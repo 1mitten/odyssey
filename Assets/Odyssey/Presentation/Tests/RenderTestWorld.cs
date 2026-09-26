@@ -145,6 +145,36 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
+        /// A stair the way <c>ConstructionGrid.RaiseEdifice</c> leaves it: <b>two</b> records, not
+        /// one, because a stair is the only buildable that finishes as two edifice values — the
+        /// lower half at the head and the upper half at the far cell, each facing the other, which
+        /// is what makes the footprint derivation symmetric from either end (U44).
+        /// </summary>
+        public RenderTestWorld Stair(int x, int z, int y, int facing, ushort stuff = CoreContent.StuffConcrete)
+        {
+            int fx = facing == 1 ? 1 : facing == 3 ? -1 : 0;
+            int fz = facing == 0 ? 1 : facing == 2 ? -1 : 0;
+            if (!Size.Contains(x + fx, z + fz, y)) return this;
+
+            int head = Index(x, z, y);
+            _edifices.Add(new PlacedEdifice
+            {
+                CellIndex = head, Def = CoreContent.EdificeStairLower, Stuff = stuff, Built = true,
+                Facing = (byte)facing,
+            });
+            Grid.Edifice[head] = _edifices.Count - 1;
+
+            int far = Index(x + fx, z + fz, y);
+            _edifices.Add(new PlacedEdifice
+            {
+                CellIndex = far, Def = CoreContent.EdificeStairUpper, Stuff = stuff, Built = true,
+                Facing = (byte)((facing + 2) & 3),
+            });
+            Grid.Edifice[far] = _edifices.Count - 1;
+            return this;
+        }
+
+        /// <summary>
         /// A board whose <c>x &lt; half</c> is <paramref name="rise"/> layers higher than the rest:
         /// a straight terrace step running the whole depth of the map, published and ready.
         ///

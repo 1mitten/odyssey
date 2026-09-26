@@ -145,6 +145,20 @@ namespace Odyssey.Presentation.Ui
                     Polyline(painter, true, p(5, 17), p(19, 17));
                     return;
 
+                // What a pillar is *for*, not what it looks like: a plate held up off the ground
+                // by a column standing under the middle of it. A bare column would read as a wall
+                // seen end-on, which is the one thing on this row it must not be mistaken for; the
+                // span across the top is the whole of what the tool buys.
+                case HudGlyphKind.ToolPillar:
+                    Polyline(painter, true, p(3, 5), p(21, 5));
+                    Polyline(painter, true, p(7, 8), p(17, 8));
+                    Polyline(painter, true, p(10, 8), p(10, 17));
+                    Polyline(painter, true, p(14, 8), p(14, 17));
+                    Polyline(painter, true, p(7, 20), p(17, 20));
+                    Polyline(painter, true, p(10, 17), p(7, 20));
+                    Polyline(painter, true, p(14, 17), p(17, 20));
+                    return;
+
                 // A ruined shell taken on as ours: a house frame with a broken wall.
                 case HudGlyphKind.ToolReclaim:
                     Polyline(painter, true, p(4, 20), p(4, 11), p(12, 4), p(20, 11), p(20, 20));
@@ -519,6 +533,7 @@ namespace Odyssey.Presentation.Ui
             { "ui.arch.tool.wall", HudGlyphKind.ToolWall },
             { "ui.arch.tool.door", HudGlyphKind.ToolDoor },
             { "ui.arch.tool.stair", HudGlyphKind.ToolStair },
+            { "ui.arch.tool.pillar", HudGlyphKind.ToolPillar },
             { "ui.arch.tool.ladder", HudGlyphKind.ToolLadder },
             { "ui.arch.tool.roof", HudGlyphKind.ToolRoof },
             { "ui.arch.tool.reclaim", HudGlyphKind.ToolReclaim },

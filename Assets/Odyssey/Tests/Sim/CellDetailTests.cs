@@ -111,7 +111,11 @@ namespace Odyssey.Tests.Sim
             Assert.That(EdificeHandle.Galley, Is.EqualTo(CoreContent.EdificeGalley));
             // Cover's sandbags (design 53 §4) after the galley.
             Assert.That(EdificeHandle.Sandbags, Is.EqualTo(CoreContent.EdificeSandbags));
-            Assert.That(EdificeHandle.Count, Is.EqualTo(CoreContent.EdificeSandbags + 1));
+            // And the colony's one-cell stair after sandbags (design 60): 24. The count is pinned
+            // to the LAST of them, so the next thing a colonist can build has to come and change
+            // this line rather than silently leaving the contract one short.
+            Assert.That(EdificeHandle.StairFull, Is.EqualTo(CoreContent.EdificeStairFull));
+            Assert.That(EdificeHandle.Count, Is.EqualTo(CoreContent.EdificeStairFull + 1));
             Assert.That(EdificeHandle.TreeFruit, Is.EqualTo(NaturalContent.EdificeTreeFruit));
             Assert.That(EdificeHandle.TreeGiant, Is.EqualTo(NaturalContent.EdificeTreeGiant));
             Assert.That(EdificeHandle.Bush, Is.EqualTo(NaturalContent.EdificeBush));
@@ -127,6 +131,11 @@ namespace Odyssey.Tests.Sim
             Assert.That(EdificeHandle.Campfire, Is.EqualTo(CoreContent.EdificeCampfire));
             Assert.That(EdificeHandle.Generator, Is.EqualTo(CoreContent.EdificeGenerator));
             Assert.That(EdificeHandle.Heater, Is.EqualTo(CoreContent.EdificeHeater));
+
+            // The colony's stair, which is deliberately NOT worldgen's StairLower/StairUpper pair
+            // — the two shapes coexist and the contract has to be able to name both.
+            Assert.That(EdificeHandle.StairLower, Is.EqualTo(CoreContent.EdificeStairLower));
+            Assert.That(EdificeHandle.StairUpper, Is.EqualTo(CoreContent.EdificeStairUpper));
         }
 
         // ---- the answer -------------------------------------------------------------------

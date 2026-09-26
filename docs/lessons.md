@@ -960,6 +960,58 @@ world draws as boxes *with* the packs present, which looks exactly like not havi
 **Check before pruning any worktree**, with the `LinkType` command above, or:
 `Get-Item <path>\Assets\Synty -Force | Select Attributes, Target` — a `ReparsePoint` is a link and
 safe to `rmdir`, anything else is the real thing.
+**It happened again on 2026-09-20, exactly as the paragraphs below predicted, and the arrangement
+they asked for is now in place.** `D:\code\odyssey-audio` was removed — the worktree that held the
+only real copy — and every checkout on the machine went dark at once: sixteen `Assets\Synty`
+junctions all resolving to nothing, including an open editor's. **The real directory now lives in
+the main checkout**, `D:\code\odyssey\Assets\Synty`, 15,868 files and 1.54 GB, with every worktree
+junctioned to it and no chain. That is the inversion the last paragraph of this section used to ask
+for; it is done, and the thing to preserve is that **the canonical path is never itself a link**.
+Check it with `(Get-Item D:\code\odyssey\Assets\Synty -Force).LinkType` — an empty string is a
+real directory, `Junction` means somebody has re-pointed it and the packs are one delete from gone.
+
+**If it has already happened**, the packs are recoverable without re-downloading, and there is no
+`.unitypackage` on this machine to fall back on — so this is the only route. A deleted worktree
+lands in the recycle bin **intact and not as a junction**, which the 2026-09-17 entry above says it
+does not; that claim was about the delete-through-a-link case and is wrong for an ordinary
+`Remove-Item` of the whole folder. Find it:
+
+```powershell
+$bin = 'D:\$RECYCLE.BIN\S-1-5-21-3546329425-3711620485-4010140739-1001'
+Get-ChildItem -LiteralPath $bin -Force -Directory | ForEach-Object {
+  $s = Join-Path $_.FullName 'Assets\Synty'
+  if (Test-Path -LiteralPath $s) {
+    "{0} entries={1}" -f $_.Name, (Get-ChildItem -LiteralPath $s -Force | Measure-Object).Count } }
+```
+
+**Eighteen entries and an empty `LinkType` is the real thing**; zero entries is another dead
+junction that went into the bin with its worktree, and there will be several. Then
+
+```powershell
+cmd /c rmdir "D:\code\odyssey\Assets\Synty"          # only if it is still a dangling junction
+robocopy <src> "D:\code\odyssey\Assets\Synty" /E /COPY:DAT /DCOPY:DAT
+```
+
+restores it byte for byte in about a minute, `.meta` files and GUIDs included — check one before
+believing it, e.g. that `PolygonGeneric\Prefabs\Base\SM_Bld_Base_Wall_01.prefab.meta` still reads
+`guid: d6b56504304c325419b598fe3ddb95ed`. **Copy, do not move**, so the bin keeps a fallback. Every
+junctioned checkout on the machine repairs itself the moment the canonical path resolves again.
+
+**Note `-LiteralPath` everywhere.** The recycle bin's folder names begin with `$R`, and PowerShell
+expands `$R…` inside double quotes and treats `[` and `]` as wildcards with `-Path`. A plain
+`Get-ChildItem "D:\$RECYCLE.BIN\…"` reports that the path does not exist, which reads exactly like
+"there is no backup" at the one moment you must not believe it.
+
+**How to tell it has happened, rather than guessing.** A worktree whose art has gone still compiles,
+still passes both tiers, and still draws — as untextured primitives. The tell in a test run is
+narrow and easy to miss: `FigureBuildTests` reports three **Ignored** cases (*"no colonist art on
+this machine; the packs are gitignored"*) and the EditMode total is unchanged. So **compare the
+skipped count against another recent run**, not the failure count. Here it was 13 skipped against
+10 on a run from the same afternoon in a sibling worktree, and that three was the whole signal.
+
+Before deleting any tree that a worktree owns, ask whether anything under it is a reparse point —
+and remember the delete that did this was of a *worktree*, not of a junction, so the check has to
+be made on the thing you are removing rather than on the link you can see.
 
 ## Per-cell geometry cracks where a continuous field does not
 
@@ -2334,6 +2386,59 @@ a duration identical to the last run's, down to the seventh decimal.
   the same worktree are mutually exclusive, and the second one loses silently if you are not
   reading its output.
 
+## The allocation test is load-sensitive; settle it with a clean-HEAD control, not by reading your diff
+
+**2026-09-20, RF1.** `PathAllocationTests.ATickThatDoesNothingAllocatesNextToNothing` failed in a
+Long-tier run on a branch. It is a measurement of bytes allocated per tick against a 16-byte budget,
+so a failure reads as *"you put an allocation in `SimWorld.Tick`"* — and the temptation is to go
+looking for one in your own diff.
+
+**Run the same tier on a clean worktree first.** `git worktree add /tmp/<name> HEAD` costs half a
+minute and answers the question the diff cannot.
+
+Four runs each, in this container, same tier, nothing else changed:
+
+| | run 1 | run 2 | run 3 | run 4 |
+|---|---|---|---|---|
+| the branch | fail | fail | pass | pass |
+| **clean `HEAD`** | pass | **fail** | pass | **fail** |
+
+It fails *more often without the change than with it*. Run on its own the test reports exactly the
+1.6 and 3.3 bytes per tick its own comment cites and passes every time; it is the batch, and
+whatever else the machine is doing, that moves it. A GC that happens to land inside the measurement
+window is the mechanism.
+
+- **A flaky measurement is not evidence about your change until you have the control.** Two samples
+  — one red on the branch, one green on `HEAD` — look conclusive and are worth nothing.
+- **Do not "fix" it by widening the budget.** The 16-byte budget is four times under the 64-byte
+  delegate the test exists to catch, and loosening it to quiet a container would retire the test.
+- The same reasoning applies to anything timed rather than asserted: `TickBenchmarkTests`,
+  `FrameTimeTests`, and any future row that prints a number. `docs/process.md` §2 already says a
+  number names its machine and its date; this is the other half — **a number that disagrees with
+  itself across runs on identical code is naming the machine, not the code.**
+
+## A failed NUnit `Assume` is reported as skipped, and the tier summary can hide it entirely
+
+**2026-09-20, U44.** Eleven new tests, four of them using `Assume` for their controls — the
+project's own idiom, and the right one: *"the control comes first and is not optional."* The stair
+being built registered no connector at all, so those four `Assume`s failed and the unit did nothing.
+
+**The tier stayed green.** NUnit treats a failed `Assume` as **inconclusive**, `dotnet test` reports
+it as **skipped**, and the summary line — `Failed: 0, Passed: 774, Skipped: 0, Total: 776` — did not
+even count them: the total was six higher than the baseline when eleven cases had been added. The
+one test that caught it, `EveryModeMayUseAStair`, was the only one with no `Assume` in it.
+
+- **A green tier after adding tests is not a green tier. Check the total went up by what you added.**
+  Five missing cases is the whole feature not working.
+- **Run a new suite on its own once, with `-l "console;verbosity=normal"`,** and read the per-test
+  lines. `Skipped` beside a test you just wrote means its control failed, which almost always means
+  the feature is not doing anything — the opposite of what the summary implies.
+- The idiom is still right: a control that cannot fail is worthless, and `Assume` is how this
+  project states one. **Pair it with at least one test in the suite that asserts the same claim
+  outright**, so the suite cannot go quiet all at once.
+- This is the same family as the three silent failures on the click-reaches-the-game line
+  (`CLAUDE.md`, known gaps) and as `OQ-40`'s vacuously passing PlayMode tests: **a test that does
+  not run is indistinguishable from a test that passes, unless something is counting.**
 ## A pack-dependent test must ask whether the art resolved, not whether there is a catalogue
 
 **Cost: one red build on the self-hosted runner, 2026-09-20, on a branch whose tests were green
@@ -2364,6 +2469,25 @@ there — so a smaller *passed* number is not a regression. And `TestResults/Pla
 `D:\actions-runner\_work\odyssey\odyssey` is overwritten by the next job, so copy it before
 diagnosing rather than after.
 
+## `BoardMemoryTests` is load-sensitive too, and a negative reading is the tell
+
+`BoardMemoryTests.EveryOfferedBoardSaysWhatItCostsToHold` joined the timing tests in this family on
+2026-09-21: it failed in an EditMode run taken beside the CI runner's PlayMode batch with
+
+```
+Expected: greater than 230400
+But was:  -11128832
+```
+
+**A world cannot cost minus eleven megabytes**, and the test's own message says what happened — the
+`before` reading carried garbage the double `Settle()` had not collected under contention, and the
+`after` reading did collect it. It passed in the two EditMode runs on the same commit either side
+of that one, and five times out of five in the fast tier alone.
+
+This one is **cheaper to settle than a timing test**, because the failure is not a number drifting
+over a threshold: it is a *sign*. A negative delta is never a regression, so it does not need a
+clean-HEAD control — re-run it alone and check whether the reading is positive. Only a positive
+delta under the floor is worth investigating.
 ## A timing test run beside another Unity batch run fails, and the baseline is the tell
 
 `HudStressTests.Adr0003_F1_TheDenseHudHoldsItsBudgetAndAllocatesNothing` failed on 2026-09-20 at
@@ -2739,3 +2863,72 @@ session's file hit a sharing violation with the leaked session's). **Report from
 coroutine and assert in the outer method, and give a file that builds worlds a `[TearDown]` that
 destroys them by name.** The symptom is a failure in a *different* test that only appears once the
 new file is in the run.
+## A screenshot probe gets one frame, and a frame meshes eleven chunks
+
+`ChunkRenderer.MeshBudgetPerFrame` landed on `main` on 2026-09-21 and is right for the game: a
+frame meshes eleven stale chunks, a deferred chunk keeps its old geometry, and the staleness is the
+queue, so the board catches up over the next few frames. **A photograph has no next frame.**
+`PlayScene.Shoot` calls `camera.Render()` exactly once.
+
+So on 2026-09-21 `StairCheck` photographed a stair and there was no stair in it — eleven chunks of
+meadow and a dark wedge where the rest of the board had not been meshed yet. The side elevation,
+taken later in the same run, was perfect, because by then three more shots had meshed thirty-three
+more chunks. **That progression is the tell**: an empty first picture and a full last one from one
+probe is a budget, not a camera. It reads as a framing mistake, which is the expensive way to spend
+an hour on it.
+
+The fix is one line in the probe's render hook, before `Render`:
+
+```csharp
+renderer.PrimeAll(activeLayer, slice);   // the one unbudgeted walk, and idempotent
+```
+
+`PrimeAll` is what `OdysseyBootstrap.BuildSession` already calls so a new world arrives whole inside
+the loading screen; a chunk that is not stale costs nothing, so paying it every frame of a four-shot
+probe is one board's meshing in total.
+
+**Twenty-one editor probes construct a `ChunkRenderer` directly** — `grep -rl "new ChunkRenderer("
+Assets/Editor/` — and every one of them is exposed. Only `StairCheck` is fixed, because it is the
+one that needed its own evidence; **check the picture before trusting any of the other twenty**, and
+prime the probe you are using rather than the whole set.
+
+
+## Rebuilding the module catalogue throws away the character swatches (2026-09-21)
+
+`PlayScene.RebuildCatalogue` writes `ModuleCatalogue.asset` **from its own rows**, and the colonist
+appearance data on those rows is not one of them: it is put there afterwards by a second pass,
+`CharacterSwatches.Classify`, which reads each body's meshes and records the atlas rectangles to
+recolour. So a plain rebuild is **destructive** — one line added to the generator, and the commit
+also deletes 2,164 lines of appearance data for all 61 colonists and every one of them draws
+untinted.
+
+Nothing says so at the call site and the rebuild reports success: *"catalogue rebuilt … 127/144 rows
+have art."* It was caught only because the Unity tier runs
+`AppearanceCatalogueTests.EveryBodyHasSomethingToRecolourAndMostAreFullyClassified`, which came back
+**"some body has nothing to recolour: Expected 61, But was 0"** — a test about colonists failing on a
+commit about stairs.
+
+**So the sequence is two commands, always:**
+
+```
+scripts/unity.sh shot Odyssey.EditorTools.PlayScene.RebuildCatalogue
+scripts/unity.sh shot Odyssey.EditorTools.CharacterSwatches.Classify
+```
+
+**And check the diff before believing it.** Adding one module row should be `+N insertions, 0
+deletions`. Any deletion at all means the second pass has not run, whatever the log said.
+
+## `unity.sh exec` passes `-nographics`, so nothing it runs can draw (2026-09-21)
+
+A probe run through `exec` writes its report perfectly and its pictures come out blank — identical
+file sizes, a flat fill, not even the camera's clear colour. `shot` is the same batch run **without**
+`-nographics`, and the script's own comment says it is "the one family of commands that needs a real
+graphics device". It takes an optional method, so anything that makes an image goes through it:
+
+```
+scripts/unity.sh shot Odyssey.EditorTools.StairCheck.Run
+```
+
+The tell is that the *log* is complete and correct while the images are uniform. That is not the
+meshing-budget symptom (`docs/design/60-stairs.md` §8c), where the first picture is empty and the
+last is full — this one is every picture blank, and it means no device.

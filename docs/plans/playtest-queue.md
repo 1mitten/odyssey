@@ -910,6 +910,21 @@ the next session learns to ignore.
   this to an alert or a confirmation. The other half is the shape left behind: the surviving cells
   of the field stay zoned, so a field with a bite taken out of it should still read as one field.
 
+- **The one-cell stair, and roofing from upstairs** (PR #143, `claude/adoring-ptolemy-baq5te`,
+  `docs/design/60-stairs.md` §10–§12, `59-roofs.md`). Played twice on 2026-09-21; both rounds' faults
+  are fixed (two flights drawn for one, nothing clickable, R did nothing, the build never started
+  because delivery could not climb a ladder, and a colonist sliding through the treads). **Merged
+  with `main` 2026-09-26** and not played since. A **Stair** chip under Structure is one cell
+  climbing a whole layer, flush with the floor above, rotatable, 6 wood; a colonist walks it as a
+  switchback with a turn on the landing. Slab on an upper storey's own floor roofs that storey. A
+  **Pillar** chip (3 wood) holds up the middle of a hall too wide to roof. Open for a person: whether
+  the stair reads as one flight **with walls-down on**, which it has never been seen beside; whether
+  the climb reads as walking up steps; whether the pillar's price and the cell it eats feel fair; and
+  whether a roof two storeys up hides anything in **build mode**, where walls-down steps aside
+  (`59-roofs.md` §4a — the old "never draw a roof two layers up" rule was dropped on the merge);
+  whether a **stack of stairs** (new on the merge) reads as a stairwell; and whether the **one open
+  cell left in a roof over each stair's top** reads as a stairwell or as a roof that failed
+  (`60-stairs.md` §12a).
 - **Does the horizon repeat now there are eight kinds of tree instead of sixteen?**
   (`claude/huge-map`, `docs/design/06-rendering-and-camera.md` §6c.4.) The surround costs its
   batch count, and the count was sixteen tree kinds multiplying every spatial cell — so it now

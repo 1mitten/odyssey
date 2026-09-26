@@ -10,7 +10,8 @@ This file is written to be executed by a session with no other context. Read `CL
 
 **The live status is the track table in `CLAUDE.md`** — this file stopped being the place to read
 it on 2026-09-16, and the table below is kept as the record of that date rather than rewritten.
-Since then: M3 has everything but stairs (`U44`); MS, WS1–WS3, RP and CL are done; the baseline
+Since then: M3 has every unit including stairs (`U44`, 2026-09-20) and waits only on its gate, the
+ten-day run (`U32`); MS, WS1–WS3, RP, CL and RF1 are done; the baseline
 audit of 2026-09-19 (`docs/audit/2026-09-19-baseline.md`) added the **HT** hardening track below,
 which is the next thing this plan schedules and which **waits for approval before any unit
 starts**. Gates on 2026-09-19: fast tier 753 Sim + 449 Hud; Unity EditMode 1,872 total, 1,858
@@ -155,7 +156,7 @@ critical path.
 | **U42 Paving — built 2026-09-17** | M | U29 | A floor **covering** laid on ground that is already there — the thing "just build a floor" means, and not what U29 built. The mirror of the slab rule: the cell must *have* a floor and no covering yet, and there is no support check because a covering over ground is grounded by definition and can never fall. Stored as a fifth slab kind in `Floor[]`, so **no new save state and no hash change**; drawn by `FloorModule` with no catalogue row. It takes the wall's lift (`StandingOn`), not the slab's, and `WorkingLayer` must stay null for it. The three names already exist and are already published — `deckplate`, `grating`, `tile` — so no wiki content moves. **Scoped 2026-09-17 after the owner played U29 and found paving missing: `docs/design/18-paving.md`, with the measurement that within ten cells of the start only 21 of 441 cells will take a slab.** **Naming settled 2026-09-17: both say floor** — the rename to `Slab` was recommended and overruled, so the palette category and the tool descriptions carry the whole distinction and no key or label moves. Build **deck plate alone** first; grating is a see-through slab wearing the same category and wants something below worth seeing. **Paving is cosmetic until rooms are**, and that is said out loud in the doc rather than discovered. One session. **The z-fight risk was measured first and came back clean** (`PavingProbe`, 2026-09-17): the prefab's 0.10 m depth lifts the slab clear, so no mesher lift is needed. The same probe found the one thing the estimate missed — **grass grows through paving**, because the scatter is keyed off terrain and knows nothing about `Floor[]` — fixed where `EmitScatter` already refuses to draw under something solid. **Built:** `Building_DeckPlate` in wood or stone (steel was scoped and is not buildable at all — no item), five new tests, fast tier 578 + 193, EditMode 1,243. **Paving does nothing yet** and will not until rooms do. |
 
 | **U43 The way up — built 2026-09-17** | M | U29 | A buildable **ladder**, because U29's second storeys were **decorative**: every slab measured walkable and *unreachable*, since vertical movement goes through a `Pathing.Connector` and connectors only ever came out of worldgen. `blocking = false` so the cell can be stood in, and one idempotent `RefreshLadder` called from all four places either end can change — the ladder up, the floor above it in, and either out. **No save-format change**: the connector is derived from the edifice list by `RebuildDerived`, exactly as support and the region graph are, and `NavGraph.OneCellConnectorAt` asks the graph rather than keeping a map that would be empty after a load. Six tests, reachability not edifice-existence, with the control measured unreachable first. **A hauler cannot climb a ladder** — `Connector`'s own rule, *"a hauler's bulky load ... rule a ladder out"* — so a colonist can get up and cannot carry material up, and **nothing can be built on an upper storey with a ladder alone**. |
-| **U44 Stairs** | M | U43 | Two cells rising 1.5 m each, `ConnectorKind.Stair` with `AllMask`, so a **hauler** can use one. This is what makes an upper storey somewhere a colony can actually build, and U43's hauler exclusion is the argument for it. The two-cell footprint wants a placement rule a ladder did not need. |
+| **U44 Stairs — built 2026-09-20** | M | U43 | Two cells rising 1.5 m each, `ConnectorKind.Stair` with `AllMask`, so a **hauler** can use one. The two-cell footprint wants a placement rule a ladder did not need. **Built on `claude/adoring-ptolemy-baq5te`, design `docs/design/60-stairs.md`.** Most of it existed: the connector kind, its mask and costs, both edifice values, worldgen's stamping and registering, the drawing, the palette chip and the label. What this added is `Building_Stair` (handle 7, `footprint` 2, the first and only def with a `secondEdifice`, finishing as **two** records the way worldgen stamps), the placement rule — a footing under both halves and the ladder's shaft rule extended to stairs on both sides and at the same reach — and `RefreshStair`, idempotent, deriving its connector from the edifice list so there is **no save-format change**. **The row's own argument was half false**: `DeliverWorkGiver` never asked for the hauling mode, so building material already went up a ladder; delivery becomes a hauling job in the same commit. Two corrections the code made: both upper cells must be *open* but only one must *arrive*, and the generator's stairwells are not the colony's to manage. 12 tests; no golden moved. |
 
 ---
 
@@ -283,6 +284,43 @@ playtest queue gains no rows from HT1–HT4 and HT6–HT8 (nothing player-visibl
 
 **What this track does not touch.** Stairs (`U44`) and the ten-day gate close M3 exactly as
 planned; WS4 stays held; every owner deferral in the section below stands.
+
+---
+
+## RF — Roofs (owner, 2026-09-20)
+
+**These units are `RF1`–`RF3`.** A new two-letter track rather than `U51`+, for the reason `WS` and
+`HT` are: a line of work with its own design document numbers from 1.
+
+**The finding that sized the track.** A roof is a floor is a slab (`02-world-and-layers.md` §4,
+layer question 2) and U29 built it. The Slab tool's key is literally `ui.arch.tool.roof`;
+`CoreContent.SlabRoof`, `ChunkBatch.Roof` and `CellGrid.IsRoofed` all exist, the last with no
+caller at all. So there was no roof pipeline to build, and RF1 is the gap between *roofs are
+implemented* and *roofing is something a player does*. Design and the six owner decisions:
+`docs/design/59-roofs.md`.
+
+| Unit | Size | Depends on | Done when |
+|---|---|---|---|
+| **RF1 Roofing a building, and seeing under it** | M | — | **Done, fast tier only.** (a) `ConstructionGrid.StandingOver` lifts a slab order off a cell that already holds a slab, so pointing at an upper storey's floor roofs that storey instead of being refused in silence. (b) A roof two or more layers above the slice is never drawn and never clickable, unconditionally; the storey directly overhead keeps today's behaviour and today's default. (c) `Building_Pillar`: a column in one cell, 3 wood, 90 ticks, appended at handle 6, **no change to `SupportSolver`**. Fast tier 770 Sim + 449 Hud, both content gates clean, goldens unmoved. **Owes both Unity tiers and a probe** — RF1b is entirely in `Odyssey.Presentation`, which the fast tier does not compile. |
+| **RF2 The pitched cap** | M | RF1, a Unity session | The autotiled pitched roof drawn over the topmost slab, and a capped roof is **not walkable** (owner, 2026-09-20). The art is bought and cell-sized — `SM_Bld_Base_Roof_Straight_01`, `_Corner_In_01`, `_Corner_Out_01`, halves, quarter, ridge and hip `Cap_*`, eaves `Trim_*`, all on the 2.5 m pitch — and **3.25 m tall against a 3.00 m layer**, so it caps and never floors (`e-01-module-mapping.md`, `17-floors-and-collapse.md` §10). Carries the one-line fix for `WorldRenderModel.FloorModule` ignoring slab kind, so a roof stops drawing as the same grey plate as a floor, and the eaves trim is the candidate fascia for the paper-lip problem in the playtest queue. Non-walkable moves the state hash; the goldens re-bake with a reason line. |
+| **RF3 The roofs overlay** | S | RF1 | `ui.overlay.roofs` — named, keyed *"What is roofed, and by what"*, listed dead in `HudShell.Bar.cs` and never built. A chunk mesh per layer, never per-cell UI (`02-world-and-layers.md` §3). It is the answer to *"did I roof all of it"*, which RF1 leaves to the eye, and it is worth more once a hall is big enough to have a middle. |
+
+**Not in this track, deliberately.** Enclosure, `IsSheltered`, indoors, weather, temperature and
+per-cell light are **M4**, and `a-05-rooms-and-beauty.md` has already ruled on the shape: chamber
+detection plus `IsSheltered` only at M3, and never a single `IsEnclosed` boolean — keep
+`IsSheltered` for weather and `IsIndoors` for mood and work speed, and expect to want a third.
+`CellGrid.IsRoofed` is where the first consumer lands.
+
+**And the thing RF1 cannot fix.** A ground-floor room's interior cannot be roofed by pointing at one
+cell of it, because its floor is terrain rather than a slab and nothing tells standing inside a hut
+from standing on the meadow outside it except enclosure. Dragging a box over the whole hut, walls
+included, already works and always has (`RunLayerFor` takes the highest layer the run reaches), and
+that is the common gesture. Recorded in `59-roofs.md` §8 rather than worked around.
+
+**What this track does not touch.** Stairs (`U44`) and the ten-day gate close M3 exactly as planned,
+and `U44` is the prerequisite for the thing roofs are in service of: **a hauler cannot climb a
+ladder, so no material reaches an upper floor.** RF1 makes roofing at ground level pleasant and
+cannot make a second storey buildable.
 
 ---
 

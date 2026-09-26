@@ -296,6 +296,7 @@ namespace Odyssey.Sim.Pawns
             // Worldgen's own ladders are already registered, because the board is regenerated from
             // its seed before a save is read over it.
             Construction.RebuildLadderConnectors(Pawns);
+            Construction.RebuildStairConnectors(Pawns);
             Construction.RebuildDoors(Pawns);
 
             // The weather's temperature offset is derived and written only every weather pass, so

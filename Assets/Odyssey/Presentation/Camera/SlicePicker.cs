@@ -350,6 +350,25 @@ namespace Odyssey.Presentation.CameraRig
                         hitAt = tTop;
                         return true;
                     }
+
+                    // **And the foot of it, for anything that climbs.** A stair's upper half
+                    // begins half a layer above its own floor, so between the plane above and the
+                    // floor below there is a band of the drawn flight that neither answers for —
+                    // measured, the far two thirds of the upper half, which fell through to the
+                    // ground behind. The two planes bracket the climb. Everything that sits on the
+                    // floor answers 0 here and is unchanged. WorldRenderModel.StandFoot.
+                    float foot = model.StandFoot(index);
+                    if (foot > 0f)
+                    {
+                        float tFoot = FloorCrossing(ray, floorY + foot);
+                        if (tFoot >= t - 1e-4f && tFoot <= tCellEnd)
+                        {
+                            cell = new CellRef(x, z, layer);
+                            thing = true;
+                            hitAt = tFoot;
+                            return true;
+                        }
+                    }
                 }
 
                 // **Water is clicked on its surface, not on its bed** (owner, 2026-09-25: "I

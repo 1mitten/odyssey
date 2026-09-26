@@ -1394,12 +1394,48 @@ namespace Odyssey.EditorTools
             // Half a flight per cell: 1.50 m of rise over a 2.5 m run, so two cells climb one
             // 3.0 m layer, which is the rule the templates are authored to. The piece carries a
             // 0.33 m skirt below its pivot that must sink into the slab, so no base snapping.
+            //
+            // **And turned about, which is what the yaw field is for** (owner, 2026-09-21: "I put
+            // one stairs to build - and it built two"). The piece ASCENDS toward its own local
+            // -Z, so yawing it by the climb direction — which is what ChunkMesher.EmitStair does,
+            // correctly — pointed both halves down the way they were meant to climb. The two
+            // pieces then diverged instead of meeting: one descending flight on the ground and a
+            // second descending flight floating 1.5 m above and beyond it, which is exactly two
+            // staircases. The heights were right all along; only the facing was not.
+            //
+            // Photographed before and after by Odyssey.EditorTools.StairCheck. It belongs here
+            // rather than in the mesher because it is a property of the ART — the field's own
+            // tooltip is "use it when a piece faces the wrong way" — and because worldgen's
+            // stamped stairwells draw through the same rows and were wrong in the same way.
             foreach (string id in new[] { ModuleIds.Stair, "odyssey.module.stair.straight", "odyssey.module.stair.core" })
                 rows.Add(new ModuleEntry
                 {
                     moduleId = id, shape = ModuleShape.StairFlight, prefabName = "SM_Bld_Base_Stairs_01",
-                    centreXZ = true, baseAtY = false,
+                    centreXZ = true, baseAtY = false, yaw = 180f,
                 });
+
+            // **The colony's own stair: one cell, one whole layer** (2026-09-21).
+            // SM_Bld_Base_Stairs_02 is 2.50 x 3.33 x 2.50 with a rise of exactly 3.00 and the same
+            // 0.33 m skirt below y=0 its half-flight sibling has. It is a SWITCHBACK - two short
+            // flights and a mid-landing - which is how a whole layer fits a 2.5 m run.
+            //
+            // **yaw 90, and the number is measured rather than inherited.** The first cut copied
+            // the sibling's 180 on family resemblance and drew the flight DESCENDING into the
+            // ground. Stairs_01 ascends toward its local -Z; this one ascends toward its local -X,
+            // a quarter turn away, and 90 is what brings that to the +Z a facing of 0 means.
+            // StairCheck reports the ascent off the prefab's own vertices and prints the yaw it
+            // implies, so the next piece of stair art is measured in one run instead of guessed
+            // (docs/design/60-stairs.md 10f).
+            //
+            // docs/research/e-01-module-mapping.md listed it as a "steep full-layer stair in one
+            // cell (optional variant)" in the table that recommended the half-flight, and nothing
+            // took it until the owner played two cells and asked for one square.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.StairFull, shape = ModuleShape.StairFull,
+                prefabName = "SM_Bld_Base_Stairs_02",
+                centreXZ = true, baseAtY = false, yaw = 90f,
+            });
 
             // Exactly one layer tall, pushed back against the wall it is fixed to.
             foreach (string id in new[] { ModuleIds.Ladder, "odyssey.module.ladder.fixed" })

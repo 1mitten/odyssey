@@ -120,6 +120,7 @@ namespace Odyssey.Presentation.Ui
         ToolStair,
         ToolLadder,
         ToolRoof,
+        ToolPillar,
         ToolReclaim,
         ToolFabricator,
         ToolGalley,

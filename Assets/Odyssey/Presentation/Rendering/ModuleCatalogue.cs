@@ -106,6 +106,18 @@ namespace Odyssey.Presentation.Rendering
         /// unit box. <see cref="CoverShape"/> lays a wall of them; see <see cref="SandbagMesh"/>.
         /// </summary>
         Sandbag = 14,
+
+        /// <summary>
+        /// A <b>whole</b> flight, rising one full layer across one cell — the colony's own stair
+        /// (2026-09-21).
+        ///
+        /// <para>A shape of its own beside <see cref="StairFlight"/> rather than the same shape at
+        /// a different scale, because the fallback box is the reason shapes exist: a clone without
+        /// the packs draws a stand-in from <c>GetFallbackBox</c>, and a half-flight's box is 1.5 m
+        /// tall. Sharing the shape would have drawn every colony stair at half its height on
+        /// exactly the machines that cannot check — the runner, and CI.</para>
+        /// </summary>
+        StairFull = 15,
     }
 
     /// <summary>
@@ -634,6 +646,14 @@ namespace Odyssey.Presentation.Rendering
         public const string Window = Prefix + "window";
         public const string Pillar = Prefix + "pillar";
         public const string Stair = Prefix + "stair";
+
+        /// <summary>
+        /// The colony's own one-cell, one-layer stair. Not a template default and not overridable
+        /// per template, unlike <see cref="Stair"/>: worldgen's stairwells vary with the shell they
+        /// are stamped into, and this is a thing a colonist builds out of wood or stone wherever
+        /// they are — the same argument <see cref="Bed"/> makes for being a fixed id.
+        /// </summary>
+        public const string StairFull = Prefix + "stair.full";
         public const string Ladder = Prefix + "ladder";
         public const string Slab = Prefix + "slab";
 

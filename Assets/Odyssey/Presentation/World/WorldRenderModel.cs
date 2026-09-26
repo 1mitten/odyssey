@@ -157,6 +157,9 @@ namespace Odyssey.Presentation.World
         readonly int _generatorModule;
         readonly int _heaterModule;
         readonly int _galleyModule;
+
+        /// <summary>The colony's one-cell, one-layer stair (2026-09-21). See <see cref="StairShape"/>.</summary>
+        readonly int _stairFullModule;
         readonly int _bedPillowModule;
         readonly int _shelfModule;
         readonly int _sandbagModule;
@@ -216,6 +219,12 @@ namespace Odyssey.Presentation.World
             _utilityTapModule = library.Resolve(ModuleIds.UtilityTap, ModuleShape.Pillar);
             _wallCoreModule = library.Resolve(ModuleIds.WallCore, ModuleShape.SolidBlock);
             _waterFallModule = library.Resolve(ModuleIds.WaterFall, ModuleShape.WaterFall);
+
+            // The colony's own stair: one id, resolved once, not a per-template slot like
+            // ModuleGroup.Stair. A stamped stairwell belongs to the shell it was stamped into and
+            // varies with it; a stair a colonist built is the same flight of wood or stone wherever
+            // it stands, which is the bed's argument for being a fixed module id too.
+            _stairFullModule = library.Resolve(ModuleIds.StairFull, ModuleShape.StairFull);
 
             // The bed's placeholder: a plain block module, because the honest stand-in for absent
             // art is a box the tint colours, not a borrowed tree or wall wearing a bed's name.
@@ -905,10 +914,19 @@ namespace Odyssey.Presentation.World
         /// where the bed was drawn and where it could be clicked disagreed by a quarter cell —
         /// measured, and reported by the owner as a bed being "really specific" to click.</para>
         ///
-        /// <para>A bed is the only thing that answers today, and the shape it answers with is
-        /// <see cref="BedShape"/>'s own, because two copies of a height is how one of them gets
-        /// corrected on its own — the same argument that put the bed's shape in one place to
-        /// begin with. The next non-occluding thing that stands up adds a line here.</para>
+        /// <para>Each shape answers with its own numbers — <see cref="BedShape"/>'s and
+        /// <see cref="StairShape"/>'s — because two copies of a height is how one of them gets
+        /// corrected on its own, the same argument that put the bed's shape in one place to begin
+        /// with. The next non-occluding thing that stands up adds a line here.</para>
+        ///
+        /// <para><b>A stair was the second, and it is the first that is not flat</b> (2026-09-21,
+        /// the owner: <i>"I couldn't click on the stairs either to get any information"</i>). It is
+        /// drawn climbing, so the two halves answer differently — the lower to half a layer, the
+        /// upper from there to the next floor — and the plane offered is the <em>top</em> of each
+        /// half's own run. The picker claims it only inside the cell's own footprint, so the far
+        /// half of each cell is answered by this plane and the near half by the floor underneath;
+        /// between them they approximate the ramp from either end.
+        /// <c>StairPickHeightTests</c> aims at every tenth of the drawn flight.</para>
         /// </summary>
         public float StandHeight(int index)
         {
@@ -930,7 +948,30 @@ namespace Odyssey.Presentation.World
             // Cover (design 53 §7): the top of the bags or the rail, which is what is clicked and
             // what a deconstruct mark sits on.
             if (CoverShape.Draws(_edifice[index])) return CoverShape.Top(_edifice[index]);
-            return 0f;
+            // A stair offers the top of its run (design 60 §8b); everything else its floor.
+            return StairShape.TopOfRun(_edifice[index]);
+        }
+
+        /// <summary>
+        /// How far above this cell's floor the thing standing in it <b>begins</b>, in metres — 0
+        /// for everything that sits on the floor, and half a layer for the upper half of a stair.
+        ///
+        /// <para><b>Because one plane cannot be a ramp.</b> <see cref="StandHeight"/> offers the
+        /// top of a stair's run, and measured on 2026-09-21 that alone leaves the far end of the
+        /// upper half unclickable: its floor is 1.5 m below where its art starts, so a ray aimed
+        /// two thirds of the way up the flight crosses the top plane before the cell and the floor
+        /// plane after it, and falls through to the ground behind. The two planes together bracket
+        /// the climb — the far part of each cell is answered by its top and the near part by its
+        /// foot — which is as much ramp as a picker built on horizontal planes can offer, and is
+        /// enough to make every tenth of a drawn flight answer with the cell it is over.</para>
+        ///
+        /// <para>A bed answers 0 here and is unaffected: its foot plane is its floor, which the
+        /// picker already tests.</para>
+        /// </summary>
+        public float StandFoot(int index)
+        {
+            if ((uint)index >= (uint)_edifice.Length) return 0f;
+            return StairShape.FootOfRun(_edifice[index]);
         }
 
         /// <summary>
@@ -1056,6 +1097,13 @@ namespace Odyssey.Presentation.World
             if (def == CoreContent.EdificeGalley) return _galleyModule;
             // Cover (design 53), above the trees' range for the same reason.
             if (def == CoreContent.EdificeSandbags) return _sandbagModule;
+            // **And the colony's stair, for exactly the bed's reason and caught exactly the way
+            // this comment warns.** Its id was 13 when this was written, above the trees' 10 and 11, so
+            // the range test below claimed it, found it past the end of the tree table and returned
+            // 0 — no module, nothing drawn, no error. The first picture of the one-cell stair was a
+            // field of grass with no stair in it (2026-09-21), and the `case` for it further down
+            // this switch was never reached. Anything numbered above the trees belongs up here.
+            if (def == CoreContent.EdificeStairFull) return _stairFullModule;
             // The natural table continues CoreContent's numbering, as terrain does. A tree is not
             // a kind of wall: before this branch existed every tree fell through the switch below
             // to the wall module and the woodland rendered as a grid of grey boxes.

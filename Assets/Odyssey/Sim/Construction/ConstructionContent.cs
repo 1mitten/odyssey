@@ -437,6 +437,7 @@ namespace Odyssey.Sim.Construction
         {
             for (int i = 1; i < BuildingTable.Length; i++)
                 if (BuildingTable[i].edifice == edifice) return i;
+
             return BuildingHandle.None;
         }
 
@@ -512,8 +513,11 @@ namespace Odyssey.Sim.Construction
             "Building_Conduit", "Building_Generator", "Building_Heater",
             "Building_Galley",
             // Cover (design 53 §4), BuildingHandle 13. The barricade that followed it was taken
-            // out on the owner's first look (design 53 §13) and may come back as 14.
+            // out on the owner's first look (design 53 §13); if it comes back it takes the next
+            // free handle, since 14 and 15 are the pillar and the stair.
             "Building_Sandbags",
+            // Roofs and stairs (designs 59 and 60), BuildingHandle 14 and 15.
+            "Building_Pillar", "Building_Stair",
         };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
@@ -715,6 +719,66 @@ namespace Odyssey.Sim.Construction
                     costCount = 5, fixedStuff = StuffHandle.Stone, workToBuild = 180, minSkill = 0,
                     iconKey = "ui.arch.tool.sandbag", maxHitPoints = 300, coverPerMille = 550,
                     wreckRefundPerMille = 250,
+                },
+
+                // The support pillar (RF1, docs/design/59-roofs.md §5). A column in one cell that
+                // holds up the slab above it, and the thing that makes a hall roofable: measured,
+                // a room with an 8-cell interior takes nine holes in its roof and a 10-cell one
+                // takes twenty-five, because support decays one per cell from a wall and a slab
+                // stands at most three cells from anything holding it up.
+                //
+                // `edifice` is CoreContent.EdificePillar, which has existed since worldgen stamped
+                // its first colonnade. The support solver needs NO change at all: IsGrounded ends
+                // at `Edifice[below] >= 0`, so a pillar has grounded the slab over it for as long
+                // as the solver has run - there was simply no way to build one.
+                //
+                // `blocking` true, and it is a decision rather than a detail. A pillar fills its
+                // 2.5 m cell, so span is paid for in the floor it stands on; you cannot walk
+                // through a column. A non-blocking pillar would make a pillared hall strictly
+                // better than an unpillared one and the choice free. The solver reads
+                // `Edifice[below] >= 0` and not the flag, so either would hold the roof up.
+                //
+                // 3 and 90 against a wall's 5 and 135 and a slab's 4 and 120: less material than a
+                // 3 m wall panel, dearer per cell than a slab. Neither number is derived from
+                // anything and nothing derives from them; they are the owner's to tune.
+                new BuildingDef
+                {
+                    defName = "Building_Pillar", label = "support pillar",
+                    edifice = CoreContent.EdificePillar, blocking = true,
+                    costCount = 3, workToBuild = 90, minSkill = 0,
+                    // INVENTED on merging combat (design 33 §4): two thirds of a wall's, since it is
+                    // a column rather than a panel. No coverPerMille: it fills its cell, so its
+                    // cover is the full-fill rule's, as a wall's is.
+                    iconKey = "ui.arch.tool.pillar", maxHitPoints = 200,
+                },
+
+                // The way up that carries something (docs/design/60-stairs.md). ONE cell, climbing
+                // a full 3.0 m layer to the floor above - owner, 2026-09-21, after playing the
+                // two-cell version: "It should be able to go up a flight in one square for ease -
+                // but it's not - it's not flush with the floor above either."
+                //
+                // One edifice value of its own, EdificeStairFull, and NOT worldgen's Lower/Upper
+                // pair. The pair stays exactly as it is for the stamped city; this is the thing a
+                // colonist builds and it is a different thing. What that buys: footprint 1, so
+                // every second-cell path in Place, Raise and Demolish falls out on SecondCell ==
+                // -1; a shaft rule about one cell above instead of two; and the ladder's own
+                // one-cell connector.
+                //
+                // blocking false for the ladder's reason exactly: a stair you cannot enter is a
+                // decoration. 6 and 150 against a wall's 5 and 135 and a ladder's 4 and 90 - a
+                // flight of carpentry, and the thing a colony saves up for rather than knocks
+                // together. The numbers are unchanged from the two-cell version deliberately: a
+                // stair still costs a stair, and neither number derives from anything nor has
+                // anything derive from it. They are the owner's to tune.
+                new BuildingDef
+                {
+                    defName = "Building_Stair", label = "stair",
+                    edifice = CoreContent.EdificeStairFull,
+                    rotates = true, blocking = false,
+                    costCount = 6, workToBuild = 150, minSkill = 0,
+                    // INVENTED on merging combat (design 33 §4): sturdier than a ladder's 80, a bed's
+                    // worth. No cover: it is stood on, not behind.
+                    iconKey = "ui.arch.tool.stair", maxHitPoints = 120,
                 },
             };
         }

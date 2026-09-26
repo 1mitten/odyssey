@@ -9359,6 +9359,221 @@ shipped table lifts Wash (mean 15/19 °C, ±5 swing) and widens the mild band so
 full-rate work and mild mood; Rime still crosses the floor. The numbers are the owner's to tune;
 the shapes are pinned by tests.
 
+### Roofs: RF1, and what was already there, 2026-09-20
+
+The owner: *"We need to plan and understand Roofs. We've created floors now that seem to work well —
+check and research, investigate how we can add roofs so we can make 1 or many floor buildings etc.
+I think it should work like slabs do but it creates roof."*
+
+**The instinct was right and the work was already done.** `02-world-and-layers.md` §4 and
+`03-systems-catalogue.md` layer question 2 both answer *"is a roof a floor?"* with **yes** — one
+material slab at a layer boundary, stored on the upper cell — and U29 built it on 2026-09-17. The
+Slab tool's registry key is literally `ui.arch.tool.roof`. `CoreContent.SlabRoof` exists and
+worldgen stamps it. `ChunkBatch.Roof` is already a separate draw bucket, which is ADR 0006's
+"separably cullable" requirement met. `CellGrid.IsRoofed` was written for this and **has never had
+a caller**. Three separate things that sounded like work turned out to be built, which is the whole
+argument for `CLAUDE.md`'s "check the code before you trust any status line".
+
+So the interview was about the gap between *roofs are implemented* and *roofing is something a
+player does*, and the owner took all six recommendations: ergonomics and seeing-in only; one Slab
+tool rather than a second Roof tool; a pitched cap makes a roof non-walkable (decided now, built in
+RF2); drop **every** roof above the slice, not just the one overhead; the support pillar is in; the
+roofs overlay is out. `docs/design/59-roofs.md` holds all of it.
+
+**Two things measured, and both corrected the plan that had been approved.**
+
+*The span limit was derived and the derivation was wrong.* The plan said a room interior wider than
+six cells could not be roofed — `S_max` 4, decaying one per cell, three cells of reach from a wall.
+The probe disagreed: sweeping a roof on as a drag does, a 6 × 6 room takes **0** holes, 8 × 8 takes
+**1**, 10 × 10 takes **9** and 12 × 12 takes **25**. The arithmetic cannot see that a cell ordered
+early supports the cells ordered after it through `SupportedByWhatIsPlanned`, so the answer depends
+on the order a drag visits cells in. A hut roofs whole and the holes then grow faster than the room.
+Better argument for the pillar than the one it replaced.
+
+*The lift rule had a hazard the plan would have shipped.* RF1a is "a slab ordered where a slab is
+means the boundary above", and the obvious spelling is `HasFloor` — *anything you could stand on* —
+which also fixes the ground-floor case where the floor is terrain rather than a slab. Measured on
+open meadow: the air cell over the ground answers `HasFloor` true, and one layer above **that** the
+support rule returns **3** whenever a wall stands beside it, because the slab over the wall's head
+is grounded. So `HasFloor` would have turned a click on grass beside a wall into a slab in the sky,
+accepted and built. The clause asks `Floor[index]` instead, which fixes the upper storey and cannot
+reach that cell. `RoofsTests.BareGrassStillRefusesAndNeverPutsASlabInTheSky` keeps the measurement.
+
+The cost of the narrower rule is honest and recorded: **a ground-floor room's interior still cannot
+be roofed by pointing at one cell of it**, because its floor is terrain and nothing distinguishes
+standing inside a hut from standing on the meadow outside it except enclosure, which is M4 and
+which `a-05-rooms-and-beauty.md` warns against reducing to one boolean. Dragging a box over the
+whole hut, walls included, already works and always has — `RunLayerFor` takes the highest layer any
+cell of the run reaches. That is the common gesture, and it is why this is a recorded limit rather
+than a blocker.
+
+**The pillar cost nothing it looked like it would cost.** `SupportSolver.IsGrounded` ends at
+`Edifice[below] >= 0`, so *any* edifice already grounds the slab over it at `S_max`: a pillar has
+worked for as long as the solver has run and there was simply nothing that could build one.
+`CoreContent.EdificePillar`, `ModuleShape.Pillar`, `SM_Bld_Base_Pillar_01` and
+`ui.arch.tool.pillar` — mapped to sheet 04, labelled *"Extends how far a roof can span"* — all
+existed. It needed a def, a handle and a palette row, and **not one line of the support rule**. Both
+content `--check`s stayed clean because the key and its label were already in the CSVs.
+
+**A third bucket list was written and reverted, and the reason is the point.** RF1b drops roofs two
+or more layers up, and `ChunkBatch.Roof` holds ground surfaces alongside slabs, so dropping it
+whole would cut away a higher terrace. The tidy fix is a `Surface` list. It also reshapes a
+structure **seven Unity-tier test files read directly**, eleven sites between them — and this
+container has no Unity, so none of it could be run. `TintCode.IsTerrain` already separates the two
+(every terrain contribution carries `TerrainBase`; a slab is tinted `Stuff(...)`, which is the raw
+index with no marker; water keeps the terrain bit), and it is the same mechanism `NeverFades`
+already uses. Same behaviour, no test-shape change. The split stays available to a session with the
+editor in front of it. **And the sharing is not a bug**: `SurfaceContributor` puts ground there on
+purpose, so a storey above the slice can drop its ground — right for the two rules that already
+exist, wrong only for one that reaches further. Both existing rules are untouched.
+
+`SlicePicker`'s half had the mirror of the same trap: its `floors` flag is per *layer* and gates the
+horizontal pick for every cell alike, a hillside's included, so switching it off two storeys up
+would have left that terrace drawn and unclickable. It is asked of the cell now —
+`slabsDropped && model.Floor(index) != 0`.
+
+- *Verified here:* fast tier **770 Sim + 449 Hud, 0 failed** (759 + 449 before; RF1 adds 11 Sim),
+  both content gates clean, **goldens unmoved**.
+- *One red herring, settled with a control.* The Long tier's
+  `ATickThatDoesNothingAllocatesNextToNothing` failed on the branch, which reads as "you put an
+  allocation in `SimWorld.Tick`". Four runs each against a clean `HEAD` worktree: the branch failed
+  twice in four, **clean `HEAD` failed twice in four**. It is load-sensitive in this container and
+  fails no more with the change than without it; run alone it reports exactly the 1.6 and 3.3 bytes
+  per tick its own comment cites. Nothing RF1 touches is in `Tick` at all — the only simulation
+  change is order-time. `docs/lessons.md` has the table.
+- *Not verified here, and this is the handover's first line:* **no Unity tier ran.** The container
+  has no Unity and no Windows. RF1b is entirely in `Odyssey.Presentation`, which the fast tier does
+  not compile — so the renderer and picker changes have not been compiled, let alone run or looked
+  at. `docs/lessons.md` and `CLAUDE.md` both say two green tiers say nothing about whether the game
+  runs; one green tier that cannot see the assembly says less.
+
+### Stairs: U44, and the eighty per cent that was already there, 2026-09-20
+
+The owner, after RF1: take stairs next. It is the last M3 unit and the thing roofs are in service of
+— RF1 made roofing pleasant at ground level and said in as many words that it could not make a
+second storey worth having.
+
+**Grounding found most of a stair already built**, which is now the third unit running to discover
+that (`CellGrid.IsRoofed` and the support pillar were the other two). `ConnectorKind.Stair` with its
+`AllMask`, `MoveCost.StairUp` 290 / `StairDown` 230, `NavFlags.ConnectorStair`, `EdificeStairLower`
+and `Upper`, worldgen stamping stairs and registering their connectors after the damage pass,
+`ShellTemplate` refusing an unpaired one as a content error, `ChunkMesher.EmitStair` drawing both
+halves, `SM_Bld_Base_Stairs_01` mapped for all three module ids, the palette chip drawn disabled,
+the glyph, the registry label and the wiki row. Two status lines in the code say *"stairs are not in
+the game yet"* and both are true only of the build tool. What was missing was a `BuildingDef`, a
+placement rule and a connector refresh.
+
+**Both halves are on one layer**, which two independent readings of the code disagreed about and
+which decided the shape of the whole unit. `EmitStair` lifts the upper half 1.5 m *inside its own
+cell*; `RecordConnectors` derives the connector's upper end as `lower + LayerStride`. So the
+footprint is the bed's and `EdificeFootprint` needed no vertical variant — the reading that said
+otherwise would have sent the unit off building one.
+
+**The justification was half false, and nothing tested it.** `CLAUDE.md`, the `U43` and `U44` plan
+rows, `21-ladders-and-climbing.md` §5 and `24-carrying.md` all say a hauler cannot climb a ladder so
+nothing can be built on an upper storey. `job.Mode = Hauler` is assigned in **exactly one place** in
+the simulation — `HaulWorkGiver` — so `DeliverWorkGiver`, which carries building material to a site,
+ran as a colonist and a plank went up a ladder happily. `LadderTests.AHaulerCannotClimbALadder...`
+asks `Reachable(pawn, landing, Hauler)` directly: it proves the *mode* is excluded and says nothing
+about which jobs use it. **A test that asserts a rule is not a test that asserts the rule is
+reached.** Delivery takes the hauling mode in this unit and not before, on the owner's instruction,
+so the day it stops going up a ladder is the day it starts going up a stair.
+
+**Three owner decisions**, all taken: fix the delivery mode inside U44; a built stair is two edifice
+values and one site, matching what worldgen stamps; bundle the terrace-bank fix into the re-bake
+this was expected to force.
+
+**Two things the code corrected after the design was written.**
+
+*Both ends or nothing was wrong.* `ConnectorRegistrar` says of stamped stairs that *"half a
+stairwell is not a narrower stairwell, it is a portal whose far end is a hole"*, and the obvious
+reading — both upper cells must be arrivable — registered **nothing at all**. You walk on to the
+lower half, climb to the upper, and step off at the top; the cell over the lower half is passed
+through, not arrived in. Worldgen never met it because a stamped shell has a real floor over both
+cells. The rule is now: both upper cells **open**, at least one of them **arriving**.
+
+*The far cell was being asked a wall's question.* `Place` answered for a two-cell thing's second
+cell with the one-argument `Allows`, which is all a bed has ever needed. A stair is the first
+buildable whose far half has a rule of its own. Narrowed to `secondEdifice` rather than widened to
+every two-cell thing, because asking the bed properly would newly demand a clear cell of its far
+half — a real change, to a different unit, riding in on this one.
+
+**The bug that mattered was caught by the Long tier, not the fast one.** `RefreshStair` managed
+*every* stair it found, and a stamped stair carries no facing — the generator had nowhere to put one
+and the mesher infers it by scanning for the partner — so deriving the far half from `Facing` 0
+named the wrong cell, `wanted` came out false, and the connector `ConnectorRegistrar` had placed was
+torn out on every colony edit. The fast tier was green.
+`ThreePawnsLiveInARuinedShellForADay` starved a colonist two storeys under its food and
+`TheStairsInTheDemoAreTheScenariosDoingAndNotTheMaps` fell from nine stair steps in a day to three.
+One line — the generator's stairs are not ours to manage, the same split
+`RebuildLadderConnectors` already states — and a fast regression test that says it in a quarter of a
+second.
+
+**And a near miss worth more than the bug.** Four of the eleven tests written for this unit use
+`Assume` for their controls, which is the project's idiom and the right one. A failed `Assume` is
+reported by NUnit as **skipped**, `dotnet test`'s summary did not even count them, and the tier read
+`Failed: 0, Passed: 774` while the feature did nothing at all. The total was six higher than the
+baseline when eleven cases had been added — the only visible sign. The one test with no `Assume` in
+it is what failed. `docs/lessons.md` has the rule: **check the total went up by what you added.**
+
+- *Verified here:* fast tier **782 Sim + 449 Hud, 0 failed, 0 skipped** (770 + 449 before; U44 adds
+  12), Long tier **21 of 21**, both content gates clean.
+- **No golden moved**, which the plan expected to. Nothing in any golden scenario builds a stair,
+  delivers building material or lies down on a terrace, so all three changes are invisible to them.
+- *Not verified here:* **no Unity tier ran** — this container has neither Unity nor Windows. U44 is
+  entirely simulation-side, so unlike RF1b the fast tier does compile and run all of it; what is
+  owed is the authoritative run, and a first look at a stair, which nobody has ever had.
+
+### Reviewing PR #143, and the handle two branches both wanted, 2026-09-20
+
+RF1 and U44 were written against a `main` that moved a long way underneath them — growing zones, the
+zone container, the Work tab, the sleep pose, graphics settings, the mark pass and **doors**. The
+branch had been sitting conflicted, and a conflicted pull request reports *no checks at all* rather
+than failing ones, so **two units described everywhere as green had never had a single CI run.**
+`docs/lessons.md` already records that trap; this is the first time it hid something.
+
+**The handle.** The door took `BuildingHandle` 6; RF1 had given the pillar the same number.
+Handle order is the save contract and positions are append-only, so the later branch moves — Door 6,
+Pillar 7, Stair 8, Count 9 — which is exactly the argument `BuildingHandle.Bed`'s own comment makes
+about the bed moving for the floor, the deck plate and the ladder. It is safe only because no save
+with a pillar or a stair in it has ever left this branch, and that clause is the whole of why it is
+safe; the day one has, the answer is a migration rather than a renumber.
+
+**Three faults the merge itself produced**, none of them anybody's mistake and all of them the same
+shape — a test whose premise `main` had quietly changed. `RoofsTests` builds its hall centred on
+`colony.Start`, and *"A starting bed is a real bed"* made the scenario's bed an edifice standing in
+the wall line, so the first wall of every hall was refused. `AToolWhoseThingDoesNotExistYetArmsNothing`
+used the **stair** as its negative control, and U44 built one. And the building table's fingerprint
+moved because the table gained a row. **The first was worth a probe rather than a guess**: five
+tests failed with *"the order for 18342 was refused"*, which reads like a placement regression, and
+the cell's `Edifice` was 0 rather than -1 — a record, not a rule.
+
+**Then CI found the thing no tier here could.** RF1 added a Pillar chip to the palette — key, label,
+`PaletteTool`, `BuildingDef` — and no shape in `PaletteGlyphs`, so it drew the placeholder square
+the specification forbids. Fast tier green, Long tier green, both content gates green, EditMode
+2,251 with nothing failed; the palette is only ever assembled in PlayMode. The stair *did* have a
+shape, because its chip had been drawn disabled long before it was buildable. **The tool invented
+whole is the one that arrives without a picture.** `docs/bug-patterns.md` has the row.
+
+**And the licensed art was destroyed mid-session, which was not this branch's doing.**
+`D:\code\odyssey-audio` held the only real copy of the packs and every other checkout junctioned
+through it; the worktree was removed and all sixteen went dark at once, including an open editor's.
+`docs/lessons.md` had named that exact branch as *"the profile of a branch somebody tidies up
+without thinking"* and asked for the arrangement to be inverted. It is inverted now: the real
+directory is `D:\code\odyssey\Assets\Synty` with no chain, recovered intact from the recycle bin,
+which — contrary to what that section used to say — does keep a copy when a whole worktree is
+deleted rather than deleted *through* a link. The tell that it had happened was narrow: three extra
+**Ignored** cases in `FigureBuildTests` and an unchanged EditMode total. Compare the skipped count,
+not the failure count.
+
+**Two small things in the code itself.** `IsLadder` had lost its doc comment to two helpers inserted
+between the summary and the method, and `RefreshStair` used a derived cell as an index into
+`_edifices` without checking the grid held anything there — unreachable today, but it runs across a
+seven-cell fan-out after every structure change, and a comparison turns "impossible" into "no
+connector". `ConstructionContent.EdificeForCell` was declared and never called, with a comment
+claiming two call sites; removed, which is the same finding PR #119's review made about
+`PlantDef.yields`.
+
 ---
 
 ## 2026-09-21 — The toast's level goes amber, and why it is a split and not a tag
@@ -14101,3 +14316,39 @@ in review and took design 57, and its code cites "design 57 §…" throughout �
 the number would have made every such reference ambiguous. The cracks are `58-cracks.md` now; the
 rewrite touched only lines this branch added (49, found from the diff against `main`, plus one
 split across a comment break), and no ride-along file. Commit messages keep the old number.
+## 2026-09-26 — Roofs and stairs, picked up again five days and 738 commits later
+
+PR #143 had sat since 2026-09-21 with two playtests behind it and a third owed. The question was
+whether it was still worth having, and the answer was mostly yes: `main` still had no way to build a
+stair, and M3's status line still named `U44` as the one unit left. But `main` had moved under it in
+three ways that each took something out.
+
+**Walls-down made RF1b redundant.** "Never draw a roof two layers up" was written to answer a
+building hiding its own ground floor. Walls-down (design 42) answers the owner's broader version of
+the same complaint by hiding every stacked storey above the slice, is on by default, and owns that
+question in one place, `SliceSettings.HidesStackedOn`. Keeping RF1b would have put a second predicate
+for *what above the slice is hidden* into the renderer and the picker, which is P1 before it has had
+a chance to disagree. It had never been played, so dropping it cost no verdict (`59-roofs.md` §4a).
+
+**#149 made the bundled bank fix a duplicate.** The branch had carried a terrace-bank sleep guard
+because both it and the stair moved the hash. `main` has rewritten where a tired colonist lies down
+since, and #149 is the dedicated PR for exactly that report, beds included. It is #149's now.
+
+**The one-cell stair had stranded the two-cell one in the code.** `secondEdifice`, a whole two-cell
+connector path, a reverse lookup and a partner test in `Demolish` were all reachable only by a
+Lower + Upper pair nobody could build any more. About two hundred and fifty lines went, and the
+building fingerprint moved for the field and nothing else.
+
+**The thing worth remembering is the test helper.** `RoofsTests.RaiseNow` called `Raise` and threw
+the answer away. On the branch that was harmless. On `main` it met the nobody-in-a-wall guard, which
+refuses a raise while a colonist walks through the cell, and the pillar the test puts at the hall's
+middle is exactly where the colony starts. So the pillar was never built, the "one pillar closes all
+nine holes" assertion failed, and the next test's `Assume` turned its own version of the same
+problem into a skip. **A helper that performs the precondition must assert it happened**, or the
+precondition failing looks like the feature failing, or worse like nothing at all. The fast tier's
+single skip was the tell.
+
+And Presentation did not compile on the first Unity run: `main` had added
+`WorldRenderModel.EdificeFacing` for the shelf while the branch had added one for the stair, with
+different return types. The fast tier compiles neither Presentation nor Editor, so it was green over
+a tree that could not build; CLAUDE.md says so, and it was true again.

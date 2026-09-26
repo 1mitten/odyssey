@@ -111,7 +111,7 @@ namespace Odyssey.Tests.Sim
                 bool building = id == CoreContent.EdificeBed || id == CoreContent.EdificeShelf
                     || id == CoreContent.EdificeCampfire || id == CoreContent.EdificeGenerator
                     || id == CoreContent.EdificeHeater || id == CoreContent.EdificeGalley
-                    || id == CoreContent.EdificeSandbags
+                    || id == CoreContent.EdificeSandbags || id == CoreContent.EdificeStairFull
                     || id < NaturalContent.FirstEdifice;
                 Assert.That(natural && building, Is.False, $"edifice {id} is claimed twice");
                 Assert.That(NaturalContent.IsTree(id) && NaturalContent.IsBush(id), Is.False);
@@ -122,7 +122,9 @@ namespace Odyssey.Tests.Sim
             Assert.That(NaturalContent.IsNatural(CoreContent.EdificeGalley), Is.False);
             // Cover's sandbags (design 53 §4) follow the galley.
             Assert.That(CoreContent.EdificeSandbags, Is.EqualTo(NaturalContent.EdificeLimit + 1));
-            Assert.That(EdificeHandle.Count, Is.EqualTo(NaturalContent.EdificeLimit + 2));
+            // And the colony's one-cell stair (design 60) after sandbags.
+            Assert.That(CoreContent.EdificeStairFull, Is.EqualTo(NaturalContent.EdificeLimit + 2));
+            Assert.That(EdificeHandle.Count, Is.EqualTo(NaturalContent.EdificeLimit + 3));
         }
 
         // ---------------------------------------------------------------- species

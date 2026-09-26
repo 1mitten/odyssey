@@ -111,7 +111,7 @@ namespace Odyssey.Tests.Sim
         /// <summary>
         /// Which edifice ids have hit points, off the content (design 33 §13b): every building that
         /// stands in a cell, and nothing the generator stamps that has no building row — trees,
-        /// windows, pillars, stairs.
+        /// windows, the two-cell stairwells.
         /// </summary>
         [Test]
         public void OnlyABuildingRowGivesAnEdificeHitPoints()
@@ -121,8 +121,12 @@ namespace Odyssey.Tests.Sim
             Assert.That(BuildingTargets.MaxHitPointsOf(EdificeHandle.Campfire), Is.EqualTo(60));
             Assert.That(BuildingTargets.MaxHitPointsOf(EdificeHandle.Generator), Is.EqualTo(300));
             Assert.That(BuildingTargets.MaxHitPointsOf(EdificeHandle.Heater), Is.EqualTo(100));
+            // The pillar and the colony's stair have building rows since RF1 and U44 (designs 59,
+            // 60), so the city's stamped pillars, which share edifice 4, are struck like its walls.
+            Assert.That(BuildingTargets.MaxHitPointsOf(EdificeHandle.Pillar), Is.EqualTo(200));
+            Assert.That(BuildingTargets.MaxHitPointsOf(EdificeHandle.StairFull), Is.EqualTo(120));
             foreach (int none in new[] { EdificeHandle.None, EdificeHandle.TreeBirch, EdificeHandle.TreeMeadow,
-                         EdificeHandle.Window, EdificeHandle.Pillar, EdificeHandle.StairLower })
+                         EdificeHandle.Window, EdificeHandle.StairLower, EdificeHandle.StairUpper })
                 Assert.That(BuildingTargets.MaxHitPointsOf((ushort)none), Is.Zero, $"edifice {none}");
         }
 

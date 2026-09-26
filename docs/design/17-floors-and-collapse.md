@@ -168,6 +168,16 @@ The lift is still needed and still does its own job: with the slice at the wall'
 on a wall caps it without the player having to change storey first. The two rules agree in both
 directions, which is the test `FloorToolReachTests` carries.
 
+**Amended by RF1, 2026-09-20 — `StandingOver` gained a third clause.** A slab ordered at a cell that
+already **holds a slab** also means the boundary one layer up, so pointing at the floor of an upper
+storey roofs that storey rather than being refused for having a floor already. It is this section's
+own sentence from the other side: you cannot put a slab where a slab is. The matrix above gains one
+row and loses none, and the rule still lifts exactly one step, so an already-roofed cell refuses
+instead of stacking storeys. **It asks `Floor[index]` and deliberately not `HasFloor`** — the looser
+test would take in the air cell over open ground, and measured, a click on the grass beside a wall
+would then land a slab one cell above the wall's head with the support rule accepting it at 3.
+`docs/design/59-roofs.md` §3 has the measurement and the control test.
+
 ### The cursor is a plate — owner, 2026-09-17
 
 *"The selection box for floors should be flat to the tile that it will be placed on rather than a

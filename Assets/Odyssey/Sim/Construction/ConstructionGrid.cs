@@ -237,7 +237,13 @@ namespace Odyssey.Sim.Construction
             // A click names a surface and an order names a cell, and which surface depends on what
             // is armed. WhereItWouldLand is that one answer, public so the build cursor asks it
             // rather than working it out again.
-            int index = WhereItWouldLand(_grid.Index(cell), building);
+            //
+            // **Less RF1's clause, because an order arrives already lifted.** Every build intent
+            // the interface sends has been through RunLayerFor, which asks WhereItWouldLand with
+            // the clause in; asking it again here lifted any cell of the run that already held a
+            // slab a second time, one storey above its ghost (review, 2026-09-26, design 59 §3a).
+            // A slab ordered where a slab is, at the layer it was ordered at, is refused.
+            int index = Lift(_grid.Index(cell), building, offASlab: false);
 
             if (def.footprint > 1)
             {
@@ -384,7 +390,13 @@ namespace Odyssey.Sim.Construction
             return best == int.MinValue ? 0 : best;
         }
 
-        public int WhereItWouldLand(int index, int building)
+        public int WhereItWouldLand(int index, int building) => Lift(index, building, offASlab: true);
+
+        /// <summary>
+        /// <see cref="WhereItWouldLand"/>, with RF1's slab-on-a-slab clause switchable: on for what
+        /// a pointer means, off for an order that has already been lifted (<see cref="Place"/>).
+        /// </summary>
+        int Lift(int index, int building, bool offASlab)
         {
             if ((uint)index >= (uint)_grid.Size.CellCount) return index;
 
@@ -398,7 +410,7 @@ namespace Odyssey.Sim.Construction
             // block and paving goes in the air cell above it, which is exactly what StandingOn
             // already does. Only structure is lifted over things that fill a cell (U42).
             return what.slab && !what.covering
-                ? StandingOver(index, building)
+                ? StandingOver(index, building, offASlab)
                 : StandingOn(index);
         }
 
@@ -456,12 +468,35 @@ namespace Odyssey.Sim.Construction
         /// <para>Ordinary ground is untouched by it. A click on grass lifts to the air above,
         /// <see cref="AllowsSlab"/> refuses that for having a floor already, and the refusal is
         /// reported at the cell the player clicked — exactly as it was before.</para>
+        ///
+        /// <para><b>A cell that already holds a slab lifts too, and that is RF1's half of this
+        /// rule</b> (<c>docs/design/59-roofs.md</c> §3). Stand on an upper storey, point at the
+        /// floor under your feet and order a slab: the picker answers with that floor's own cell,
+        /// because a pointer names a surface and the surface is the slab. Without this clause the
+        /// order was <c>NotPermitted</c> for having a floor already — measured, and silent — so
+        /// roofing the storey you are standing on meant raising the depth rail first. It is the
+        /// same sentence as the clause above seen from the other side: you cannot put a slab where
+        /// a slab is, so the order means the next boundary up.</para>
+        ///
+        /// <para><b>An actual slab, and deliberately not <c>HasFloor</c>.</b> The looser test would
+        /// take in the air cell over solid ground, which is every cell of open meadow — and
+        /// measured, a click on the grass beside a wall would then lift twice and land one cell
+        /// above the wall's head, where the support rule <i>accepts</i> it at 3 because the slab
+        /// over the wall beside it is grounded. A slab in the sky, from a click on grass. The
+        /// clause asks <c>Floor[index]</c> because a cell holding a slab can never be that cell.
+        /// <c>RoofsTests.BareGrassStillRefusesAndNeverPutsASlabInTheSky</c> is the control.</para>
+        ///
+        /// <para><b>One step, always.</b> Ordering a slab where one already stands lifts onto the
+        /// roof above it, <see cref="AllowsSlab"/> refuses that for the same reason, and the
+        /// refusal is reported at the cell the player clicked. The rule cannot walk a column.</para>
         /// </summary>
-        int StandingOver(int index, int building)
+        int StandingOver(int index, int building, bool offASlab)
         {
             // Anything that fills the cell, which is the same set the solver calls grounding: a
-            // slab laid over it has something underneath to rest on.
-            if (!_grid.IsSolidTerrain(index) && _grid.Edifice[index] < 0) return index;
+            // slab laid over it has something underneath to rest on. Or anything that already
+            // carries a slab, which is the same question asked from above (RF1).
+            if (!_grid.IsSolidTerrain(index) && _grid.Edifice[index] < 0 &&
+                (!offASlab || _grid.Floor[index] == CoreContent.SlabNone)) return index;
 
             int above = index + _grid.Size.LayerStride;
             return above < _grid.Size.CellCount && Allows(above, building) ? above : index;
@@ -526,6 +561,12 @@ namespace Odyssey.Sim.Construction
                 ? AllowsSlab(index)
                 : building == BuildingHandle.Ladder
                 ? StandsOnSomething(index) && AllowsLadder(index)
+                // A stair wants something under it and an open cell over it. The footing is the
+                // ladder's StandsOnSomething widened by one clause, because a stair may start from
+                // the open shaft cell at the top of another one: that is how a stairwell climbs
+                // more than one storey.
+                : building == BuildingHandle.Stair
+                ? StairStandsOnSomething(index) && AllowsStair(index)
                 // Something underfoot. A wall hanging in the air is the fault the whole support
                 // model exists to prevent, and refusing it at the order is far better than
                 // collapsing it afterwards: the player never gave an order that could not be
@@ -590,11 +631,44 @@ namespace Odyssey.Sim.Construction
         /// </summary>
         bool ShaftRulePermits(int index, BuildingDef def, int building)
         {
+            // **A stair climbs an open shaft on exactly the ladder's terms** (U44,
+            // docs/design/60-stairs.md §5). Its upper end is the cell directly above it, so a slab
+            // there caps it; and the cell above *that* is where a colonist arrives, so a slab there
+            // roofs the shaft and silently closes a way up — which is the owner's answer for the
+            // ladder and is the same fact about a stair. Same rule, same reach, one method: two
+            // copies of a shaft rule is how one of them gets fixed on its own.
             if (def.slab || def.covering)
                 return !LadderHereOrOrdered(BelowOf(index))
-                    && !LadderHereOrOrdered(BelowOf(BelowOf(index)));
+                    && !LadderHereOrOrdered(BelowOf(BelowOf(index)))
+                    && !StairHereOrOrdered(BelowOf(index))
+                    && !StairHereOrOrdered(BelowOf(BelowOf(index)));
 
+            if (building == BuildingHandle.Stair) return AllowsStair(index);
             return building != BuildingHandle.Ladder || AllowsLadder(index);
+        }
+
+        /// <summary>
+        /// Whether a stair may climb out of this cell: the cell above has to be open, exactly as a
+        /// ladder's does.
+        /// </summary>
+        bool AllowsStair(int index)
+        {
+            int above = index + _grid.Size.LayerStride;
+            if (above >= _grid.Size.CellCount) return false;
+
+            return !FloorHereOrOrdered(above);
+        }
+
+        /// <summary>
+        /// A stair standing in this cell, <b>or ordered into it</b>: <see cref="LadderHereOrOrdered"/>'s
+        /// twin. A colony stair is one cell, so its order is on the cell itself; either half of a
+        /// stamped stairwell answers <see cref="IsStair"/>.
+        /// </summary>
+        bool StairHereOrOrdered(int cell)
+        {
+            if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
+            if (IsStair(cell)) return true;
+            return _building[cell] == BuildingHandle.Stair;
         }
 
         /// <summary>Whether a ladder may go up from this cell: the cell above has to be open.</summary>
@@ -685,6 +759,31 @@ namespace Odyssey.Sim.Construction
         /// silently had no connector.</para>
         /// </summary>
         bool StandsOnAFooting(int cell) => _grid.IsWalkable(cell) || IsLadder(BelowOf(cell));
+
+        /// <summary>
+        /// <see cref="StandsOnSomething"/> for a stair: anything a ladder may stand on, or a
+        /// colony stair built or ordered in the cell below.
+        ///
+        /// <para><b>Without it a stairwell was one storey</b> (review, 2026-09-26). The comment on
+        /// the order rule already said a stair may start from the top of another, and
+        /// <see cref="StairArrivesAt"/> already had its "another stair above" clause, but a stair is
+        /// non-blocking and the open shaft cell over it has no floor, so the second stair of a
+        /// stack was refused in silence — the ladder's own chain fault, met again. Only the
+        /// colony's own one-cell stair: a stamped half-flight below is a different shape.</para>
+        /// </summary>
+        bool StairStandsOnSomething(int index)
+        {
+            if (StandsOnSomething(index)) return true;
+            int below = BelowOf(index);
+            return (uint)below < (uint)_grid.Size.CellCount
+                && (IsFullStair(below) || _building[below] == BuildingHandle.Stair);
+        }
+
+        /// <summary>
+        /// <see cref="StandsOnAFooting"/> for a stair's connector: a built colony stair below counts,
+        /// never an ordered one, for the ladder's reason — a blueprint must never open a way up.
+        /// </summary>
+        bool StairStandsOnAFooting(int cell) => StandsOnAFooting(cell) || IsFullStair(BelowOf(cell));
 
         /// <summary>
         /// Whether a slab may be built at this cell's lower boundary.
@@ -1193,9 +1292,11 @@ namespace Odyssey.Sim.Construction
             ctx.MarkStructureChanged(cell);
             ctx.Enclosure?.MarkDirty(cell);
 
-            // 5. A ladder joins two layers, and a slab is what gives a ladder somewhere to arrive.
-            //    Both are refreshed here because either can be the one that completes the pair.
+            // 5. A ladder or a stair joins two layers, and a slab is what gives either somewhere
+            //    to arrive. Both are refreshed here because any of the three can be the one that
+            //    completes the pair (U43, U44).
             RefreshLaddersAround(ctx, cell);
+            RefreshStairsAround(ctx, cell);
         }
 
         /// <summary>
@@ -1249,6 +1350,118 @@ namespace Odyssey.Sim.Construction
             }
         }
 
+        /// <summary>
+        /// The connector of the colony's own one-cell stair at this cell, re-derived.
+        ///
+        /// <para><b>Deliberately <see cref="RefreshLadder"/>'s shape, line for line</b>, because a
+        /// one-cell way up is a one-cell way up: work out what is <em>wanted</em>, compare it
+        /// against what the graph holds, add or remove. Idempotent in both directions, so every
+        /// place either end can change may call it without anyone tracking which change it was.</para>
+        ///
+        /// <para><b>Where it differs from the ladder is the top.</b> A ladder asks
+        /// <c>LadderArrivesAt</c>; a stair asks <see cref="StairArrivesAt"/>, which is the same
+        /// question with <see cref="StairTopIsOpen"/> folded into it — a stair's flight is drawn
+        /// climbing <em>into</em> the cell above, so a slab or a blocking edifice there is a
+        /// colonist walking into the ceiling. That is <c>ConnectorRegistrar</c>'s rule about
+        /// worldgen's stairwells said of one cell instead of two.</para>
+        ///
+        /// <para><b>Worldgen's two-cell stairwells are not this method's</b>, and need no guard: their
+        /// connectors are two-cell (<c>ConnectorRegistrar</c>'s), which
+        /// <c>OneCellConnectorAt</c> never returns, and nothing the generator stamps is ever
+        /// <see cref="CoreContent.EdificeStairFull"/>. The two-cell path this used to carry, for a
+        /// colony-built Lower + Upper pair, went when the stair became one cell (design 60 §10).</para>
+        /// </summary>
+        void RefreshStair(PawnContext ctx, int cell)
+        {
+            if ((uint)cell >= (uint)_grid.Size.CellCount) return;
+
+            int above = cell + _grid.Size.LayerStride;
+            bool wanted = IsFullStair(cell)
+                && above < _grid.Size.CellCount
+                && StairStandsOnAFooting(cell)
+                && StairArrivesAt(above);
+
+            int existing = ctx.Nav.OneCellConnectorAt(cell, ConnectorKind.Stair);
+            if (wanted == (existing >= 0)) return;
+
+            if (wanted) ctx.Nav.AddConnector(ConnectorKind.Stair, new[] { cell }, new[] { above });
+            else ctx.Nav.RemoveConnector(existing);
+        }
+
+        /// <summary>
+        /// Every stair a change at this cell could have opened or closed: the one standing here,
+        /// the one under it, the one above it, and the one under each of this cell's four
+        /// neighbours — for which a slab laid here is the landing they arrive on.
+        ///
+        /// <para>The same seven-cell fan-out <see cref="RefreshLaddersAround"/> makes, for the same
+        /// reason, and missing any of them is the class of fault that leaves a colony with one
+        /// stair it can climb and one it cannot, identical on the board and differing only in the
+        /// order the two things were built.</para>
+        /// </summary>
+        void RefreshStairsAround(PawnContext ctx, int cell)
+        {
+            GridSize size = _grid.Size;
+            RefreshStair(ctx, cell);
+            RefreshStair(ctx, cell - size.LayerStride);
+            RefreshStair(ctx, cell + size.LayerStride);
+
+            CellRef at = size.FromIndex(cell);
+            for (int dir = 0; dir < 4; dir++)
+            {
+                int nx = at.X + (dir == 1 ? 1 : dir == 3 ? -1 : 0);
+                int nz = at.Z + (dir == 0 ? 1 : dir == 2 ? -1 : 0);
+                if (!size.Contains(nx, nz, at.Y)) continue;
+
+                int beside = size.Index(nx, nz, at.Y);
+                RefreshStair(ctx, beside);
+                RefreshStair(ctx, beside - size.LayerStride);
+            }
+        }
+
+        /// <summary>
+        /// Is the top of a stair somewhere a colonist can arrive? <see cref="LadderArrivesAt"/>'s
+        /// twin, and the same three answers: another stair continuing the flight, or a landing
+        /// beside it to step off on to, in a cell that is open.
+        /// </summary>
+        bool StairArrivesAt(int top)
+        {
+            if (!StairTopIsOpen(top)) return false;
+            if (IsStair(top)) return true;
+
+            return HasLandingBeside(top);
+        }
+
+        /// <summary>
+        /// Is the cell over a stair clear enough to climb into? Solid rock, a blocking edifice or
+        /// water there is a colonist walking into the ceiling.
+        /// </summary>
+        bool StairTopIsOpen(int top)
+        {
+            if ((uint)top >= (uint)_grid.Size.CellCount) return false;
+            if (_grid.IsSolidTerrain(top)) return false;
+            if (_grid.IsBlockedByEdifice(top)) return false;
+            return !NaturalContent.IsWater(_grid.Terrain[top]);
+        }
+
+        /// <summary>
+        /// Re-derive every stair's connector, for a colony that has just been loaded.
+        ///
+        /// <para>The same argument <see cref="RebuildLadderConnectors"/> makes, and the reason this
+        /// unit costs no save format: a built stair is an edifice and edifices are saved; its
+        /// connector is not, because it is derived. The colony's own stairs only: worldgen's are
+        /// registered by <c>ConnectorRegistrar</c> when the board is regenerated from its seed.</para>
+        /// </summary>
+        public void RebuildStairConnectors(PawnContext ctx)
+        {
+            for (int i = 0; i < _edifices.Count; i++)
+            {
+                PlacedEdifice placed = _edifices[i];
+                if (placed.Removed || !placed.Built) continue;
+                if (placed.Def != CoreContent.EdificeStairFull) continue;
+                RefreshStair(ctx, placed.CellIndex);
+            }
+        }
+
         void RefreshLadder(PawnContext ctx, int cell)
         {
             if ((uint)cell >= (uint)_grid.Size.CellCount) return;
@@ -1259,7 +1472,7 @@ namespace Odyssey.Sim.Construction
                 wanted = above < _grid.Size.CellCount
                     && StandsOnAFooting(cell) && LadderArrivesAt(above);
 
-            int existing = ctx.Nav.OneCellConnectorAt(cell);
+            int existing = ctx.Nav.OneCellConnectorAt(cell, ConnectorKind.Ladder);
             if (wanted == (existing >= 0)) return;
 
             if (wanted) ctx.Nav.AddConnector(ConnectorKind.Ladder, new[] { cell }, new[] { above });
@@ -1355,6 +1568,37 @@ namespace Odyssey.Sim.Construction
             return false;
         }
 
+        /// <summary>
+        /// A stair standing in this cell, of either shape: the colony's own one-cell flight, or
+        /// either half of one of worldgen's two-cell stairwells.
+        ///
+        /// <para>Both, because every caller of this asks a question about <i>the way up</i> and not
+        /// about who put it there — the shaft rule, the footing rule and the connector refresh all
+        /// mean the same thing whichever kind is standing. Where the two kinds must be told apart,
+        /// the caller names the def itself; see <see cref="IsFullStair"/>.</para>
+        /// </summary>
+        bool IsStair(int cell)
+        {
+            if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
+            int handle = _grid.Edifice[cell];
+            if (handle < 0 || handle >= _edifices.Count) return false;
+            PlacedEdifice placed = _edifices[handle];
+            return !placed.Removed
+                && (placed.Def == CoreContent.EdificeStairFull
+                    || placed.Def == CoreContent.EdificeStairLower
+                    || placed.Def == CoreContent.EdificeStairUpper);
+        }
+
+        /// <summary>The colony's own one-cell, one-layer stair standing in this cell.</summary>
+        bool IsFullStair(int cell)
+        {
+            if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
+            int handle = _grid.Edifice[cell];
+            if (handle < 0 || handle >= _edifices.Count) return false;
+            PlacedEdifice placed = _edifices[handle];
+            return !placed.Removed && placed.Def == CoreContent.EdificeStairFull;
+        }
+
         /// <summary>Is a ladder standing in this cell, whoever put it there?</summary>
         bool IsLadder(int cell)
         {
@@ -1402,10 +1646,12 @@ namespace Odyssey.Sim.Construction
         /// rather than off the footprint.</para>
         void RaiseEdifice(int cell, BuildingDef def, ushort stuff, int second, byte facing, byte quality)
         {
+            byte face = def.rotates ? facing : (byte)0;
+
             _edifices.Add(new PlacedEdifice
             {
                 CellIndex = cell, Def = def.edifice, Stuff = stuff, Built = true,
-                Facing = def.rotates ? facing : (byte)0, Quality = quality,
+                Facing = face, Quality = quality,
             });
             _grid.Edifice[cell] = _edifices.Count - 1;
             if (second >= 0) _grid.Edifice[second] = _edifices.Count - 1;
@@ -1518,8 +1764,9 @@ namespace Odyssey.Sim.Construction
             // come down, which is what the unit is for.
             ctx.MarkStructureChanged(cell);
 
-            // And a ladder below has just lost the landing it arrived at (U43).
+            // And a ladder or a stair below has just lost the landing it arrived at (U43, U44).
             RefreshLaddersAround(ctx, cell);
+            RefreshStairsAround(ctx, cell);
             return true;
         }
 
@@ -1558,6 +1805,13 @@ namespace Odyssey.Sim.Construction
             // clicked" is how the other one survives to point at a record that says it is gone.
             int second = EdificeFootprint.SecondCell(was.CellIndex, was.Def, was.Facing, _grid.Size);
 
+            // **And the derived cell has to point at this record.** Both cells of a two-cell thing
+            // hold its one handle, so for anything the colony built this is always true. It is here
+            // for a record whose facing was never the one it stands at - a stamped one, which
+            // carries none - so that a derivation from facing 0 can never take the neighbour to the
+            // north out with it (StairTests, 2026-09-21).
+            if (second >= 0 && _grid.Edifice[second] != handle) second = -1;
+
             // 1. The thing itself.
             _grid.RemoveEdifice(was.CellIndex);
             if (second >= 0) _grid.RemoveEdifice(second);
@@ -1569,6 +1823,8 @@ namespace Odyssey.Sim.Construction
             gone.Removed = true;
             _edifices[handle] = gone;
 
+            // A bed leaves the sleep chooser's list with the world; its owner goes with it, in
+            // that the record nobody will read again still says who it was.
             if (was.Def == CoreContent.EdificeDoor) ctx.Nav.SetDoor(was.CellIndex, isDoor: false, open: false);
             if (IsPassThrough(was.Def)) ctx.Nav.SetPassThrough(was.CellIndex, 0);
             if (was.Def == CoreContent.EdificeBed)

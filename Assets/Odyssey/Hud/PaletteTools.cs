@@ -105,6 +105,22 @@ namespace Odyssey.Hud
         public const string Ladder = "ui.arch.tool.ladder";
         public const string Door = "ui.arch.tool.door";
 
+        /// <summary>
+        /// The <b>stair</b> (U44): one cell climbing a whole layer, rotatable, and the way up a
+        /// colony builds when a ladder is not enough. Under <c>Structure</c> beside the ladder,
+        /// where its chip had been drawn disabled since the catalogue was written.
+        /// <c>docs/design/60-stairs.md</c>.
+        /// </summary>
+        public const string Stair = "ui.arch.tool.stair";
+
+        /// <summary>
+        /// The <b>support pillar</b> (RF1): a column that holds up the slab above it, and what
+        /// makes a room wider than a hut roofable at all. Under <c>Structure</c> beside the wall
+        /// and the slab, because a wall, its roof and the pillar holding the middle of that roof
+        /// up are one job. <c>docs/design/59-roofs.md</c> §5.
+        /// </summary>
+        public const string Pillar = "ui.arch.tool.pillar";
+
         public const string Bed = "ui.arch.tool.bed";
 
         /// <summary>
@@ -195,7 +211,7 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly (string key, string[] tools)[] Categories =
         {
-            ("ui.arch.category.structure", new[] { Wall, Paving, Door, "ui.arch.tool.stair", Ladder, Slab, "ui.arch.tool.reclaim" }),
+            ("ui.arch.category.structure", new[] { Wall, Paving, Door, Stair, Ladder, Slab, Pillar, "ui.arch.tool.reclaim" }),
             ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", Galley, "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
             ("ui.arch.category.furniture", new[] { Bed, Shelf, Campfire, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp" }),
             // Power (design 32): the line and its undoing, then what makes power and what spends
@@ -333,6 +349,20 @@ namespace Odyssey.Hud
             new PaletteTool(Door,
                 d => d.ArmBuild(BuildingHandle.Door),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Door,
+                wantsMaterial: true),
+
+            // The way up (U44). One cell and rotatable, so it arms the way the bed does: one per
+            // click, turned with the rotate key while it is held.
+            new PaletteTool(Stair,
+                d => d.ArmBuild(BuildingHandle.Stair),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Stair,
+                wantsMaterial: true),
+
+            // What holds the middle of a wide roof up (RF1). Beside the slab, because the order a
+            // player gives is "roof this hall" and the pillar is half of that answer.
+            new PaletteTool(Pillar,
+                d => d.ArmBuild(BuildingHandle.Pillar),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Pillar,
                 wantsMaterial: true),
 
             // The first furniture, and the palette's first single-placement, rotatable thing:

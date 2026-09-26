@@ -160,12 +160,11 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void AToolWhoseThingDoesNotExistYetArmsNothing()
         {
-            Assert.That(PaletteTools.TryGet("ui.arch.tool.stair", out _), Is.False,
-                "stairs cannot be built yet, so the stair chip must be drawn disabled");
-            // The stockpile was the second example here until S1 built it. The dumping zone takes
-            // its place: its key is still in the registry, deliberately, because a real dumping
-            // zone — one that also takes rubble, never re-stows out and sits at Last — is a thing
-            // worth having a name ready for, and until it exists it must arm nothing.
+            // The stair was this control until U44 built one, and the stockpile until S1 painted
+            // one. The dumping zone is what is left: its key is in the registry deliberately,
+            // because a real dumping zone — one that also takes rubble, never re-stows out and
+            // sits at Last — is worth having a name ready for, and until it exists it must arm
+            // nothing.
             Assert.That(PaletteTools.TryGet("ui.arch.tool.dumping", out _), Is.False);
             Assert.That(PaletteTools.TryGet("not.a.key.at.all", out _), Is.False);
         }
@@ -359,9 +358,9 @@ namespace Odyssey.Tests.Hud
         /// it out of.
         ///
         /// <para>The list is spelled out rather than derived from <c>WantsMaterial</c> itself,
-        /// which would assert that a field equals itself. Three things are built out of something
-        /// today — a wall, a slab and paving — and a fourth arriving should have to be written
-        /// here.</para>
+        /// which would assert that a field equals itself. Seven things are built out of something
+        /// today — a wall, a slab, paving, a ladder, a bed, a pillar and a stair — and an eighth
+        /// arriving should have to be written here.</para>
         /// </summary>
         [Test]
         public void OnlyAThingMadeOfSomethingAsksWhatItIsMadeOf()
@@ -377,6 +376,8 @@ namespace Odyssey.Tests.Hud
                 // The kitchen (design 48 §5): the galley is built of wood or stone like the heater.
                 PaletteTools.Galley,
                 // Cover (design 53 §4): sandbags are always stone and ask nothing.
+                // Roofs and stairs (designs 59 and 60): both built of wood or stone.
+                PaletteTools.Pillar, PaletteTools.Stair,
             };
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(tool.WantsMaterial, Is.EqualTo(System.Array.IndexOf(built, tool.Key) >= 0),

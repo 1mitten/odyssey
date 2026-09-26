@@ -1113,6 +1113,91 @@ measurement in the Unity tier**: *would this number be the same on a machine wit
 not, does the test know?* The fast tier cannot see the question at all, and a green local run is
 exactly what makes it invisible.
 
+### 2026-09-21 — One stair drawn as two, and a flight nobody could click (P1, P5)
+
+Owner, the first play of U44: *"I put one stairs to build - and it built two - also I couldn't click
+on the stairs either to get any information."* Two separate faults under one report, and the second
+is a fault this project has already had once in another costume.
+
+**"It built two" was the drawing, not the order.** One click really does place one stair —
+`DesignateDirector.SinglePlacement` returns the anchor alone for anything more than one cell — and a
+stair really is two edifice records by design. The art is a **half-flight**: `SM_Bld_Base_Stairs_01`
+measures 2.50 × 1.83 × 2.50 with its rise exactly 1.50 m over a 2.5 m run, so two chained pieces
+climb one 3.0 m layer and the heights were right all along. **The pieces were turned about.** The
+model ascends toward its own local −Z, so `ChunkMesher.EmitStair` yawing each half by its climb
+direction — which reads correctly and is the obvious thing to write — pointed both of them *down*
+the way they were meant to climb. The two then diverged instead of meeting: one descending flight on
+the ground and a second descending flight floating 1.5 m above and beyond it. That is exactly two
+staircases, and the owner described it precisely.
+
+**Nothing could have caught it but a photograph.** No stair had ever been photographed — not a built
+one and not one of worldgen's own stairwells, because the meadow is what the scene loads and the
+ruined city is not. Every tier was green; the geometry is correct in every respect a test can name.
+`StairCheck` now takes the picture, and the side elevation is the one that answers it, because a
+three-quarter view cannot settle a question about a profile along one line.
+
+**Fixed in the catalogue, not the mesher** — `yaw = 180` on the three stair rows, whose own tooltip
+is *"use it when a piece faces the wrong way"*. It is a property of the art, and worldgen's stamped
+stairwells draw through the same rows and were wrong in the same way, so one line corrects both.
+
+**And the click was the bed's fault, again** (P5, and the second time this exact shape has cost a
+report). `WorldRenderModel.StandHeight` knew about one thing — the bed — and its own comment said
+*"the next non-occluding thing that stands up adds a line here."* A stair does not occlude, so the
+only surface it offered a ray was the floor of its cell; but it is drawn **climbing**, and at the
+play camera's 48° the whole flight sat well in front of the cells answering for it. Every click went
+through to the ground behind. The bed had this in July's terms on 2026-09-19 and was reported as
+being "really specific" to click.
+
+**A stair is the first non-occluding thing that is not flat**, which is why the fix is not one more
+line. `StairShape` owns the drawn heights and both the mesher and the picker read them, so the two
+ends cannot drift apart. And one plane cannot be a ramp: offering only the top of each run left the
+far two thirds of the *upper* half unclickable — measured — because its floor is 1.5 m below where
+its art begins, so a ray crosses the top plane before the cell and the floor plane after it.
+`StandFoot` is the second plane, and the two bracket the climb.
+
+**The check that catches the next one:** `StairPickHeightTests` aims at every tenth of a drawn
+flight and requires the cell under the pointer to come back — `BedPickHeightTests`' own shape, which
+is the point. Anything that stands up and is not flat wants that sweep, not a check of its centre:
+a test of the two midpoints alone passed before the fix.
+
+**A near miss on the way.** Applying the yaw by running *Rebuild module catalogue* dropped **2,160
+lines** of the asset — the curated skin, hair and cloth swatch rectangles for all sixty-one
+colonists, which is how appearance recolouring works at all. The rebuild is only half the pipeline;
+*Classify character swatches* is a separate step. `AppearanceCatalogueTests` was the only thing that
+said so. **Do not regenerate that asset to change one field of one row.**
+
+### 2026-09-20 — A chip on the palette with no shape, and the first CI run this branch ever had
+
+Not reported. Found by merging PR #143 (RF1 + U44) with `main` and letting the pull-request checks
+run for the first time: `HudGeometryTests.EveryPaletteKeyHasItsOwnShape` and
+`EveryTileInTheBuildPaletteDrawsSomething`, both PlayMode, both red.
+
+RF1 added a **Pillar** chip to the Build palette's Structure row — a registry key, a label, a
+`PaletteTool`, a `BuildingDef` — and no entry in `PaletteGlyphs.Shapes`. `For(key)` answers
+`HudGlyphKind.Placeholder` for anything it does not know, so the chip drew the placeholder square
+that the palette specification forbids and that the test exists to catch. The stair, added in the
+same branch by U44, *did* have a shape: `ui.arch.tool.stair` had been in the map since before it
+was buildable, because the chip was drawn disabled first. **The tool that was invented whole is the
+one that arrives without a picture**, and nothing on the way in asks for one.
+
+**Why every other gate was green.** Fast tier 915 Sim + 562 Hud, Long tier 23 of 23, both content
+`--check`s clean, EditMode 2,251 with nothing failed. The fast tier compiles neither
+`Odyssey.Presentation` nor the HUD shell, so it cannot see `PaletteGlyphs` at all; EditMode compiles
+it and never builds a panel. The palette is only ever assembled in PlayMode. **And the PR had never
+had a CI run**, because it conflicted with `main` — a conflicting pull request reports *no checks*
+rather than failing ones, which `docs/lessons.md` already records and which is exactly how two red
+tests sat undiscovered under a branch everybody described as green.
+
+**Stopped by** the test that found it, which already existed and already walks every key
+`PaletteTools.IconKeys` returns — there is nothing to add. The lesson is about *when* it runs, not
+about what it asserts: this fault is invisible until the PlayMode tier executes, so a unit that puts
+a new chip on the palette is not provable by the fast tier however many tests it adds. Resolve the
+conflict first and let CI answer, rather than reading the tiers you can run quickly.
+
+Same family as **P13** — the asset cannot draw the thing the code asked for, and nothing says so —
+with the fallback one layer up: there, the font had no glyph for the character; here, the glyph
+table had no shape for the key. Both degrade to something that renders, so every assertion anybody
+could write about the element still passes.
 ### 2026-09-21 — The warning moved the rows it was about, and the pane was an action stale (P1)
 
 Owner, on the storage pane's first look: *"when I clicked off all the categories a message appeared
@@ -2994,3 +3079,53 @@ UI. PlayMode `StartScreenTests.ALoadedWorldIsCoveredLikeANewOne` is the regressi
 reading state its own previous call may have written. Ask of any event: can it fire twice in one
 frame, and does the second call ask a question the first one answered? Decide from a counter or the
 cause, not from the screen.
+## A rule whose stated consequence is a deadlock (2026-09-21)
+
+**P19.** U44 moved construction delivery from `TraverseMode.Colonist` to `Hauler`, reasoning that
+carrying a plank is carrying something and a hauler is barred from a ladder. The design document
+stated the consequence in as many words and called it the point: *"a ladder-only upper storey stops
+being buildable, which is the whole point."* One playtest later the owner could not build anything
+above ground, and the thing meant to rescue them — a stair — was itself a building order needing
+material delivered to the storey nothing could deliver to.
+
+- **The pattern:** a restriction whose replacement is *gated behind the restriction*. The review
+  question that catches it is not "is the rule right" — it was defensible — but **"what is the first
+  move a player makes under the new rule, and can they make it?"** Here the answer was: none.
+- **Why nothing failed.** Every test in the file asserted the *rule* (`a hauler cannot climb a
+  ladder`) and none asserted the *outcome* (`a wall ordered up a ladder gets built`). The design had
+  written that distinction down a fortnight earlier — *a test that asserts a rule is not a test that
+  asserts the rule is reached* — and then leaned on the rule test anyway.
+- **How it was found:** not from the screenshot. `tools/dotnet/Odyssey.SaveProbe` on the owner's own
+  save, flood-filling the region the stalled site was in, once per mode: **81 walkable cells for a
+  colonist, 20 for a hauler, and no wood in either**. Two numbers ended an argument that reading the
+  code could not.
+- **Where to look for the next one:** any change that narrows a `TraverseMode`, a permission or a
+  reachability test, where the compensating feature is something the player has to *build*.
+- **The check:** `LadderTests.ABuildingOrderOnALadderOnlyStoreyIsFedAndFinished`, and it took two
+  attempts to make it discriminate. The first ordered a **deck plate** on the upper storey and
+  passed in both modes, because `BuildJob.StandToBuild` falls back to the cell *below* a slab — so a
+  slab up there is reachable from the ground and the test measured nothing. A **wall** is only ever
+  built from beside it, on its own storey. Confirmed red against the pre-fix mode before the fix
+  went back in.
+
+## A ghost that is the only evidence, and it was never rotated (2026-09-21)
+
+**P20.** The owner reported two faults in one breath: a stair *"not flush with the floor above"* and
+*"I couldn't rotate the stairs with R"*. Both were one branch. `DrawThingGhost` had cases for the
+bed, the door and the ladder; a stair fell through to the plain `else`, which draws one module flat
+on the cell floor with **no rotation at all**. R changed the stored facing correctly and nothing
+moved on screen.
+
+- **The pattern:** a dispatch written as `if (thing A) … else if (thing B) … else <the simple case>`,
+  where the simple case is silently wrong rather than absent. A missing branch that *throws* is
+  found in a minute; a missing branch that falls into a plausible default is found by a playtest.
+- **The multiplier:** the blueprint was the *only* stair that had ever been drawn, because the
+  flight itself never got built (P19). **When a thing cannot be finished, its ghost becomes the
+  whole of the player's evidence** — so a cosmetic fault in the cursor is reported as a fault in the
+  geometry, and two bugs arrive looking like three.
+- **Where to look for the next one:** grep for the `else` at the end of any per-thing dispatch and
+  ask what the newest member of the family does there. `DrawThingGhost`, `EdificeModule`,
+  `ChunkMesher.Emit*` and `StandHeight` are four of the same shape, keyed on the same value.
+- **The check:** the ghost is drawn by the same arithmetic as the built thing —
+  `GroundRelief.Drape(FloorCentre) * Rotate(Yaw[facing])` in both — which is
+  `19-build-cursor.md` §6's rule rather than a new one.

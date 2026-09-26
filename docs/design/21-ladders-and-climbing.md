@@ -171,6 +171,17 @@ unmoved, because neither has a ladder on it.
 
 - **A hauler still cannot climb a ladder** (`Connector`'s mode mask). Material cannot be carried up;
   stairs (`U44`) remain the answer.
+
+  > **Half of that was false until 2026-09-20, and nothing tested it.** `job.Mode = Hauler` was set
+  > in exactly one place in the simulation — `HaulWorkGiver` — so the exclusion covered stockpile
+  > hauling and **not** construction delivery: `DeliverWorkGiver` ran as a colonist and a plank went
+  > up a ladder happily. The sentence above, and the same sentence in `CLAUDE.md`, the `U43` and
+  > `U44` plan rows and `24-carrying.md`, all concluded that nothing could be built on an upper
+  > storey, and a player could. `U44` gave delivery the hauling mode for one day and it was
+  > **reversed** after a playtest (2026-09-21): a ladder-only storey became unbuildable, and the
+  > stair meant to replace the ladder is itself a building order needing material up there. So the
+  > exclusion is stockpile hauling only, by decision now rather than by accident, and a plank goes
+  > up a ladder. `docs/design/60-stairs.md` §10a.
 - **Climb cost is unchanged** — `MoveCost.LadderUp` 540 / `LadderDown` 400. Presentation only was the
   owner's choice; a climb rate belongs with WS if it is ever wanted.
 - **Fall damage** still has nothing to apply itself to, so a colonist who steps into an open shaft

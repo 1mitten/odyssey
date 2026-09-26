@@ -125,7 +125,18 @@ namespace Odyssey.Tests.Sim
         // gained fixedStuff. In the XML and the code oracle together.
         // Moved once, deliberately, 2026-09-25, design 53 §13: Building_Barricade taken out again on the
         // owner's first look; the table is the sandbags' alone. Re-taken.
-        const ulong BuildingFingerprint = 12857519967509301005UL;
+        //
+        // Moved once, deliberately, 2026-09-26, merging RF1 + U44 (designs 59 and 60) into main:
+        // Building_Pillar appended at handle 14 (edifice 4, CoreContent.EdificePillar, blocking,
+        // 3 stuff, 90 ticks, 200 hit points) and Building_Stair at 15 (edifice 24,
+        // CoreContent.EdificeStairFull, one cell, rotatable, passable, 6 stuff, 150 ticks, 120 hit
+        // points), in the XML and the code oracle together. Both were written at 7 and 8 and moved
+        // because everything from the shelf to sandbags reached main first; the stair's edifice
+        // was 13 and moved to 24 for the same reason. The hit points are INVENTED on the merge,
+        // because the branch predates combat. Re-taken from the merged table.
+        // Moved again the same day: `secondEdifice` removed from BuildingDef. It was the two-cell
+        // stair's and no row had set it since the stair became one cell. Re-taken.
+        const ulong BuildingFingerprint = 16814629638888440776UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

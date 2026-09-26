@@ -1146,6 +1146,13 @@ namespace Odyssey.Presentation.Rendering
                     size = new Vector3(2.2f, 1.5f, 2.2f);
                     centre = new Vector3(0f, 0.75f, 0f);
                     return;
+                // A whole layer, not half of one: the colony's stair climbs 3.0 m in its own cell,
+                // and a stand-in that stopped at 1.5 m would put the placeholder's top nowhere near
+                // the floor it is supposed to reach — on precisely the machines that cannot see it.
+                case ModuleShape.StairFull:
+                    size = new Vector3(2.2f, CellMetrics.SizeY, 2.2f);
+                    centre = new Vector3(0f, CellMetrics.SizeY * 0.5f, 0f);
+                    return;
                 case ModuleShape.Ladder:
                     size = new Vector3(0.6f, CellMetrics.SizeY, 0.14f);
                     centre = new Vector3(0f, CellMetrics.SizeY * 0.5f, 0f);

@@ -506,7 +506,16 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Sandbags (design 53 §4): low cover, crossed but never stood on. See <c>CoreContent.EdificeSandbags</c>.</summary>
         public const int Sandbags = 23;
 
-        public const int Count = 24;
+        /// <summary>
+        /// The colony-built stair: one cell, one full layer (2026-09-21). Worldgen's stamped
+        /// stairwells keep <see cref="StairLower"/> and <see cref="StairUpper"/> and are a
+        /// different thing; see <c>CoreContent.EdificeStairFull</c> for why they are not unified.
+        /// 24, not 13: it was written as 13 and the shelf, the campfire, power, the wild things,
+        /// the galley and sandbags all reached main first.
+        /// </summary>
+        public const int StairFull = 24;
+
+        public const int Count = 25;
     }
 
     /// <summary>
@@ -599,7 +608,42 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Sandbags (design 53 §4): cheap low cover, always stone, dragged as a line.</summary>
         public const int Sandbags = 13;
 
-        public const int Count = 14;
+        /// <summary>
+        /// A support pillar: a column in one cell whose only job is to hold up the slab above it
+        /// (docs/design/59-roofs.md §5).
+        ///
+        /// <para><b>The solver has trusted one since M1 and nothing could build it.</b>
+        /// <c>SupportSolver.IsGrounded</c> ends at <c>Edifice[below] >= 0</c>, so any edifice
+        /// underneath already grounds a slab at <c>S_max</c> — a pillar needed a def, a handle and
+        /// a palette row, and not one line of the support rule.</para>
+        ///
+        /// <para>Appended, as every handle before it was. Handle order is the save contract and a
+        /// value inserted in the middle would compile silently and mean something else in every
+        /// save already written. <b>Fourteen, not seven:</b> it was written as 7 and moved twice
+        /// as the door, then the shelf, the campfire, power, the galley and sandbags reached main
+        /// first. Safe only because no save with a pillar or a stair in it has ever left this
+        /// branch.</para>
+        /// </summary>
+        public const int Pillar = 14;
+
+        /// <summary>
+        /// A stair: <b>one</b> cell, climbing one full layer to the floor above
+        /// (docs/design/60-stairs.md §10).
+        ///
+        /// <para><b>It was two cells for one day.</b> U44 built it as the bed's footprint — two
+        /// adjacent cells on one layer rising 1.5 m each — because the half-flight was the art the
+        /// Phase 3 research recommended. The owner played it and asked for one square
+        /// (2026-09-21): <i>"It should be able to go up a flight in one square for ease ... it's
+        /// not flush with the floor above either."</i> The pack has a full-layer flight,
+        /// <c>SM_Bld_Base_Stairs_02</c>, listed as an optional variant in the same research table
+        /// and never taken.</para>
+        ///
+        /// <para>So one cell, one record, one edifice value — <c>CoreContent.EdificeStairFull</c>.
+        /// Worldgen's stamped two-cell stairwells are untouched and stay a different thing.</para>
+        /// </summary>
+        public const int Stair = 15;
+
+        public const int Count = 16;
     }
 
     /// <summary>

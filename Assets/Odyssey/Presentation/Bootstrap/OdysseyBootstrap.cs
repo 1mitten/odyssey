@@ -2464,6 +2464,25 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
+            // **A stair's ghost turns, and until 2026-09-21 it did not.** The stair fell through
+            // to the plain branch below, which applies no rotation at all — so R changed the
+            // facing the order would be placed at, the director raised FacingChanged, the site was
+            // stored correctly, and nothing whatsoever moved on screen. The owner reported it as
+            // two faults in one breath: *"it's not flush with the floor above either ... I couldn't
+            // rotate the stairs with R"*. Both were this: the blueprint was the only stair they
+            // ever saw, because the flight itself was never built.
+            //
+            // Drawn the way ChunkMesher.EmitFullStair draws the built one — draped, from the cell
+            // floor, yawed by the facing — because a cursor that promises a different thing from
+            // the one that will stand there is worse than no cursor (`19-build-cursor.md` §6).
+            if (what.edifice == CoreContent.EdificeStairFull)
+            {
+                _renderer.DrawGhost(module, tint,
+                    GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y)) *
+                    Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[facing & 3], 0f)));
+                return;
+            }
+
             // A ladder's ghost stands on the face the built one will stand on: the wall it would be
             // fixed to if there is one, and the rotation the player has turned it to if there is
             // not. Asked of the model rather than worked out here, because that rule has one owner

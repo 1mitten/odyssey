@@ -107,6 +107,39 @@ namespace Odyssey.Presentation.Rendering
             Vector3 to = CellMetrics.FloorCentre(pawn.NextCell);
             Vector3 travel = to - from;
 
+            // **A stair is walked, and nothing else in here can draw that** (2026-09-21).
+            //
+            // The one-cell stair's connector joins a cell to the cell above it, so `travel` is
+            // (0, +3, 0) and every rule below treats it as a ladder: no ground distance, so
+            // StepPace keeps the raw clock; no bearing, so the heading is zero and the figure holds
+            // whatever way it was facing; and the position is a straight lerp between two cell
+            // centres, which runs **up the middle of the staircase**. The colonist rises through
+            // the art with no forward motion at all, so the gait blend — which is driven by
+            // observed speed — has nothing to observe either. The owner: *"the animation for going
+            // upstairs is terrible it needs to ground 2 flights of stairs and make sure the feet
+            // get onto each step and surface as it climbs."*
+            //
+            // StairWalk owns the whole answer: a switchback line measured off the art, paced so the
+            // speed is even, with a heading that turns on the landing. Returned here rather than
+            // folded into StepPace and OnTheDrawnGround because it shares nothing with them — there
+            // is no bank to sample, no relief to lift on to and no chord to clamp, and a figure on
+            // a flight of stairs must not sidestep round a tree either.
+            if (StairWalk.Crosses(world, pawn.Cell, pawn.NextCell, out CellRef stairCell, out bool goingUp))
+            {
+                int stairFacing = world!.EdificeFacing(
+                    world.Size.Index(stairCell.X, stairCell.Z, stairCell.Y));
+
+                float stairCarried = pawn.MoveDeltaPerMille > 0
+                    ? pawn.MoveDeltaPerMille * 0.1f * tickAlpha
+                    : movePerTick * tickAlpha;
+                float stairPercent = pawn.MovePerMille > 0
+                    ? pawn.MovePerMille * 0.1f + stairCarried
+                    : pawn.MovePercent + stairCarried;
+
+                return StairWalk.At(stairCell, stairFacing, goingUp,
+                    Mathf.Clamp(stairPercent, 0f, 100f) * 0.01f, out heading);
+            }
+
             // **A heading is a bearing, and a bearing has no vertical part.**
             //
             // A step that only changes layer travels (0, ±3, 0), and the yaw of that is

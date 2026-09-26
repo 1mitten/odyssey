@@ -18,8 +18,12 @@ namespace Odyssey.Hud
     public static class EdificeLabels
     {
         /// <summary>
-        /// Parallel to <see cref="EdificeHandle"/>. A stair is one edifice in two cells, so both
-        /// halves carry the stair's key.
+        /// Parallel to <see cref="EdificeHandle"/>.
+        ///
+        /// <para><b>Three entries say "stair" and all three are right.</b> 5 and 6 are the two
+        /// halves of one of worldgen's stamped stairwells and 24 is the colony's own one-cell
+        /// flight; they are different things to the mesher and to the graph, and the same thing to
+        /// a player, who clicks a stair and is told it is a stair.</para>
         /// </summary>
         public static readonly string[] Keys =
         {
@@ -37,6 +41,8 @@ namespace Odyssey.Hud
             "ui.arch.tool.galley",
             // Cover (design 53 §4), edifice 23.
             "ui.arch.tool.sandbag",
+            // The colony's own one-cell stair (design 60), edifice 24.
+            "ui.arch.tool.stair",
         };
 
         public static string IconKey(int edifice) =>
