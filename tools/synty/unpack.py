@@ -10,6 +10,12 @@ GUIDs, and importing them whole silently overwrites the one the other packs shar
 usage:
   python3 tools/synty/unpack.py list PKG
   python3 tools/synty/unpack.py extract PKG . --only Assets/Synty/PolygonShops [--skip P] [--dry-run] [--overwrite]
+  python3 tools/synty/unpack.py extract PKG . --remap Assets/SimpleForestAnimal=Assets/Synty/SimpleForestAnimal
+
+--remap moves a pack that installs outside Assets/Synty (SIMPLE Forest Animals installs to
+Assets/SimpleForestAnimal, which git does not ignore) to where licensed art belongs; --only and --skip
+match the package's own paths, before the remap. Nothing is written outside Assets/Synty/ unless
+--allow-outside is given, so a licensed pack cannot land one `git add .` from a commit.
 
 Existing files are left alone unless --overwrite. Standard library only. Never commit the output:
 Assets/Synty/ is gitignored and must stay so.
@@ -43,6 +49,8 @@ def main():
     ap.add_argument("--skip", action="append", default=[])
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--overwrite", action="store_true")
+    ap.add_argument("--remap", action="append", default=[], metavar="OLD=NEW")
+    ap.add_argument("--allow-outside", action="store_true")
     a = ap.parse_args()
 
     by_guid = entries(a.pkg)
@@ -57,11 +65,27 @@ def main():
             return False
         return not any(p == s or p.startswith(s.rstrip("/") + "/") for s in a.skip)
 
+    remaps = [r.split("=", 1) for r in a.remap]
+
+    def moved(p):
+        for old, new in remaps:
+            old = old.rstrip("/")
+            if p == old or p.startswith(old + "/"):
+                return new.rstrip("/") + p[len(old):]
+        return p
+
     picked = {g: e for g, e in by_guid.items() if "path" in e and wanted(e["path"])}
+    outside = sorted({moved(e["path"]) for e in picked.values()
+                      if not (moved(e["path"]) + "/").startswith("Assets/Synty/")})
+    if outside and not a.allow_outside:
+        print("refusing: these would land outside Assets/Synty/ (use --remap, or --allow-outside):", file=sys.stderr)
+        for p in outside[:10]:
+            print("  " + p, file=sys.stderr)
+        return 1
     written = skipped = 0
     with tarfile.open(a.pkg, "r:gz") as tar:
         for g, e in picked.items():
-            dest = os.path.join(a.project, *e["path"].split("/"))
+            dest = os.path.join(a.project, *moved(e["path"]).split("/"))
             if a.dry_run:
                 continue
             if "asset" in e:
