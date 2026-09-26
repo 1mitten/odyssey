@@ -526,8 +526,9 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void AStepOntoAFloorIsNotAHop()
         {
-            // Stairs are not in the game yet (U44), and the day they land a colonist on one must
-            // not be drawn vaulting up the stairwell. The simulation's own separation is that you
+            // Written before stairs existed (U44); since design 63 a built stair's step is exactly
+            // this shape — one across, one up, onto a cell with no rock under it — and a colonist
+            // on one must not be drawn vaulting up the stairwell. The simulation's own separation is that you
             // hop onto ground and take a stair to a storey, so the cell under the upper end has to
             // be solid terrain — here it is a slab over open air, and the arc must keep out of it.
             const int n = 6;

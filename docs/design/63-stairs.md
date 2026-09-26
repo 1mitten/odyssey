@@ -205,3 +205,25 @@ No interview was held; each of these is a default chosen to agree with the ladde
     is in a cell with nothing under her, as on a ladder's shaft. Should the deconstructor wait?
 11. **The look.** Whether the figure walking up reads as climbing the treads, and whether the pack's
     flight reads at the play camera. A Play session's question, not a test's.
+
+## 11. As built (2026-09-26)
+
+- **Content.** `Building_Stair` (handle 14) → edifice 24, in `Buildings.xml` and the code oracle
+  together; `BuildingFingerprint` moved for the appended row alone. The Hud's parallel tables
+  (`BuildShapes`, `BuildLabels`, `EdificeLabels`) gained the row and the dim Structure chip went
+  live. The icon key's description now says a load can be carried up.
+- **Simulation.** `ConstructionGrid`: `ShaftRulePermits` knows the stair and `StairHereOrOrdered`;
+  `FarHalfAllows` puts the far half under the stair's own rule; `AllowsFootprint` is the cursor's
+  question; `RefreshStair` / `RefreshStairsAround` / `RebuildStairConnectors` keep the connector
+  true, from `MarkNavAround` **and from `RemoveSlab`**, which refreshed only ladders — a landing
+  taken away left the stair opening on to nothing. `NavGraph.OneCellConnectorAt` takes a kind.
+- **Proven, with negative controls.** `StairTests` (16): with the kind test removed from
+  `OneCellConnectorAt`, `AnEditBesideTheFootLeavesTheStairWorking` fails (the connector is torn out
+  and re-registered under a new id); with `RemoveSlab`'s stair refresh removed,
+  `TakingTheLandingAwayClosesTheStair` fails. The price test is in `HopPriceHasOneOwnerTests`. The
+  meadow golden (fast tier) and the played-board and city goldens (Long tier) did not move: no
+  golden builds a stair, and the refresh finds nothing on a board without one.
+- **Unproven until Unity compiles it.** `StairShape`, `ChunkMesher.EmitBuiltStair`, the module in
+  `WorldRenderModel.ModuleForEdificeAt`, the ghost in `OdysseyBootstrap.DrawThingGhost` and the
+  cursor's `Refused` asking `AllowsFootprint`. **Picking** is left as the city's stairs have it: a
+  stair offers the floor to a click (`StandHeight` 0), not the treads.
