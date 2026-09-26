@@ -1471,6 +1471,14 @@ loading screen with stages. Nothing compiles after the hand-over, so there is no
   now, but the obvious place to look if the wait grows.
 - `-odyssey-newgame` (the test path) has no start screen to hold, so it still shows its first frames.
 
+- **Closed 2026-09-26 by design 56 (the wake-up):** the frozen setup page is gone — the menu fades to
+  black and the build is asked for only once two black frames have been drawn, so the long frame
+  freezes on black. The hand-over is still in the build frame behind an opaque cover, exactly as
+  §25b requires; the cover is now the wake's warm-black veil rather than the starfield, and the
+  three curtain frames are its *Covered* phase. The older curtain stays for a world built without
+  the menu (the hitch tour's direct build). A **load** was never covered at all until the same day
+  (`docs/bug-patterns.md`, "An event raised twice in one frame").
+
 ## 26. What a chunk costs to mesh, and a budget in milliseconds (2026-09-25)
 
 §20d owed it: the skin took a chunk's meshing from about 0.2 ms to "0.43", and the eleven-chunk

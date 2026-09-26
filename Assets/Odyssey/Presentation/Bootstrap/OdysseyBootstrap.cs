@@ -594,6 +594,18 @@ namespace Odyssey.Presentation.Bootstrap
 
         /// <summary>The key bindings, for the life of the game rather than of a colony.</summary>
         public HotkeyDirector Keys { get; } = new HotkeyDirector();
+
+        /// <summary>
+        /// Whether the colony's clock is held — the wake into a world, which keeps it paused until
+        /// the player's eyes are open (design 56 §7). A gate on the tick loop, deliberately not a
+        /// speed: the world's own speed is untouched, so a loaded colony resumes at the speed it was
+        /// saved at and nothing about the hold reaches a save.
+        /// </summary>
+        public bool ClockHeld { get; set; }
+
+        /// <summary>Whether the player has pressed Start and the menu is on its way out, so its bed
+        /// should leave now rather than when the world exists (design 56 §5).</summary>
+        public bool MenuLeaving { get; set; }
         public WorldRenderModel? Model => _model;
         public ChunkRenderer? Renderer => _renderer;
 
@@ -1287,7 +1299,10 @@ namespace Odyssey.Presentation.Bootstrap
 
             if (_world == null) return;
 
-            int speed = _world.GameSpeed;
+            // The wake holds the colony until the player's eyes are open (design 56 §7): a gate on
+            // the clock, never a written speed, so nothing about it can be saved, remembered by
+            // the speed control or undone by the pause toggle.
+            int speed = ClockHeld ? 0 : _world.GameSpeed;
             _tickMs = 0d;
             if (speed > 0)
             {
@@ -1519,7 +1534,9 @@ namespace Odyssey.Presentation.Bootstrap
             // on: no world, nothing rendered, and a title screen that still wants a bed under it.
             // Unscaled, because a fade that is part of the interface must not care that the game
             // behind it is paused or running at six times speed.
-            _menuBed?.Sync(Time.unscaledDeltaTime, wanted: _world == null);
+            // MenuLeaving: the bed goes when Start is pressed, with the menu, not when the world
+            // it hands over to exists a second later (design 56 §5).
+            _menuBed?.Sync(Time.unscaledDeltaTime, wanted: _world == null && !MenuLeaving);
 
             if (_renderer == null || _model == null || _world == null) return;
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;

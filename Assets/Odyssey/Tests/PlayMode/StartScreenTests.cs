@@ -184,6 +184,10 @@ namespace Odyssey.Tests.PlayMode
                 yield return Settle();
 
                 Assert.That(shell.Menu.Start(), Is.True);
+                // Not on the press: the menu fades to black first and the build waits for the
+                // black to have been drawn (design 56 §3), so the long frame freezes on black.
+                Assert.That(boot.HasSession, Is.False, "the world was built on the press frame, over the menu");
+                for (int frame = 0; frame < 10 && !boot.HasSession; frame++) yield return null;
                 Assert.That(boot.HasSession, Is.True, "Start built no world");
                 var built = boot.World;
                 Assert.That(shell.CurtainUp, Is.True, "the new world was shown at once, with no frames behind a cover");
@@ -194,7 +198,7 @@ namespace Odyssey.Tests.PlayMode
                 shell.Menu.Start();
                 Assert.That(boot.World, Is.SameAs(built), "a second press built a second world");
 
-                for (int frame = 0; frame < HudShell.CurtainFrames + 1; frame++) yield return null;
+                for (int frame = 0; frame < HudShell.CurtainFrames + 2; frame++) yield return null;
 
                 Assert.That(shell.CurtainUp, Is.False, "the curtain never lifted");
                 Assert.That(Shown(doc.rootVisualElement.Q("curtain")), Is.False, "the curtain is still up over the colony");

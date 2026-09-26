@@ -13873,3 +13873,40 @@ temperature: the weather's share of the outdoor curve is written by the weather 
 and saved nowhere, so a loaded world stood in its build's sky until the next boundary. That is on
 `main` for every save, and was fixed here because the raid test cannot pass without it. The lesson
 is in `docs/bug-patterns.md`: a value one system writes into another is derived state no section owns.
+
+## 2026-09-26 — Waking into the world
+
+The owner asked for the jump from the menu into a colony to stop feeling like loading: fade the menu
+out, then open on the world as waking from sleep — blurred, the sound closed and distant — coming
+into focus. Asked four things and answered: five seconds, the camera settles, the colony holds until
+the eyes are open, New game and Load alike, soft and warm. Design 56.
+
+**Reading the code first found two faults that were there already**, and they went in as their own
+PR before the feature (`claude/load-curtain`). A load was never covered: `LoadSession` raises
+`SessionChanged` twice in one frame and the second raise asked a question — is the title screen
+showing? — that the first had just answered no to, so it lifted the cover on the build frame. And the
+menu's bed faded on the unclamped real-time delta, so the frame after a one-second build took a
+quarter of its fade in one step. The first is now a bug-patterns row.
+
+**The move that makes it seamless is small**: the world is still built in one frame and still handed
+over in that frame, behind an opaque cover — the order design 38 §25b measured to be the only cheap
+one — but the *request* for the build now waits until the screen has been drawn black twice. The
+freeze is still there; it is black.
+
+**The plan's blur was wrong, and the source said so before any probe.** It proposed URP's Bokeh
+depth of field with a 4K shot against Gaussian as the tie-breaker. URP's own constants settle it:
+Bokeh's radius is capped at twenty pixels of the screen's height and Gaussian's at 1.5, so at 4K both
+are a soft picture rather than sleep, and depth of field has never been used here, so a player build
+would have stripped it. The blur is a small dual-filter pass of our own, injected from
+`beginCameraRendering` for the five seconds and gone after, its depth chosen from the screen height.
+
+**Two decisions to keep.** The hold is a gate on the tick loop and never a speed, so it cannot be
+saved, remembered as the player's pause, or reorder against a load's own speed restore. And the
+dream's volume overrides only the numbers it moves: `Add<T>(overrides: true)`, which the storm's
+volume uses, would have swapped the golden hour's un-blendable bloom and vignette settings for URP's
+defaults the moment the weight left nought.
+
+Written in a container with no Unity: the model and its setting are proven in the fast tier; the
+engine half is uncompiled and owes both Unity tiers, a player build and the hitch tour's mid-wake
+picture before it merges (design 56 §11).
+

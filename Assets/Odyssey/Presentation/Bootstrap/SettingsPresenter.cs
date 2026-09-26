@@ -109,6 +109,10 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
+            // The wake into a world has the keys (design 56 §7): any press is a skip, and Escape
+            // must not also open the settings over a colony the player cannot see yet.
+            if (_shell != null && _shell.WakeHoldsInput) return;
+
             // The leave prompt is modal and has no text field to own the key, so it is answered
             // here, above everything else Escape could mean. Escape over a modal means the modal
             // (`17-start-flow.md` §13), and cancelling is its safe answer: a key press must never
