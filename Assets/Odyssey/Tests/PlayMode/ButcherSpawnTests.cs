@@ -75,6 +75,10 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(cleaver!.parent != null && cleaver.parent.name.Contains("Hand"), Is.True,
                     $"the cleaver hangs from {(cleaver.parent != null ? cleaver.parent.name : "nothing")}, not the hand");
                 TestContext.WriteLine($"butcher drawn {box.x:0.00} x {box.y:0.00} x {box.z:0.00} m");
+                // Its card shows the butcher, not a bandit (owner, 2026-09-26).
+                Assert.That(boot.Portraits.For(world.Views.Current, butcher.Id), Is.SameAs(boot.Portraits.ForKind(PawnKindIndex.Butcher)),
+                    "the card's portrait is not the butcher's own");
+                Assert.That(boot.Portraits.ForKind(PawnKindIndex.Butcher), Is.Not.Null, "no portrait of the butcher");
             }
             finally
             {
@@ -159,6 +163,61 @@ namespace Odyssey.Tests.PlayMode
                 }
                 TestContext.WriteLine(log.ToString());
                 TestContext.WriteLine($"telegraphed {telegraphed}, flung {flung}");
+            }
+            finally
+            {
+                if (cam != null) cam.targetTexture = null;
+                if (target != null) target.Release();
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Pictures for the handover, not a gate: the four levels side by side in a paused world
+        /// (design 62 §4b) — each a size up, each in its own colourway — and the four portraits the
+        /// inspect card shows, to <c>Logs/look/butcher-levels.png</c> and <c>butcher-portrait-*.png</c>.
+        /// </summary>
+        [UnityTest, Explicit("photographs for the handover, not a test")]
+        public IEnumerator TheFourLevelsPhotographed()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig rig,
+                out HudShell shell, buildOnPlay: false);
+            RenderTexture? target = null;
+            Camera cam = rig.Camera;
+            try
+            {
+#if UNITY_EDITOR
+                if (boot.moduleCatalogue == null)
+                    boot.moduleCatalogue = UnityEditor.AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);
+#endif
+                for (int i = 0; i < 8; i++) yield return null;
+                shell.Menu.Choose(SessionCommands.NewGameKey);
+                for (int i = 0; i < 10; i++) yield return null;
+                Assert.That(shell.Menu.Start(), Is.True);
+                for (int i = 0; i < 20; i++) yield return null;
+                var colony = boot.Colony!;
+                var world = boot.World!;
+                if (boot.Figures == null || !boot.Figures.CanDrawKind(PawnKindIndex.ButcherKing)) Assert.Ignore("no butcher art here");
+
+                int[] kinds = { PawnKindIndex.Butcher, PawnKindIndex.ButcherScarred, PawnKindIndex.ButcherBlood, PawnKindIndex.ButcherKing };
+                var at = colony.Start;
+                for (int k = 0; k < kinds.Length; k++)
+                    world.Intents.Submit(new Intent(IntentKind.SpawnPawn, new CellRef(at.X - 3 + 2 * k, at.Z - 6, at.Y), kinds[k]));
+                world.Tick();
+                for (int i = 0; i < 20; i++) yield return null;
+
+                Directory.CreateDirectory(Path.GetFullPath("Logs/look"));
+                for (int k = 0; k < kinds.Length; k++)
+                {
+                    Texture2D? portrait = boot.Portraits.ForKind(kinds[k]);
+                    Assert.That(portrait, Is.Not.Null, $"no portrait for kind {kinds[k]}");
+                    File.WriteAllBytes(Path.GetFullPath($"Logs/look/butcher-portrait-{k + 1}.png"), portrait!.EncodeToPNG());
+                }
+
+                target = new RenderTexture(1920, 1080, 24) { name = "levels" };
+                cam.targetTexture = target;
+                rig.FocusOn(new CellRef(at.X, at.Z - 6, at.Y), 26f);
+                yield return Photograph("butcher-levels", target);
             }
             finally
             {
