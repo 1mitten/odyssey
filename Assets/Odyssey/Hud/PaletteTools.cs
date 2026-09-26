@@ -103,6 +103,13 @@ namespace Odyssey.Hud
         /// its floor and the ladder onto it are one job.
         /// </summary>
         public const string Ladder = "ui.arch.tool.ladder";
+
+        /// <summary>
+        /// The way up a hauler can use (U44, design 63): two cells, turned with the rotate key.
+        /// The key predates the tool — it sat in Structure as a dim chip between the door and the
+        /// ladder since the palette was written — so arriving is going live, not naming anything.
+        /// </summary>
+        public const string Stair = "ui.arch.tool.stair";
         public const string Door = "ui.arch.tool.door";
 
         public const string Bed = "ui.arch.tool.bed";
@@ -195,7 +202,7 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly (string key, string[] tools)[] Categories =
         {
-            ("ui.arch.category.structure", new[] { Wall, Paving, Door, "ui.arch.tool.stair", Ladder, Slab, "ui.arch.tool.reclaim" }),
+            ("ui.arch.category.structure", new[] { Wall, Paving, Door, Stair, Ladder, Slab, "ui.arch.tool.reclaim" }),
             ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", Galley, "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
             ("ui.arch.category.furniture", new[] { Bed, Shelf, Campfire, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp" }),
             // Power (design 32): the line and its undoing, then what makes power and what spends
@@ -329,6 +336,11 @@ namespace Odyssey.Hud
             new PaletteTool(Ladder,
                 d => d.ArmBuild(BuildingHandle.Ladder),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Ladder,
+                wantsMaterial: true),
+            // The stair (design 63): single placement, two cells, rotatable, like the bed.
+            new PaletteTool(Stair,
+                d => d.ArmBuild(BuildingHandle.Stair),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Stair,
                 wantsMaterial: true),
             new PaletteTool(Door,
                 d => d.ArmBuild(BuildingHandle.Door),

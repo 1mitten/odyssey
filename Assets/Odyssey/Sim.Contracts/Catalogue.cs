@@ -506,7 +506,15 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Sandbags (design 53 §4): low cover, crossed but never stood on. See <c>CoreContent.EdificeSandbags</c>.</summary>
         public const int Sandbags = 23;
 
-        public const int Count = 24;
+        /// <summary>
+        /// A built stair (design 63): one record over two cells, climbing one layer. 24, after the
+        /// sandbags — the barricade held it for an afternoon and was taken out again (design 53
+        /// §13). Not the city's <see cref="StairLower"/> and <see cref="StairUpper"/>, which are
+        /// two records found again by adjacency. See <c>CoreContent.EdificeStair</c>.
+        /// </summary>
+        public const int Stair = 24;
+
+        public const int Count = 25;
     }
 
     /// <summary>
@@ -599,7 +607,15 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Sandbags (design 53 §4): cheap low cover, always stone, dragged as a line.</summary>
         public const int Sandbags = 13;
 
-        public const int Count = 14;
+        /// <summary>
+        /// A stair (design 63): two cells, rotatable, climbing one layer — the way up a
+        /// <b>hauler</b> can use, which a ladder is not. Fourteen, the next free handle: the
+        /// barricade held it for an afternoon (design 53 §13). Handle order is the save contract
+        /// and positions are append-only.
+        /// </summary>
+        public const int Stair = 14;
+
+        public const int Count = 15;
     }
 
     /// <summary>

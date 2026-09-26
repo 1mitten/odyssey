@@ -125,7 +125,10 @@ namespace Odyssey.Tests.Sim
         // gained fixedStuff. In the XML and the code oracle together.
         // Moved once, deliberately, 2026-09-25, design 53 §13: Building_Barricade taken out again on the
         // owner's first look; the table is the sandbags' alone. Re-taken.
-        const ulong BuildingFingerprint = 12857519967509301005UL;
+        // Moved once, deliberately, 2026-09-26, U44 stairs (design 63): Building_Stair appended at handle
+        // 14, edifice 24 — two cells, rotatable, not blocking, a clear cell, 8 stuff, 180 work, 160 hp,
+        // no quality — in the XML and the code oracle together. Nothing else in the table moved.
+        const ulong BuildingFingerprint = 6762346294805219882UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

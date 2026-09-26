@@ -207,7 +207,7 @@ ui.arch.category.floors,Floors,ui.arch.category,M3,"Surfaces, and the roof of th
 ui.arch.category.recreation,Recreation,ui.arch.category,M3,Things colonists enjoy
 ui.arch.tool.wall,Wall,ui.arch.tool,M3,"Blocks movement, sight and heat"
 ui.arch.tool.door,Door,ui.arch.tool,M3,"Passable, and holds a room's air"
-ui.arch.tool.stair,Stair,ui.arch.tool,M3,Two cells. The fast way between layers
+ui.arch.tool.stair,Stair,ui.arch.tool,M3,"Two cells. The fast way between layers, and the one a load can be carried up"
 ui.arch.tool.ladder,Ladder,ui.arch.tool,M3,"One cell. Slow, cheap, no hauling"
 ui.arch.tool.pillar,Support pillar,ui.arch.tool,M3,Extends how far a roof can span
 ui.arch.tool.roof,Slab,ui.arch.tool,M3,"An upper floor. Goes on a wall or bridges out from one"
