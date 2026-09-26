@@ -55,6 +55,37 @@ namespace Odyssey.Hud
         /// <summary>Add a bill's plus, heavier because it sits on the accent fill.</summary>
         public const float AddStroke = 2.6f;
 
+        // ---- the inspect pane's header (design 61, mockup 24c), paths exactly as the mockup gives them
+
+        /// <summary>
+        /// Draft's shield. <b>The same shape on and off</b>: off it is stroked in the dim ink, on it is
+        /// filled and stroked in the hue. The icon never swaps.
+        /// </summary>
+        public const string Shield = "M12 21s7-3.5 7-9.5V5.5L12 3 5 5.5v6c0 6 7 9.5 7 9.5z";
+
+        /// <summary>
+        /// First Person's eye: the lid and the pupil, two closed subpaths. Filled even-odd, so a
+        /// filled eye keeps its pupil open as a hole.
+        /// </summary>
+        public const string Eye =
+            "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 9.2a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6z";
+
+        /// <summary>The two toggles' stroke, in path units.</summary>
+        public const float ToggleStroke = 2f;
+
+        /// <summary>The Almanac button's i: a ring, a stem, and a dot drawn as a stroke with round caps.</summary>
+        public const string Info = "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v6M12 7.4v.2";
+
+        /// <summary>Heavier than the toggles, because at 16 px on the info fill the ring breaks up.</summary>
+        public const float InfoStroke = 2.4f;
+
+        /// <summary>Close's cross, on a <b>10-unit</b> box rather than the 24 (<see cref="CloseBox"/>).</summary>
+        public const string Close = "M1 1l8 8M9 1L1 9";
+
+        public const float CloseBox = 10f;
+
+        public const float CloseStroke = 1.6f;
+
         /// <summary>The path registered under an icon key, or null for a key with none.</summary>
         public static string? PathOf(string iconKey) => iconKey switch
         {
