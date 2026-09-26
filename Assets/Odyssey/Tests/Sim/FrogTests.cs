@@ -191,6 +191,79 @@ namespace Odyssey.Tests.Sim
             Assert.That(WaterBank.Near(colony.Grid, frog.Cell, FrogRadius + 1), Is.True, "and it did not stay there");
         }
 
+        /// <summary>
+        /// <b>A group's frogs hop different ways</b> (owner, 2026-09-26: "make sure they jump in
+        /// different directions as some were very similar"). Four frogs round a pond, where the
+        /// bank runs every way so a heading is free to choose; every leg a frog starts while
+        /// another within six cells is mid-hop is compared with that hop, and fewer than one in
+        /// five may be within 60 degrees of it. <c>divergeRadius</c> is a preference, so the
+        /// bound is a rate rather than never.
+        /// </summary>
+        [Test]
+        public void AGroupsFrogsHopInDifferentDirections()
+        {
+            ColonyWorld colony = Board();
+            CellRef start = Start(colony);
+            // A pond five cells across, eight rows off the colonist, with bank all round it.
+            int cx = start.X, cz = start.Z + 8;
+            for (int dz = -2; dz <= 2; dz++)
+            for (int dx = -2; dx <= 2; dx++)
+            {
+                int cell = Size.Index(cx + dx, cz + dz, start.Y);
+                colony.Grid.Terrain[cell] = NaturalContent.TerrainShallowWater;
+                for (int nz = -1; nz <= 1; nz++)
+                for (int nx = -1; nx <= 1; nx++)
+                    colony.Pawns.Nav.MarkDirty(Size.Index(cx + dx + nx, cz + dz + nz, start.Y));
+            }
+            colony.Pawns.Nav.Rebuild();
+
+            var frogs = new List<Pawn>();
+            foreach (var (dx, dz) in new[] { (-3, 0), (3, 0), (0, -3), (0, 3) })
+            {
+                int cell = Size.Index(cx + dx, cz + dz, start.Y);
+                Assume.That(colony.Grid.IsWalkable(cell), Is.True);
+                frogs.Add(colony.Pawns.Pawns.Spawn(cell, PawnKindIndex.CulvertFrog));
+            }
+            int radius = ContentPack.Pawns().SpeciesOf(PawnKindIndex.CulvertFrog).divergeRadius;
+            Assume.That(radius, Is.GreaterThan(0));
+
+            var lastTarget = new int[frogs.Count];
+            for (int i = 0; i < lastTarget.Length; i++) lastTarget[i] = -1;
+            int withNeighbour = 0, alike = 0;
+            for (int tick = 0; tick < 20_000; tick++)
+            {
+                colony.World.Tick();
+                for (int i = 0; i < frogs.Count; i++)
+                {
+                    Job? leg = frogs[i].CurrentJob;
+                    if (leg == null || leg.DefIndex != JobIndex.Wander || leg.TargetCell == lastTarget[i]) continue;
+                    lastTarget[i] = leg.TargetCell;
+                    CellRef a = Size.FromIndex(frogs[i].Cell), at = Size.FromIndex(leg.TargetCell);
+                    long ax = at.X - a.X, az = at.Z - a.Z;
+                    bool neighbour = false, close = false;
+                    for (int j = 0; j < frogs.Count; j++)
+                    {
+                        if (j == i) continue;
+                        Job? other = frogs[j].CurrentJob;
+                        if (other == null || other.DefIndex != JobIndex.Wander || other.TargetCell < 0) continue;
+                        CellRef b = Size.FromIndex(frogs[j].Cell), bt = Size.FromIndex(other.TargetCell);
+                        if (System.Math.Max(System.Math.Abs(b.X - a.X), System.Math.Abs(b.Z - a.Z)) > radius) continue;
+                        long bx = bt.X - b.X, bz = bt.Z - b.Z;
+                        if (bx == 0 && bz == 0) continue;
+                        neighbour = true;
+                        long dot = ax * bx + az * bz;
+                        if (dot > 0 && 4 * dot * dot > (ax * ax + az * az) * (bx * bx + bz * bz)) close = true;
+                    }
+                    if (!neighbour) continue;
+                    withNeighbour++;
+                    if (close) alike++;
+                }
+            }
+            TestContext.WriteLine($"{alike} of {withNeighbour} legs started beside a hopping neighbour were within 60 degrees of it");
+            Assert.That(withNeighbour, Is.GreaterThanOrEqualTo(10), "too few legs beside a neighbour to judge");
+            Assert.That(alike * 5, Is.LessThan(withNeighbour), $"{alike} of {withNeighbour} set off the same way as a neighbour");
+        }
+
         /// <summary>The search radius in <c>BankTarget</c>, which is internal to the job system.</summary>
         const int BankTargetSearchRadius = 20;
 

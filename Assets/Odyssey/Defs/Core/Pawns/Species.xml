@@ -155,6 +155,9 @@
     <restTicksMax>720</restTicksMax>
     <bankRadius>3</bankRadius>
     <ignoresRain>true</ignoresRain>
+    <!-- A group's frogs set off in different directions (owner, 2026-09-26): a new hop prefers a
+         heading 60 degrees or more from every other frog within six cells that is already hopping. -->
+    <divergeRadius>6</divergeRadius>
     <figureKey>animal.frog</figureKey>
     <healthPoints>8</healthPoints>
     <deathAtPerMille>-500</deathAtPerMille>

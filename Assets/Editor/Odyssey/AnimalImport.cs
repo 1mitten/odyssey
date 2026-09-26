@@ -50,12 +50,14 @@ namespace Odyssey.EditorTools
         /// file, the material's name in the file, the asset written for it, and the colour. The
         /// frog's own green was the meadow's green and it vanished into the grass (owner,
         /// 2026-09-26: "a different green colour to the environment so they can be spotted"), so
-        /// its skin is a saturated jade — blue of the grass's yellow-green, and brighter than any
-        /// of it. Its yellow belly, red eyes and black pupils are left as the author painted them.
+        /// its skin is a saturated emerald — the jade it was first given read as teal ("make the
+        /// frogs greener", the same day), so the hue came back from 158 to about 135 degrees:
+        /// still clear of the grass's yellow-green near 80, and brighter than any of it. Its
+        /// yellow belly, red eyes and black pupils are left as the author painted them.
         /// </summary>
         public static readonly (string file, string material, string asset, Color colour)[] Paints =
         {
-            ("Frog.fbx", "Green", Folder + "/Materials/Frog_Skin.mat", new Color(0.08f, 0.78f, 0.55f)),
+            ("Frog.fbx", "Green", Folder + "/Materials/Frog_Skin.mat", new Color(0.12f, 0.80f, 0.24f)),
         };
 
         /// <summary>

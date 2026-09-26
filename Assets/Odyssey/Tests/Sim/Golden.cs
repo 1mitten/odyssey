@@ -581,8 +581,10 @@ namespace Odyssey.Tests.Sim
             // and its pace 800 -> 1,000. Pawns 15 -> 22 against main (4c40e189); items,
             // experience, passions and failed jobs identical, food/rest/mood differ by exactly
             // seven animals' untouched needs (7 x 800 / 800 / 600). The colonists did the same things.
+            // Then the frogs' legs diverge from each other (design 30 §8e): Simulated only; the
+            // probe differs from the line above in the animals' wander count alone (217 -> 216).
             Generated = 5971917863521832692UL,
-            Simulated = 2807535922006973866UL,
+            Simulated = 12025630770127775805UL,
         };
 
         /// <summary>

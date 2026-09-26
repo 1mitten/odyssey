@@ -25,9 +25,9 @@ the next session learns to ignore.
 
 - **Do the frogs read as frogs, and are they where the water is?** (`claude/frog`, design 30 §8.)
   New game on the meadow and look along a stream or a pond: there should be groups of three to five
-  bright jade, red-eyed frogs on the banks (about 0.9 m long since the owner's first ask), and none
+  bright emerald, red-eyed frogs on the banks (about 0.9 m long since the owner's first ask), and none
   in dry fields. Watch one move: it should crouch, leap about 1.3 m, land and sit, rather than
-  glide. Open Debug → Spawn → **Spawn culvert frog** away from
+  glide, and when several in a group hop at once they should go different ways. Open Debug → Spawn → **Spawn culvert frog** away from
   water and watch it hop back to the nearest bank. Make it rain (Debug) and see the frogs stay out
   while the hogs go under the trees. Wrong answers: a frog that slides along the ground between
   hops or lurches backwards at the start of one; frogs far from water; a frog too small to find from

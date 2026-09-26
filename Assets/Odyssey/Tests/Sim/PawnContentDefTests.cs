@@ -316,7 +316,8 @@ namespace Odyssey.Tests.Sim
         // nought/false on every other species. Taken from a freshly loaded pack.
         // 2026-09-26, the owner's first ask on the frog: bodyLengthMm 400 -> 870 and movePerMille
         // 800 -> 1,000, so the bigger frog hops a body and a half. Taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 17132943754721641587UL;
+        // And SpeciesDef gained divergeRadius (frog 6; design 30 §8e), the same day.
+        const ulong ContentFingerprint = 16996377386193066143UL;
 
 
         [Test]

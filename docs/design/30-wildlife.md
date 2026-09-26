@@ -302,9 +302,29 @@ them. Also make them a different green colour to the environment so they can be 
   colonists' first) — so a board big enough to reach it shares 24 between all three kinds.
 - **Colour**: the model's embedded `Green` is remapped (`AnimalImport.Paints`, `AddRemap`) to
   `Assets/Art/Custom/Animals/Materials/Frog_Skin.mat`, URP Lit, a saturated jade
-  `(0.08, 0.78, 0.55)` — bluer than the meadow's yellow-green and brighter than any of it. The
+  `(0.08, 0.78, 0.55)` (emerald since §8e) — bluer than the meadow's yellow-green and brighter than any of it. The
   yellow belly, red eyes and black pupils are the author's. On the probe's grass tile it is the
   first thing the eye finds.
+
+### 8e. Greener, and a group that scatters
+
+2026-09-26, the second ask: *"make the frogs greener, when you get groups, make sure they jump in
+different directions as some were very similar."*
+
+- **Colour**: the jade read as teal. `(0.08, 0.78, 0.55)` → `(0.12, 0.80, 0.24)`, a saturated
+  emerald near 135° — greener, and still well clear of the grass's olive near 80°
+  (`docs/reference/screenshots/2026-09-26-frog-on-grass.png`).
+- **Directions**: `SpeciesDef.divergeRadius` (frog 6). When a frog picks a new hop it looks at every
+  other frog within six cells that is already hopping and prefers a heading at least 60° from all
+  of theirs; twelve tries rather than eight, the first that clears every neighbour wins, and
+  failing that the least alike of the good ones — a preference, never a refusal, so a frog on a
+  narrow strip of bank still goes. Integer arithmetic (a signed squared cosine in 1,024ths), so
+  the choice hashes the same on Mono and CoreCLR. Why they matched: a group is seeded together and
+  thinks on the same ticks, and a bank that runs one way offers mostly the same two headings.
+  **Measured with a control**, four frogs round a pond for 20,000 ticks: **3 of 46** legs started
+  beside a hopping neighbour were within 60° of it, against **10 of 36** with the rule switched
+  off (`AGroupsFrogsHopInDifferentDirections`, whose one-in-five bound the control fails). The
+  played-board golden moved in Simulated only, by the frogs' own legs.
 
 ### 8d. Measured
 

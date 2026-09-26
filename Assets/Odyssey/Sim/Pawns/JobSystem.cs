@@ -1073,7 +1073,8 @@ namespace Odyssey.Sim.Pawns
             bool active = IsNight(ctx) == species.nocturnal;
             int legPerCent = active ? LegPerCent : LegPerCent / OffHoursFactor;
             if (rng.NextInt(100) < legPerCent &&
-                WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, pawn.OwnMode, avoidSlopes: true, bankRadius: bank))
+                WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, pawn.OwnMode, avoidSlopes: true, bankRadius: bank,
+                    divergeRadius: species.divergeRadius))
                 return true;
 
             int span = species.restTicksMax > species.restTicksMin
@@ -1458,15 +1459,25 @@ namespace Odyssey.Sim.Pawns
         /// wander is the mental break's, and moving it would move every golden.</para>
         /// <para><paramref name="bankRadius"/>, when above nought, refuses any destination further
         /// than that from water (design 30 §8): the frog's legs all end on its bank.</para>
-        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, int radius, TraverseMode mode, bool avoidSlopes, int bankRadius = 0)
+        /// <para><paramref name="divergeRadius"/>, when above nought, prefers a destination whose
+        /// heading is at least 60 degrees from that of every other pawn of the same kind within
+        /// that many cells that is already walking a leg (design 30 §8e), so a group does not set
+        /// off the same way together. Twelve tries rather than eight; the first that clears every
+        /// neighbour wins, and failing that the least alike of the tries that were otherwise good.
+        /// Integer arithmetic throughout, so the choice hashes the same on every runtime.</para>
+        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, int radius, TraverseMode mode, bool avoidSlopes, int bankRadius = 0,
+            int divergeRadius = 0)
         {
             var rng = DeterministicRandom.ForTick(
                 ctx.Seed, ctx.CurrentTick, PawnPurpose.Wander ^ (uint)pawn.Id.Value);
 
             GridSize size = ctx.Size;
             CellRef from = size.FromIndex(pawn.Cell);
+            bool diverging = divergeRadius > 0;
+            int best = -1;
+            long bestScore = long.MaxValue;
 
-            for (int attempt = 0; attempt < 8; attempt++)
+            for (int attempt = 0, tries = diverging ? 12 : 8; attempt < tries; attempt++)
             {
                 int x = from.X + rng.NextInt(-radius, radius + 1);
                 int z = from.Z + rng.NextInt(-radius, radius + 1);
@@ -1478,13 +1489,69 @@ namespace Odyssey.Sim.Pawns
                 if (bankRadius > 0 && !Wildlife.WaterBank.Near(ctx.Cells, cell, bankRadius)) continue;
                 if (!ctx.Reachable(pawn, cell, mode)) continue;
 
+                if (diverging)
+                {
+                    long score = Likeness(pawn, ctx, x - from.X, z - from.Z, divergeRadius);
+                    if (score >= Alike)
+                    {
+                        if (score < bestScore) { bestScore = score; best = cell; }
+                        continue;
+                    }
+                }
+
                 job.Reset(JobIndex.Wander);
                 job.TargetCell = cell;
                 job.Mode = mode;
                 return true;
             }
 
+            if (best >= 0)
+            {
+                job.Reset(JobIndex.Wander);
+                job.TargetCell = best;
+                job.Mode = mode;
+                return true;
+            }
             return false;
+        }
+
+        /// <summary>
+        /// A <see cref="Likeness"/> at or above this is two headings under 60 degrees apart: the
+        /// squared cosine, signed, in 1,024ths, and cos² 60° is a quarter.
+        /// </summary>
+        const long Alike = 256;
+
+        /// <summary>
+        /// How alike a heading (<paramref name="dx"/>, <paramref name="dz"/>) is to the most
+        /// alike leg another pawn of this one's kind within <paramref name="radius"/> is walking:
+        /// the signed squared cosine in 1,024ths, 1,024 for the same way, nought or less for at
+        /// right angles or beyond, and <see cref="long.MinValue"/> when nobody near is walking.
+        /// </summary>
+        static long Likeness(Pawn pawn, PawnContext ctx, int dx, int dz, int radius)
+        {
+            GridSize size = ctx.Size;
+            CellRef at = size.FromIndex(pawn.Cell);
+            long mine = (long)dx * dx + (long)dz * dz;
+            if (mine == 0) return long.MinValue;
+            long worst = long.MinValue;
+            IReadOnlyList<Pawn> all = ctx.Pawns.All;
+            for (int i = 0; i < all.Count; i++)
+            {
+                Pawn other = all[i];
+                if (ReferenceEquals(other, pawn) || other.Kind != pawn.Kind) continue;
+                Job? leg = other.CurrentJob;
+                if (leg == null || leg.DefIndex != JobIndex.Wander || leg.TargetCell < 0) continue;
+                CellRef o = size.FromIndex(other.Cell);
+                if (System.Math.Max(System.Math.Abs(o.X - at.X), System.Math.Abs(o.Z - at.Z)) > radius) continue;
+                CellRef t = size.FromIndex(leg.TargetCell);
+                long ox = t.X - o.X, oz = t.Z - o.Z;
+                long theirs = ox * ox + oz * oz;
+                if (theirs == 0) continue;
+                long dot = dx * ox + dz * oz;
+                long score = (dot >= 0 ? 1 : -1) * dot * dot * 1024 / (mine * theirs);
+                if (score > worst) worst = score;
+            }
+            return worst;
         }
     }
 

@@ -13616,3 +13616,9 @@ with its size and the hop is a body and a half again. **And "more" stopped at th
 is the figure budget's, not the wildlife's, so it was left alone and the played board's 22 pawns
 sit under it. Design 30 §8c-bis.
 
+**Later the same day: greener, and apart.** The jade read as teal, so the hue came back to an
+emerald. And a group's frogs hopped the same way because they were seeded together, thought on the
+same ticks and stood on a bank that ran one way; each new hop now prefers a heading 60 degrees
+from every neighbour already hopping. The control mattered: without the rule 28 % of such hops
+matched a neighbour, with it 6.5 %, and the test's bound sits between them. Design 30 §8e.
+
