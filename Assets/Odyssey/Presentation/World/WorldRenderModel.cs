@@ -868,21 +868,6 @@ namespace Odyssey.Presentation.World
         /// <summary>The facing of the bed in this cell, 0–3. Meaningful only while a bed stands here.</summary>
         public byte BedFacing(int index) => _edificeFacing[index];
 
-        /// <summary>
-        /// The facing stored on the edifice in this cell, 0–3.
-        ///
-        /// <para><b>For the colony's one-cell stair, and it is why that stair is one cell's worth
-        /// of progress rather than none.</b> <c>ChunkMesher.EmitStair</c> works out which way a
-        /// two-cell stair climbs by <em>scanning for its partner</em>, which
-        /// <c>docs/design/20-beds.md</c> §93 says a built thing must never do — <i>"the stairs
-        /// infer only because worldgen had nowhere to put an answer, and placing is exactly where
-        /// the answer is known"</i> — and which is ambiguous the moment two stairwells stand side
-        /// by side. A one-cell flight has no partner to scan for, so it must read what the player
-        /// chose, and <c>60-stairs.md</c> §9's first open item closes with it.</para>
-        /// </summary>
-        public int EdificeFacing(int index) =>
-            (uint)index < (uint)_edificeFacing.Length ? _edificeFacing[index] & 3 : 0;
-
         /// <summary>Whether this cell is the head of the bed that stands in it — the half that draws.</summary>
         public bool BedHead(int index) => _bedHead[index];
 

@@ -1,8 +1,9 @@
 # Stairs — U44, the way up that carries something
 
 **Status:** design settled by owner interview 2026-09-20; **re-cut to one cell 2026-09-21 after the
-second play (§10)**; implementation on `claude/adoring-ptolemy-baq5te`. The last M3 unit before the
-ten-day run.
+second play (§10)**; merged with `main` 2026-09-26 and ready for its third play (§12). Implementation
+on `claude/adoring-ptolemy-baq5te`, PR #143. The last M3 unit before the ten-day run. **This was
+design 28 until the merge**; `main` had given 28 to temperature, map size and the pointer.
 
 **Read §10 first.** Everything above it describes the stair as **two cells**, which it was for one
 day. A colony-built stair is one cell climbing a whole layer; worldgen's stamped stairwells are
@@ -59,7 +60,7 @@ Three questions, owner 2026-09-20. Every recommendation was taken.
 |---|---|---|
 | 1 | Building material can already go up a ladder (§3). What does U44 do about it? | **Fix it inside U44**, so the capability is never removed without the replacement existing |
 | 2 | Worldgen's stairs are two edifice values; a bed is one record over two cells. Which for a built stair? | **Two edifice values, one site** — what worldgen already produces |
-| 3 | The golden re-bake U44 forces anyway | **Bundle the terrace-bank fix**, per the audit |
+| 3 | The golden re-bake U44 forces anyway | **Bundle the terrace-bank fix**, per the audit — *unbundled on the merge, §12* |
 
 Settled here rather than asked, because the code answered them:
 
@@ -630,3 +631,40 @@ would be nonsense on one, and a colonist on a stamped stairwell is drawn exactly
 - **No climb rate.** A stair costs 290 up and 230 down flat, like everything else; a rate belongs
   with WS if it is ever wanted, which is the answer `21-ladders-and-climbing.md` §5 already gave for
   the ladder.
+
+## 12. Merged with `main`, 2026-09-26 — what moved and what went
+
+`main` was 738 commits ahead: the shelf, temperature, power, combat, wildlife, the kitchen, cover,
+walls-down and the Meadow look had all landed. What that did to this unit:
+
+**Every number moved, because handle order is the save contract and the later branch moves.**
+`BuildingHandle.Stair` is **15** (written as 8), `EdificeHandle.StairFull` / `CoreContent.EdificeStairFull`
+is **24** (written as 13, which is the shelf's), and `ModuleShape.StairFull` is **15** (sandbags took 14).
+Safe because no save with a stair in it has ever left this branch. The stair gained the combat-era
+fields every building now has: **120 hit points** (a bed's; invented) and no cover, since it is stood
+on rather than behind.
+
+**The terrace-bank sleep fix is out of this unit.** Decision 3 bundled it because both moved the hash;
+`main` has since rewritten where a tired colonist lies down (`FreeSpot`, the fireside) and PR #149 is
+the dedicated fix for exactly that report. Two fixes for one report in two open PRs would be P1 in the
+making, so this one was dropped and #149 owns it. `22-terrace-steps.md` §4 is `main`'s again.
+
+**The two-cell colony stair is gone from the code, not just from the content.** `secondEdifice`, the
+two-cell connector path in `RefreshStair`, `StairHeadAt`, `IsOurs`, `NavGraph.TwoCellConnectorTouching`
+and the partner comparison in `Demolish` were all unreachable once nothing built a Lower + Upper pair.
+Worldgen's stairwells keep their own two-cell connectors from `ConnectorRegistrar` and are untouched;
+`RefreshStair` cannot see them because `OneCellConnectorAt` never returns a two-cell connector. What
+`Demolish` keeps is one comparison — the derived cell must point at the same record — which is all
+`DemolishingAStampedStairLeavesTheNeighbourItPointsAtStanding` needs.
+
+**Delivery needed no merge.** The branch's delivery-mode plumbing (`BuildJob.Mode`, the `mode`
+parameter on `StandBeside` and `StandToBuild`) had become a constant equal to the default when §10a
+reversed it, so `main`'s job files were taken whole. `LadderTests.ABuildingOrderOnALadderOnlyStoreyIsFedAndFinished`
+still holds the outcome.
+
+**A test helper was building nothing and saying so only as a skip.** `StairTests` and `RoofsTests`
+raised through a helper that ignored `Raise`'s return. `main`'s nobody-in-a-wall guard (design 30)
+refuses a raise while a colonist walks through the cell, so a blocking thing ordered at the start cell
+was never built, and a downstream `Assume` turned the rest into a skip. The helper now waits for the
+cell, bounded at 600 ticks, and asserts the site is gone. `EveryModeMayUseAStair` walks every
+`TraverseMode` there is, rather than a list naming one `main` has since removed.

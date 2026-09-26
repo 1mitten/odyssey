@@ -414,7 +414,7 @@ introduces one; the seam for it is `CarryPose`, not a special case in the render
 | A distinct abandoning drop | §6d — deferred with its seam intact, not abandoned |
 | Holding a load clear of the water | §5c — accepted as-is pending a playtest |
 | A tool stowed on the back | Needs a back attachment seated per rig. A whole piece of work, and it would slip this one |
-| Carrying up a ladder | A hauler cannot climb one at all. Stairs (`U44`) are the unit that opens it — and until U44 this was true of stockpile hauling only, because construction delivery never asked for the hauling mode (`60-stairs.md` §3) |
+| Carrying up a ladder | A hauler tidying a stockpile cannot climb one; a stair (`U44`) carries every mode. Construction delivery is a colonist's errand and a plank does go up a ladder — by decision since 2026-09-21 (`60-stairs.md` §10a) |
 
 ## 10. Tests
 

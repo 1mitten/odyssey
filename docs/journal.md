@@ -14136,3 +14136,40 @@ temperature: the weather's share of the outdoor curve is written by the weather 
 and saved nowhere, so a loaded world stood in its build's sky until the next boundary. That is on
 `main` for every save, and was fixed here because the raid test cannot pass without it. The lesson
 is in `docs/bug-patterns.md`: a value one system writes into another is derived state no section owns.
+
+## 2026-09-26 — Roofs and stairs, picked up again five days and 738 commits later
+
+PR #143 had sat since 2026-09-21 with two playtests behind it and a third owed. The question was
+whether it was still worth having, and the answer was mostly yes: `main` still had no way to build a
+stair, and M3's status line still named `U44` as the one unit left. But `main` had moved under it in
+three ways that each took something out.
+
+**Walls-down made RF1b redundant.** "Never draw a roof two layers up" was written to answer a
+building hiding its own ground floor. Walls-down (design 42) answers the owner's broader version of
+the same complaint by hiding every stacked storey above the slice, is on by default, and owns that
+question in one place, `SliceSettings.HidesStackedOn`. Keeping RF1b would have put a second predicate
+for *what above the slice is hidden* into the renderer and the picker, which is P1 before it has had
+a chance to disagree. It had never been played, so dropping it cost no verdict (`59-roofs.md` §4a).
+
+**#149 made the bundled bank fix a duplicate.** The branch had carried a terrace-bank sleep guard
+because both it and the stair moved the hash. `main` has rewritten where a tired colonist lies down
+since, and #149 is the dedicated PR for exactly that report, beds included. It is #149's now.
+
+**The one-cell stair had stranded the two-cell one in the code.** `secondEdifice`, a whole two-cell
+connector path, a reverse lookup and a partner test in `Demolish` were all reachable only by a
+Lower + Upper pair nobody could build any more. About two hundred and fifty lines went, and the
+building fingerprint moved for the field and nothing else.
+
+**The thing worth remembering is the test helper.** `RoofsTests.RaiseNow` called `Raise` and threw
+the answer away. On the branch that was harmless. On `main` it met the nobody-in-a-wall guard, which
+refuses a raise while a colonist walks through the cell, and the pillar the test puts at the hall's
+middle is exactly where the colony starts. So the pillar was never built, the "one pillar closes all
+nine holes" assertion failed, and the next test's `Assume` turned its own version of the same
+problem into a skip. **A helper that performs the precondition must assert it happened**, or the
+precondition failing looks like the feature failing, or worse like nothing at all. The fast tier's
+single skip was the tell.
+
+And Presentation did not compile on the first Unity run: `main` had added
+`WorldRenderModel.EdificeFacing` for the shelf while the branch had added one for the stair, with
+different return types. The fast tier compiles neither Presentation nor Editor, so it was green over
+a tree that could not build; CLAUDE.md says so, and it was true again.

@@ -896,51 +896,18 @@ the next session learns to ignore.
   this to an alert or a confirmation. The other half is the shape left behind: the surviving cells
   of the field stay zoned, so a field with a bite taken out of it should still read as one field.
 
-- **Nobody has ever seen a stair** — stamped or built (PR #143, `claude/adoring-ptolemy-baq5te`,
-  `docs/design/60-stairs.md`). `U44`, the last M3 unit. A **Stair** chip is live under Structure: two
-  cells, rotatable with the rotate key like a bed, 6 wood and 150 ticks. It is the only way up a
-  **hauler** can use, so an upper storey is somewhere a colony can build rather than merely visit —
-  and in the same change **delivering building material became a hauling job**, which it never was,
-  so a ladder alone no longer supplies a second storey. Also bundled: **a tired colonist with no bed
-  no longer lies down inside a terrace bank** and vanishes into the façade.
-  Open questions a test cannot answer: whether 6 wood and 150 ticks feel right for two cells;
-  whether the flight *reads* as a flight, given no stair has ever been photographed and the art is
-  the Synty half-flight at 1.5 m a cell; whether the rotate key lands the stair the way you expect;
-  and whether losing ladder-borne delivery is felt as a loss before the stair is affordable.
-  **Played once, 2026-09-21, and it found two faults** (`docs/design/60-stairs.md` §8b). The flight
-  was drawn as *two* descending half-flights, one floating 1.5 m above and beyond the other — the
-  art ascends toward its own local −Z, so yawing each half by its climb direction turned both of
-  them about. And nothing could be clicked: a stair does not occlude and is drawn climbing, so the
-  whole flight sat in front of the cells that answered for it, which is the bed's fault of
-  2026-09-19 in another costume. Both fixed and photographed (`Logs/stair-side.png`). Deconstruct
-  was checked and was already right. What is left for a person: whether the flight now reads as
-  *one* staircase in play rather than in a still, whether clicking anywhere along it selects it,
-  and whether a deconstruct mark painted on the treads is legible.
-  Fast tier 954 Sim + 642 Hud, Long tier 34 of 34, EditMode 2,396 / 2,375 / 0 and PlayMode
-  97 / 92 / 0 on the tree merged with main on 2026-09-21, **no golden moved**.
-  **And both stair pictures were re-shot after the merge** — `Logs/stair-side.png` and
-  `Logs/stair-play.png`, one continuous flight from the profile and from the play camera's 48°.
-  The first attempt photographed eleven chunks of meadow and no stair at all, which was `main`'s
-  new meshing budget meeting a probe that gets one frame, not a framing mistake (`docs/lessons.md`).
-
-- **Nobody has seen a roof go on, or looked up out of a roofed building** (PR #143,
-  `claude/adoring-ptolemy-baq5te`,
-  `docs/design/59-roofs.md`). RF1, and most of it was already built — a roof has been a slab since U29.
-  Three things changed. **(a)** Pointing at the floor of an upper storey and ordering a slab now roofs
-  *that* storey, instead of being refused in silence for "there is already a floor here"; you no longer
-  raise the depth rail one notch first. **(b)** A roof two or more layers above the slice is never
-  drawn, so a three-storey building cannot hide its own ground floor. The storey *directly* overhead
-  is untouched and still buildable from below, which is the 2026-09-17 setting you turned off and it
-  stays off. **(c)** A **support pillar** under Structure: a column in one cell, 3 wood, 90 ticks.
-  Measured — a 10 × 10 hall takes nine holes in its roof and one pillar closes all nine.
-  Open questions a test cannot answer: whether the pillar's cost and the cell of floor it eats feel
-  like a fair price for the span; whether losing every roof two storeys up reads as clarity or as
-  the building being unfinished; whether the **Pillar chip's new icon** reads as a column holding a
-  plate up rather than as a wall seen end-on — it had no shape at all until the review and drew the
-  placeholder square; and whether a roof still reading as the same grey plate as a floor is the next
-  thing worth fixing (RF2 has the pitched cap ready to go, art and all).
-  Merged with main twice — 2026-09-20 for the door, and 2026-09-21 for the perf trace, the
-  meshing budget, the Huge board and the storage pane. See the handover for what each moved.
+- **The one-cell stair, and roofing from upstairs** (PR #143, `claude/adoring-ptolemy-baq5te`,
+  `docs/design/60-stairs.md` §10–§12, `59-roofs.md`). Played twice on 2026-09-21; both rounds' faults
+  are fixed (two flights drawn for one, nothing clickable, R did nothing, the build never started
+  because delivery could not climb a ladder, and a colonist sliding through the treads). **Merged
+  with `main` 2026-09-26** and not played since. A **Stair** chip under Structure is one cell
+  climbing a whole layer, flush with the floor above, rotatable, 6 wood; a colonist walks it as a
+  switchback with a turn on the landing. Slab on an upper storey's own floor roofs that storey. A
+  **Pillar** chip (3 wood) holds up the middle of a hall too wide to roof. Open for a person: whether
+  the stair reads as one flight **with walls-down on**, which it has never been seen beside; whether
+  the climb reads as walking up steps; whether the pillar's price and the cell it eats feel fair; and
+  whether a roof two storeys up hides anything in **build mode**, where walls-down steps aside
+  (`59-roofs.md` §4a — the old "never draw a roof two layers up" rule was dropped on the merge).
 - **Does the horizon repeat now there are eight kinds of tree instead of sixteen?**
   (`claude/huge-map`, `docs/design/06-rendering-and-camera.md` §6c.4.) The surround costs its
   batch count, and the count was sixteen tree kinds multiplying every spatial cell — so it now

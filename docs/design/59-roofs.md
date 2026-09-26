@@ -1,7 +1,8 @@
 # Roofs — RF1: roofing a building, and seeing under it
 
-**Status:** design settled by owner interview 2026-09-20; implementation on
-`claude/adoring-ptolemy-baq5te`.
+**Status:** design settled by owner interview 2026-09-20; merged with `main` 2026-09-26, **§4 dropped
+on the merge (§4a)**; implementation on `claude/adoring-ptolemy-baq5te`, PR #143. **This was design 27
+until the merge**; `main` had given 27 to the Work tab and the graphics settings.
 **Read first:** `02-world-and-layers.md` §4 (*"a roof is a floor is a slab"*, and the support rule
 this unit does not change), `17-floors-and-collapse.md` (the unit that built roofs, whose §3
 amendment matrix RF1a extends by exactly one row), `15-building.md` §2 (the two tables a new
@@ -224,6 +225,29 @@ it off two layers up would have left that terrace **drawn and unclickable**: the
 renderer-and-picker disagreement `FloorToolReachTests` was written about, in the other direction.
 So RF1 passes a second flag and asks it of the cell: `slabsDropped && model.Floor(index) != 0`. A
 cell carrying a slab offers nothing; the grass beside it still does.
+
+### 4a. Dropped on the merge with `main`, 2026-09-26 — walls-down answers it
+
+Nothing in this section is built. **Walls-down** (`42-walls-down.md`, PR #197) reached `main` while
+this sat in review and answers the same complaint more broadly: *"it is hard to see your colonists
+inside your own building."* It hides every **stacked** storey above the slice — built on something
+built rather than on the ground, which is exactly what a roof is — keeps the landscape, and is on by
+default. With it on, `RoofIsAlwaysDropped` changes nothing; with it off, the player has asked to see
+the building whole.
+
+Keeping both would give the renderer and the picker two owners for one question — *what above the
+slice is hidden* — each with its own per-cell test, and they would disagree the first time either was
+corrected. That is P1, and this project has paid for it before. §4 had never been played, so dropping
+it costs no verdict. `ChunkRenderer` and `SliceSettings` are `main`'s; the picker keeps only the
+stair's foot plane (`60-stairs.md` §8b), which is a different question.
+
+**If a roof two storeys up still hides a ground floor in play**, it will be in build mode, which
+walls-down deliberately ignores. The answer then belongs in `WallsView`, beside the rule that already
+owns the question, not in a second predicate here.
+
+The pillar gained **200 hit points** on the merge (two thirds of a wall's; invented), and
+`BuildingHandle.Pillar` is **14** (written as 7). The city's stamped pillars share edifice 4, so they
+now have hit points too, as its stamped walls always have.
 
 ## 5. The support pillar
 

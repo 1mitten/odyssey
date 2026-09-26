@@ -100,22 +100,6 @@ spans the cell the ramp rises across. Two candidate fixes, neither taken here:
 Both change the state hash, so both want re-baked goldens and a decision rather than a guess. The
 predicate is in place for whichever is chosen.
 
-**Taken 2026-09-20 with `U44`: candidate 1.** The audit had it as *"next, with stairs — both fixes
-move the hash; do it in a re-bake that is already happening"*, and the owner agreed to bundle it.
-Candidate 1 rather than 2 on this section's own reasoning: it is cheap and reversible, it leaves
-WS3's collapse-at-zero-rest rule alone, and candidate 2 *"takes a cell away from the player for a
-reason the player cannot see"*. **The owner was asked whether to bundle the fix and not which of the
-two to take** — this is the recommendation the section already argued for, and candidate 2 remains
-available if a playtest wants it.
-
-`JobSystem.OutOfTheBank` is the clause: when a tired colonist has no bed within reach *and* is
-standing in a terrace foot, she lies down in the first orthogonal neighbour that is walkable,
-reachable and not a foot itself. Fixed direction order, first match wins, because the choice is
-state and state must be the same on every machine. **−1 — lie down where you stand — is still the
-answer when nothing better is beside her**: refusing to sleep is worse than sleeping badly, and a
-colonist ringed by steps has nowhere else to be. Zero rest is untouched and still goes down where it
-stands, bank or no bank.
-
 ## 4b. Crossing a step: the price and the motion
 
 *Owner, 2026-09-18, after the first look in play:* "Would it be possible to make the terrace step, if
