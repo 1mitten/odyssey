@@ -442,8 +442,23 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 for (int i = 0; i < 30; i++) yield return null;
                 yield return Step("the title screen (the control)", null, 3f);
-                yield return Step("New game pressed: the session built, and its first frames",
-                    () => _boot.BuildSession(), 3f);
+                _shell ??= UnityEngine.Object.FindFirstObjectByType<Odyssey.Presentation.Ui.HudShell>();
+                if (_shell != null)
+                {
+                    // Through the wake (design 56), as the menu does it: the fade, the build behind
+                    // the black and five seconds of dream, so the step is the passage a player sits
+                    // through — and a picture from the middle of it, which is the one proof that
+                    // the blur survived a player build's shader stripping.
+                    Odyssey.Presentation.Ui.HudShell shell = _shell;
+                    _boot.StartCoroutine(CaptureMidWake(shell));
+                    yield return Step("New game pressed: the fade, the build behind the black, and the wake",
+                        () => shell.EnterWorld(() => _boot.BuildSession()), 7f);
+                }
+                else
+                {
+                    yield return Step("New game pressed: the session built, and its first frames",
+                        () => _boot.BuildSession(), 3f);
+                }
             }
             while (_boot.Renderer == null || _boot.Model == null) yield return null;
 
@@ -569,6 +584,36 @@ namespace Odyssey.Presentation.Bootstrap
 
             Application.logMessageReceivedThreaded -= CountCompile;
             Log("[Hitch] table:\n" + _hitchTable);
+        }
+
+        /// <summary>
+        /// A second into the dream, a screenshot beside the log and a line saying whether the blur
+        /// was drawn. A player build strips any shader nothing names, and the wake's blur is found
+        /// by name; this is where a stripped one would show as a sharp picture and "available False".
+        /// </summary>
+        IEnumerator CaptureMidWake(Odyssey.Presentation.Ui.HudShell shell)
+        {
+            float giveUp = Time.realtimeSinceStartup + 15f;
+            while (shell.Wake.Phase != Odyssey.Hud.WakePhase.Waking && Time.realtimeSinceStartup < giveUp)
+                yield return null;
+            if (shell.Wake.Phase != Odyssey.Hud.WakePhase.Waking)
+            {
+                Log("[Hitch] wake: never reached the dream (setting off, or skipped)");
+                yield break;
+            }
+            float at = Time.realtimeSinceStartup + 1f;
+            while (Time.realtimeSinceStartup < at) yield return null;
+            // Beside the -logFile, absolute. A relative path is not resolved against the working
+            // directory in a player, and a capture that cannot be written fails without a word:
+            // "Logs/wake-mid.png" was logged as captured and never existed (2026-09-26).
+            string? logDir = string.IsNullOrEmpty(Application.consoleLogPath)
+                ? null : System.IO.Path.GetDirectoryName(Application.consoleLogPath);
+            string path = System.IO.Path.Combine(
+                string.IsNullOrEmpty(logDir) ? Application.persistentDataPath : logDir!, "wake-mid.png");
+            ScreenCapture.CaptureScreenshot(path);
+            Odyssey.Presentation.Rendering.WakeBlur? blur = shell.WakeBlurNow;
+            Log($"[Hitch] wake: captured {path} at blur {shell.Wake.Look.Blur:0.00}, haze {shell.Wake.Look.Haze:0.00}; " +
+                $"blur shader available {blur?.Available ?? false}, pass enqueued {blur?.Enqueued ?? 0} times");
         }
 
         /// <summary>

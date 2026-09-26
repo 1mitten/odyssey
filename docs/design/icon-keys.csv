@@ -567,6 +567,7 @@ ui.settings.audio,Audio,ui.settings,M3,"How loud each part of the game is. Store
 ui.settings.camspeed,Camera speed,ui.settings,M3,"How fast the camera pans and zooms, as a share of its tuned speed"
 ui.settings.buildlayout,Build palette layout,ui.settings,M3,"Which of the three shapes the Build palette takes: rows, rail or bar"
 ui.settings.selectionstyle,Selection style,ui.settings,M3,"How the selected thing is marked: a line round the thing itself, or corner brackets"
+ui.settings.wake,Wake-up,ui.settings,MS,"Enter a colony by waking into it: blurred, warm and muffled, clearing over five seconds. Any key or click wakes you at once. Off fades straight in"
 ui.settings.developer,Developer overlay,ui.settings,M3,"The frame-time and draw-call readout, kept on the machine between sessions"
 ui.debug.panel,Debug,ui.debug,M3,"Debug-only actions: not saved and not for a shipping build"
 ui.debug.spawnpawn,Spawn colonist,ui.debug,M3,"Adds a colonist with no scenario and no starting kit"
