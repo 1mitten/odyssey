@@ -23,17 +23,6 @@ the next session learns to ignore.
 
 ## Open
 
-- **Does the Almanac read true, and do its pages find their things?** (`claude/almanac-refresh`,
-  design 64.) Rewritten against the code: 110 pages in 19 categories, keyed by registry key, icons
-  drawn, links resolved, the info button opening the page for what is selected. Look for:
-  - whether the rail's nineteen categories are findable, or too many to scan;
-  - whether the line icons read at 20 px in the index beside the sixteen pixel-art ones, or look
-    like two different games;
-  - the info button on a birch, a picked berry bush, a crowbar, a bandit and a colonist on her
-    Needs tab: each should open its own page;
-  - *Find on map* on Coal before any is dug: the button should say *None on this map* and the
-    Almanac stay open.
-
 - **Does the World screen read as a planet, and does the site change the colony?** (`claude/busy-meitner-zkrhtu`,
   the reviewed `claude/sharp-euler-a6xtci`; design 59.) **Second look after the first (2026-09-26, §4e–§4f):** the planet is
   128 x 64 with warped coasts and a sea share that varies by seed, zoom goes to 8x, temperatures in the site panel are
@@ -1421,6 +1410,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-26 | **The Almanac, true to the game, and one picture per key** (`claude/almanac-refresh`, `docs/design/64-almanac.md`): 110 pages keyed by registry key, the facts pinned to the Defs, and `IconGlyphs` drawn by every icon slot | working — owner, after asking for the pane and the Almanac to share their icons: *"yep it's all good"* | the icon request moved the line art into one table (design 64 §2a); the issues found along the way are rows 1–13 of `docs/plans/todo.md`. Ready to merge |
 | 2026-09-26 | **The inspect header's two toggles** (PR #245, `docs/design/61-inspect-header.md`): Draft and First Person as icon toggles, the mixed draft, First Person on Z, Close over Info | working — owner: *"it's great - happy to get this resolved and get it ready for a merge"* | none; ready to merge. Z for First Person and the 40 px tile stand |
 | 2026-09-26 | **Cracks, the break and the demolition sounds, two rounds** (PR #243, `docs/design/58-cracks.md`): walls and mined rock cracking, the break into quarters, rock's six levels, the wood smash and the boulder impact | working — owner, after the second round and the sounds: *"happy to get ready to merge into main"* | the first look moved three things (cracks from an impact point, six rock levels, the break, §1a); the sounds' one-blow gap was closed (§9). Ready to merge |
 | 2026-09-26 | **Waking into the world** (PR #241 on PR #240, `docs/design/56-wake-up.md`): the fade to black, the build behind it, the five-second dream, the held clock, the skip and the setting | working — owner: *"perfect"* | none; ready to merge after PR #240. The Unity tier found the blur's keep-alive material missing (design 56 §11) |
