@@ -466,6 +466,22 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
+        /// The key the armed banner <em>names</em> the held order by: <see cref="ArmedOrder"/>,
+        /// except that the Mine order reads <b>Dig</b> on soft ground (design 62 §4) — over the
+        /// cell under the pointer, or over a drag's start cell for as long as the drag runs, which
+        /// is the cell its run was decided from. The colour stays <see cref="ArmedOrder"/>'s: it is
+        /// one order under two words, and the strip's button lit for it is the Mine button.
+        /// </summary>
+        public string ArmedWordKey
+        {
+            get
+            {
+                string order = ArmedOrder;
+                return order == PaletteTools.Mine ? DigOrMine.OrderKey(_designate.PointerTerrain) : order;
+            }
+        }
+
+        /// <summary>
         /// Arm or put down a pinned action. The same toggle the category tools use, so a player
         /// can always put a tool down the way they picked it up.
         /// </summary>

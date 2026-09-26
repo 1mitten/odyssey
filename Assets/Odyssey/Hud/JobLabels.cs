@@ -116,9 +116,17 @@ namespace Odyssey.Hud
             if (!snapshot.TryGetPawnAspect(id, CarryStackKey, out stack)) stack = 1;
         }
 
-        public static string Carrying(int jobDef, int carriedDef, int stack)
+        public static string Carrying(int jobDef, int carriedDef, int stack) =>
+            Carrying(IconKey(jobDef), carriedDef, stack);
+
+        /// <summary>
+        /// The same line from an activity key rather than a job: for the one job that reads two
+        /// ways, the Mine job, which says <see cref="DigOrMine.DiggingKey"/> on soft ground
+        /// (design 62 §4).
+        /// </summary>
+        public static string Carrying(string activityKey, int carriedDef, int stack)
         {
-            string doing = Label(jobDef);
+            string doing = Registry.Label(activityKey);
             if (carriedDef < 0) return doing;
 
             string load = ItemLabels.Label(carriedDef);

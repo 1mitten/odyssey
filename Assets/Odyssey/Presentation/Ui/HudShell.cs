@@ -1086,10 +1086,15 @@ namespace Odyssey.Presentation.Ui
 
             _armedBanner.style.display = DisplayStyle.Flex;
             int stuff = tool!.Stuff;
-            if (_armedFor == armed && _armedStuffFor == stuff) return;
+
+            // The word can change with the tool held still: the Mine order reads Dig over soft
+            // ground (design 62 §4), so the pointer crossing from rock to grass is a new banner.
+            string wordKey = _palette?.ArmedWordKey ?? string.Empty;
+            if (_armedFor == armed && _armedStuffFor == stuff && _armedWordFor == wordKey) return;
 
             _armedFor = armed;
             _armedStuffFor = stuff;
+            _armedWordFor = wordKey;
 
             // Which of the four orders is held, or empty for a build tool. Asked of the palette
             // model rather than switched on the tool here: ArmedPinned is what the orders strip
@@ -1104,7 +1109,7 @@ namespace Odyssey.Presentation.Ui
             // exists to prevent.
             string building = Registry.Label("ui.status.building");
             string what = order.Length > 0
-                ? PaletteTools.OrderWord(order)
+                ? PaletteTools.OrderWord(wordKey.Length > 0 ? wordKey : order)
                 : BuildLabels.Building(tool.Building) is { Length: > 0 } name
                     ? building + " " + name.ToLowerInvariant() + " of " + BuildLabels.Stuff(stuff)
                     : building;
@@ -1123,6 +1128,7 @@ namespace Odyssey.Presentation.Ui
 
         DesignateTool _armedFor = DesignateTool.None;
         int _armedStuffFor = -1;
+        string _armedWordFor = string.Empty;
 
         void UpdateMarquee()
         {

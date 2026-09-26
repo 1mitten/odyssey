@@ -140,10 +140,10 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <nav aria-label="Sections"><h2>Sections</h2><ul class="navlist">
 <li><a href="#commodities">Commodities<b>58</b></a></li>
 <li><a href="#items">Items and equipment<b>34</b></a></li>
-<li><a href="#buildings">Buildings and orders<b>83</b></a></li>
+<li><a href="#buildings">Buildings and orders<b>84</b></a></li>
 <li><a href="#commands">Commands<b>55</b></a></li>
 <li><a href="#work">Work and skills<b>57</b></a></li>
-<li><a href="#colonists">Colonists<b>63</b></a></li>
+<li><a href="#colonists">Colonists<b>64</b></a></li>
 <li><a href="#health">Health and anatomy<b>39</b></a></li>
 <li><a href="#events">Events<b>51</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>985</b><i>named entries</i></div>
+<div class="stat"><b>987</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>713</b><i>no art yet</i></div>
+<div class="stat m"><b>715</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -732,7 +732,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="buildings" data-sec="1">
-<h2>Buildings and orders <em class="count">83 entries</em></h2>
+<h2>Buildings and orders <em class="count">84 entries</em></h2>
 <p class="blurb">Everything on the architect menu: what can be built, and the one-off orders that can be given to things that already exist. The vertical connectors matter more here than in a flat colony sim, because a stair occupies two cells and a ladder one.</p>
 <h3 class="nsh">Architect categories</h3>
 <div class="tbl">
@@ -891,11 +891,17 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M3</div>
 </div>
-<div class="row" id="ui.arch.tool.mine" data-hay="mine ui.arch.tool.mine dig out a cell " data-gap="0">
+<div class="row" id="ui.arch.tool.mine" data-hay="mine ui.arch.tool.mine dig out a cell. a drag begun on rock marks only rock; one begun on soft ground marks everything " data-gap="0">
 <div class="nm">Mine<span class="k">ui.arch.tool.mine</span></div>
-<div class="dsc">Dig out a cell</div>
+<div class="dsc">Dig out a cell. A drag begun on rock marks only rock; one begun on soft ground marks everything</div>
 <div class="art"><span class="pill">high</span> tools and weapons</div>
 <div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.arch.tool.dig" data-hay="dig ui.arch.tool.dig the mine order on soft ground: grass, earth, sand, gravel or subsoil. the same job and the same work " data-gap="1">
+<div class="nm">Dig<span class="k">ui.arch.tool.dig</span></div>
+<div class="dsc">The Mine order on soft ground: grass, earth, sand, gravel or subsoil. The same job and the same work</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
 </div>
 <div class="row" id="ui.arch.tool.deconstruct" data-hay="deconstruct ui.arch.tool.deconstruct take our own building apart for materials " data-gap="0">
 <div class="nm">Deconstruct<span class="k">ui.arch.tool.deconstruct</span></div>
@@ -1953,7 +1959,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">63 entries</em></h2>
+<h2>Colonists <em class="count">64 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -2138,11 +2144,17 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
-<div class="row" id="ui.status.mining" data-hay="mining ui.status.mining cutting into rubble, concrete or rock " data-gap="0">
+<div class="row" id="ui.status.mining" data-hay="mining ui.status.mining cutting into rock, ore or rubble " data-gap="0">
 <div class="nm">Mining<span class="k">ui.status.mining</span></div>
-<div class="dsc">Cutting into rubble, concrete or rock</div>
+<div class="dsc">Cutting into rock, ore or rubble</div>
 <div class="art"><span class="pill">high</span> tools and weapons</div>
 <div class="ms">M2</div>
+</div>
+<div class="row gap" id="ui.status.digging" data-hay="digging ui.status.digging cutting out a cell of soft ground: grass, earth, sand, gravel or subsoil " data-gap="1">
+<div class="nm">Digging<span class="k">ui.status.digging</span></div>
+<div class="dsc">Cutting out a cell of soft ground: grass, earth, sand, gravel or subsoil</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
 </div>
 <div class="row gap" id="ui.status.felling" data-hay="chopping ui.status.felling cutting a tree down for wood an axe swung at a trunk" data-gap="1">
 <div class="nm">Chopping<span class="k">ui.status.felling</span></div>
@@ -4482,7 +4494,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 985, "gaps": 713};</script>
+<script>window.WIKI={"total": 987, "gaps": 715};</script>
 <script>
 (function(){
   var D = window.WIKI;

@@ -447,6 +447,42 @@ namespace Odyssey.Sim.Contracts
         public const int Emberquartz = 25;
 
         public const int Count = 26;
+
+        /// <summary>
+        /// Rock-like: stone a pick goes through, or a heap of it — rock, deep stone, bedrock, every
+        /// ore, and rubble. The Mine order on one of these reads <b>Mine</b>; on soft ground it reads
+        /// <b>Dig</b> (design 62 §4).
+        ///
+        /// <para><b>The one owner of the rule, and it is here because both sides ask it.</b> The
+        /// simulation asks it of a drag's start cell to decide whether the run marks only rock
+        /// (<c>DesignationGrid.Designate</c>), and the interface asks it to choose the word — the
+        /// armed banner, the tile pane's order line, the colonist's activity. The interface cannot
+        /// see <c>NaturalContent</c> (ADR 0003), so a static there would have been a second copy
+        /// here within the day. A Sim-side test holds <see cref="IsSoftGround"/> to the terrain
+        /// table's own solidity, so a stone added to the table without a decision here fails.</para>
+        /// </summary>
+        public static bool IsRockLike(int terrain) =>
+            terrain == Rock || terrain == Bedrock || terrain == IronOre || terrain == CoalSeam
+            || terrain == Rubble
+            // Deep mining (design 62 §5): deep stone and the four new ores. WorldContentDefTests
+            // holds every kind in Ores.xml to this list, so an ore added there without a word
+            // here fails the fast tier.
+            || terrain == DeepStone || terrain == CopperOre || terrain == GoldOre || terrain == Gems
+            || terrain == Emberquartz;
+
+        /// <summary>
+        /// Soft ground: solid terrain that is not rock-like — grass, bare earth, packed gravel,
+        /// sand, subsoil and marsh on the meadow, and the city's fill, buried seam and salvage.
+        /// Diggable by the Mine order exactly as rock is; only the word differs (design 62 §4).
+        ///
+        /// <para>Written as a list because this assembly does not know which terrain is solid —
+        /// that is the Def's — and held to <c>solid &amp;&amp; !IsRockLike</c> for every terrain by
+        /// <c>DigOrMineTests</c> in the simulation's tests.</para>
+        /// </summary>
+        public static bool IsSoftGround(int terrain) =>
+            terrain == Grass || terrain == BareEarth || terrain == PackedGravel || terrain == Sand
+            || terrain == Subsoil || terrain == Marsh
+            || terrain == EngineeredFill || terrain == BuriedSeam || terrain == Salvage;
     }
 
     /// <summary>

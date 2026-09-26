@@ -278,6 +278,47 @@ namespace Odyssey.Sim.Pawns
         public override int WorkType => WorkTypeIndex.Mining;
 
         /// <summary>
+        /// Present, at 1, on a colonist whose Mine job is on soft ground: the activity line's
+        /// "Digging" rather than "Mining" (design 62 §4). Sparse — a miner at a rock face and
+        /// everybody else publish nothing.
+        /// </summary>
+        public const string DiggingName = "odyssey.pawn.digging";
+
+        public static readonly AspectKey Digging = AspectKey.Of(DiggingName);
+
+        /// <summary>
+        /// Whether the cut in hand was soft ground, taken at the instant it came out, for the
+        /// settle that follows: by then the cell is air and cannot say what it was. Neither saved
+        /// nor hashed — it chooses a word and nothing reads it but <see cref="IsDigging"/>. A load
+        /// in the half-second of a settle reads "Mining" until the job ends, which is the whole
+        /// cost of not saving it.
+        /// </summary>
+        bool _cutSoft;
+
+        public override void Begin(Pawn pawn, Job job)
+        {
+            base.Begin(pawn, job);
+            _cutSoft = false;
+        }
+
+        /// <summary>
+        /// Is this colonist digging soft ground rather than mining rock? Asked at publish time, so
+        /// the pane can say "Digging" without a job def of its own — which would be one more
+        /// hashed per-job tally and would move every golden (the argument
+        /// <see cref="AnimalShelterThinkNode.IsSheltering"/> makes). Read off the cell being cut:
+        /// <see cref="TerrainHandle.IsSoftGround"/> is the one rule the banner and the tile pane
+        /// ask too, so the three cannot disagree about one cell.
+        /// </summary>
+        public static bool IsDigging(Pawn pawn, CellGrid cells)
+        {
+            if (pawn.CurrentJob == null || pawn.CurrentJob.DefIndex != JobIndex.Mine) return false;
+            if (pawn.Driver is not MineJobDriver driver) return false;
+            if (driver.ToilIndex == SettleToil) return driver._cutSoft;
+            int cell = driver.Job.DestCell;
+            return cell >= 0 && cell < cells.Size.CellCount && TerrainHandle.IsSoftGround(cells.Terrain[cell]);
+        }
+
+        /// <summary>
         /// The rock face, once the walk is over and the swings have started. Presentation turns
         /// this into a tool in the hands and an arm that comes down on it; before the walk ends it
         /// is -1, so a colonist crossing the map does it empty-handed.
@@ -352,6 +393,7 @@ namespace Odyssey.Sim.Pawns
                 return JobStatus.Ongoing;
 
             designations.Clear(cell);
+            _cutSoft = TerrainHandle.IsSoftGround(terrain);
             ctx.Defer(_ => MineCell(ctx, cell, terrain));
 
             // The rock goes now; the colonist straightens up before walking off.

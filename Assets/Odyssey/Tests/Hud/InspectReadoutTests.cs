@@ -410,6 +410,22 @@ namespace Odyssey.Tests.Hud
                 "the order is the actionable row, so it leads and the estimate stands down");
         }
 
+        /// <summary>
+        /// The Mine order on soft ground reads Dig (design 62 §4), on the tile pane as everywhere:
+        /// a grass block is diggable, and one with the order on it is being dug.
+        /// </summary>
+        [Test]
+        public void GrassIsDiggableAndItsOrderReadsDigging()
+        {
+            InspectModel bare = Looking(FrameWith(Detail(terrain: TerrainHandle.Grass, workToClear: 60)));
+            Assert.That(Rows(bare), Does.StartWith("diggable=about "));
+
+            InspectModel ordered = Looking(FrameWith(
+                Detail(terrain: TerrainHandle.Grass, workToClear: 60),
+                new OrderView(Size.Index(At), 1, 115)));
+            Assert.That(Rows(ordered), Does.StartWith("digging=45% done"));
+        }
+
         [Test]
         public void ABuiltFloorIsTitledByItsMaterial()
         {

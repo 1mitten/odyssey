@@ -1860,6 +1860,11 @@ namespace Odyssey.Hud
                     float width = PaletteTools.OrderWord(key).Length * size * HudCommands.UiAdvance;
                     if (width > widest) widest = width;
                 }
+
+                // And the Mine order's second word (design 62 §4): the banner says Dig over soft
+                // ground, so a rename that made it the longest must widen the minimum too.
+                float dig = PaletteTools.OrderWord(DigOrMine.DigKey).Length * size * HudCommands.UiAdvance;
+                if (dig > widest) widest = dig;
                 return widest + 2 * ArmedPadX + 2 * HudTheme.ArmedBorderWidth;
             }
         }
