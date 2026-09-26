@@ -200,6 +200,14 @@ namespace Odyssey.Presentation.Bootstrap
                 Handed?.Invoke(combatEvent);
                 return;
             }
+            // Cover that took a bullet and has no hit points to take it with — a tree, a rock face —
+            // reports only Covered, so it throws the dust a struck building's Hit throws (design 53 §7e).
+            if (combatEvent.Kind == CombatEventKind.Covered && combatEvent.Amount == 0 && IsGun(combatEvent.Weapon))
+            {
+                Projectiles?.OnCombatEvent(combatEvent, snapshot, figures);
+                if (combatEvent.Cell.Y >= lowestLayer && combatEvent.Cell.Y <= highestLayer)
+                    ThrowDust(combatEvent, snapshot, figures);
+            }
             bool bullet = (combatEvent.Kind == CombatEventKind.Hit || combatEvent.Kind == CombatEventKind.Miss)
                           && IsGun(combatEvent.Weapon);
             if (bullet)

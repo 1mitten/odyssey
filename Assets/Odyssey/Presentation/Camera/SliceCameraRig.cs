@@ -433,6 +433,8 @@ namespace Odyssey.Presentation.CameraRig
             Vector2 pointer = mouse.position.ReadValue();
             bool overInterface = PointerOverInterface != null && PointerOverInterface(pointer);
             PointerWasOverInterface = overInterface;
+            _pointerNow = pointer;
+            _pointerKnown = true;
 
             // Case 8 of design 09 section 6: scroll over a panel scrolls the panel, scroll over
             // the world zooms the camera. Until this guard the wheel did both at once — a scroll
@@ -597,6 +599,11 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         void ResolvePointer()
         {
+            // The plain hover the readout asks for (design 53 §8b), resolved here with every other
+            // pick, after the camera has moved this frame.
+            _hasPointerCell = WantsPointerCell && _pointerKnown && !PointerWasOverInterface
+                && CellAt(_pointerNow, out _pointerCell);
+
             switch (_pending)
             {
                 case PointerOutcome.Idle:
@@ -703,6 +710,31 @@ namespace Odyssey.Presentation.CameraRig
         /// <inheritdoc cref="HighestSelectableLayer"/>
         public int LowestSelectableLayer =>
             _model == null ? ActiveLayer : slice.LowestSelectableLayer(ActiveLayer, _model.LowestOutdoorLayer);
+
+        /// <summary>
+        /// The cell under the mouse now, on a drawn layer, and where the mouse is — false when the
+        /// pointer is over the interface or the ray misses. What the hit-chance readout asks
+        /// (design 53 §8b); it resolves a pick exactly as a click would.
+        /// </summary>
+        public bool CellUnderPointer(out CellRef cell, out Vector2 screenPosition)
+        {
+            cell = _pointerCell;
+            screenPosition = _pointerNow;
+            return _hasPointerCell;
+        }
+
+        /// <summary>
+        /// Should the cell under the pointer be resolved every frame, tool or no tool? Set by the
+        /// hit-chance readout while it could show (design 53 §8b), so a colony with nobody drafted
+        /// pays for no pick. Resolved in <see cref="ResolvePointer"/> like every other pick — after
+        /// the camera has moved, never before (design 28, P15).
+        /// </summary>
+        public bool WantsPointerCell { get; set; }
+
+        Vector2 _pointerNow;
+        bool _pointerKnown;
+        CellRef _pointerCell;
+        bool _hasPointerCell;
 
         /// <summary>The cell under a screen point on a drawn layer, or false when the ray misses.</summary>
         bool CellAt(Vector2 screenPosition, out CellRef cell)

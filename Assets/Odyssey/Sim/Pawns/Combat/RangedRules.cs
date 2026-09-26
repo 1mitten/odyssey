@@ -28,14 +28,32 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Ticks in the air: <c>max(1, ceil(distance / speed))</c> from the shooter to <see cref="EndCell"/>.</summary>
         public readonly int FlightTicks;
 
-        public ShotOutcome(bool aimed, int hitPerMille, int damageMilli, int endCell, int flightTicks)
+        /// <summary>
+        /// The cover the target had from this shot, per mille (design 53 §2): what the cover roll
+        /// was made against, nought in the open or when the aim roll already missed.
+        /// </summary>
+        public readonly int CoverPerMille;
+
+        /// <summary>
+        /// The piece of cover a shot the cover roll defeated is fired into (design 53 §2d), or -1.
+        /// When set, <see cref="Aimed"/> is false and <see cref="EndCell"/> is this cell.
+        /// </summary>
+        public readonly int CoverCell;
+
+        public ShotOutcome(bool aimed, int hitPerMille, int damageMilli, int endCell, int flightTicks,
+            int coverPerMille = 0, int coverCell = -1)
         {
             Aimed = aimed;
             HitPerMille = hitPerMille;
             DamageMilli = damageMilli;
             EndCell = endCell;
             FlightTicks = flightTicks;
+            CoverPerMille = coverPerMille;
+            CoverCell = coverCell;
         }
+
+        /// <summary>The chance the player is told, per mille: the aim times what the cover leaves (design 53 §2d).</summary>
+        public int TotalPerMille => HitPerMille * (1_000 - CoverPerMille) / 1_000;
     }
 
     /// <summary>
@@ -54,6 +72,21 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>The chance, per mille, that a shot over <paramref name="distanceMm"/> with this gun is aimed true.</summary>
         int HitChancePerMille(Pawn shooter, int distanceMm, in Armament armament, PawnContext ctx);
+
+        /// <summary>
+        /// How well a target in <paramref name="targetCell"/> is covered from a shot out of
+        /// <paramref name="shooterCell"/>, per mille (design 53 §2): <see cref="Cover.Evaluate"/>,
+        /// with the contributors written into <paramref name="report"/> when one is given.
+        /// </summary>
+        int CoverPerMille(int shooterCell, int targetCell, PawnContext ctx, CoverReport? report = null);
+
+        /// <summary>
+        /// The chance, per mille, that a stray crossing a cell whose cover is
+        /// <paramref name="basePerMille"/> is caught by it (design 53 §2e): half the base (the
+        /// combat Def's <c>coverInterceptPerMille</c>) times the dead zone's ramp from the shooter,
+        /// so a colonist's own sandbags never take her outgoing shots.
+        /// </summary>
+        int CoverInterceptPerMille(int basePerMille, int distanceFromShooterMm, PawnContext ctx);
 
         /// <summary>
         /// Decide one shot <b>on the tick it is fired</b>: the hit, the damage (for a miss too), the
@@ -75,7 +108,8 @@ namespace Odyssey.Sim.Pawns
     /// and hashes exactly; public, unsealed and virtual, per the code conventions.
     ///
     /// <para><b>The hit</b> is <c>pow(perCell(level), distance in cells) × the gun's accuracy at the
-    /// distance × cover</c>, floored. The power is a loop over whole 2.5 m cells with the fraction
+    /// distance</c>, floored. Cover is a second roll after this one (design 53 §2d), so this is
+    /// the aim alone. The power is a loop over whole 2.5 m cells with the fraction
     /// of a cell interpolated linearly, so a shot up a layer — longer, because a layer is 3 m —
     /// is harder than one along it by exactly its extra length, and by nothing else.</para>
     ///
@@ -98,7 +132,6 @@ namespace Odyssey.Sim.Pawns
             long chance = PowPerMille(perCell, distanceMm);
             RangedDef? ranged = armament.Attack.ranged;
             if (ranged != null) chance = chance * ranged.AccuracyPerMille(distanceMm) / 1_000;
-            chance = chance * combat.coverPerMille / 1_000;
             // The gun's quality (design 47 §11).
             chance = WeaponQuality.Accuracy((int)chance, armament);
             int floor = combat.hitFloorPerMille;
@@ -132,14 +165,56 @@ namespace Odyssey.Sim.Pawns
             var hit = DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.RangedHit ^ who);
             bool aimed = hit.NextInt(1_000) < hitPerMille;
 
+            // Cover is the second roll (design 53 §2d), made only after an aim that was true: the
+            // reference's order, and why a miss never wears a sandbag down by the roll — only by
+            // crossing it (§2e). A shot the cover wins is fired into one piece, chosen in
+            // proportion to what each gave.
+            int cover = 0, coverCell = -1;
+            if (aimed)
+            {
+                cover = CoverPerMille(shooter.Cell, target.Cell, ctx, _cover);
+                if (cover > 0 && DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.RangedCover ^ who).NextInt(1_000) < cover)
+                {
+                    int sum = _cover.Sum;
+                    if (sum > 0)
+                        coverCell = _cover.CellForPick(
+                            DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.RangedCoverPick ^ who).NextInt(sum));
+                    if (coverCell >= 0) aimed = false;
+                }
+            }
+
             int damage = WeaponQuality.Damage(MeleeRules.DamageMilli(armament.Attack, ctx,
                 DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.RangedDamage ^ who)), armament);
 
-            int end = aimed ? target.Cell : MissCell(ctx, shooter.Cell, target.Cell, ScatterRadius(hitPerMille, ctx),
-                DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.RangedScatter ^ who));
+            int end = aimed ? target.Cell
+                : coverCell >= 0 ? coverCell
+                : MissCell(ctx, shooter.Cell, target.Cell, ScatterRadius(hitPerMille, ctx),
+                    DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.RangedScatter ^ who));
 
             return new ShotOutcome(aimed, hitPerMille, damage, end,
-                FlightTicks(RangedGeometry.DistanceMm(size, shooter.Cell, end), armament));
+                FlightTicks(RangedGeometry.DistanceMm(size, shooter.Cell, end), armament), cover, coverCell);
+        }
+
+        /// <summary>The scratch the shot's cover is worked into: one per rules, and the simulation has one thread.</summary>
+        readonly CoverReport _cover = new CoverReport();
+
+        public virtual int CoverPerMille(int shooterCell, int targetCell, PawnContext ctx, CoverReport? report = null) =>
+            Cover.Evaluate(ctx, shooterCell, targetCell, report);
+
+        public virtual int CoverInterceptPerMille(int basePerMille, int distanceFromShooterMm, PawnContext ctx)
+        {
+            CombatDef combat = ctx.Content.Combat;
+            int chance = basePerMille * combat.coverInterceptPerMille / 1_000;
+            return Ramp(chance, distanceFromShooterMm, combat);
+        }
+
+        /// <summary>The dead zone's ramp (design 47 §2c): nought within it, the whole of <paramref name="chance"/> past its far edge, linear between.</summary>
+        static int Ramp(int chance, int distanceFromShooterMm, CombatDef combat)
+        {
+            int near = combat.interceptDeadZoneMm, full = combat.interceptFullMm;
+            if (distanceFromShooterMm <= near) return 0;
+            if (distanceFromShooterMm >= full || full <= near) return chance;
+            return (int)((long)chance * (distanceFromShooterMm - near) / (full - near));
         }
 
         /// <summary>The scatter's radius in cells for a shot made at <paramref name="hitPerMille"/>.</summary>
@@ -198,12 +273,7 @@ namespace Odyssey.Sim.Pawns
 
         public virtual int InterceptPerMille(Pawn bystander, int distanceFromShooterMm, PawnContext ctx)
         {
-            CombatDef combat = ctx.Content.Combat;
-            int near = combat.interceptDeadZoneMm, full = combat.interceptFullMm;
-            int chance = bystander.Species.interceptPerMille;
-            if (distanceFromShooterMm <= near) return 0;
-            if (distanceFromShooterMm >= full || full <= near) return chance;
-            return (int)((long)chance * (distanceFromShooterMm - near) / (full - near));
+            return Ramp(bystander.Species.interceptPerMille, distanceFromShooterMm, ctx.Content.Combat);
         }
     }
 }

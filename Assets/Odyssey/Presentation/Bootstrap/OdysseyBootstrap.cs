@@ -192,6 +192,10 @@ namespace Odyssey.Presentation.Bootstrap
         CellGrid? _grid;
         WorldRenderModel? _model;
         ChunkRenderer? _renderer;
+
+        /// <summary>Scratch for a cover piece's ghost boxes (design 53 §7); drawn and forgotten each frame.</summary>
+        readonly Matrix4x4[] _coverGhost = new Matrix4x4[CoverShape.MaxParts];
+        readonly int[] _coverGhostShades = new int[CoverShape.MaxParts];
         PawnContext? _pawns;
         PawnFigureDirector? _figures;
         DesignatePresenter? _designate;
@@ -1666,6 +1670,7 @@ namespace Odyssey.Presentation.Bootstrap
             // The fight (design 33 §1): a bar over the hurt and the drafted, the hostile marker,
             // then the moments since last frame, handed on once each, and the words they float.
             DrawCombatMarks(_world.Views.Current, movePerTick, activeLayer, slice);
+            UpdateShotReadout(_world.Views.Current);
             _combatFeedback.Floaters.Step(_world.Views.Current.Running ? Time.deltaTime : 0f);
             int bloodLowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model?.LowestOutdoorLayer ?? int.MaxValue));
             int bloodHighest = slice.HighestVisibleLayer(activeLayer, _world.Views.Current.Size.SizeY);
@@ -2315,6 +2320,16 @@ namespace Odyssey.Presentation.Bootstrap
                 Matrix4x4 shelf = ShelfShape.Root(cell.X, cell.Z, cell.Y, facing);
                 for (int part = 0; part < ShelfShape.PartCount; part++)
                     _renderer.DrawGhost(module, tint, ShelfShape.Part(shelf, facing, part));
+                return;
+            }
+
+            // Cover's ghost (design 53 §7a-bis), from the same bags the mesher draws: a lone piece,
+            // the way a line of them looks before its neighbours stand. A ghost has one colour, so
+            // the cloths are ignored.
+            if (CoverShape.Draws(what.edifice))
+            {
+                int count = CoverShape.Parts(what.edifice, cell.X, cell.Z, cell.Y, 0, _coverGhost, _coverGhostShades);
+                for (int part = 0; part < count; part++) _renderer.DrawGhost(module, tint, _coverGhost[part]);
                 return;
             }
 
@@ -3294,7 +3309,79 @@ namespace Odyssey.Presentation.Bootstrap
                     _renderer.DrawMarker(feet + Vector3.up * (top + DraftMarkerLift), DraftMarkerSize, hostileInk);
             }
 
+            // A struck building's bar (design 33 §13k, built with cover, design 53 §7d): one row per
+            // building something has hit, none for a whole one, so a sandbag line worn down in a
+            // fight shows how much is left of each piece. Over the thing's top, the order mark's own
+            // height, and the same pieces and inks as a pawn's bar.
+            ReadOnlySpan<EdificeDamageView> struck = snapshot.EdificeDamage;
+            for (int i = 0; i < struck.Length; i++)
+            {
+                EdificeDamageView row = struck[i];
+                if ((uint)row.CellIndex >= (uint)snapshot.Size.CellCount) continue;
+                if (!CombatFeedbackModel.BuildingHealthBar(snapshot, row.CellIndex, out int hp, out int hpMax)) continue;
+                CellRef cell = snapshot.Size.FromIndex(row.CellIndex);
+                if (cell.Y < lowest || cell.Y > highest) continue;
+                float top = _model.MarkHeight(row.CellIndex, slice.wallsLowered);
+                Vector3 centre = GroundRelief.Lift(CellMetrics.FloorCentre(cell)) + Vector3.up * (top + CombatMarks.BarLift);
+                Color fill = Ui.HudTokens.Convert(HealthBarLayout.InkOf(HealthBarInk.Fill,
+                    CombatFeedbackModel.HealthBarColour(hp, hpMax)));
+                int pieces = HealthBarLayout.Pieces(CombatMarks.Fraction(hp, hpMax), _barPieces);
+                for (int p = 0; p < pieces; p++)
+                {
+                    HealthBarInk ink = _barPieces[p].Ink;
+                    Color colour = ink == HealthBarInk.Fill ? fill : ink == HealthBarInk.Plate ? plate : outline;
+                    _renderer.GatherBarPiece(colour, CombatMarks.Place(in _barPieces[p], centre, facing));
+                }
+            }
+
             _renderer.FlushBarPieces();
+        }
+
+        PawnId _shotShooter, _shotTarget;
+
+        /// <summary>
+        /// The hit-chance readout (design 53 §8b): with one drafted colonist selected and a hostile
+        /// under the pointer, ask the simulation what her shot would come to and show its answer
+        /// beside the cursor. The question is sent only when the pair changes; the answer is the
+        /// published <see cref="ShotReportView"/>, so the words can never promise odds the dice do
+        /// not keep. A colonist with no gun gets no answer, and so no readout.
+        /// </summary>
+        void UpdateShotReadout(WorldSnapshot snapshot)
+        {
+            if (_world == null) return;
+            PawnId shooter = default, target = default;
+            Vector2 pointer = default;
+            IReadOnlyList<PawnId>? selected = Directors?.Selection?.Pawns;
+            bool could = selected != null && selected.Count == 1 && snapshot.TryGetPawn(selected[0], out PawnView chosen)
+                && chosen.IsDrafted && !chosen.IsDowned;
+            // The rig resolves the hover cell only while the readout could show (next frame on).
+            if (cameraRig != null) cameraRig.WantsPointerCell = could;
+            if (could && snapshot.TryGetPawn(selected![0], out chosen)
+                && cameraRig != null && cameraRig.CellUnderPointer(out CellRef cell, out pointer))
+            {
+                var pawns = snapshot.Pawns;
+                for (int i = 0; i < pawns.Length; i++)
+                {
+                    if (pawns[i].Cell != cell || !pawns[i].IsHostile) continue;
+                    shooter = chosen.Id;
+                    target = pawns[i].Id;
+                    break;
+                }
+            }
+
+            if (shooter != _shotShooter || target != _shotTarget)
+            {
+                _shotShooter = shooter;
+                _shotTarget = target;
+                _world.Intents.Submit(new Intent(IntentKind.QueryShot, default,
+                    shooter.IsValid ? shooter.Value : 0, target.IsValid ? target.Value : 0));
+            }
+
+            string? text = null;
+            if (target.IsValid && snapshot.TryGetShotReport(out ShotReportView report)
+                && report.Shooter == shooter && report.Target == target)
+                text = ShotReadout.Text(report);
+            _hudShell?.SetShotReadout(text, pointer);
         }
 
         /// <summary>One bar's pieces, reused for every bar every frame.</summary>

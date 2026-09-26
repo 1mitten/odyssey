@@ -2915,3 +2915,29 @@ only the blow that *crosses* the line kills. Found by review, not by a test — 
 - **The check:** a test of a consequence that is deferred must also run it from inside the
   deferred phase (`FallTests.AFatalFallInsideTheDeferredPhaseIsGoneTheSameTick`), and a removal
   that must not outlive its tick uses `DeferThisTick`.
+
+## A derived value written on an interval, and not on a load (2026-09-25)
+
+**Symptom.** A save taken mid-gunfight on a cloudy day resumed identically for 45 ticks and parted
+on the 46th, on one colonist's mood (`CoverGateTests.ASaveTakenMidFightResumesTheSame`), with or
+without sandbags and with cover-seeking off — and on `claude/ranged-combat` untouched, which put it
+before cover.
+
+**Cause.** `TemperatureSystem.WeatherOffsetC` is derived and never saved, and its one writer,
+`WeatherSystem`, writes it only on a weather pass (every 120 ticks). A loaded colony therefore held
+the fresh board's offset until the next pass, while the run that was never saved held the loaded
+sky's; the needs pass sampled a colonist's ambient in the gap. The weather's own state loaded and
+hashed perfectly, so the hash of the weather matched and the fault showed only downstream, in a pawn.
+
+**Measurement that found it.** Per-component state hashes on both worlds at the first divergent
+tick (only `PawnRegistry` differed), then every hashed pawn field (only `AmbientTempC` and
+`MoodTarget`), then the reader of that field.
+
+**Fix.** `WeatherSystem.ReapplyOffset`, called from `ColonyWorld.RebuildDerived` after the tick is
+restored: the offset at the last pass at or below the tick before the load's. `WeatherLoadTests` is
+the regression, with its negative control run.
+
+**The check for the next one.** Any value a system *writes into another* on an interval is derived
+state with a writer that does not run on load. Ask of each: is it written in `Load` or in
+`RebuildDerived`? The existing save tests missed it because none of them fights under a changed sky
+for longer than one weather pass before saving.
