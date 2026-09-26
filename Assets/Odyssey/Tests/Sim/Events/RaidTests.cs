@@ -270,23 +270,50 @@ namespace Odyssey.Tests.Sim.Events
 
         // ---- the size, the mix, the ceiling ---------------------------------------------------
 
-        [TestCase(3, 0, 3)]
-        [TestCase(3, 10, 5)]
-        [TestCase(0, 0, 1)]
-        [TestCase(100, 0, 30)]
-        public void TheAutoSizeIsHeadcountAndDays(int colonists, int day, int expected)
+        /// <summary>
+        /// The size is strength against the raider (design 59 §4b): as many of the mix's average
+        /// raider as the colony's fighting power buys, times the day ramp, clamped.
+        /// </summary>
+        [TestCase(3, 0, 1000, 2)]
+        [TestCase(3, 48, 1000, 3)]
+        [TestCase(3, 48, 2000, 6)]
+        [TestCase(0, 0, 1000, 1)]
+        [TestCase(100, 48, 1000, 30)]
+        public void TheAutoSizeIsStrengthAgainstTheRaider(int raidersWorth, int day, int scale, int expected)
         {
             RaidParams p = ContentPack.Incidents().Defs[IncidentHandle.Raid].raid!;
-            Assert.That(RaidBudget.AutoSize(colonists, day * Calendar.TicksPerDay, p), Is.EqualTo(expected));
+            const int raider = 2_000;
+            int strength = (int)((long)raidersWorth * raider * 1000 / p.raidersPerStrengthPerMille);
+            Assert.That(RaidBudget.AutoSize(strength, raider, day * Calendar.TicksPerDay, p, scale), Is.EqualTo(expected));
         }
 
-        /// <summary>Size 0 is the incident's own: three standing colonists on day nought is three.</summary>
+        [Test]
+        public void TheRampRisesThenCreeps()
+        {
+            RaidParams p = ContentPack.Incidents().Defs[IncidentHandle.Raid].raid!;
+            Assert.That(RaidBudget.Ramp(0, p), Is.EqualTo(p.rampStartPerMille));
+            Assert.That(RaidBudget.Ramp(p.rampDays * Calendar.TicksPerDay, p), Is.EqualTo(1000));
+            Assert.That(RaidBudget.Ramp((p.rampDays + 24) * Calendar.TicksPerDay, p), Is.EqualTo(1000 + p.rampPerSeasonPerMille));
+            Assert.That(RaidBudget.Ramp(3000 * Calendar.TicksPerDay, p), Is.EqualTo(p.rampMaxPerMille));
+        }
+
+        /// <summary>
+        /// Size 0 is the incident's own, and is the sum <see cref="RaidWorker.SizeFor"/> makes: the
+        /// three colonists of this board, unarmed on day nought, meet about the three raiders the
+        /// old headcount rule gave them, which is what <c>raidersPerStrengthPerMille</c> is
+        /// calibrated to.
+        /// </summary>
         [Test]
         public void ARaidWithNoSizeTakesTheAutoSize()
         {
             ColonyWorld colony = Board();
+            IncidentContent content = colony.Incidents.Content;
+            RaidParams p = content.Defs[IncidentHandle.Raid].raid!;
+            int expected = RaidWorker.SizeFor(colony.Pawns, content, p, 0, 2, colony.World.CurrentTick);
+            TestContext.Out.WriteLine($"strength {ColonyStrength.Of(colony.Pawns)}, raider {ColonyStrength.RaiderPowerOf(colony.Pawns.Content, content.Mixes[2])}, size {expected}");
             Assert.That(Fire(colony, 0), Is.EqualTo(IntentRejection.None));
-            Assert.That(Raid(colony).StartingSize, Is.EqualTo(3));
+            Assert.That(Raid(colony).StartingSize, Is.EqualTo(expected));
+            Assert.That(expected, Is.InRange(2, 4), "three unarmed colonists on day nought meet about three");
         }
 
         /// <summary>

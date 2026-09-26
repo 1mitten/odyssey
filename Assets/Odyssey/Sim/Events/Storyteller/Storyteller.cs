@@ -258,11 +258,21 @@ namespace Odyssey.Sim.Events
 
         // ------------------------------------------------------------------ strength (ST2)
 
+        /// <summary>
+        /// How fast the remembered strength lets go, per mille an hour: about a tenth a day, so
+        /// stowing the guns before a raid buys nothing for days and a real loss still shows within
+        /// a week (design 59 §4c). INVENTED.
+        /// </summary>
+        public const int PeakDecayPerMillePerHour = 4;
+
         void UpdateStrengthPeak()
         {
+            int now = CurrentStrength();
+            int decayed = _strengthPeak - (int)((long)_strengthPeak * PeakDecayPerMillePerHour / 1000);
+            _strengthPeak = Math.Max(now, decayed);
         }
 
-        int CurrentStrength() => 0;
+        int CurrentStrength() => ColonyStrength.Of(_ctx);
 
         // ------------------------------------------------------------------ tension (ST3)
 

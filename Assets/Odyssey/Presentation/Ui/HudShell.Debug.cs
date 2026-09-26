@@ -572,7 +572,8 @@ namespace Odyssey.Presentation.Ui
                 bool fires = colony.Incidents.CanFire(new IncidentParms(def, intent.B, null, intent.C - 1));
                 RaidParams? p = colony.Incidents.Content.Defs[def].raid;
                 string note = fires || p == null ? string.Empty
-                    : DebugDirector.RaidRefusal(RaidWorker.SizeFor(colony.Pawns, p, intent.B, world.CurrentTick),
+                    : DebugDirector.RaidRefusal(RaidWorker.SizeFor(colony.Pawns, colony.Incidents.Content, p,
+                            intent.B, intent.C - 1, world.CurrentTick),
                         RaidWorker.Room(colony.Pawns));
                 _raidNote.text = note;
                 _raidNote.style.display = note.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;

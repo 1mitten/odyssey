@@ -160,7 +160,7 @@ namespace Odyssey.Hud
 
         /// <summary>The two controls' tooltips, as the Spawn rows keep theirs here.</summary>
         public const string RaidSizeTooltip =
-                "How many the next raid brings. Auto sizes it from the colonists standing and the days survived",
+                "How many the next raid brings. Auto sizes it from the colony's fighting strength and the days survived",
             RaidMixTooltip = "Who the next raid is made of: bandits, gunmen, or a mix of both";
 
         public const string WeatherClearKey = "ui.debug.weather.clear",

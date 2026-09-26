@@ -141,8 +141,11 @@
     <minColonists>1</minColonists>
     <maxFires>0</maxFires>
     <raid>
-      <perColonist>1</perColonist>
-      <daysPerExtra>5</daysPerExtra>
+      <raidersPerStrengthPerMille>3300</raidersPerStrengthPerMille>
+      <rampStartPerMille>700</rampStartPerMille>
+      <rampDays>48</rampDays>
+      <rampPerSeasonPerMille>50</rampPerSeasonPerMille>
+      <rampMaxPerMille>1500</rampMaxPerMille>
       <minSize>1</minSize>
       <maxAutoSize>30</maxAutoSize>
       <arrivalTicks>300</arrivalTicks>

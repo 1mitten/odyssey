@@ -46,7 +46,11 @@ namespace Odyssey.Tests.Sim.Events
         // 2026-09-26, the storyteller (design 59 §3): every Def gains populationGain (false), and
         // Incident_Raid's minRefireDays goes 4 -> 2 (design 59 §2 ruling 16: the storyteller paces,
         // the Def is a floor). No golden moved: no golden chooses a storyteller.
-        const ulong ContentFingerprint = 16455487098994534184UL;
+        //
+        // 2026-09-26, colony strength (design 59 §4b): the raid block's perColonist and
+        // daysPerExtra are gone for raidersPerStrengthPerMille 3300 and a day ramp (700 per mille
+        // on day 0 to 1000 by day 48, then +50 a season to 1500). No golden fires a raid.
+        const ulong ContentFingerprint = 1162007863741320009UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

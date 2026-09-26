@@ -16,13 +16,22 @@ namespace Odyssey.Sim.Events
     /// </summary>
     public sealed class RaidParams
     {
-        // ---- the size, when the caller leaves it to the incident (design 55 §9) ---------------
+        // ---- the size, when the caller leaves it to the incident (design 59 §4b) --------------
 
-        /// <summary>Raiders per standing colonist.</summary>
-        public int perColonist = 1;
+        /// <summary>
+        /// Raiders per raider's worth of colony strength, per mille: how many of a mix's average
+        /// raider the colony's fighting power buys. Calibrated so three unarmed colonists on the
+        /// first day still meet about the three raiders the headcount rule gave them (INVENTED).
+        /// </summary>
+        public int raidersPerStrengthPerMille = 3300;
 
-        /// <summary>One more raider for every this many days survived. 0 for none.</summary>
-        public int daysPerExtra = 5;
+        /// <summary>The day ramp: this per mille on day 0, rising to 1000 by <see cref="rampDays"/>.</summary>
+        public int rampStartPerMille = 700;
+        public int rampDays = 48;
+
+        /// <summary>After the ramp, this much more each 24-day season, up to <see cref="rampMaxPerMille"/>.</summary>
+        public int rampPerSeasonPerMille = 50;
+        public int rampMaxPerMille = 1500;
 
         public int minSize = 1;
 
@@ -67,15 +76,31 @@ namespace Odyssey.Sim.Events
     public static class RaidBudget
     {
         /// <summary>
-        /// <c>clamp(perColonist × standing colonists + day ÷ daysPerExtra, minSize, maxAutoSize)</c>.
-        /// The owner's headcount and days, because nothing in the game has a value to total yet; a
-        /// wealth measure replaces this function and nothing else.
+        /// <c>clamp(strength x ramp x scale x raidersPerStrength / raiderPower, minSize, maxAutoSize)</c>,
+        /// rounded (design 59 §4b). The owner's rule of 2026-09-26: the colony's fighting strength,
+        /// not its wealth and not its headcount, is what a raid is sized against. Until then this was
+        /// headcount and days; design 55 §9 said a value measure would replace it and nothing else,
+        /// and strength did.
         /// </summary>
-        public static int AutoSize(int standingColonists, int tick, RaidParams p)
+        public static int AutoSize(int strength, int raiderPower, int tick, RaidParams p, int scalePerMille)
         {
-            int day = tick / Calendar.TicksPerDay;
-            int size = p.perColonist * standingColonists + (p.daysPerExtra > 0 ? day / p.daysPerExtra : 0);
-            return Math.Max(p.minSize, Math.Min(p.maxAutoSize, size));
+            long wanted = (long)Math.Max(0, strength) * Ramp(tick, p) / 1000;
+            wanted = wanted * Math.Max(0, scalePerMille) / 1000;
+            wanted = wanted * p.raidersPerStrengthPerMille / 1000;
+            int power = Math.Max(1, raiderPower);
+            long size = (wanted + power / 2) / power;
+            return (int)Math.Max(p.minSize, Math.Min(p.maxAutoSize, size));
+        }
+
+        /// <summary>The day ramp, per mille: from the start figure on day 0 to 1000 by the ramp's
+        /// last day, then a little more each season, capped.</summary>
+        public static int Ramp(int tick, RaidParams p)
+        {
+            int day = Math.Max(0, tick / Calendar.TicksPerDay);
+            if (p.rampDays > 0 && day < p.rampDays)
+                return p.rampStartPerMille + (1000 - p.rampStartPerMille) * day / p.rampDays;
+            int seasons = (day - p.rampDays) / 24;
+            return Math.Min(p.rampMaxPerMille, 1000 + seasons * p.rampPerSeasonPerMille);
         }
 
         /// <summary>Colonists on their feet, which is who a raid is sized against.</summary>
@@ -118,7 +143,9 @@ namespace Odyssey.Sim.Events
             {
                 if (!ok) throw new DefLoadException($"{def.Origin}: incident '{def.defName}' has {what}.");
             }
-            Require(p.perColonist >= 0 && p.daysPerExtra >= 0, "a negative size rule");
+            Require(p.raidersPerStrengthPerMille > 0, $"raidersPerStrengthPerMille {p.raidersPerStrengthPerMille}");
+            Require(p.rampStartPerMille > 0 && p.rampDays >= 0 && p.rampPerSeasonPerMille >= 0
+                    && p.rampMaxPerMille >= 1000, "a day ramp out of range");
             Require(p.minSize >= 1 && p.maxAutoSize >= p.minSize, $"auto size {p.minSize}–{p.maxAutoSize}");
             Require(p.arrivalTicks >= 0, $"arrivalTicks {p.arrivalTicks}");
             Require(p.gatherInset >= 0 && p.gatherRadius >= 1, "a gather point that is not one");
@@ -146,7 +173,7 @@ namespace Odyssey.Sim.Events
 
             int mixIndex = parms.Mix >= 0 ? parms.Mix : ctx.Content.MixIndex(p.mix);
             if (mixIndex < 0 || mixIndex >= ctx.Content.Mixes.Length) return false;
-            int size = SizeFor(ctx, parms, p);
+            int size = SizeFor(ctx.Pawns, ctx.Content, p, parms.Points, mixIndex, ctx.Tick);
             if (size <= 0 || !Fits(pawns, size)) return false;
 
             int origin = Origin(pawns);
@@ -221,7 +248,7 @@ namespace Odyssey.Sim.Events
 
         /// <summary>The caller's size, or the incident's own when the caller named none.</summary>
         static int SizeFor(IncidentContext ctx, in IncidentParms parms, RaidParams p) =>
-            SizeFor(ctx.Pawns, p, parms.Points, ctx.Tick);
+            SizeFor(ctx.Pawns, ctx.Content, p, parms.Points, parms.Mix, ctx.Tick);
 
         /// <summary>Would a band of <paramref name="size"/> fit under the pawn ceiling, with every raid still arriving?</summary>
         public static bool Fits(PawnContext pawns, int size) => size <= Room(pawns);
@@ -234,9 +261,24 @@ namespace Odyssey.Sim.Events
         public static int Room(PawnContext pawns) =>
             PawnRegistry.PawnCeiling - pawns.Pawns.Count - (pawns.Raids?.PendingArrivals ?? 0);
 
-        /// <summary>How many a raid of this incident would bring: the caller's size, or its own at 0.</summary>
-        public static int SizeFor(PawnContext pawns, RaidParams p, int size, int tick) =>
-            size > 0 ? size : RaidBudget.AutoSize(RaidBudget.StandingColonists(pawns), tick, p);
+        /// <summary>
+        /// How many a raid of this incident would bring: the caller's size, or its own at 0 — the
+        /// colony's strength against the mix's average raider (design 59 §4b). With a storyteller
+        /// chosen the strength is the one it remembers and the scale its own (difficulty, tension,
+        /// a bag's draw); without one it is the strength now at 1000. <b>A debug Auto raid and a
+        /// storyteller's raid are one sum</b>, which is why both come through here.
+        /// </summary>
+        public static int SizeFor(PawnContext pawns, IncidentContent content, RaidParams p, int size, int mixIndex, int tick)
+        {
+            if (size > 0) return size;
+            int m = mixIndex >= 0 ? mixIndex : content.MixIndex(p.mix);
+            if (m < 0 || m >= content.Mixes.Length) return p.minSize;
+            Storyteller? teller = pawns.Storyteller;
+            bool told = teller != null && teller.HasStoryteller;
+            int strength = told ? teller!.StrengthPeak : ColonyStrength.Of(pawns);
+            int scale = told ? teller!.RaidScalePerMille : 1000;
+            return RaidBudget.AutoSize(strength, ColonyStrength.RaiderPowerOf(pawns.Content, content.Mixes[m]), tick, p, scale);
+        }
 
         /// <summary>
         /// Where the census is taken from and the fallback target: the colony's start, else the
