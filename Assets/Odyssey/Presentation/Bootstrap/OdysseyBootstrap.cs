@@ -484,6 +484,55 @@ namespace Odyssey.Presentation.Bootstrap
         static bool DefaultTracing() =>
             !Application.isBatchMode && (Application.isEditor || Debug.isDebugBuild);
 
+        /// <summary>
+        /// Whether a session records itself for replay (design 63, HR0): a keyframe when it starts
+        /// and every order after it, into <c>Logs/replay</c>. <b>On by default in the editor only</b>
+        /// and never in a batch run, for <see cref="TraceEnabled"/>'s reason — a test run must not
+        /// fill the folder — and because the spike's whole point is that the owner's ordinary play
+        /// becomes the evidence without anyone remembering to switch it on. The debug menu turns it
+        /// off and on; off takes effect at once.
+        /// </summary>
+        public static bool ReplayRecordingEnabled
+        {
+            get => _replayRecordingEnabled ??= !Application.isBatchMode && Application.isEditor;
+            set => _replayRecordingEnabled = value;
+        }
+
+        static bool? _replayRecordingEnabled;
+
+        /// <summary>This session's replay recording, or null when it is not recording.</summary>
+        Diagnostics.ReplayRecording? _replay;
+
+        /// <summary>A recording that could not start is not retried every frame; a new session tries again.</summary>
+        bool _replayRefused;
+
+        /// <summary>The folder this session is recording into, or null.</summary>
+        public string? ReplayFolder => _replay?.Folder;
+
+        /// <summary>
+        /// Start recording once a session has run a frame, then flush it once a minute. Between
+        /// ticks, like the autosave beside it.
+        /// </summary>
+        void SampleReplay()
+        {
+            if (_world == null || _colony == null) return;
+            if (_replay == null)
+            {
+                if (!ReplayRecordingEnabled || _replayRefused) return;
+                _replay = Diagnostics.ReplayRecording.TryBegin(_world, _colony.SaveComponents, CurrentRecipe());
+                _replayRefused = _replay == null;
+                return;
+            }
+            _replay.Update(Time.unscaledDeltaTime);
+        }
+
+        /// <summary>Seal and close this session's recording, leaving the session running.</summary>
+        public void StopReplayRecording()
+        {
+            _replay?.Stop();
+            _replay = null;
+        }
+
         bool _sceneryPathLogged;
         int _framesRendered;
 
@@ -1354,6 +1403,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             ReportRejections();
             ConsiderAutosave();
+            SampleReplay();
 
             // The light follows the clock every frame, not every tick: at speed 3 several ticks
             // retire in one frame and the sky would step, and when the game is paused the hour
@@ -4509,6 +4559,10 @@ namespace Odyssey.Presentation.Bootstrap
 
         public void TeardownSession()
         {
+            // First, while the world still stands: the recording's last write hashes it.
+            StopReplayRecording();
+            _replayRefused = false;
+
             if (cameraRig != null)
             {
                 if (Directors != null) Directors.Slice.LayerChanged -= OnActiveLayerChanged;

@@ -1,6 +1,6 @@
 # 63 — The highlights reel
 
-**Status: designed 2026-09-26, nothing built.** Branch `claude/charming-edison-8xso6q`.
+**Status: designed 2026-09-26; HR0 (the spike) built the same day, waiting on the owner's play session (§10).** Branch `claude/charming-edison-8xso6q`.
 
 **Related files:**
 - The ground and the owner's answers: `docs/research/highlights-interview.md`
@@ -266,3 +266,64 @@ bisector from OQ-06 (`HashTrace.FirstDivergence`) finds its tick.
   exists.
 - **Keeping old builds to replay old moments**, StarCraft II's answer. Not practical for a prototype
   that builds several times a day.
+
+## 10. HR0 as built — the spike, 2026-09-26
+
+**What it is.** The recorder and the replayer that §3–§4 describe, without anything a player sees.
+It exists to answer the two risks of §8 on real play before anything else is built on them.
+
+| Part | Where | What it does |
+|---|---|---|
+| The hook | `SimWorld.ReplaySink` | Called from the intent handler (`HandleIntentAndRecord`) for every applied or refused intent, with the tick and whether it came through `RepublishViews` (the paused frame), and at the end of every tick after the hash sink. Null in an ordinary run: one branch per intent and per tick. |
+| The light hash | `SimWorld.ComputeLightHash` | The full hash without the `CellGrid`. **0.54 ms against 23.2 ms** for the full one on the played board (120 x 120 x 16, this container; `ReplayTests.TheLightHashIsCheaperThanTheFullOneAndStillSeesAPawn`). Taken once every 600 ticks while recording. |
+| The log | `Sim/Diagnostics/ReplayLog.cs` | `ReplayLog` (binary, `OYRP` v1): seed, size, from and end tick, full hash at both ends, the light hash at the end, a note, the **view preamble**, the records and the checkpoints. `ReplayRecorder` writes it. |
+| The replay | `Sim/Diagnostics/Replayer.cs` | Puts the preamble back (`SimWorld.ApplyPendingWithoutTicking`, internal, replay only). Then, per tick, submits the paused records and republishes, submits the rest and ticks. Every applied intent is compared with the record it came from (tick, paused, outcome), and every checkpoint and both end hashes are compared too. |
+| Recording in play | `Presentation/Diagnostics/ReplayRecording.cs`, `OdysseyBootstrap.SampleReplay` | **On by default in the editor, never in a batch run.** On a session's first frame: `Logs/replay/replay-<time>/keyframe.odyssey` (the simulation sections only) and `orders.oyreplay`. The log is rewritten once a real minute with the light hash, and at teardown with the full hash. Twelve recordings are kept. |
+| The switch | Debug → Cheats → **Replay recording** (`ui.debug.replay`) | Off seals and closes the recording; on starts a new one with its own keyframe. |
+| The probe | `tools/dotnet/Odyssey.ReplayProbe` | Replays every recording in `Logs/replay` with no Unity and prints the result, and what a whole day would cost at the measured rate. `--sample <folder>` writes a headless recording to try it on. |
+
+**The view preamble** is the one thing §3 did not foresee. The slice, the speed and the standing
+questions (the queried cell, the power and home watches, the shot question) are not in a save,
+because none of them is simulation state. But the publish reads them, and design 28 §12a records a
+lazy pass that runs from the publish. So the recorder writes them down as the intents that would
+ask them again, and the replayer applies them before anything else, unrecorded and uncompared,
+because they were already in force.
+
+**What the fast tier proves** (`ReplayTests`, six tests):
+- **A session recorded mid-run replays exactly.** The session includes orders given with the clock
+  running, two paused frames (one with a refused order in it) and two speed changes. Result:
+  start hash, **12 of 12 checkpoints**, the end light hash and the **end full hash with the grid**
+  all match, and all 22 records have the same outcome. That is 7,000 ticks in 314 ms, 0.045 ms a
+  tick.
+- **Two controls, both caught:**
+  - One order dropped: parts at the first checkpoint.
+  - One order moved to a different tree: parts at the checkpoint after it (3 of 12 agree).
+  - A replay that matched because nothing was visible would fail both.
+- **The file round-trips**, and a world with no recorder records nothing.
+
+**The audit §3a asked for.** Presentation reaches the simulation only through intents and
+`SimWorld.Tick`:
+- The debug menu's day, month, morning and night skips are ordinary ticks.
+- *Ripen crops* is `DebugRipen`, an intent. *Finish research* never touches the simulation.
+- The jumps switch, the raid rows and the weather go through intents too.
+- The direct reads that remain (`Incidents.CanFire`, `Temperature.OutdoorTempC`, the storage and
+  inventory panes) were read for writes and found none. None of them is the publish-time lazy
+  solve; that one runs inside `Views.Publish`, which the replay calls exactly where the game did.
+
+**What only the owner's machine can answer**, and the reason HR0 is not closed:
+- Does a real session, with a real player's orders, the wake, a raid and the day skips, replay to
+  the same hashes on the game's Mono runtime?
+- What does a re-simulated tick cost on a played colony a few days in? That decides §3b's danger
+  keyframe.
+
+**Not yet proven:**
+- The Presentation half has not been compiled; the fast tier builds neither Presentation nor the
+  editor.
+- `ReplayRecording` has not run in Unity.
+
+**Next.**
+- If every recording matches and a day costs under about 8 s: HR1 (the temperature leak, now
+  that a replay can measure it), then HR2 onwards as planned.
+- If a recording diverges: the first divergent checkpoint names a 600-tick window. A `HashTrace`
+  over that window on two replays of the same log finds the tick, and the fix becomes the next
+  unit.

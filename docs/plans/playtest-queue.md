@@ -23,6 +23,20 @@ the next session learns to ignore.
 
 ## Open
 
+- **Highlights reel HR0: does a real session replay to the same colony?**
+  (`claude/charming-edison-8xso6q`, design 63 §10.) Nothing to look at. Play as normal in the
+  editor for **at least one game day** (×3 is fine), through a raid if you can (Debug → Events),
+  **pausing to give orders** and using the debug menu. Recording is on by default in the editor
+  (Debug → Cheats → *Replay recording*) and writes to `Logs/replay/`. Leave Play mode normally,
+  then run `dotnet run --project tools/dotnet/Odyssey.ReplayProbe`.
+  - Right: every recording prints `MATCH`, and the line *a whole day re-simulated at this rate* is
+    under about 8 s.
+  - Wrong: `DIVERGED`, with the tick at which the colony first parted from its recording, which
+    names what to bisect. Or a whole day costing well over 8 s, which means the danger keyframe of
+    design 63 §3b is needed.
+  - Also wrong: any hitch you can feel when a session starts or once a minute (the keyframe and the
+    log's flush).
+
 - **First Person: does the shoulder camera show a colonist's day and a fight clearly?**
   (`claude/planning-session-fok6wm`, design 57.) Select a colonist, press **First Person** on her
   card, and let her work, walk up a terrace and go through a door.

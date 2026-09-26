@@ -265,6 +265,7 @@ namespace Odyssey.Hud
             { "ui.debug.raid.mix", "Raid mix" },
             { "ui.debug.raid.size", "Raid size" },
             { "ui.debug.rainparticles", "Draw as particles" },
+            { "ui.debug.replay", "Replay recording" },
             { "ui.debug.ripen", "Ripen crops" },
             { "ui.debug.skipday", "Skip one day" },
             { "ui.debug.skipmonth", "Skip one month" },

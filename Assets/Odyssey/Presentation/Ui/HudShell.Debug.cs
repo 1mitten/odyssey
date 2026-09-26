@@ -104,6 +104,11 @@ namespace Odyssey.Presentation.Ui
                     + "is how the tracer itself gets ruled out of a report about stutter",
                 ToggleTrace);
             _debugCheats.Add(_debugTraceRow);
+            _debugReplayRow = DebugToggleRow(DebugDirector.ReplayKey,
+                "Stops or starts recording this session for replay: a keyframe and every order "
+                    + "after it, into Logs/replay. Off closes the recording at once; on starts a new one",
+                ToggleReplay);
+            _debugCheats.Add(_debugReplayRow);
             _debugJumpsFailRow = DebugToggleRow(DebugDirector.JumpsFailKey,
                 "Every jump over a one-cell stream falls short into the water, and the colonist "
                     + "climbs out on the far side. Off by default; a new colony starts with it off",
@@ -198,6 +203,7 @@ namespace Odyssey.Presentation.Ui
         void MarkTrace() => _boot?.MarkTrace("debug menu");
 
         VisualElement? _debugTraceRow;
+        VisualElement? _debugReplayRow;
 
         VisualElement? _debugJumpsFailRow;
 
@@ -238,6 +244,21 @@ namespace Odyssey.Presentation.Ui
             if (!OdysseyBootstrap.TraceEnabled) _boot?.StopTrace();
             RefreshTraceRow();
         }
+
+        /// <summary>
+        /// Replay recording off or on (design 63, HR0). Off seals and closes the recording now; on
+        /// starts a new one on the next frame, with a keyframe of its own, for the trace's reason:
+        /// two halves of a session in one recording would replay as one.
+        /// </summary>
+        void ToggleReplay()
+        {
+            OdysseyBootstrap.ReplayRecordingEnabled = !OdysseyBootstrap.ReplayRecordingEnabled;
+            if (!OdysseyBootstrap.ReplayRecordingEnabled) _boot?.StopReplayRecording();
+            RefreshReplayRow();
+        }
+
+        void RefreshReplayRow() => _debugReplayRow?.EnableInClassList(
+            "settings__row--on", OdysseyBootstrap.ReplayRecordingEnabled);
 
         void RefreshTraceRow() => _debugTraceRow?.EnableInClassList(
             "settings__row--on", OdysseyBootstrap.TraceEnabled);
@@ -465,6 +486,7 @@ namespace Odyssey.Presentation.Ui
                 // previous session, or a test, may have left either way round, and a pip showing
                 // the opposite of the truth is worse than no pip.
                 RefreshTraceRow();
+                RefreshReplayRow();
                 // And the jumps switch, which a new colony has quietly turned off.
                 RefreshJumpsFailRow();
             }

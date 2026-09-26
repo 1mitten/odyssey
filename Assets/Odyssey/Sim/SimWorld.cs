@@ -50,7 +50,7 @@ namespace Odyssey.Sim
             Seed = seed;
             Size = size;
             CurrentTick = 0;
-            _handleIntent = HandleIntent;
+            _handleIntent = HandleIntentAndRecord;
             _appliesWhilePaused = i => PausedIntents.AppliesWhilePaused(i.Kind);
             _byGroup = new[]
             {
@@ -97,6 +97,22 @@ namespace Odyssey.Sim
         /// which is small against the phases but not nothing, and is why it is opt-in.</para>
         /// </summary>
         public Diagnostics.ITickPhaseSink? PhaseSink { get; set; }
+
+        /// <summary>
+        /// Optional, and null in every ordinary run: something that wants every applied intent and
+        /// the end of every tick, which is what a replay is recorded from and checked against
+        /// (design 63 §3a, <see cref="Diagnostics.ReplayRecorder"/>, <see cref="Diagnostics.Replayer"/>).
+        ///
+        /// <para><b>Hooked at the handler, not at the bus</b>, so an order applied while paused
+        /// (<see cref="RepublishViews"/>) and one applied by a tick's own drain pass one point, in
+        /// the order they were applied. When null the whole mechanism is one branch per applied
+        /// intent and one per tick.</para>
+        /// </summary>
+        public Diagnostics.IReplaySink? ReplaySink { get; set; }
+
+        /// <summary>True only while <see cref="RepublishViews"/> is draining: the order is being
+        /// applied with the clock stopped.</summary>
+        bool _drainingPaused;
 
         public IReadOnlyList<ITickable> Tickables => _tickables;
 
@@ -205,6 +221,7 @@ namespace Odyssey.Sim
             // entry is labelled with the tick that produced the state — which is the tick to
             // re-run when two traces part here.
             HashSink?.Record(CurrentTick, ComputeStateHash().Value);
+            ReplaySink?.TickEnded(this, CurrentTick);
             Mark(phases, Diagnostics.TickSegment.Hash, ref mark);
 
             CurrentTick++;
@@ -221,6 +238,17 @@ namespace Odyssey.Sim
             long now = System.Diagnostics.Stopwatch.GetTimestamp();
             sink.Record(CurrentTick, phase, now - since);
             since = now;
+        }
+
+        /// <summary>
+        /// Apply one command and, when a replay is being recorded or checked, say so. The one
+        /// point both drains pass through (design 63 §3a).
+        /// </summary>
+        IntentRejection HandleIntentAndRecord(Intent intent)
+        {
+            IntentRejection result = HandleIntent(intent);
+            ReplaySink?.Applied(CurrentTick, _drainingPaused, intent, result);
+            return result;
         }
 
         /// <summary>
@@ -306,9 +334,26 @@ namespace Odyssey.Sim
         /// </summary>
         public void RepublishViews()
         {
-            Intents.DrainWhere(_appliesWhilePaused, _handleIntent);
+            _drainingPaused = true;
+            try
+            {
+                Intents.DrainWhere(_appliesWhilePaused, _handleIntent);
+            }
+            finally
+            {
+                _drainingPaused = false;
+            }
             Views.Publish(this, _contributors);
         }
+
+        /// <summary>
+        /// Apply everything queued, now, without a tick or a publish. <b>For a replay only</b>: it
+        /// puts back the view a recording began on (<see cref="Diagnostics.ReplayLog.Preamble"/>),
+        /// which was already in force in the live world and is not simulation state. Anything else
+        /// that applied an order off a tick boundary would be the unreproducible input the replay
+        /// exists to catch.
+        /// </summary>
+        internal void ApplyPendingWithoutTicking() => Intents.Drain(_handleIntent);
 
         public void Tick(int count)
         {
@@ -363,6 +408,39 @@ namespace Odyssey.Sim
             // state worth pinning — the job counters — and the omission was the sort that shows
             // up as a save that resumes wrongly rather than as anything obvious. Schedule order
             // is sorted and fixed at construction, so this is as deterministic as the tickables.
+            Contribute(Systems.WorldSystems, ref hash);
+            Contribute(Systems.PawnSystems, ref hash);
+            return hash;
+        }
+
+        /// <summary>
+        /// <see cref="ComputeStateHash"/> without the cell grid: the tickables, the systems and
+        /// every other registered hashable, in the same order.
+        ///
+        /// <para><b>Why a second hash.</b> Since OQ-50 the full hash walks every cell, about 10 ms
+        /// on the played board, which is a visible hitch if it is taken while somebody plays. The
+        /// rest costs microseconds. A replay checkpoint needs to be taken during play, and almost
+        /// nothing moves a cell without also moving a job, a pawn, an item or a designation, all of
+        /// which are here — so this is the cheap canary and the full hash, taken once at each end,
+        /// is the proof (design 63 §4).</para>
+        /// </summary>
+        public StateHash ComputeLightHash()
+        {
+            var hash = StateHash.New();
+            hash.Add(Seed);
+            hash.Add(CurrentTick);
+            hash.Add(Size.SizeX);
+            hash.Add(Size.SizeZ);
+            hash.Add(Size.SizeY);
+
+            for (int i = 0; i < _hashables.Length; i++)
+                if (!(_hashables[i] is World.CellGrid))
+                    _hashables[i].ContributeTo(ref hash);
+
+            for (int i = 0; i < _tickables.Count; i++)
+                if (_tickables[i] is IStateHashable hashable)
+                    hashable.ContributeTo(ref hash);
+
             Contribute(Systems.WorldSystems, ref hash);
             Contribute(Systems.PawnSystems, ref hash);
             return hash;

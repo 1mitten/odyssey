@@ -14201,3 +14201,28 @@ anyway: the chronicle is the durable base and the replay a same-build bonus.
 start of danger would put a new hitch at exactly the moment a hitch is least acceptable. HR0, a spike
 the owner plays through, measures whether a day of re-simulation is short enough and whether a real
 session replays to the same light hashes. **It is the next step and waits for approval.**
+
+### 2026-09-26 — HR0: the first replay, and the view it forgot
+
+The owner approved the spike. The recorder hooks the intent *handler*, so an order applied with the
+clock stopped and one applied by a tick's drain pass one point in the order they were applied. It
+worked first time on the fast tier. A colony keyframed at tick 1,500, given orders running and
+paused, with its speed changed twice, replayed 7,000 ticks to the same full hash, grid included.
+That is the claim ADR 0004 made on the project's first day, and nobody had checked it until now.
+
+**Two controls, because the cheap hash had to be shown to see something.** Dropping one order is
+caught at the first checkpoint, and moving one order to another tree at the checkpoint after it.
+The light hash leaves out the grid and costs 0.54 ms against the full hash's 23.2 on the played
+board, so it can be taken every 600 ticks while somebody plays.
+
+**The one thing the design missed is the view.** The slice, the speed and the standing questions
+(the queried cell, the power and home watches) are not in a save, and should not be. But the
+publish reads them, and design 28 §12a records a lazy pass that runs from the publish. So a
+recording now opens with a preamble: those views, as the intents that would ask them again,
+applied before the replay starts and never compared. Whether it matters is exactly what the
+owner's session will show.
+
+**What the container could not do** is compile the Presentation half or play a real session. The
+editor now records every session by default into `Logs/replay/`, and
+`tools/dotnet/Odyssey.ReplayProbe` replays them all. One day of the owner's ordinary play answers
+both open questions: does it match, and what does a day cost to re-run.

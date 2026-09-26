@@ -122,6 +122,14 @@ namespace Odyssey.Hud
         public const string TraceKey = "ui.debug.trace";
 
         /// <summary>
+        /// Stop or start recording this session for replay (design 63, HR0): a keyframe and every
+        /// order after it, which <c>tools/dotnet/Odyssey.ReplayProbe</c> re-runs to check the colony
+        /// goes where it went. On by default in the editor, so this is how it is ruled out of a
+        /// report, the same argument as the trace's switch.
+        /// </summary>
+        public const string ReplayKey = "ui.debug.replay";
+
+        /// <summary>
         /// Every key the panel puts on screen that is its own, so <c>RegistryTests</c> can hold
         /// the panel to the naming CSV the way it holds Settings. The event rows are named by
         /// <see cref="IncidentLabels"/>, which has its own test.
@@ -133,7 +141,7 @@ namespace Odyssey.Hud
             SpawnBanditsKey, ArmColonistsKey, SpawnPistolKey, SpawnGunmanKey, HurtKey, HealKey, KillKey, GiveMedkitsKey,
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey, GiveCarrotsKey,
-            SkipDayKey, SkipMonthKey, SkipMorningKey, SkipNightKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
+            SkipDayKey, SkipMonthKey, SkipMorningKey, SkipNightKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey, ReplayKey,
             JumpsFailKey,
             WeatherTabKey, WeatherClearKey, WeatherOvercastKey, WeatherDrizzleKey, WeatherRainKey,
             WeatherDownpourKey, WeatherStormKey, RainParticlesKey, WetGlossKey,

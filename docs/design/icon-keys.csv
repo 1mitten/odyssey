@@ -613,6 +613,7 @@ ui.debug.group.weapons,Weapons,ui.debug,CB,"The Spawn tab heading over the weapo
 ui.debug.group.items,Items,ui.debug,CB,"The Spawn tab heading over the resource grants"
 ui.debug.marktrace,Mark this moment,ui.debug,PT,"Writes a marker into the performance trace, so the seconds around now can be found"
 ui.debug.trace,Performance trace,ui.debug,PT,"Stops or starts the per-second performance trace this session writes"
+ui.debug.replay,Replay recording,ui.debug,HR,"Stops or starts recording this session's keyframe and orders, so it can be replayed to check it went the same way"
 ui.debug.tab.weather,Weather,ui.debug,WE,"The sky set by hand: clear, overcast, three strengths of rain and a storm, drawn only"
 ui.debug.weather.clear,Clear,ui.debug,WE,"No cloud and no rain: the day as the clock has it"
 ui.debug.weather.overcast,Overcast,ui.debug,WE,"A grey day with no rain: the sun and its shadows faded, the colour drained"
