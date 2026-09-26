@@ -759,6 +759,8 @@ namespace Odyssey.Sim.Pawns
                 // this scan is not optional once a shelf accepts food.
                 int at = ctx.WhereIs(item);
                 if (at < 0) continue;
+                // A prisoner's meal is hers (design 58 §14): food in a cell is not a colonist's.
+                if (PrisonCells.Holds(ctx, at)) continue;
 
                 int distance = ctx.Distance(pawn.Cell, at);
                 if (food.foodTier == bestTier && distance >= bestDistance) continue;
@@ -1737,6 +1739,9 @@ namespace Odyssey.Sim.Pawns
                 // it.
                 int at = ctx.WhereIs(item);
                 if (at < 0) continue;
+                // Food in a prison cell stays there (design 58 §14): a hauler carrying a prisoner's
+                // meal back out through the door is the warden's work undone.
+                if (ctx.Content.Items[item.DefIndex].nutrition > 0 && PrisonCells.Holds(ctx, at)) continue;
                 if (!ctx.Content.Items[item.DefIndex].haulable) continue;
 
                 // Which pass this stored thing belongs to. A loose thing is never refused -

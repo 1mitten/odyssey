@@ -140,7 +140,9 @@ namespace Odyssey.Tests.Sim
                 // Capture is the third (design 58 §7): a captured raider is usually bleeding, so the
                 // warden's carry to a prison bed is an emergency, after the colony's own wounded.
                 "Rescue", "Doctor", "Capture", "Deliver", "Build", "LayConduit", "Deconstruct", "RemoveConduit",
-                "Forage", "Harvest", "Sow", "Cook", "Fell", "Mine", "Refuel", "Haul",
+                // FeedPrisoner is warden work and warden work is scanned last (design 58 §7): a
+                // prisoner goes hungry slowly, and the capture that brings her in is the emergency.
+                "Forage", "Harvest", "Sow", "Cook", "Fell", "Mine", "Refuel", "Haul", "FeedPrisoner",
             }));
         }
 
