@@ -79,6 +79,43 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// <b>And a stair's price is the connector's</b> (U44, design 63 §7). The note at the top
+        /// of this class says a stair needs no such test because its connector carries its price —
+        /// true only while nobody else names the price, and the day stairs became buildable a
+        /// second place deciding it became a thing that could happen. <c>Connector</c> is the one
+        /// owner (its constructor maps the kind to the price); <c>NavGrid.cs</c> defines the
+        /// constants. The one sanctioned reader beside them is the search heuristic's layer-change
+        /// <i>estimate</i> in <c>NavGraph</c>, a lower bound that is never charged, and it is
+        /// allowed by name rather than by file so a real charge in <c>NavGraph</c> still fails.
+        /// </summary>
+        [Test]
+        public void OnlyTheConnectorDecidesWhatAStairCosts()
+        {
+            string[] stairOwners = { "NavGrid.cs", "Connector.cs" };
+            var offenders = new List<string>();
+
+            foreach (string file in Directory.EnumerateFiles(SimSourceRoot(), "*.cs", SearchOption.AllDirectories))
+            {
+                string name = Path.GetFileName(file);
+                if (Array.IndexOf(stairOwners, name) >= 0) continue;
+
+                string[] lines = File.ReadAllLines(file);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    string code = StripComment(lines[i]);
+                    if (!Regex.IsMatch(code, @"\bMoveCost\s*\.\s*(StairUp|StairDown)\b")) continue;
+                    if (name == "NavGraph.cs" && code.Contains("EstimatedLayerChangeCost")) continue;
+                    offenders.Add($"{name}:{i + 1}: {lines[i].Trim()}");
+                }
+            }
+
+            Assert.That(offenders, Is.Empty,
+                "MoveCost.StairUp and MoveCost.StairDown are the stair connector's price, which " +
+                "Connector owns; the region graph, the cell search and the mover all read it off the " +
+                "connector's edge. Offenders:\n  " + string.Join("\n  ", offenders));
+        }
+
+        /// <summary>
         /// The owner's two overloads cannot drift from each other either: the one the search uses
         /// (a direction) and the one the mover uses (two cells) must price the same step alike.
         /// </summary>
