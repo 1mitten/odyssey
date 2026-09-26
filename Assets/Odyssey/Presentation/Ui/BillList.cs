@@ -255,6 +255,13 @@ namespace Odyssey.Presentation.Ui
             view.State.style.whiteSpace = WhiteSpace.NoWrap;
             view.State.style.unityTextAlign = TextAnchor.MiddleLeft;
             view.NameColumn.Add(view.State);
+            // A station that makes more than one thing (design 62 §9, the smelter): pressing the
+            // name goes round what the row makes, as pressing the mode goes round how it counts.
+            view.NameColumn.RegisterCallback<ClickEvent>(e =>
+            {
+                if (view.Row != null && _model.PressRecipe(view.Row, out Intent c)) _send(c);
+                e.StopPropagation();
+            });
             view.Root.Add(view.NameColumn);
 
             // 4. how it counts: press to go round
@@ -406,7 +413,7 @@ namespace Odyssey.Presentation.Ui
             HudText.Set(_needs, _model.Needs, HudTextRole.Meta);
             HudText.Set(_supply, _model.Supply, HudTextRole.Meta);
             _supply.style.color = _model.NoSupply ? HudTokens.Warn : HudTokens.TextMeta;
-            _supply.tooltip = _model.NoSupply ? "Grow carrots, or use the debug menu's Give carrots" : null;
+            _supply.tooltip = _model.NoSupply ? _model.SupplyHint : null;
             _empty.style.display = _model.Rows.Count == 0 ? DisplayStyle.Flex : DisplayStyle.None;
             _add.style.opacity = _model.Full ? BillsLayout.DisabledOpacity : 1f;
             _add.tooltip = _model.Full ? "This station holds " + BillsModel.MaxRows + " bills" : Registry.Label("ui.bill.add");

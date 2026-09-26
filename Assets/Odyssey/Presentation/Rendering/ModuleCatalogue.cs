@@ -716,6 +716,13 @@ namespace Odyssey.Presentation.Rendering
         public const string Galley = Prefix + "galley";
 
         /// <summary>
+        /// The smelter (design 62 §9): a pack furnace drawn once from the head, turned to the
+        /// player's facing like the galley, because it is worked from the front. A clone without
+        /// the pack resolves it to nothing and draws the tinted block, as every machine does.
+        /// </summary>
+        public const string Smelter = Prefix + "smelter";
+
+        /// <summary>
         /// The bed's pillow, which is a module of its own so it can be a different shape and a
         /// different colour from the rest of the bed. Bedding is linen whatever the frame is made
         /// of: a stone bed has a white pillow, exactly as a wooden one does.
@@ -934,6 +941,12 @@ namespace Odyssey.Presentation.Rendering
         public const string ItemGems = Prefix + "item.gems";
         public const string ItemEmberquartz = Prefix + "item.emberquartz";
 
+        // The smelter's bars (design 62 §9), handles 22 and 23. Rows for them are written by
+        // PlayScene and arrive when the catalogue is next rebuilt with the packs; until then they
+        // draw as the fallback box.
+        public const string ItemIronBar = Prefix + "item.ironbar";
+        public const string ItemCopperBar = Prefix + "item.copperbar";
+
 
         /// <summary>
         /// Module ids for item def indices, in <c>ItemIndex</c> order.
@@ -955,6 +968,8 @@ namespace Odyssey.Presentation.Rendering
             ItemPistol,
             // Deep mining (design 62 §5c), handles 18 to 21.
             ItemCopperOre, ItemGoldOre, ItemGems, ItemEmberquartz,
+            // The smelter's bars (design 62 §9), handles 22 and 23.
+            ItemIronBar, ItemCopperBar,
         };
 
         /// <summary>How many item def indices have a module. Must equal <c>ItemIndex.Count</c>.</summary>

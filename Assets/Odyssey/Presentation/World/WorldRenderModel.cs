@@ -157,6 +157,7 @@ namespace Odyssey.Presentation.World
         readonly int _generatorModule;
         readonly int _heaterModule;
         readonly int _galleyModule;
+        readonly int _smelterModule;
         readonly int _bedPillowModule;
         readonly int _shelfModule;
         readonly int _sandbagModule;
@@ -226,6 +227,7 @@ namespace Odyssey.Presentation.World
             _generatorModule = library.Resolve(ModuleIds.Generator, ModuleShape.SolidBlock);
             _heaterModule = library.Resolve(ModuleIds.Heater, ModuleShape.SolidBlock);
             _galleyModule = library.Resolve(ModuleIds.Galley, ModuleShape.SolidBlock);
+            _smelterModule = library.Resolve(ModuleIds.Smelter, ModuleShape.SolidBlock);
 
             // The pillow is a module of its own so it can be a rounded shape and a linen colour
             // whatever the bed's frame is made of (BedShape, PillowMesh).
@@ -1065,6 +1067,8 @@ namespace Odyssey.Presentation.World
             if (def == CoreContent.EdificeHeater) return _heaterModule;
             // The galley (design 48), above the trees' range for the same reason.
             if (def == CoreContent.EdificeGalley) return _galleyModule;
+            // The smelter (design 62 §9), above the trees' range for the same reason.
+            if (def == CoreContent.EdificeSmelter) return _smelterModule;
             // Cover (design 53), above the trees' range for the same reason.
             if (def == CoreContent.EdificeSandbags) return _sandbagModule;
             // A built stair (design 63), above the trees' range for the same reason: the city's
