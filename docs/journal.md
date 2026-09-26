@@ -13873,3 +13873,41 @@ temperature: the weather's share of the outdoor curve is written by the weather 
 and saved nowhere, so a loaded world stood in its build's sky until the next boundary. That is on
 `main` for every save, and was fixed here because the raid test cannot pass without it. The lesson
 is in `docs/bug-patterns.md`: a value one system writes into another is derived state no section owns.
+
+## 2026-09-26 — A second Windows machine, from nothing (`D:\dev\odyssey`)
+
+A clone with no editor, no Python and no packs, on an RTX 2080 with C: 97% full. Python 3.13 went
+in per `local-dev.md` §10; the fast tier and all three content gates were green before Unity
+existed. **The editor took three attempts**: Hub's headless install stopped at a UAC prompt without
+a word in its log, a hand-run `/S` install exited 2 twice (the prompt declined), and the owner's own
+run failed extracting into `%TEMP%` on a full C:. With room made it installed to
+`D:\Unity\Hub\Editor` (`UNITY_HUB_EDITORS` points `unity.sh` there).
+
+**The packs were unpacked rather than imported** (`tools/synty/unpack.py`, new), because two of the
+ten ship PolygonGeneric under the same GUIDs and Unity's importer cannot leave a folder out. The five
+PolygonGeneric copies were compared file by file before choosing: 1,267 of 1,268 identical, the odd
+one newer in Sci-Fi City 1.3.4 (the old machine had 1.3.3), so that is the one installed. Before any
+editor opened, every GUID the committed assets reference into `Assets/Synty` resolved, the whole of
+`ModuleCatalogue.asset` included.
+
+**The first open changed a committed file.** `UpgradeBuiltInMaterials` ran URP's project-wide
+upgrader, which rewrote `Resources/OdysseyKeepAlive/Standard.mat` — the material that keeps the
+built-in Standard shader in a player build — to URP Lit. Restored, and the upgrade now walks
+`Assets/Synty` only (566 materials; a re-run leaves the tree clean). `docs/lessons.md`.
+
+**EditMode on `main`: 4,363 total, 4,324 passed, 1 failed** — `WeaponSheathGapTests`, the bat on
+`Character_MilitaryMale_01` at 3.2 cm against 0.8–3.0, which the 2026-09-25 entry above found on a
+clean `main` with the same number. Identical to the tenth of a centimetre on a different machine
+with separately unpacked packs, which is the best evidence available that the art matches. It
+still needs its own fix.
+
+**Then the machine became a second Unity runner** (`UPSTAIRS`, owner: *"fix it up with the unity
+label"*). Two things stood in the way. `unity.sh` found editors only under `C:\Program Files` or an
+environment variable a runner started before `setx` never sees, so it now also reads Hub's own
+install location. And `HudStressTests` asserted one budget, laptop ÷ 3, written for a Ryzen 7
+9800X3D: here the dense HUD read 1.285 ms against 1.167. The ruler for "how much slower is this
+box" is the per-label figure, the only quantity `docs/lessons.md` (2026-09-23) found stable —
+17.0 us quiet there, 30.9 here — so the headroom is now a table of known CPUs (3 for the 9800X3D,
+unchanged; 3 × 17.0 / 30.9 ≈ 1.65 here, a 2.12 ms budget), and an unknown machine keeps the strict
+3. The label goes on after the fix is merged, or every PR branched from the old `main` could fail
+on whichever runner picked it up.
