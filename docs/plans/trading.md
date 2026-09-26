@@ -1,8 +1,7 @@
 # Trading — plan
 
 **Written 2026-09-26.** Design: `docs/design/57-trading.md`. Interview:
-`docs/research/trading-interview.md`. **Phase gate: this plan waits for the owner's approval; no unit
-is started.** Each unit is test-first, has at least one commit of its own, and leaves the fast and
+`docs/research/trading-interview.md`. **Approved and built 2026-09-26: T0–T7 on this branch** (design 57 §10 has the as-built notes). Each unit is test-first, has at least one commit of its own, and leaves the fast and
 Long tiers green.
 
 Paths are under `Assets/Odyssey/` unless shown otherwise. The line numbers were read on `081302f9`.

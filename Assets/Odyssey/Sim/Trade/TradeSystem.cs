@@ -73,8 +73,8 @@ namespace Odyssey.Sim.Trade
         /// <summary>How often visitors without a visit are looked for, in ticks.</summary>
         public const int AdoptTicks = 30;
 
-        /// <summary>The record layout this build writes. 1: the first.</summary>
-        public const int Layout = 1;
+        /// <summary>The record layout this build writes. 1: the first. 2: the guests turned hostile (design 57 §7).</summary>
+        public const int Layout = 2;
 
         readonly PawnContext _ctx;
         readonly List<Visit> _visits = new List<Visit>();
@@ -204,6 +204,25 @@ namespace Odyssey.Sim.Trade
             if (trader.Leaving) return;
             trader.Leaving = true;
             visit.StayLeft = 0;
+            if (Jobs != null && !trader.Downed && trader.CurrentJob != null) Jobs.Interrupt(trader, JobStatus.Failed);
+        }
+
+        /// <summary>
+        /// The colony attacked this guest on purpose (design 57 §7): it is an enemy from now on. Its
+        /// visit ends — the session with it, the stock lost — and it thinks again at once, with the
+        /// hostile mind. It keeps its pistol and its coat.
+        /// </summary>
+        public void Turn(Pawn trader)
+        {
+            if (trader.TurnedHostile) return;
+            Visit? visit = VisitOf(trader.Id.Value);
+            if (visit != null)
+            {
+                EndSession(visit);
+                _visits.Remove(visit);
+            }
+            trader.TurnedHostile = true;
+            trader.Leaving = false;
             if (Jobs != null && !trader.Downed && trader.CurrentJob != null) Jobs.Interrupt(trader, JobStatus.Failed);
         }
 
@@ -455,13 +474,20 @@ namespace Odyssey.Sim.Trade
                     writer.Write(visit.Stock[i]);
                 }
             }
+
+            // Layout 2: every guest turned hostile, by pawn id (design 57 §7).
+            IReadOnlyList<Pawn> all = _ctx.Pawns.All;
+            int turned = 0;
+            for (int i = 0; i < all.Count; i++) if (all[i].TurnedHostile) turned++;
+            writer.Write(turned);
+            for (int i = 0; i < all.Count; i++) if (all[i].TurnedHostile) writer.Write(all[i].Id.Value);
         }
 
         public void Load(SaveReader reader)
         {
             _visits.Clear();
             int layout = reader.ReadInt();
-            if (layout != Layout)
+            if (layout != 1 && layout != Layout)
                 throw new SaveLoadException($"{SaveKey} layout {layout} is not one this build reads ({Layout}).");
             _nextId = reader.ReadInt();
             int visits = reader.ReadInt();
@@ -488,6 +514,14 @@ namespace Odyssey.Sim.Trade
                     if ((uint)item < (uint)visit.Stock.Length) visit.Stock[item] = count;
                 }
                 _visits.Add(visit);
+            }
+
+            if (layout < 2) return;
+            int turned = reader.ReadInt();
+            for (int t = 0; t < turned; t++)
+            {
+                Pawn? pawn = _ctx.Pawns.Get(new PawnId(reader.ReadInt()));
+                if (pawn != null) pawn.TurnedHostile = true;
             }
         }
     }

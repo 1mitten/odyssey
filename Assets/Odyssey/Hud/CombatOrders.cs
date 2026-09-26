@@ -49,7 +49,9 @@ namespace Odyssey.Hud
         {
             if (under.IsValid && snapshot.TryGetPawn(under, out PawnView target))
             {
-                if (target.IsAnimal || target.IsHostile || (ctrl && target.IsColonist))
+                // A guest is attacked only on purpose, with Ctrl, as a colonist is (design 57 §7):
+                // an ordinary right-click on a trader opens its menu.
+                if (target.IsAnimal || target.IsHostile || (ctrl && (target.IsColonist || target.IsVisitor)))
                     return Attack(selection, snapshot, target, into);
 
                 if (target.IsColonist && target.IsDowned)

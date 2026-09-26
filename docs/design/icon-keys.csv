@@ -353,6 +353,31 @@ ui.tab.animals,Animals,ui.tab,M1,Tame beasts and their training
 ui.tab.wildlife,Wildlife,ui.tab,M1,"What is out there. Listed under Animals for now; not on the bar"
 ui.tab.bills,Bills,ui.tab,M1,Standing production orders
 ui.tab.trade,Trade,ui.tab,M1,Caravans and traders
+ui.trade.sell,Sell,ui.trade,TR,"The trade window's mode for what the colony sells: its stock, at what the trader pays"
+ui.trade.buy,Buy,ui.trade,TR,"The trade window's mode for what the colony buys: the trader's stock, at what it charges"
+ui.trade.col.item,Item,ui.trade,TR,The trade window's column of what is being traded
+ui.trade.col.quality,Quality,ui.trade,TR,"The trade window's column of how well a weapon was made. Blank for anything else"
+ui.trade.col.instock,In stock,ui.trade,TR,"How many this side holds: the colony's stores in Sell, the trader's pack in Buy"
+ui.trade.col.price,Price,ui.trade,TR,"The gold for one: what the trader pays in Sell, what it charges in Buy"
+ui.trade.col.quantity,Quantity,ui.trade,TR,How many are moving in this deal
+ui.trade.col.total,Total,ui.trade,TR,"Quantity times price, in gold"
+ui.trade.all,All,ui.trade,TR,Move every one this side holds
+ui.trade.sellingfor,Selling for,ui.trade,TR,What the trader pays for everything the colony is selling
+ui.trade.buyingfor,Buying for,ui.trade,TR,What everything the colony is buying costs
+ui.trade.youpay,You pay,ui.trade,TR,"The colony owes the trader this much gold, taken from its stores on Confirm"
+ui.trade.youreceive,You receive,ui.trade,TR,"The trader owes the colony this much gold, set down beside the trader on Confirm"
+ui.trade.balance,Balance,ui.trade,TR,Neither side owes anything yet
+ui.trade.you,you,ui.trade,TR,"The colony's gold, in the trade window's foot"
+ui.trade.trader,trader,ui.trade,TR,"The trader's purse, in the trade window's foot"
+ui.trade.leavesin,leaves in,ui.trade,TR,"How long the trader stays, under its name in the trade window"
+ui.trade.negotiating,negotiating,ui.trade,TR,"Who is trading, under the trader's name in the trade window"
+ui.trade.reason.nothing,Nothing to trade,ui.trade,TR,Why Confirm is off: nothing is moving
+ui.trade.reason.gold,Not enough gold,ui.trade,TR,Why Confirm is off: the colony owes more gold than it has
+ui.trade.reason.purse,The trader cannot pay,ui.trade,TR,Why Confirm is off: the trader owes more gold than it carries
+ui.trade.reset,Reset,ui.trade,TR,Nothing moving in either mode
+ui.trade.confirm,Confirm,ui.trade,TR,"Make the deal: sold goods leave the stores, bought goods and any gold owed are set down beside the trader"
+ui.trade.pane.leaves,Leaves in,ui.trade,TR,"On a trader's pane: how long it stays before walking out"
+ui.trade.pane.carrying,Carrying,ui.trade,TR,"On a trader's pane: the gold in its purse"
 ui.tab.factions,Factions,ui.tab,M1,"Who likes us, and how much"
 ui.tab.archive,History,ui.tab,M1,Everything that has happened
 ui.tab.almanac,Almanac,ui.tab,M1,"The colony reference: every terrain, material, structure, item and craft"

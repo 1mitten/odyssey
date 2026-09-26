@@ -23,6 +23,17 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does trading read, from the trader walking in to the goods on the ground?** (`claude/wonderful-clarke-kkd9pq`,
+  design 57.) Debug → Events → **Trader**, or Debug → Spawn → Visitors → **Spawn trader**, and Debug
+  → Spawn → Items → **Give gold**. Watch the trader walk from the edge to the fire in an ochre coat.
+  Select a colonist and right-click the trader → **Trade**: she walks over, the game pauses and the
+  window opens on Sell. Move some wood, press Tab (Buy), take a pistol, and read the foot. Confirm,
+  and the pistol and any gold owed should be set down beside the trader and hauled away. **A wrong
+  answer looks like** a trader lost indoors or wandering off the fire, a window that does not open or
+  opens twice, a foot you have to add up yourself, the list scrolling, or bought goods landing in a
+  tree or never hauled. Then Ctrl-right-click it with a drafted colonist: it should turn on you. A
+  stray bullet should send it home instead.
+
 - **Do the frogs read as frogs, and are they where the water is?** (`claude/frog`, design 30 §8.)
   New game on the meadow and look along a stream or a pond: there should be groups of three to five
   bright emerald, red-eyed frogs on the banks (about 0.9 m long since the owner's first ask), and none

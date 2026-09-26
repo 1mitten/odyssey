@@ -145,28 +145,38 @@ Goods sold to the trader join the stock.
 **What ends a session:** drafting, downing or reordering the negotiator, the trader leaving, and the
 window's *Cancel*.
 
-**The window** is a modal over a scrim that **pauses the game** while it is open. It is built to
-B10: one row per item either side holds, with these columns:
+**The window** is a modal over the settings window's scrim that **pauses the game** while it is
+open. It is built to the owner's spec, **mockups 28a Sell and 28b Buy**
+(`docs/reference/mockups/trade-window-spec.md`), which replaced B10's two-column ledger:
 
-| Colony qty | Colony-side price | Transfer stepper | Trader price | Trader qty |
-|---|---|---|---|---|
+- **Two modes, Sell and Buy**, and one deal spans both. The window opens on Sell; Tab switches.
+- **Each mode lists only its side's stock**: Sell shows the colony's, priced at what the trader
+  pays; Buy shows the trader's, priced at what it charges. Nothing with nought in stock is listed.
+- **Columns**: icon, Item, Quality, In stock, Price, Quantity, Total. Quality is its own column in
+  the quality colours; the item column carries the bare name.
+- **The quantity control**: minus, the figure, plus, and *All*. One unit, or ten with Shift, clamped
+  to nought and to what the side holds. Minus and plus are neutral, because neither direction is
+  good or bad.
+- **The foot**: *Selling for*, *Buying for*, the balance (*You pay*, *You receive*, or *Balance 0*)
+  and the gold both sides hold.
+- **The buttons**: *Reset* clears both modes, *Cancel* ends the session, and *Confirm* sends the
+  deal. Confirm is off with a reason in Warn (*Nothing to trade*, *Not enough gold*, *The trader
+  cannot pay*), and the side that cannot pay turns Bad.
+- **Paging**: below 1,000 panel pixels of screen height, the list pages at twenty lines.
 
-- The stepper moves one unit, or ten with Shift.
-- The foot shows colony gold, the **running balance**, and the trader's purse.
-- The buttons are *Reset*, *Cancel* and *Confirm*.
-- *Confirm* is disabled with a reason when the colony cannot pay, the trader cannot pay, or a
-  quantity is beyond what either holds.
+**Where the numbers live.** The quantities are `TradeModel`'s (Hud, engine-free) until *Confirm*.
+Confirm submits one `TradeLine(trader, def, signedQty)` per moving row, then
+`TradeCommit(trader, balance)`, then `TradeCancel(trader)`, which ends the session. The window then
+closes. The simulation re-validates everything at the commit and applies the deal atomically or
+rejects it whole. All of these intents apply while paused.
 
-**Where the numbers live.** The quantities are **local to the HUD** until *Confirm*. Confirm submits
-one `TradeLine(trader, def, signedQty)` per row, then `TradeCommit(trader, expectedBalance)`. The
-simulation re-validates everything at the commit and applies the deal atomically or rejects it
-whole. All three intents apply while paused.
+**The pause** is `OdysseyBootstrap.ModalHeld`, a gate ORed with `ClockHeld`. The wake assigns
+`ClockHeld` outright, so trade must not share that flag. While the window is up the game's keys are
+suspended (`HotkeyDirector.Suspended`). Tab is read by name, as Escape is, because Tab is no
+`HudKey` and so nothing can bind it (`HotkeyClashTests`).
 
-**The look** is being drawn by Claude Design to `docs/reference/mockups/trade-window-brief.md`:
-five states, the right-click row, the trader's pane and the arrival row. T6 builds what comes back.
-
-**The pause** is a `ModalHeld` gate ORed with `OdysseyBootstrap.ClockHeld`. The wake assigns
-`ClockHeld` outright, so trade must not share that flag.
+**The trader's pane** (the owner's 27e) is a guest's: a face, the name, "trader", no tab strip and
+no Draft button, and two rows, *Leaves in 14 h* and *Carrying 640 gold*.
 
 ## 7. Harm (the owner's *"1 and 3 depending"*)
 
@@ -175,8 +185,11 @@ five states, the right-click row, the trader's pane and the arrival row. T6 buil
 | **Accidental**: a stray shot, a raider, a fall, friendly fire | The session is cancelled and the trader leaves at once |
 | **Deliberate**: a colonist ordered to attack the trader (Ctrl-attack; an ordinary right-click never attacks a visitor) | The trader turns hostile and fights back through the hostile tree |
 
-**How turning hostile is stored.** It is a per-pawn `FactionOverride`, saved with the visit and
-hashed only while set. The trader keeps their outfit. Raiders only ever target colonists, so they
+**How turning hostile is stored.** It is a per-pawn `Pawn.TurnedHostile`, saved in `odyssey.trade`
+(layout 2) and hashed at bit 28 of the pawn word, both only while set. `Pawn.Faction` reads it
+first. The trader keeps its outfit: its `PawnFlags.Visitor` is by kind and stays set beside
+`Hostile`, `PawnOutfits` checks it first, and `PawnView.IsVisitor` requires `Hostile` to be absent.
+Its visit ends with the blow, and its stock is lost. Raiders only ever target colonists, so they
 ignore a trader by construction, but their stray shots can still hit one, which is why the
 accidental rule exists. Goodwill, and a faction remembering the attack, come with factions.
 
@@ -186,9 +199,8 @@ accidental rule exists. Goodwill, and a faction remembering the attack, come wit
   a save without the section loads with no visit. The HUD's ledger quantities are **not** saved, so
   a load mid-trade reopens an empty ledger. Buffered trade lines never outlive the tick.
 - **Hash.** The visit is hashed only while it exists, so a world that never saw a trader hashes as
-  before and no golden moves for the visit. **The new item might move goldens**, because
-  `StorageSettingsTable` hashes `Allow.Length`. This is to be measured with `GoldenColonyProbe` and
-  re-baked only on a clean probe.
+  before and no golden moves for the visit. **The new item moved no golden either**: every
+  golden passed unedited after gold was appended, so nothing needed re-baking.
 - **Scaling (process §3).** The colony's tradeable stock is scanned on publish **only while a trader
   is on the board**, over stored stacks. That is O(stored stacks) for about a day at a time and
   nothing otherwise.
@@ -206,7 +218,35 @@ accidental rule exists. Goodwill, and a faction remembering the attack, come wit
 | A comms console to call a trader | `ui.arch.tool.comms` |
 | Gifts | A commit whose balance favours the trader |
 
-## 10. Owed to the owner
+## 10. As built (2026-09-26)
+
+Units T1 to T7 on `claude/wonderful-clarke-kkd9pq`. **No golden moved**: every golden passes
+unedited, because the new state is hashed only while it exists.
+
+**Where the build departs from the plan or the spec, and why:**
+
+- **The category hues are the shipped Inventory tab's** (`HudTheme.ItemCategoryHues`), not the
+  spec's list. The spec names them as "Inventory tab" and gives older values. The shipped ones were
+  retuned for colour-blind players (design 35 §5a).
+- **The middle dot stays in the header line**, as it does across the rest of the HUD. Both fonts
+  draw it, and `HudFontTests` checks that.
+- **The face and the item icons are placeholders**, as the spec asks, and the coin is a 14 px square.
+  The portrait and the pixel icons drop in later.
+- **A bought weapon is Normal**, and the Buy rows say so. Price ignores quality (§3), so a trader's
+  weapon should not roll a lottery ticket at the drop.
+- **The trader's traverse mode is the bandit's**: a guest never opens the colony's doors. A hearth
+  indoors means it waits outside, the nearest it can reach.
+- **Confirm also ends the session.** Without that, the negotiator would stand at the trader until
+  she was reordered.
+- **One trader at a time.** The incident refuses while a visit exists. A debug-spawned visitor is
+  adopted into a visit with the first trader kind.
+
+**Tests.** The fast tier covers all of it except the view: `TradeContentTests`, `VisitorTests`,
+`TraderVisitTests`, `TradeCoreTests`, `TradeSessionTests` and `VisitorHarmTests` (Sim), and
+`VisitorViewTests`, `TradeMenuTests` and `TradeModelTests` (Hud). `HudShell.Trade.cs`, the pane's
+two rows, the pause gate and Escape are **uncompiled until the Unity tier runs**.
+
+## 11. Owed to the owner
 
 - **Confirm the harm reading** in §7.
 - **Confirm the currency name**, *Gold*, against the registry's *Credit chit*.

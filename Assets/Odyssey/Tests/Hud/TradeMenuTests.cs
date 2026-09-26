@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Sim.Contracts;
@@ -80,6 +81,36 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void NoRowWithNoColonistSelected() =>
             Assert.That(RightClick(Board()), Is.Empty);
+
+        /// <summary>A guest is attacked only on purpose (design 57 §7): Ctrl with a drafted colonist, as a colonist is.</summary>
+        [Test]
+        public void CtrlRightClickWithADraftedColonistAttacksTheTrader()
+        {
+            WorldSnapshot frame = Board();
+            frame.AddPawnAspect(new PawnAspect(Ada, AspectKey.Of(OrderModel.DraftedAspect), 1));
+            var into = new List<Intent>();
+            var menu = new List<ContextMenuRow>();
+            OrderModel.RightClick(new[] { Ada }, frame, GuestCell, Guest, ctrl: true, into, menu);
+            Assert.That(menu, Is.Empty);
+            Assert.That(into.Single().Kind, Is.EqualTo(IntentKind.OrderAttack));
+            Assert.That(into.Single().B, Is.EqualTo(Guest.Value));
+
+            into.Clear();
+            OrderModel.RightClick(new[] { Ada }, frame, GuestCell, Guest, ctrl: false, into, menu);
+            Assert.That(into, Is.Empty, "the control: without Ctrl it asks");
+            Assert.That(menu, Is.Not.Empty);
+        }
+
+        [Test]
+        public void ATraderTurnedHostileKeepsItsCoatAndIsNoGuest()
+        {
+            PawnFlags turned = PawnFlags.Person | PawnFlags.Visitor | PawnFlags.Hostile;
+            Assert.That(PawnOutfits.For(turned), Is.EqualTo(PawnOutfit.Trader));
+            var view = new PawnView(Guest, GuestCell, 800, 800, 700, kind: PawnKindLabels.Trader, flags: turned);
+            Assert.That(view.IsVisitor, Is.False);
+            Assert.That(view.IsHostile, Is.True);
+            Assert.That(view.IsColonist, Is.False);
+        }
 
         [Test]
         public void TheTradeVerbIsTheRegistrys() =>

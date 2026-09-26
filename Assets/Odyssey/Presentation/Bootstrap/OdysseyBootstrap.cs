@@ -603,6 +603,13 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         public bool ClockHeld { get; set; }
 
+        /// <summary>
+        /// Whether a pausing modal holds the colony's clock — the trade window (design 57 §6). A gate
+        /// beside <see cref="ClockHeld"/> and never a speed, for its reason; kept apart from it
+        /// because the wake assigns that flag outright and would release a trade's hold.
+        /// </summary>
+        public bool ModalHeld { get; set; }
+
         /// <summary>Whether the player has pressed Start and the menu is on its way out, so its bed
         /// should leave now rather than when the world exists (design 56 §5).</summary>
         public bool MenuLeaving { get; set; }
@@ -1302,7 +1309,7 @@ namespace Odyssey.Presentation.Bootstrap
             // The wake holds the colony until the player's eyes are open (design 56 §7): a gate on
             // the clock, never a written speed, so nothing about it can be saved, remembered by
             // the speed control or undone by the pause toggle.
-            int speed = ClockHeld ? 0 : _world.GameSpeed;
+            int speed = ClockHeld || ModalHeld ? 0 : _world.GameSpeed;
             _tickMs = 0d;
             if (speed > 0)
             {

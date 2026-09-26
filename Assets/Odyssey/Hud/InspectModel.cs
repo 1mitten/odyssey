@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 
@@ -295,6 +296,17 @@ namespace Odyssey.Hud
         /// </summary>
         public bool IsVisitor;
 
+        /// <summary>
+        /// A trader's two lines (design 57 §6, the pane of mockup 27e): "Leaves in 14 h" and
+        /// "Carrying 640 gold", each split so the number can be set in mono. Empty for anybody else,
+        /// and for a guest with no visit published.
+        /// </summary>
+        public string VisitorLeavesLabel = string.Empty, VisitorLeavesValue = string.Empty;
+        public string VisitorCarryingLabel = string.Empty, VisitorCarryingValue = string.Empty;
+
+        /// <summary>The pane shows the trader's two lines.</summary>
+        public bool ShowsVisitorLines => IsVisitor && VisitorLeavesValue.Length > 0;
+
         // Which pawn IsAnimal and IsHostile were last read for. A pawn that leaves the frame keeps
         // the shape it had while it was in it, rather than falling to a colonist's tombstone.
         PawnId _shapeFor;
@@ -577,6 +589,24 @@ namespace Odyssey.Hud
         /// <summary>The word under a guest's name: "trader" for the trader (design 57 §5), else "visitor".</summary>
         static string VisitorKindWord(int kind) => kind == PawnKindLabels.Trader ? TraderWord : VisitorWord;
 
+        /// <summary>The trader's stay and purse, off its published visit (design 57 §6).</summary>
+        void RefreshVisitor(WorldSnapshot snapshot, PawnId pawn)
+        {
+            VisitorLeavesValue = VisitorCarryingValue = string.Empty;
+            if (!IsVisitor) return;
+            ReadOnlySpan<TradeView> trades = snapshot.Trades;
+            for (int i = 0; i < trades.Length; i++)
+            {
+                if (trades[i].Trader != pawn) continue;
+                VisitorLeavesLabel = Registry.Label(TradeModel.PaneLeavesKey);
+                VisitorLeavesValue = TradeModel.Hours(trades[i].StayLeftTicks).ToString(System.Globalization.CultureInfo.InvariantCulture) + " h";
+                VisitorCarryingLabel = Registry.Label(TradeModel.PaneCarryingKey);
+                VisitorCarryingValue = trades[i].Purse.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    + " " + Registry.Label(TradeModel.GoldKey).ToLowerInvariant();
+                return;
+            }
+        }
+
         static string WithArticle(string noun) =>
             noun.Length > 0 && "aeiou".IndexOf(noun[0]) >= 0 ? "an " + noun : "a " + noun;
 
@@ -726,6 +756,7 @@ namespace Odyssey.Hud
                         // A bandit's job is a person's job — fighting, mostly — in a person's words,
                         // under the kind's word where the name would otherwise leave you guessing.
                         Subtitle = IsVisitor ? VisitorKindWord(pawn.Kind) : HostileKindWord(pawn.Kind);
+                        RefreshVisitor(snapshot, pawn.Id);
                         SetJob(snapshot, pawn);
                         JobIconKey = JobLabels.IconKey(pawn.JobDef);
                     }

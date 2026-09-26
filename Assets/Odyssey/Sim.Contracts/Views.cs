@@ -109,9 +109,10 @@ namespace Odyssey.Sim.Contracts
         KnockedDown = 1 << 7,
 
         /// <summary>
-        /// A guest (design 57 §5): a person of the visitor faction, a trader today. Neither one of
-        /// ours nor hostile, so it is on no roster, takes no orders and wears no uniform. The flags
-        /// widened from a byte to carry it: the eight before it were all taken.
+        /// A guest by kind (design 57 §5): a person of the visitor faction, a trader today. Not one of
+        /// ours, so it is on no roster, takes no orders and wears no uniform. Still set on a guest
+        /// turned hostile (§7), beside <see cref="Hostile"/>, so it keeps its coat. The flags widened
+        /// from a byte to carry it: the eight before it were all taken.
         /// </summary>
         Visitor = 1 << 8,
     }
@@ -347,8 +348,12 @@ namespace Odyssey.Sim.Contracts
         /// <summary>One of ours: a person who is neither hostile nor a visitor. The roster, the Work tab and the draft.</summary>
         public bool IsColonist => (Flags & (PawnFlags.Person | PawnFlags.Hostile | PawnFlags.Visitor)) == PawnFlags.Person;
 
-        /// <summary>A guest: a person of the visitor faction (design 57 §5), a trader today.</summary>
-        public bool IsVisitor => (Flags & (PawnFlags.Person | PawnFlags.Visitor)) == (PawnFlags.Person | PawnFlags.Visitor);
+        /// <summary>
+        /// A guest: a person of the visitor faction (design 57 §5), a trader today — and not one the
+        /// colony has turned hostile (§7), which is an enemy in a trader's coat.
+        /// </summary>
+        public bool IsVisitor =>
+            (Flags & (PawnFlags.Person | PawnFlags.Visitor | PawnFlags.Hostile)) == (PawnFlags.Person | PawnFlags.Visitor);
 
         public bool IsHostile => (Flags & PawnFlags.Hostile) != 0;
         public bool IsDrafted => (Flags & PawnFlags.Drafted) != 0;

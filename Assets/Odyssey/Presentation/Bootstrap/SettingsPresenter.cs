@@ -123,6 +123,14 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
+            // The trade window is a modal too (design 57 §6): Escape is its Cancel, and nothing
+            // behind it hears the key.
+            if (_shell != null && _shell.TradeOpen)
+            {
+                if (keys.escapeKey.wasPressedThisFrame) _shell.CancelTrade();
+                return;
+            }
+
             // A text field has the keyboard, so Escape belongs to it: it backs out of the name
             // being typed, not out of whatever is open behind the prompt. The field registers for
             // the key itself (HudShell.TakesTheKeyboard), which is why this is a return rather

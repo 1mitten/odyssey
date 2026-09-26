@@ -13991,3 +13991,39 @@ ordered attack turning them hostile, and design 57 §7 asks the owner to confirm
 
 **Written with the reference unread**: `rimworldwiki.com` is blocked by this container's network
 policy. The reference mechanics used are the ones already in `a-11` and `a-14`.
+
+## 2026-09-26 — Trading, built
+
+The owner approved the plan and handed over the window's spec, returned from Claude Design as
+mockups 28a Sell and 28b Buy, with *"fit it into the style we have … and go ahead"*. Units T1 to T7
+are built on the planning branch, test-first, with no Unity in the container. The .NET SDK was
+installed from Ubuntu's packages, because Microsoft's download host is blocked here.
+
+**The spec changed the window's shape, and the model absorbed it without the simulation noticing.**
+B10's two columns became two modes, Sell and Buy, with one deal across both. The intents did not
+change: signed lines and one commit.
+
+**What the tests caught on the way:**
+- **A trader already walking kept walking** after a colonist was sent to it. The visitor's "hold
+  still" is decided at its next think, so the order now interrupts the trader's walk, keeping its
+  step, and the negotiator re-aims up to three times if that step carried the trader past her.
+  `TradeSessionTests.TheTraderHoldsStillForHer` found it.
+- **`ToilProgress` counted re-aims in plain ticks.** The project's own guard
+  (`NoDriverAdvancesToilProgressInPlainTicks`) caught it on the first run.
+- **Tab was read by name.** `HotkeyClashTests` refused it. Tab is no `HudKey`, so it is declared
+  fixed while the modal holds the keys, as Escape is. The window also suspends the game's keys.
+- **`OrderTrade` had no handler for one commit.** `EveryIntentTheInterfaceCanSendIsAnsweredByTheColony`
+  said so, which is why T4 and T5 went in together.
+
+**Decisions to keep:**
+- **A deal is planned before it is applied.** Every count, both purses, the balance the ledger
+  showed, and a landing cell for every bought stack are all checked first, so a refused deal moves
+  nothing. `TradeCoreTests` asserts the "nothing moved" half every time, not just the rejection.
+- **A turned trader keeps its coat.** `PawnFlags.Visitor` is by kind and stays set beside
+  `Hostile`. `PawnView.IsVisitor` asks for it without `Hostile`, and `PawnOutfits` asks for it first.
+- **No golden moved.** The visit, the session and the turned flag are all hashed only while they
+  exist, and gold's append passed every golden unedited.
+
+**Owed:** the Unity tier (`HudShell.Trade.cs`, the pane's rows, the pause gate and Escape are
+uncompiled), the module catalogue rebuilt on the owner's machine for gold's coin art, and the first
+play.

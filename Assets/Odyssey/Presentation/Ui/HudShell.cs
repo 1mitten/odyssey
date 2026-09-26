@@ -627,6 +627,9 @@ namespace Odyssey.Presentation.Ui
             // once today, and if that ever changes the later one should be the one on top.
             BuildLeavePrompt();
 
+            // The trade window (design 57 §6), a modal like the two prompts and after them.
+            BuildTrade();
+
             // Last of all, above every modal: the cover a new world is drawn behind (CurtainFrames).
             BuildCurtain();
 
@@ -883,6 +886,7 @@ namespace Odyssey.Presentation.Ui
                 _fast = 0f;
                 RefreshStrip();
                 RefreshInspect();
+                RefreshTrade();
             }
             if (_mid >= MidBucketSeconds)
             {
@@ -910,6 +914,7 @@ namespace Odyssey.Presentation.Ui
             MarkViews();
             MarkWalls();
             ReadBarKeys();
+            ReadTradeKeys();
             UpdateContextMenu();
 
             // The roster sweep ends when the button does, wherever the pointer happens to be when

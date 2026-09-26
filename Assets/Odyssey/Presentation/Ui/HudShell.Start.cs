@@ -1004,6 +1004,14 @@ namespace Odyssey.Presentation.Ui
 
         void OnSessionChanged()
         {
+            // A trade belongs to one colony (design 57 §6): a session coming or going puts the
+            // window away and lets go of the clock, or a loaded colony would wake paused behind it.
+            _trade.Close();
+            _tradeModal?.Show(false);
+            HoldTradeKeys(false);
+            if (_boot != null) _boot.ModalHeld = false;
+            _tradePainted = -1;
+
             // The wake owns the veil from the press to the end of the dream (design 56). A load
             // raises this three times inside its build — torn down, built, read — and none of
             // them may lift a cover the wake is still counting.

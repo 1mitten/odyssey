@@ -590,7 +590,9 @@ namespace Odyssey.Sim.Pawns
                 PawnFlags flags = PawnFlags.None;
                 if (pawn.IsPerson) flags |= PawnFlags.Person;
                 if (pawn.IsHostile) flags |= PawnFlags.Hostile;
-                if (pawn.IsVisitor) flags |= PawnFlags.Visitor;
+                // A guest by kind, even one turned hostile (design 57 §7): the flag keeps its coat on,
+                // and PawnView.IsVisitor asks for the flag without Hostile.
+                if (pawn.IsPerson && pawn.Content.KindOf(pawn.Kind).faction == Faction.Visitor) flags |= PawnFlags.Visitor;
                 if (pawn.Drafted) flags |= PawnFlags.Drafted;
                 if (pawn.Downed) flags |= PawnFlags.Downed;
                 if (pawn.StunnedAt(world.CurrentTick)) flags |= PawnFlags.Stunned;

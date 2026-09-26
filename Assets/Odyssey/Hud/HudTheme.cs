@@ -508,6 +508,22 @@ namespace Odyssey.Hud
         };
 
         /// <summary>
+        /// A quality tier's ink, by <see cref="QualityHandle"/> (the trade window's Quality column,
+        /// design 57 §6, mockup 28a): none, Poor in <see cref="Bad"/>, Normal in
+        /// <see cref="TextMeta"/>, Decent a pale gold, Uber a sea green, Epic a violet. The owner's
+        /// values; a tier is also always named, so the colour is the second cue.
+        /// </summary>
+        public static readonly HudColour[] QualityHues =
+        {
+            TextMeta, Bad, TextMeta, new HudColour(0xe9, 0xe0, 0x8c), new HudColour(0x45, 0xc7, 0xb0),
+            new HudColour(0xb9, 0x8c, 0xe8),
+        };
+
+        /// <summary>The tier's ink, or <see cref="TextMeta"/> for a tier that does not exist.</summary>
+        public static HudColour QualityHue(int tier) =>
+            (uint)tier < (uint)QualityHues.Length ? QualityHues[tier] : TextMeta;
+
+        /// <summary>
         /// How strongly a category's heading row is washed with its hue, and a category with
         /// nothing in it. One owner for the storage pane and the Inventory tab, which draw the same
         /// heading so the two read as one system (owner, 2026-09-23: "uniform for easy

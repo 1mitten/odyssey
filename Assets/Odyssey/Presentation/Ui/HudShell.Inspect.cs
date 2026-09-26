@@ -238,6 +238,7 @@ namespace Odyssey.Presentation.Ui
                     ? _inspect.Pawn.ToString() + (_inspect.Drafted ? ":drafted" : string.Empty)
                         + (_inspect.ShowsColonistBody ? string.Empty : ":bare")
                         + (_inspect.ShowsTabBox ? ":tabs" : string.Empty)
+                        + (_inspect.IsVisitor ? ":visitor" : string.Empty)
                  : _inspect.Subject == InspectSubject.Item ? _inspect.Thing.ToString()
                  : _inspect.Subject == InspectSubject.Corpse ? _inspect.Corpse.ToString()
                  : _inspect.Position + ":" + _inspect.Layer
@@ -335,6 +336,12 @@ namespace Odyssey.Presentation.Ui
                 // A cooking station's bills (design 48 §5), above the tile's facts.
                 WorldSnapshot? frame = _boot?.World?.Views.Current;
                 if (frame != null) SyncBills(frame);
+            }
+
+            if (_visitorLeaves != null && _visitorCarrying != null)
+            {
+                _visitorLeaves.text = _inspect.VisitorLeavesValue;
+                _visitorCarrying.text = _inspect.VisitorCarryingValue;
             }
 
             if (!_inspect.ShowsColonistBody || _inspect.Tombstoned) return;
@@ -793,6 +800,10 @@ namespace Odyssey.Presentation.Ui
 
             // Any other campfire offers to be the hearth: one button, nine under the header.
             if (_inspect.OffersHearth) _inspectBody.Add(MakeHearthButton());
+
+            // A trader's two lines (design 57 §6): how long it stays and what it carries.
+            _visitorLeaves = _visitorCarrying = null;
+            if (_inspect.IsVisitor) _inspectBody.Add(MakeVisitorLines());
 
             if (_inspect.ShowsTabBox)
             {
@@ -2053,6 +2064,37 @@ namespace Odyssey.Presentation.Ui
             label.style.whiteSpace = WhiteSpace.Normal;
             element.Add(label);
             return element;
+        }
+
+        Label? _visitorLeaves, _visitorCarrying;
+
+        /// <summary>
+        /// A trader's body (design 57 §6, mockup 27e): two 30 px rows, a label and a mono figure —
+        /// "Leaves in 14 h" and "Carrying 640 gold". No tabs and no Draft: a guest takes no orders.
+        /// </summary>
+        VisualElement MakeVisitorLines()
+        {
+            var block = new VisualElement();
+            block.style.flexShrink = 0;
+            block.Add(VisitorLine(TradeModel.PaneLeavesKey, out _visitorLeaves));
+            block.Add(VisitorLine(TradeModel.PaneCarryingKey, out _visitorCarrying));
+            return block;
+        }
+
+        static VisualElement VisitorLine(string key, out Label value)
+        {
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.alignItems = Align.Center;
+            row.style.height = 30;
+            Label label = HudText.Make(Registry.Label(key), HudTextRole.Row);
+            label.style.color = HudTokens.TextMeta;
+            label.style.width = 120;
+            row.Add(label);
+            value = HudText.Make(string.Empty, HudTextRole.Row, numeric: true);
+            value.style.color = HudTokens.TextPrimary;
+            row.Add(value);
+            return row;
         }
 
         internal static HudGlyphKind CategoryGlyph(int category) => category switch

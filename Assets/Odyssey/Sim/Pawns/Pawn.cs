@@ -215,8 +215,19 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public bool IsPerson => Species.person;
 
-        /// <summary>Whose side this pawn is on — its kind's (design 33 §3). Nothing is saved for it.</summary>
-        public Faction Faction => Content.KindOf(Kind).faction;
+        /// <summary>
+        /// Whose side this pawn is on — its kind's (design 33 §3), unless it has turned hostile. Nothing
+        /// is saved for the kind's side; <see cref="TurnedHostile"/> is.
+        /// </summary>
+        public Faction Faction => TurnedHostile ? Faction.Hostile : Content.KindOf(Kind).faction;
+
+        /// <summary>
+        /// A guest the colony attacked on purpose (design 57 §7): a trader a colonist was ordered to
+        /// strike is an enemy from that blow on, whatever its kind says. Saved in the trade section
+        /// and folded into the hash as bit 28 of the kind word, both only while set, so no colony
+        /// that never did it saves or hashes differently.
+        /// </summary>
+        public bool TurnedHostile { get; internal set; }
 
         /// <summary>Fights the colony on sight: a bandit (design 33 §1).</summary>
         public bool IsHostile => Faction == Faction.Hostile;
@@ -1170,7 +1181,9 @@ namespace Odyssey.Sim.Pawns
                 | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0)
                 | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0)
                 | (TreatedUntilTick != 0 ? 1 << 22 : 0) | (health ? 1 << 23 : 0)
-                | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0) | ((int)Area << 27));
+                | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0) | ((int)Area << 27)
+                // A guest turned hostile (design 57 §7) is bit 28, nought for everybody else.
+                | (TurnedHostile ? 1 << 28 : 0));
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
             if (JumpLanding >= 0) hash.Add(JumpLanding);
