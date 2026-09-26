@@ -46,7 +46,7 @@ ui.res.tallow,07,,,block of fat,med,mapped
 ui.res.plantmatter,01,,,leaves and fern,high,mapped
 ui.res.seed,01,,,acorns,med,mapped
 ui.res.ammo,08,,,ammunition box,high,mapped
-ui.res.credit,08,,,coin,high,mapped
+ui.res.gold,08,,,coin,high,mapped
 ui.res.relic,08,,,old photographs,med,mapped
 ui.res.smokes,08,,,cigarette packet,med,mapped
 ui.res.curio,08,,,teddy bear,high,mapped

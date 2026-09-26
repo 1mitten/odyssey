@@ -18,6 +18,7 @@
   -->
   <ItemDef>
     <defName>Item_Meal</defName>
+    <marketValue>6</marketValue>
     <label>ration pack</label>
     <nutrition>900</nutrition>
     <stackLimit>20</stackLimit>
@@ -39,6 +40,7 @@
   -->
   <ItemDef>
     <defName>Item_Salvage</defName>
+    <marketValue>3</marketValue>
     <label>scrap metal</label>
     <stackLimit>50</stackLimit>
     <category>Materials</category>
@@ -47,6 +49,7 @@
   <!-- Wood's 75 is the one limit the research states outright (a-14 section 4). -->
   <ItemDef>
     <defName>Item_Wood</defName>
+    <marketValue>1</marketValue>
     <label>wood</label>
     <stackLimit>75</stackLimit>
     <category>Materials</category>
@@ -60,6 +63,7 @@
   -->
   <ItemDef>
     <defName>Item_Stone</defName>
+    <marketValue>1</marketValue>
     <label>stone</label>
     <stackLimit>75</stackLimit>
     <category>Materials</category>
@@ -67,6 +71,7 @@
 
   <ItemDef>
     <defName>Item_IronOre</defName>
+    <marketValue>2</marketValue>
     <label>iron ore</label>
     <stackLimit>75</stackLimit>
     <category>Materials</category>
@@ -74,6 +79,7 @@
 
   <ItemDef>
     <defName>Item_Coal</defName>
+    <marketValue>2</marketValue>
     <label>coal</label>
     <stackLimit>75</stackLimit>
     <category>Materials</category>
@@ -88,6 +94,7 @@
   -->
   <ItemDef>
     <defName>Item_Carrots</defName>
+    <marketValue>1</marketValue>
     <label>carrots</label>
     <nutrition>180</nutrition>
     <stackLimit>75</stackLimit>
@@ -106,6 +113,7 @@
   -->
   <ItemDef>
     <defName>Item_Berries</defName>
+    <marketValue>1</marketValue>
     <label>berries</label>
     <nutrition>60</nutrition>
     <stackLimit>75</stackLimit>
@@ -120,6 +128,7 @@
 
   <ItemDef>
     <defName>Item_Mushrooms</defName>
+    <marketValue>1</marketValue>
     <label>mushrooms</label>
     <nutrition>70</nutrition>
     <stackLimit>75</stackLimit>
@@ -154,6 +163,7 @@
   -->
   <ItemDef>
     <defName>Item_Bat</defName>
+    <marketValue>25</marketValue>
     <label>bat</label>
     <category>Weapons</category>
     <weapon>
@@ -170,6 +180,7 @@
 
   <ItemDef>
     <defName>Item_Crowbar</defName>
+    <marketValue>30</marketValue>
     <label>crowbar</label>
     <category>Weapons</category>
     <weapon>
@@ -186,6 +197,7 @@
 
   <ItemDef>
     <defName>Item_Machete</defName>
+    <marketValue>45</marketValue>
     <label>machete</label>
     <category>Weapons</category>
     <weapon>
@@ -200,6 +212,7 @@
 
   <ItemDef>
     <defName>Item_ArcBlade</defName>
+    <marketValue>120</marketValue>
     <label>arc blade</label>
     <category>Weapons</category>
     <weapon>
@@ -220,6 +233,7 @@
   -->
   <ItemDef>
     <defName>Item_MedicalSupplies</defName>
+    <marketValue>20</marketValue>
     <label>medical supplies</label>
     <stackLimit>10</stackLimit>
     <category>Medicine</category>
@@ -240,6 +254,7 @@
   -->
   <ItemDef>
     <defName>Item_CookedMeal</defName>
+    <marketValue>12</marketValue>
     <label>meal</label>
     <nutrition>900</nutrition>
     <stackLimit>10</stackLimit>
@@ -251,6 +266,7 @@
 
   <ItemDef>
     <defName>Item_VegetableMeal</defName>
+    <marketValue>10</marketValue>
     <label>vegetable meal</label>
     <nutrition>900</nutrition>
     <stackLimit>10</stackLimit>
@@ -262,6 +278,7 @@
 
   <ItemDef>
     <defName>Item_BurntMeal</defName>
+    <marketValue>2</marketValue>
     <label>burnt meal</label>
     <nutrition>700</nutrition>
     <stackLimit>10</stackLimit>
@@ -284,6 +301,7 @@
   -->
   <ItemDef>
     <defName>Item_Pistol</defName>
+    <marketValue>150</marketValue>
     <label>pistol</label>
     <category>Weapons</category>
     <weapon>
@@ -318,6 +336,20 @@
         </melee>
       </ranged>
     </weapon>
+  </ItemDef>
+
+  <!--
+    Gold (design 57 section 2): the currency. A real item, stored, hauled and filtered like any
+    commodity, and never a row in a trade ledger: it is the balance. 500 to a stack, the one limit
+    the research gives for a currency (a-14 section 4). Filed under Items, the category that was
+    empty until now. Its value is 1 by definition: every other value is a number of it.
+  -->
+  <ItemDef>
+    <defName>Item_Gold</defName>
+    <label>gold</label>
+    <marketValue>1</marketValue>
+    <stackLimit>500</stackLimit>
+    <category>Items</category>
   </ItemDef>
 
 </Defs>

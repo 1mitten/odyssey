@@ -94,7 +94,9 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(new[] { 14, 15, 16 }));
             // The pistol at 17, after the kitchen's meals (design 47).
             Assert.That(ItemHandle.Pistol, Is.EqualTo(17));
-            Assert.That(ItemHandle.Count, Is.EqualTo(18));
+            // Gold at 18 (design 57 §2), the currency.
+            Assert.That(ItemHandle.Gold, Is.EqualTo(18));
+            Assert.That(ItemHandle.Count, Is.EqualTo(19));
             Assert.That(WorkHandle.Rescue, Is.EqualTo(5));
             Assert.That(WorkHandle.Doctor, Is.EqualTo(6));
             // 8 since the kitchen appended Work_Cooking at 7 (design 48).
@@ -148,7 +150,9 @@ namespace Odyssey.Tests.Sim
                   // The kitchen (design 48), after the wild foods.
                   "Item_CookedMeal", "Item_VegetableMeal", "Item_BurntMeal",
                   // The pistol (design 47), after the kitchen.
-                  "Item_Pistol" }));
+                  "Item_Pistol",
+                  // Gold (design 57 §2), appended.
+                  "Item_Gold" }));
             Assert.That(content.Items[ItemIndex.Pistol].weapon!.ranged, Is.Not.Null, "the pistol is a gun");
             Assert.That(content.Items[ItemIndex.Machete].weapon!.ranged, Is.Null, "a machete is not");
             Assert.That(content.Kinds[PawnKindIndex.Bandit].defName, Is.EqualTo("PawnKind_Bandit"));

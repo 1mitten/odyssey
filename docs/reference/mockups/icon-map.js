@@ -1292,13 +1292,6 @@ window.ICON_MAP = {
   "r": null,
   "s": "04"
  },
- "ui.res.credit": {
-  "c": null,
-  "d": "coin",
-  "q": "high",
-  "r": null,
-  "s": "08"
- },
  "ui.res.curio": {
   "c": null,
   "d": "teddy bear",
@@ -1340,6 +1333,13 @@ window.ICON_MAP = {
   "q": "high",
   "r": null,
   "s": "04"
+ },
+ "ui.res.gold": {
+  "c": null,
+  "d": "coin",
+  "q": "high",
+  "r": null,
+  "s": "08"
  },
  "ui.res.grain": {
   "c": null,

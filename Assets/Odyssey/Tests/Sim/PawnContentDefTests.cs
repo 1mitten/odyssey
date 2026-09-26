@@ -329,7 +329,10 @@ namespace Odyssey.Tests.Sim
         // The frog merged with cover, 2026-09-26: re-taken from the merged pack.
         // The frog merged with raids, 2026-09-26: the gunman keeps kind 4 and the frog moves to 5;
         // re-taken from the merged pack.
-        const ulong ContentFingerprint = 11744128507824195914UL;
+        // 2026-09-26, trading (design 57 §2-§3, T1): ItemDef gained marketValue, set on every item
+        // (wood 1 ... pistol 150), and Item_Gold appended at handle 18 (stack 500, category Items,
+        // value 1). Taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 645312853867905911UL;
 
 
         [Test]

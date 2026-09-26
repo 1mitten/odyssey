@@ -655,6 +655,7 @@ namespace Odyssey.Sim.Pawns
         public const int VegetableMeal = ItemHandle.VegetableMeal;
         public const int BurntMeal = ItemHandle.BurntMeal;
         public const int Pistol = ItemHandle.Pistol;
+        public const int Gold = ItemHandle.Gold;
         public const int Count = ItemHandle.Count;
     }
 
@@ -730,6 +731,13 @@ namespace Odyssey.Sim.Pawns
         /// colonist thinks of a meal is the food's, not the eater's, so a new food is one row.
         /// </summary>
         public int ateThought = -1;
+
+        /// <summary>
+        /// What one unit is worth, in gold (design 57 §3). A trader's prices are made from it by
+        /// <c>TradePricing</c> and nowhere else, and it is the first brick of a colony wealth
+        /// measure. Zero means it cannot be traded; gold itself is 1 by definition.
+        /// </summary>
+        public int marketValue;
     }
 
     /// <summary>
@@ -1609,7 +1617,9 @@ namespace Odyssey.Sim.Pawns
                 // The kitchen (design 48 §4), appended: the two meals and the burnt one.
                 "Item_CookedMeal", "Item_VegetableMeal", "Item_BurntMeal",
                 // The pistol (design 47), the first ranged weapon.
-                "Item_Pistol");
+                "Item_Pistol",
+                // Gold (design 57 §2), the currency, appended.
+                "Item_Gold");
             content.Recipes = ByName<RecipeDef>(defs, "Recipe_Meal");
             for (int r = 0; r < content.Recipes.Length; r++)
             {

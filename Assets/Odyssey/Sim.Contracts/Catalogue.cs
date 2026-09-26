@@ -279,7 +279,13 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Pistol = 17;
 
-        public const int Count = 18;
+        /// <summary>
+        /// Gold (design 57 §2): the currency. A real item, 500 to a stack, category Items, stored
+        /// and hauled like any other. A trade ledger never shows it as a row; it is the balance.
+        /// </summary>
+        public const int Gold = 18;
+
+        public const int Count = 19;
     }
 
     /// <summary>

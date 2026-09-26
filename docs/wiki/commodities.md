@@ -56,7 +56,7 @@ What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the o
 | **Plant matter** | `ui.res.plantmatter` | Cuttings and chaff. Compost and feedstock | sheet 01 (raw materials), high | M1 |
 | **Seed** | `ui.res.seed` | Plants a growing zone. Some strains are irreplaceable | sheet 01 (raw materials), med | M1 |
 | **Ammunition** | `ui.res.ammo` | Feeds firearms and turrets | sheet 08 (salvage gear), high | M1 |
-| **Credit chit** | `ui.res.credit` | The one currency every faction still honours | sheet 08 (salvage gear), high | M1 |
+| **Gold** | `ui.res.gold` | The currency every trader takes. Stored and hauled like any other goods | sheet 08 (salvage gear), high | M1 |
 | **Relic** | `ui.res.relic` | Pre-collapse curio. Trade value and a mood lift | sheet 08 (salvage gear), med | M1 |
 | **Smokes** | `ui.res.smokes` | Cheap comfort with a long bill | sheet 08 (salvage gear), med | M1 |
 | **Curio** | `ui.res.curio` | Sentimental object. Worth more to a colonist than a trader | sheet 08 (salvage gear), high | M1 |

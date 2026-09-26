@@ -49,7 +49,7 @@ ui.res.tallow,Tallow,ui.res,M1,"Rendered fat. Candles, soap, fuel"
 ui.res.plantmatter,Plant matter,ui.res,M1,Cuttings and chaff. Compost and feedstock
 ui.res.seed,Seed,ui.res,M1,Plants a growing zone. Some strains are irreplaceable
 ui.res.ammo,Ammunition,ui.res,M1,Feeds firearms and turrets
-ui.res.credit,Credit chit,ui.res,M1,The one currency every faction still honours
+ui.res.gold,Gold,ui.res,M1,The currency every trader takes. Stored and hauled like any other goods
 ui.res.relic,Relic,ui.res,M1,Pre-collapse curio. Trade value and a mood lift
 ui.res.smokes,Smokes,ui.res,M1,Cheap comfort with a long bill
 ui.res.curio,Curio,ui.res,M1,Sentimental object. Worth more to a colonist than a trader
