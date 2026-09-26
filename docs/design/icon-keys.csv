@@ -133,6 +133,7 @@ ui.stat.pace.drafted,Drafted,ui.stat,WE,"A drafted colonist runs"
 ui.stat.pace.running,Running,ui.stat,WE,"Running to a fight or away from one"
 ui.stat.pace.standard,The standard walk,ui.stat,WE,"The pace tooltip when nothing is making her faster or slower"
 ui.status.shooting,Shooting,ui.status,RC,"Standing where the line is open and firing at a target"
+ui.status.fetchingkit,Fetching kit,ui.status,GE,"Walking to a stack to take some into her kit"
 ui.combat.miss,Miss,ui.combat,CB,A swing that did not land
 ui.combat.dodge,Dodge,ui.combat,CB,A swing the target stepped out of
 ui.combat.stunned,Stunned,ui.combat,CB,"Knocked senseless by a blunt blow, for a moment"
@@ -291,6 +292,8 @@ ui.command.wear,Wear,ui.command,M3,Put this on
 ui.command.drop,Drop,ui.command,M3,Leave this here
 ui.command.pickup,Pick up,ui.command,M3,Carry in inventory
 ui.command.remove,Remove,ui.command,GE,"Take this off, and leave it for the haulers"
+ui.command.takeintokit,Take into kit,ui.command,GE,"Keep some of this on her, as much as one kit slot holds"
+ui.command.use,Use,ui.command,GE,"Use it now: medical supplies treat her, a ration is eaten"
 ui.command.refuel,Refuel,ui.command,M3,Top this up
 ui.command.switchon,Switch on,ui.command,M3,Power this up
 ui.command.switchoff,Switch off,ui.command,M3,Power this down
@@ -949,3 +952,6 @@ ui.gear.pick.hint,Click a row to fetch it,ui.gear,GE,The foot of the Pick from s
 ui.gear.pick.empty,Nothing in the stores fits,ui.gear,GE,The Pick from stores list with nothing in it
 ui.gear.downedreason,Downed. Only the Strip order can take this.,ui.gear,GE,"Why a downed colonist's gear cannot be changed"
 ui.gear.preview,Preview,ui.gear,GE,"Marks a made-up item on the Gear tab while the preview is on"
+ui.gear.reason.kitfull,Kit full,ui.gear,GE,"Why Take into kit is greyed: no slot has room for this"
+ui.gear.reason.nothurt,Not hurt,ui.gear,GE,"Why Use is greyed on medical supplies: nothing to treat"
+ui.gear.reason.nothungry,Not hungry,ui.gear,GE,"Why Use is greyed on a ration: she is full"

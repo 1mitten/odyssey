@@ -59,6 +59,8 @@ namespace Odyssey.Hud
             // The ranged attack (design 47 §2d), JobHandle 27, after the kitchen's: a word of its own rather than
             // "Fighting", so a line of shooters reads as shooting.
             "ui.status.shooting",
+            // The kit (design 54 §3), JobHandle 28, after the ranged attack.
+            "ui.status.fetchingkit",
         };
 
         public static string IconKey(int jobDef) =>

@@ -145,11 +145,11 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="wrap">
 <nav aria-label="Sections"><h2>Sections</h2><ul class="navlist">
 <li><a href="#commodities">Commodities<b>54</b></a></li>
-<li><a href="#items">Items and equipment<b>63</b></a></li>
+<li><a href="#items">Items and equipment<b>66</b></a></li>
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
-<li><a href="#commands">Commands<b>54</b></a></li>
+<li><a href="#commands">Commands<b>56</b></a></li>
 <li><a href="#work">Work and skills<b>57</b></a></li>
-<li><a href="#colonists">Colonists<b>61</b></a></li>
+<li><a href="#colonists">Colonists<b>62</b></a></li>
 <li><a href="#health">Health and anatomy<b>39</b></a></li>
 <li><a href="#events">Events<b>48</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
@@ -162,9 +162,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>950</b><i>named entries</i></div>
+<div class="stat"><b>956</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>678</b><i>no art yet</i></div>
+<div class="stat m"><b>684</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -502,7 +502,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="items" data-sec="1">
-<h2>Items and equipment <em class="count">63 entries</em></h2>
+<h2>Items and equipment <em class="count">66 entries</em></h2>
 <p class="blurb">Things a colonist carries, wears or fights with, as distinct from the bulk commodities above. A commodity is counted; an item is an object with a quality and a history.</p>
 <h3 class="nsh">Items and equipment</h3>
 <div class="tbl">
@@ -886,6 +886,24 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.gear.preview" data-hay="preview ui.gear.preview marks a made-up item on the gear tab while the preview is on " data-gap="1">
 <div class="nm">Preview<span class="k">ui.gear.preview</span></div>
 <div class="dsc">Marks a made-up item on the Gear tab while the preview is on</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.reason.kitfull" data-hay="kit full ui.gear.reason.kitfull why take into kit is greyed: no slot has room for this " data-gap="1">
+<div class="nm">Kit full<span class="k">ui.gear.reason.kitfull</span></div>
+<div class="dsc">Why Take into kit is greyed: no slot has room for this</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.reason.nothurt" data-hay="not hurt ui.gear.reason.nothurt why use is greyed on medical supplies: nothing to treat " data-gap="1">
+<div class="nm">Not hurt<span class="k">ui.gear.reason.nothurt</span></div>
+<div class="dsc">Why Use is greyed on medical supplies: nothing to treat</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.reason.nothungry" data-hay="not hungry ui.gear.reason.nothungry why use is greyed on a ration: she is full " data-gap="1">
+<div class="nm">Not hungry<span class="k">ui.gear.reason.nothungry</span></div>
+<div class="dsc">Why Use is greyed on a ration: she is full</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">GE</div>
 </div>
@@ -1404,7 +1422,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="commands" data-sec="1">
-<h2>Commands <em class="count">54 entries</em></h2>
+<h2>Commands <em class="count">56 entries</em></h2>
 <p class="blurb">What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein. A right-click on a thing with more than one answer, a weapon today, opens a small menu at the pointer whose rows are these commands; the menu's own words are listed after them.</p>
 <h3 class="nsh">Commands</h3>
 <div class="tbl">
@@ -1526,6 +1544,18 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.command.remove" data-hay="remove ui.command.remove take this off, and leave it for the haulers " data-gap="1">
 <div class="nm">Remove<span class="k">ui.command.remove</span></div>
 <div class="dsc">Take this off, and leave it for the haulers</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.command.takeintokit" data-hay="take into kit ui.command.takeintokit keep some of this on her, as much as one kit slot holds " data-gap="1">
+<div class="nm">Take into kit<span class="k">ui.command.takeintokit</span></div>
+<div class="dsc">Keep some of this on her, as much as one kit slot holds</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.command.use" data-hay="use ui.command.use use it now: medical supplies treat her, a ration is eaten " data-gap="1">
+<div class="nm">Use<span class="k">ui.command.use</span></div>
+<div class="dsc">Use it now: medical supplies treat her, a ration is eaten</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">GE</div>
 </div>
@@ -2108,7 +2138,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">61 entries</em></h2>
+<h2>Colonists <em class="count">62 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -2448,6 +2478,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Standing where the line is open and firing at a target</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">RC</div>
+</div>
+<div class="row gap" id="ui.status.fetchingkit" data-hay="fetching kit ui.status.fetchingkit walking to a stack to take some into her kit " data-gap="1">
+<div class="nm">Fetching kit<span class="k">ui.status.fetchingkit</span></div>
+<div class="dsc">Walking to a stack to take some into her kit</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
 </div>
 </div>
 <h3 class="nsh">Pace and what it is made of</h3>
@@ -4315,7 +4351,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 950, "gaps": 678};</script>
+<script>window.WIKI={"total": 956, "gaps": 684};</script>
 <script>
 (function(){
   var D = window.WIKI;

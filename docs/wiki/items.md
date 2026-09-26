@@ -2,7 +2,7 @@
 
 Things a colonist carries, wears or fights with, as distinct from the bulk commodities above. A commodity is counted; an item is an object with a quality and a history.
 
-63 entries, 37 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+66 entries, 40 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Items and equipment
 
@@ -76,6 +76,9 @@ Things a colonist carries, wears or fights with, as distinct from the bulk commo
 | **Nothing in the stores fits** | `ui.gear.pick.empty` | The Pick from stores list with nothing in it | no art | GE |
 | **Downed. Only the Strip order can take this.** | `ui.gear.downedreason` | Why a downed colonist's gear cannot be changed | no art | GE |
 | **Preview** | `ui.gear.preview` | Marks a made-up item on the Gear tab while the preview is on | no art | GE |
+| **Kit full** | `ui.gear.reason.kitfull` | Why Take into kit is greyed: no slot has room for this | no art | GE |
+| **Not hurt** | `ui.gear.reason.nothurt` | Why Use is greyed on medical supplies: nothing to treat | no art | GE |
+| **Not hungry** | `ui.gear.reason.nothungry` | Why Use is greyed on a ration: she is full | no art | GE |
 
 ---
 

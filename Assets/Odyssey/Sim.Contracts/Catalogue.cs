@@ -111,7 +111,13 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int AttackRanged = 27;
 
-        public const int Count = 28;
+        /// <summary>
+        /// Walk to a stack and take as much of it as fits into her kit (design 54 §3): the kit's
+        /// one job, 28, appended after the ranged attack.
+        /// </summary>
+        public const int TakeIntoKit = 28;
+
+        public const int Count = 29;
     }
 
     /// <summary>
