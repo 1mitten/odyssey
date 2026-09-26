@@ -736,12 +736,13 @@ namespace Odyssey.Presentation.Rendering
         /// and you take a stair to a storey, so the cell under the upper end has to be solid
         /// terrain rather than a built floor. That is the test repeated here.</para>
         ///
-        /// <para><b>Written before it was needed, on purpose.</b> Stairs are not in the game yet
-        /// (<c>U44</c>), so today every step of this shape really is a hop and the second clause
-        /// changes nothing. The day stairs land, a colonist on one would have been drawn vaulting
-        /// up the stairwell, and nothing would have failed — the class of silent fault
-        /// <c>docs/bug-patterns.md</c> calls a rule with two owners. <c>HopArcTests</c> covers it
-        /// with a floored upper cell.</para>
+        /// <para><b>Written before it was needed, on purpose</b>, and needed since U44: a built
+        /// stair declares its connector from the foot to the cell over its upper half, so its step
+        /// has exactly this shape, and the cell under the top is the stair's own upper half rather
+        /// than rock (<c>docs/design/63-stairs.md</c> §3). Without the second clause a colonist on
+        /// one would be drawn vaulting up the stairwell, and nothing would have failed — the class
+        /// of silent fault <c>docs/bug-patterns.md</c> calls a rule with two owners.
+        /// <c>HopArcTests</c> covers it with a floored upper cell.</para>
         /// </summary>
         public static bool IsDrawnAsAHop(WorldRenderModel? world, in PawnView pawn)
         {

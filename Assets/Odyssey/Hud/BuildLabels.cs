@@ -32,6 +32,8 @@ namespace Odyssey.Hud
             "ui.arch.tool.galley",
             // Cover (design 53 §4), BuildingHandle 13.
             "ui.arch.tool.sandbag",
+            // The stair (design 63), BuildingHandle 14.
+            "ui.arch.tool.stair",
         };
 
         /// <summary>

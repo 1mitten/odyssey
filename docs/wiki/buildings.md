@@ -25,7 +25,7 @@ Everything on the architect menu: what can be built, and the one-off orders that
 |---|---|---|---|---|
 | **Wall** | `ui.arch.tool.wall` | Blocks movement, sight and heat | sheet 03 (camp and crafting), med | M3 |
 | **Door** | `ui.arch.tool.door` | Passable, and holds a room's air | sheet 06 (action tiles), med | M3 |
-| **Stair** | `ui.arch.tool.stair` | Two cells. The fast way between layers <br>**Needs:** a staircase. M1 needs it and no sheet has one | no art | M3 |
+| **Stair** | `ui.arch.tool.stair` | Two cells. The fast way between layers, and the one a load can be carried up <br>**Needs:** a staircase. M1 needs it and no sheet has one | no art | M3 |
 | **Ladder** | `ui.arch.tool.ladder` | One cell. Slow, cheap, no hauling <br>**Needs:** a ladder. M1 needs it and no sheet has one | no art | M3 |
 | **Support pillar** | `ui.arch.tool.pillar` | Extends how far a roof can span | sheet 04 (manufactured), low | M3 |
 | **Slab** | `ui.arch.tool.roof` | An upper floor. Goes on a wall or bridges out from one <br>**Needs:** a roof or ceiling panel seen from below. Central to the layer model | no art | M3 |

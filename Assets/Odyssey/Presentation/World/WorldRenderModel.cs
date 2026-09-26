@@ -1056,6 +1056,10 @@ namespace Odyssey.Presentation.World
             if (def == CoreContent.EdificeGalley) return _galleyModule;
             // Cover (design 53), above the trees' range for the same reason.
             if (def == CoreContent.EdificeSandbags) return _sandbagModule;
+            // A built stair (design 63), above the trees' range for the same reason: the city's
+            // flight, from the group that governs the cell, so a clone with no packs draws the
+            // library's own stair primitive.
+            if (def == CoreContent.EdificeStair) return _groups[_slot[index]].Stair;
             // The natural table continues CoreContent's numbering, as terrain does. A tree is not
             // a kind of wall: before this branch existed every tree fell through the switch below
             // to the wall module and the woodland rendered as a grid of grey boxes.

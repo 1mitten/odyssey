@@ -2369,14 +2369,10 @@ namespace Odyssey.Presentation.Bootstrap
             ConstructionGrid? sites = _colony?.Construction;
             if (sites == null || _grid == null) return false;
 
-            int index = _grid.Index(cell);
-            if (!sites.Allows(index, building)) return true;
-
-            BuildingDef def = ConstructionContent.BuildingAt(building);
-            if (def.footprint <= 1) return false;
-
-            int second = EdificeFootprint.SecondCell(index, def.edifice, facing, _grid.Size);
-            return second < 0 || !sites.Allows(second);
+            // The simulation's whole footprint question, asked rather than restated (design 63
+            // §5): a stair's far half answers the stair's own stairwell rule, which the wall's
+            // rule this used to ask of every far cell knows nothing about.
+            return !sites.AllowsFootprint(_grid.Index(cell), building, facing);
         }
 
         void DrawSiteGhost(CellRef cell, int building, int stuff, int facing = 0, bool refused = false)
@@ -2468,6 +2464,21 @@ namespace Odyssey.Presentation.Bootstrap
                 Matrix4x4 shelf = ShelfShape.Root(cell.X, cell.Z, cell.Y, facing);
                 for (int part = 0; part < ShelfShape.PartCount; part++)
                     _renderer.DrawGhost(module, tint, ShelfShape.Part(shelf, facing, part));
+                return;
+            }
+
+            // A stair's ghost (design 63 §9): both halves of the flight, from the placement the
+            // mesher draws them with, the upper half in the cell the facing claims. The far cell is
+            // the simulation's own answer, so the ghost climbs the way the stair will.
+            if (what.edifice == CoreContent.EdificeStair && _grid != null)
+            {
+                _renderer.DrawGhost(module, tint, StairShape.Half(cell.X, cell.Z, cell.Y, facing, upper: false));
+                int upper = EdificeFootprint.SecondCell(_grid.Index(cell), what.edifice, facing, _grid.Size);
+                if (upper >= 0)
+                {
+                    CellRef up = _grid.Size.FromIndex(upper);
+                    _renderer.DrawGhost(module, tint, StairShape.Half(up.X, up.Z, up.Y, facing, upper: true));
+                }
                 return;
             }
 
