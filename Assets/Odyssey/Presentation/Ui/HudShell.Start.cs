@@ -217,7 +217,7 @@ namespace Odyssey.Presentation.Ui
             _setupPage = BuildSetupPage();
             _hud.Add(_setupPage);
 
-            // The planet, between New game and the setup page (design 57 §9).
+            // The planet, between New game and the setup page (design 59 §9).
             _worldPage = BuildWorldPage();
             _hud.Add(_worldPage);
             _menu.World!.PlanetChanged += OnPlanetChanged;
@@ -484,7 +484,7 @@ namespace Odyssey.Presentation.Ui
             board.Add(Captioned(SeedField.ColonyKey, _colonyBox = Field("colony", 32,
                 text => _menu.TypeColonyName(text))));
 
-            // The site this page was reached from, read-only (design 57 §9): the seed and its reroll
+            // The site this page was reached from, read-only (design 59 §9): the seed and its reroll
             // moved to the World screen, where they make the planet, and Back returns there.
             _setupSiteLine = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "setup__sizevalue");
             VisualElement site = Captioned("ui.world.site", _setupSiteLine);
@@ -1056,6 +1056,8 @@ namespace Odyssey.Presentation.Ui
             // which read as the game being open behind a dialog it was not open behind.
             bool playing = live != null;
             _worldUi.style.display = playing ? DisplayStyle.Flex : DisplayStyle.None;
+            // A ride belongs to the colony it was begun in (design 57 §5).
+            ResetRideUi();
             _backdrop.style.display = playing ? DisplayStyle.None : DisplayStyle.Flex;
 
             // The toast stack belongs to a colony and goes away with it (SK4). Not for the rows —
@@ -1080,7 +1082,7 @@ namespace Odyssey.Presentation.Ui
         {
             // The setup page is not a screen of the panel; it stands in its place, full viewport,
             // and the panel goes away entirely while it is up.
-            // The World screen stands in the panel's place the same way (design 57 §9).
+            // The World screen stands in the panel's place the same way (design 59 §9).
             bool world = _menu.Showing && _menu.Screen == MenuScreen.World;
             _worldPage.style.display = world ? DisplayStyle.Flex : DisplayStyle.None;
             if (world)
@@ -1281,7 +1283,7 @@ namespace Odyssey.Presentation.Ui
             {
                 MapSizes.Choice size = MapSizes.At(choice.Size);
                 // With a site the seed is the world's, and the bootstrap derives the board's from it
-                // and the tile, and deepens a mountainous board (design 57 §5, §8).
+                // and the tile, and deepens a mountainous board (design 59 §5, §8).
                 _boot!.BuildSession(choice.Seed, null, choice.Colonists, choice.Name,
                     new GridSize(size.X, size.Z, size.Y), choice.Site, choice.Seed);
 

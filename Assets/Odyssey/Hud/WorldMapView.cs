@@ -5,7 +5,7 @@ using System.Globalization;
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// Zoom and pan on the World map (design 57 §9c, the specification's "Zoom and pan"): 1× to 4× in
+    /// Zoom and pan on the World map (design 59 §9c, the specification's "Zoom and pan"): 1× to 4× in
     /// steps of ×1.5, eased over 180 ms, centred with no pan at 1×, the north–south pan held so the map
     /// cannot leave the box, and east–west free because the planet wraps.
     ///

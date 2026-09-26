@@ -4,15 +4,15 @@
 `world-map-brief.md` (*"happy to go - here is the claude code design prompt"*). It is kept
 verbatim below the rule, as the home-area specification was.
 
-**Where it disagreed with design 57, the owner ruled (2026-09-26):**
+**Where it disagreed with design 59, the owner ruled (2026-09-26):**
 - **Biomes: the spec's six.** Ocean, Meadow, Cold steppe, Dry scrub, Marsh and Ice, with its ramps.
 - **Hill names: ours, not the spec's.** The spec's *Flat, Small hills, Large hills, Mountainous,
   Impassable* are the reference's own labels, which the clean-room rule forbids. They are built as
   **Flat, Rolling, Hilly, Mountainous, Sheer**, and the spec's marks map across one to one: Large
   hills is Hilly, and Impassable is Sheer.
-- **Region names, zoom and pan: built as specified**, reversing design 57 §10's "no place names".
+- **Region names, zoom and pan: built as specified**, reversing design 59 §10's "no place names".
 
-What was built, and every departure from the text below, is in design 57 §9a–§9c.
+What was built, and every departure from the text below, is in design 59 §9a–§9c.
 
 ---
 
@@ -148,7 +148,7 @@ sea    Archivo Narrow 500 italic, 14 px, tracked .06em, ink rgba(190,225,240,.85
   and `MapSeaInk`.
 - The fonts ship italic-free. If Archivo Narrow Italic isn't available, draw the sea labels
   upright and keep the tracking and colour. Record that in `41-the-draw.md`-style notes for
-  design 57.
+  design 59.
 
 ## Zoom and pan
 

@@ -12,7 +12,7 @@ introduce this to Odyssey. Explore, plan and investigate what will work and ask 
 to clarify."*
 
 **Read next:**
-- `docs/design/57-world-generation.md`, the design these answers decide
+- `docs/design/59-world-generation.md`, the design these answers decide
 - `docs/research/a-13-world-generation.md`, how the reference does it
 - `docs/reference/mockups/world-map-brief.md`, the Claude Design prompt
 - `docs/plans/world-generation.md`, the units
@@ -81,7 +81,7 @@ to clarify."*
 - Claude Design draws the screen.
 - There are no factions yet.
 
-**Left to design 57, and put to the owner there as proposals:**
+**Left to design 59, and put to the owner there as proposals:**
 - **The biome and terrain names.** They are proposed for veto in the registry, as the occupations
   were (design 19 §6).
 - **How latitude becomes a season's swing**, and where the meadow's reference latitude sits so that

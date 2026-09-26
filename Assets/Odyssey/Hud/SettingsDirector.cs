@@ -241,6 +241,13 @@ namespace Odyssey.Hud
         /// tool down instead. Appended rather than placed by rung so no value moves.
         /// </summary>
         CloseContextMenu,
+
+        /// <summary>
+        /// Leave the ride (design 57 §5): the view is locked to a colonist "until they push Esc"
+        /// (owner, 2026-09-26), so while one runs this is the only thing the key means. Appended
+        /// so no member moves.
+        /// </summary>
+        LeaveRide,
     }
 
     /// <summary>
@@ -1854,8 +1861,22 @@ namespace Odyssey.Hud
                 inventoryOpen, researchOpen, assignOpen: false, startScreen);
 
         /// <summary>
+        /// The same rule with a ride in it (design 57 §5), above everything: while the view rides
+        /// with a colonist nothing else is on screen, so there is nothing else for Escape to close,
+        /// and the owner's words were that the view is kept "until they push Esc". The one the
+        /// presenter calls.
+        /// </summary>
+        public EscapeAction Escape(bool riding, bool contextMenuOpen, bool toolArmed, bool paletteOpen,
+            bool menuOpen, bool workOpen, bool almanacOpen, bool animalsOpen, bool inventoryOpen,
+            bool researchOpen, bool assignOpen, MenuScreen? startScreen) =>
+            riding
+                ? EscapeAction.LeaveRide
+                : Escape(contextMenuOpen, toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
+                    inventoryOpen, researchOpen, assignOpen, startScreen);
+
+        /// <summary>
         /// The same rule with the Assign tab in it (design 43 §6), which docks in the Work tab's
-        /// corner beside the others and unwinds at their rung. The one the presenter calls.
+        /// corner beside the others and unwinds at their rung.
         /// </summary>
         public EscapeAction Escape(bool contextMenuOpen, bool toolArmed, bool paletteOpen, bool menuOpen,
             bool workOpen, bool almanacOpen, bool animalsOpen, bool inventoryOpen, bool researchOpen,

@@ -2744,7 +2744,7 @@ new file is in the run.
 
 Two ranged-combat tests made a format-9 file by writing `9` over the version field of a save the
 current build had written, on the reasoning that formats 9 and 10 share every layout. Format 11
-(design 57) added the planet site to the **header**, so the relabelled file carried a byte no older
+(design 59) added the planet site to the **header**, so the relabelled file carried a byte no older
 build wrote, the reader took it for the section count, and both tests failed with a negative length
 — nothing to do with ranged combat. **Make an older save with `SaveFixtures.AsFormat(bytes,
 version)`**, which knows what each version's header lacks, and give it the next header change.
@@ -2757,3 +2757,19 @@ A board-memory probe read a 24-layer board as **smaller** than a 16-layer one (8
 JIT. Two warm-up builds and each arm taken twice in alternating order gave 18.8 / 27.8 MiB, stable
 to 1 %. **Warm up before the first measured arm, and repeat in the reverse order**; an arm order
 that changes the answer is the tell.
+
+## Setting up a machine: what the first open quietly changes
+
+**`SyntyImport.UpgradeBuiltInMaterials` converted a committed material** (2026-09-26, the
+`D:\dev\odyssey` machine). URP's `UpgradeProjectFolder` walks the whole of `Assets/`, and
+`Assets/Resources/OdysseyKeepAlive/Standard.mat` exists precisely to keep the built-in *Standard*
+shader alive in a player build — so the converter rewrote it to URP Lit and `git status` showed it
+modified. Nothing failed; the next commit would have carried it. The upgrade is scoped to
+`Assets/Synty` now. The general rule: **after any first open or pack import, `git status` must show
+nothing but `.vsconfig`** (Visual Studio's workload hint, generated, harmless), and anything else is
+restored with `git checkout --` before it can be swept into a commit. A `ProjectSettings/*.asset`
+that differs only in line endings is the same case.
+
+**Hub's headless install fails without saying so.** Twice on that machine: once at a UAC prompt
+nobody saw (the log ends at *"Install … started"*), once because the installer unpacks into
+`%TEMP%` on C: whatever the destination. `docs/setup/local-dev.md` §8a.

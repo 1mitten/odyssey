@@ -5,7 +5,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Worldgen.Planet
 {
     /// <summary>
-    /// A site's climate (design 57 §7): today's temperate curve, re-centred on the site's mean and
+    /// A site's climate (design 59 §7): today's temperate curve, re-centred on the site's mean and
     /// scaled by its latitude and rainfall. The arithmetic is <see cref="SiteRules"/>'s, so the
     /// World screen's season line and the colony's thermometer cannot disagree.
     /// </summary>

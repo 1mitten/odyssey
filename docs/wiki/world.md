@@ -1,6 +1,6 @@
 # World and interface
 
-Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006. The planet's biomes and terrain are proposals for veto (design 57): only Meadow can be settled until more art arrives.
+Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006. The planet's biomes and terrain are proposals for veto (design 59): only Meadow can be settled until more art arrives.
 
 187 entries, 161 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 

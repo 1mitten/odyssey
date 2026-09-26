@@ -212,6 +212,10 @@ namespace Odyssey.Sim.Pawns
                 // The raids on the board (design 55 §10): appended, no format bump. A save from
                 // before raids has no section and loads with no band.
                 pawns.Raids!,
+                // The work kept in rock whose mining order was taken off (design 58 §3): appended,
+                // no format bump. A save from before has no section and loads with none kept —
+                // which is what a cancel then left.
+                designations.PartMined,
             };
         }
 
@@ -226,7 +230,7 @@ namespace Odyssey.Sim.Pawns
                 Request.WorldSeed, Request.Site);
 
         /// <summary>
-        /// The climate a request's colony lives in: the site's (design 57 §7), or the content's
+        /// The climate a request's colony lives in: the site's (design 59 §7), or the content's
         /// temperate curve itself when there is no site — the same object, not a copy, so a world
         /// with no site is today's to the reference.
         /// </summary>
@@ -416,7 +420,7 @@ namespace Odyssey.Sim.Pawns
                 else natural.MakeBarren();
             }
 
-            // A planet site's hills (design 57 §5), after the preset so they scale what it chose.
+            // A planet site's hills (design 59 §5), after the preset so they scale what it chose.
             // No site, no change: that is what keeps every golden where it is.
             if (site is SiteTile tile && gen is NaturalMapGenDef sited)
                 Worldgen.Planet.SiteBoard.Apply(sited, tile.Hills, size);

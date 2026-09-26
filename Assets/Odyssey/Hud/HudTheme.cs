@@ -436,7 +436,7 @@ namespace Odyssey.Hud
         /// that on the day this landed: "Zones, at rest" measuring 1.16:1.</para>
         /// </remarks>
         /// <summary>
-        /// The World map's fixed inks (design 57 §9a, Claude Design's specification): a land name's
+        /// The World map's fixed inks (design 59 §9a, Claude Design's specification): a land name's
         /// dark ink, a sea name's pale one, and what shows behind the map where it does not reach.
         /// Map colours rather than interface tokens, because they are drawn over the planet's own
         /// colours and must read on every biome; the biome ramps themselves are content

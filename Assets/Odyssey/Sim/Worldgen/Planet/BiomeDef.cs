@@ -6,7 +6,7 @@ using Odyssey.Sim.Defs;
 namespace Odyssey.Sim.Worldgen.Planet
 {
     /// <summary>
-    /// One biome of the planet (design 57 §6): where on the temperature and rainfall plane it falls,
+    /// One biome of the planet (design 59 §6): where on the temperature and rainfall plane it falls,
     /// whether a colony may land on it, and how the World screen colours it. The first map-generation
     /// content authored in XML (<c>Defs/Core/World/Biomes.xml</c>).
     /// </summary>
@@ -30,7 +30,7 @@ namespace Odyssey.Sim.Worldgen.Planet
         /// <summary>Half-open bands on the temperature and rainfall plane; a tile in any one belongs here.</summary>
         public List<BiomeBand> bands = new List<BiomeBand>();
 
-        /// <summary>The map ramp's colour at t = 0 and t = 1, as <c>#rrggbb</c> (design 57 §9b).</summary>
+        /// <summary>The map ramp's colour at t = 0 and t = 1, as <c>#rrggbb</c> (design 59 §9b).</summary>
         public string rampFrom = "#000000";
         public string rampTo = "#000000";
 

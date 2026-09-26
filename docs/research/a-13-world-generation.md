@@ -1,9 +1,9 @@
 # a-13 — World generation in the reference (and the genre)
 
 **Lane A, item 13** (brief §5: research, factions, trade and world map), world generation only;
-factions and trade are later files under the same number. Asked 2026-09-26 for design 57.
+factions and trade are later files under the same number. Asked 2026-09-26 for design 59.
 **Clean room:** this file records mechanics, data shapes, numbers and design intent. No XML, code,
-names or flavour text from the reference are reproduced, and design 57 invents its own names.
+names or flavour text from the reference are reproduced, and design 59 invents its own names.
 
 **Access, stated first because it bounds everything below.** Two capped research passes (8 and 6
 tool calls) were run. **Every page fetch was refused by the proxy**: rimworldwiki.com,
@@ -116,7 +116,7 @@ can confirm them by measuring.
 | Kenshi | one hand-built persistent world, no procedural overworld | [recall] |
 | Going Medieval | a map type and a seed; no overworld | low confidence |
 
-## What this means for Odyssey (feeds design 57)
+## What this means for Odyssey (feeds design 59)
 
 - **The minimum that gives the most:**
   - a seeded planet grid
@@ -184,5 +184,5 @@ https://neitsa.github.io/games/rimworld/preparelanding/temperature_tab.html
 - Whether the population setting exists, and its steps.
 - The exact list of unsettleable biomes.
 
-None of these blocks design 57. Every number it needs is **ours to tune and measure**, and none is
+None of these blocks design 59. Every number it needs is **ours to tune and measure**, and none is
 copied.

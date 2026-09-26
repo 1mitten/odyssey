@@ -90,7 +90,7 @@ namespace Odyssey.Sim.Pawns
         public int SurfaceRelief = -1;
 
         /// <summary>
-        /// The planet tile the colony lands on (design 57), or null for a board with no world:
+        /// The planet tile the colony lands on (design 59), or null for a board with no world:
         /// every test, every golden, the debug scenes and every save written before format 11.
         /// <b>Null builds exactly today's board, climate and weather</b> — that is the seam's one
         /// rule, and <c>SiteSeamTests</c> holds it field for field.

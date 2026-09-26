@@ -141,7 +141,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#commodities">Commodities<b>54</b></a></li>
 <li><a href="#items">Items and equipment<b>34</b></a></li>
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
-<li><a href="#commands">Commands<b>53</b></a></li>
+<li><a href="#commands">Commands<b>55</b></a></li>
 <li><a href="#work">Work and skills<b>57</b></a></li>
 <li><a href="#colonists">Colonists<b>63</b></a></li>
 <li><a href="#health">Health and anatomy<b>39</b></a></li>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>977</b><i>named entries</i></div>
+<div class="stat"><b>979</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>705</b><i>no art yet</i></div>
+<div class="stat m"><b>707</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1219,7 +1219,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="commands" data-sec="1">
-<h2>Commands <em class="count">53 entries</em></h2>
+<h2>Commands <em class="count">55 entries</em></h2>
 <p class="blurb">What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein. A right-click on a thing with more than one answer, a weapon today, opens a small menu at the pointer whose rows are these commands; the menu's own words are listed after them.</p>
 <h3 class="nsh">Commands</h3>
 <div class="tbl">
@@ -1535,6 +1535,18 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Centre the colony's home on this campfire<span class="need">Needs drawing: a house over a campfire</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.command.ride" data-hay="first person ui.command.ride watch from behind her shoulder while she goes about her day. the wheel goes in to her eyes; esc leaves an eye over a figure's shoulder" data-gap="1">
+<div class="nm">First Person<span class="k">ui.command.ride</span></div>
+<div class="dsc">Watch from behind her shoulder while she goes about her day. The wheel goes in to her eyes; Esc leaves<span class="need">Needs drawing: an eye over a figure's shoulder</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RA</div>
+</div>
+<div class="row gap" id="ui.command.leaveride" data-hay="leave ui.command.leaveride back to the colony view, where you were interface words, no icon wanted" data-gap="1">
+<div class="nm">Leave<span class="k">ui.command.leaveride</span></div>
+<div class="dsc">Back to the colony view, where you were<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RA</div>
 </div>
 </div>
 <h3 class="nsh">The context menu</h3>
@@ -3067,7 +3079,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 </section>
 <section id="world" data-sec="1">
 <h2>World and interface <em class="count">187 entries</em></h2>
-<p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006. The planet's biomes and terrain are proposals for veto (design 57): only Meadow can be settled until more art arrives.</p>
+<p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006. The planet's biomes and terrain are proposals for veto (design 59): only Meadow can be settled until more art arrives.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
@@ -4427,10 +4439,10 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">244 given names in three registers — settled, frontier and yard — owner-supplied 2026-09-18. The eight invented for the mockups are in the frontier register. The pool has its own file because it would drown this table, and its own wiki page so every name can be read and struck; the order of that file is load-bearing, since a name is arithmetic on a saved seed</div>
 <div class="st approved">approved</div>
 </div>
-<div class="row" id="world.regionnames" data-hay="regions and seas on the planet generated from the world seed s1=ver cal mor ess tal ond bra hes kel iv sar dun ul quen ash; s2=an ere oth ia ul ane ess ir orra en ys; s3=- - d n th ry ck. a name is s1+s2+s3 (a dash is no ending), shown bare, with -ia, or in a frame from ui.world.region.* (reach, downs, hold, greater; sea of, deep, shelf, sound, gulf of). drawn on the world map only, regenerated from the seed, never saved. from claude design's specification, 2026-09-26 (design 57 §9c); regionnamestests holds the code to these tables proposed" data-gap="0">
+<div class="row" id="world.regionnames" data-hay="regions and seas on the planet generated from the world seed s1=ver cal mor ess tal ond bra hes kel iv sar dun ul quen ash; s2=an ere oth ia ul ane ess ir orra en ys; s3=- - d n th ry ck. a name is s1+s2+s3 (a dash is no ending), shown bare, with -ia, or in a frame from ui.world.region.* (reach, downs, hold, greater; sea of, deep, shelf, sound, gulf of). drawn on the world map only, regenerated from the seed, never saved. from claude design's specification, 2026-09-26 (design 59 §9c); regionnamestests holds the code to these tables proposed" data-gap="0">
 <div class="nm">Regions and seas on the planet<span class="k">world.regionnames</span></div>
 <div>Generated from the world seed</div>
-<div class="dsc">S1=Ver Cal Mor Ess Tal Ond Bra Hes Kel Iv Sar Dun Ul Quen Ash; S2=an ere oth ia ul ane ess ir orra en ys; S3=- - d n th ry ck. A name is S1+S2+S3 (a dash is no ending), shown bare, with -ia, or in a frame from ui.world.region.* (Reach, Downs, Hold, Greater; Sea of, Deep, Shelf, Sound, Gulf of). Drawn on the World map only, regenerated from the seed, never saved. From Claude Design's specification, 2026-09-26 (design 57 §9c); RegionNamesTests holds the code to these tables</div>
+<div class="dsc">S1=Ver Cal Mor Ess Tal Ond Bra Hes Kel Iv Sar Dun Ul Quen Ash; S2=an ere oth ia ul ane ess ir orra en ys; S3=- - d n th ry ck. A name is S1+S2+S3 (a dash is no ending), shown bare, with -ia, or in a frame from ui.world.region.* (Reach, Downs, Hold, Greater; Sea of, Deep, Shelf, Sound, Gulf of). Drawn on the World map only, regenerated from the seed, never saved. From Claude Design's specification, 2026-09-26 (design 59 §9c); RegionNamesTests holds the code to these tables</div>
 <div class="st proposed">proposed</div>
 </div>
 </div>
@@ -4440,7 +4452,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 977, "gaps": 705};</script>
+<script>window.WIKI={"total": 979, "gaps": 707};</script>
 <script>
 (function(){
   var D = window.WIKI;

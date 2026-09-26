@@ -4,11 +4,11 @@ using System;
 namespace Odyssey.Sim.Contracts
 {
     /// <summary>
-    /// How hilly a site on the planet is (design 57 §5). The order is the rank the planet cuts its
+    /// How hilly a site on the planet is (design 59 §5). The order is the rank the planet cuts its
     /// land into, flattest first, and it is saved: append, never reorder.
     ///
     /// <para><b>The names are ours.</b> Claude Design's specification used the reference's own five
-    /// labels, and the owner ruled for these on 2026-09-26 (design 57 §9a).</para>
+    /// labels, and the owner ruled for these on 2026-09-26 (design 59 §9a).</para>
     /// </summary>
     public enum HillBand
     {
@@ -28,7 +28,7 @@ namespace Odyssey.Sim.Contracts
         Sheer = 4,
     }
 
-    /// <summary>Whether a colony may land on a tile, and if not, why (design 57 §9).</summary>
+    /// <summary>Whether a colony may land on a tile, and if not, why (design 59 §9).</summary>
     public enum SettleVerdict
     {
         Settleable = 0,
@@ -44,7 +44,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// One tile of the planet, as a colony remembers it (design 57 §8). This is what the save header
+    /// One tile of the planet, as a colony remembers it (design 59 §8). This is what the save header
     /// carries whole, so a later retune of the planet generator cannot change a saved colony's
     /// climate or hills: the board is rebuilt from what it was built from, never regenerated.
     ///
@@ -88,7 +88,7 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Metres above the sea; negative for a sea tile's depth.</summary>
         public readonly int ElevationM;
 
-        /// <summary>The second axis (design 57 §2): recorded, read by nothing until the city board.</summary>
+        /// <summary>The second axis (design 59 §2): recorded, read by nothing until the city board.</summary>
         public readonly int RuinPerMille;
 
         /// <summary>Whether any neighbour is sea. Recorded for the coast seam; read by nothing.</summary>
@@ -121,7 +121,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// The rules a site imposes that both the simulation and the World screen need (design 57 §5,
+    /// The rules a site imposes that both the simulation and the World screen need (design 59 §5,
     /// §7, §8). They live here, beside the site, because the interface cannot call the simulation
     /// and a rule written twice is a rule that drifts (bug-patterns P1).
     /// </summary>
@@ -130,7 +130,7 @@ namespace Odyssey.Sim.Contracts
         /// <summary>
         /// The latitude at which a site's seasons swing exactly as today's temperate curve does:
         /// 590 per mille, 53°. Together with 900 centi-degrees and 1,000 mm it reproduces
-        /// <c>Climate_Temperate</c> field for field (design 57 §7).
+        /// <c>Climate_Temperate</c> field for field (design 59 §7).
         /// </summary>
         public const int ReferenceLatitudePerMille = 590;
 
@@ -184,7 +184,7 @@ namespace Odyssey.Sim.Contracts
             hills == HillBand.Mountainous ? Math.Max(chosenLayers, MountainLayers) : chosenLayers;
 
         /// <summary>
-        /// The board's seed for a tile of a world (design 57 §8): the same world and the same tile
+        /// The board's seed for a tile of a world (design 59 §8): the same world and the same tile
         /// always give the same colony, and neighbouring tiles give unrelated boards.
         /// </summary>
         public static uint BoardSeed(uint worldSeed, int tileIndex) =>

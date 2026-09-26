@@ -93,7 +93,7 @@ namespace Odyssey.Sim.Worldgen
 
         /// <summary>
         /// One octave of 2D value noise that repeats every <paramref name="circumference"/> along x
-        /// (design 57 §4b): the lattice column is taken modulo the number of cells round the
+        /// (design 59 §4b): the lattice column is taken modulo the number of cells round the
         /// circumference, so the field's east edge meets its west with no seam and no trigonometry —
         /// the planet's wrap, in integers. <paramref name="period"/> must divide the circumference.
         /// </summary>

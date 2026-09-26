@@ -40,8 +40,8 @@ namespace Odyssey.Hud
         public const float HexRowStep = 0.75f;
 
         /// <summary>
-        /// The texture is painted at this multiple of its 1× size (design 57 §9a), so a 4× zoom is not
-        /// a blur. The painter's cost is measured in design 57 §9d; 1.5 is the fall-back.
+        /// The texture is painted at this multiple of its 1× size (design 59 §9a), so a 4× zoom is not
+        /// a blur. The painter's cost is measured in design 59 §9d; 1.5 is the fall-back.
         /// </summary>
         public const float PaintScale = 2f;
 

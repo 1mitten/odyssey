@@ -5,7 +5,7 @@ using Odyssey.Sim.Defs;
 namespace Odyssey.Sim.Worldgen.Planet
 {
     /// <summary>
-    /// The planet's shape and climate (design 57 §4c), in <c>Defs/Core/World/Planet.xml</c>. Every
+    /// The planet's shape and climate (design 59 §4c), in <c>Defs/Core/World/Planet.xml</c>. Every
     /// number is a proposal to tune; temperatures are centi-degrees, like the thermal model's.
     /// </summary>
     public class PlanetDef : Def
@@ -42,7 +42,7 @@ namespace Odyssey.Sim.Worldgen.Planet
         public int rainMaxMm = 1800;
 
         /// <summary>
-        /// Latitude belts added to the rainfall (design 57 §4b): a wet equator, dry belts about 30°,
+        /// Latitude belts added to the rainfall (design 59 §4b): a wet equator, dry belts about 30°,
         /// wet about 60°, dry poles. Four values, for |latitude| per mille below 170, 400, 700 and above.
         /// </summary>
         public List<int> rainBeltsMm = new List<int> { 500, -300, 300, -300 };

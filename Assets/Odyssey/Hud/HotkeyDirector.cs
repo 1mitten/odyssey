@@ -311,7 +311,7 @@ namespace Odyssey.Hud
         /// binding, and while a field has the keyboard it belongs to the field, which is where
         /// that rule lives.</para>
         /// </summary>
-        public bool GameKeysLive => Listening == null && Typist == null && !Suspended;
+        public bool GameKeysLive => Listening == null && Typist == null && !Suspended && !HeldByRide;
 
         /// <summary>
         /// Whether something that is not a text field has taken the keys for a while — the wake
@@ -321,6 +321,18 @@ namespace Odyssey.Hud
         /// capture and Shift, and harmless because it names no key (<c>HotkeyClashTests</c>).
         /// </summary>
         public bool Suspended { get; set; }
+
+        /// <summary>
+        /// The game's keys are held by First Person (design 57 §5): the view is not the colony view,
+        /// so a tool key, a tab key or the slice would act on a board the player cannot see. The
+        /// ride reads the few keys it keeps — time, and Escape — itself. Set and cleared by
+        /// <see cref="HudDirectors"/>.
+        ///
+        /// <para><b>Its own flag, not <see cref="Suspended"/>.</b> The wake holds that one across the
+        /// build of a new session, and a new <see cref="HudDirectors"/> clears a ride's hold; with one
+        /// flag for both, every wake handed the player live keys under its curtain half way through.</para>
+        /// </summary>
+        public bool HeldByRide { get; set; }
 
         /// <summary>
         /// Take the keyboard for a text field. Idempotent, and a second field taking it from the

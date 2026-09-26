@@ -63,7 +63,7 @@ namespace Odyssey.Tests.PlayMode
                 GiveItACatalogue(boot);
                 for (int i = 0; i < 8; i++) yield return null;
                 shell.Menu.Choose(SessionCommands.NewGameKey);
-                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 57 §9)
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 59 §9)
                 for (int i = 0; i < 10; i++) yield return null;
                 Assert.That(shell.Menu.Start(), Is.True, "Start built no world");
                 for (int i = 0; i < 20; i++) yield return null;

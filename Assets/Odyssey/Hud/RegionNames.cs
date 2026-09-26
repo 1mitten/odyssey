@@ -24,7 +24,7 @@ namespace Odyssey.Hud
     }
 
     /// <summary>
-    /// Names for the planet's lands and seas (design 57 §9c, the specification's "Region names"):
+    /// Names for the planet's lands and seas (design 59 §9c, the specification's "Region names"):
     /// generated from the world seed, drawn only, never saved and never in the hash.
     ///
     /// <para><b>The syllables are listed twice and guarded once.</b> The tables are here, because the

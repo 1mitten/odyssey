@@ -85,7 +85,7 @@ namespace Odyssey.EditorTools
         }
 
         /// <summary>
-        /// Runs URP's Built-in → URP converter set over the project, headless. The 2022.3-era Synty
+        /// Runs URP's Built-in → URP converter set over the packs under Assets/Synty, headless. The 2022.3-era Synty
         /// packs are Shader Graph native, but a handful of materials (Standard, legacy particle
         /// shaders) still target the built-in pipeline and render magenta under URP without this.
         /// Run via: scripts/unity.sh exec Odyssey.EditorTools.SyntyImport.UpgradeBuiltInMaterials
@@ -100,11 +100,22 @@ namespace Odyssey.EditorTools
                 // The underlying material-upgrader API is public and batchmode-aware, so use it.
                 var upgraders = UnityEditor.Rendering.MaterialUpgrader.FetchAllUpgradersForPipeline(
                     typeof(UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset));
-                UnityEditor.Rendering.MaterialUpgrader.UpgradeProjectFolder(
-                    upgraders, "Upgrading materials to URP",
-                    UnityEditor.Rendering.MaterialUpgrader.UpgradeFlags.LogMessageWhenNoUpgraderFound);
+                // The packs only. UpgradeProjectFolder walks all of Assets/, and
+                // Resources/OdysseyKeepAlive/Standard.mat is committed precisely to keep the built-in
+                // Standard shader in a player build: the project-wide pass rewrote it to URP Lit on a
+                // fresh machine's first open (2026-09-26, docs/lessons.md).
+                var guids = AssetDatabase.FindAssets("t:Material", new[] { SyntyRoot });
+                foreach (var guid in guids)
+                {
+                    var material = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(guid));
+                    if (material == null) continue;
+                    var before = material.shader;
+                    UnityEditor.Rendering.MaterialUpgrader.Upgrade(material, upgraders,
+                        UnityEditor.Rendering.MaterialUpgrader.UpgradeFlags.None);
+                    if (material.shader != before) EditorUtility.SetDirty(material);
+                }
                 AssetDatabase.SaveAssets();
-                Debug.Log("[SyntyImport] Built-in → URP converter run finished");
+                Debug.Log($"[SyntyImport] Built-in → URP converter run finished over {guids.Length} materials under {SyntyRoot}");
             }
             catch (Exception e)
             {

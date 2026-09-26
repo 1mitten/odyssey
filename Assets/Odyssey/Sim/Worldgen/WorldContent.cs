@@ -182,10 +182,10 @@ namespace Odyssey.Sim.Worldgen
         static Worldgen.Planet.PlanetDef? _planet;
         static Worldgen.Planet.BiomeDef[]? _biomes;
 
-        /// <summary>The planet's shape and climate (design 57 §4c).</summary>
+        /// <summary>The planet's shape and climate (design 59 §4c).</summary>
         public static Worldgen.Planet.PlanetDef Planet => _planet ??= One<Worldgen.Planet.PlanetDef>(ContentPack.Core, "Planet_Carrow");
 
-        /// <summary>The biomes, lowest priority first — the order a tile is classified in (design 57 §6).</summary>
+        /// <summary>The biomes, lowest priority first — the order a tile is classified in (design 59 §6).</summary>
         public static Worldgen.Planet.BiomeDef[] Biomes => _biomes ??= BiomesFromDefs(ContentPack.Core);
 
         public static Worldgen.Planet.BiomeDef[] BiomesFromDefs(DefDatabase defs)

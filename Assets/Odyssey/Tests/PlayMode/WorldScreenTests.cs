@@ -13,7 +13,7 @@ using UnityEngine.UIElements;
 namespace Odyssey.Tests.PlayMode
 {
     /// <summary>
-    /// The World screen under the real bootstrap (design 57 §9): New game shows the planet with a
+    /// The World screen under the real bootstrap (design 59 §9): New game shows the planet with a
     /// site already picked, Next reaches the setup page, Start builds a colony that remembers its
     /// site, and Back and Escape unwind a level at a time. The models are the fast tier's; this is
     /// the one place the page, the texture and the flow are seen together.

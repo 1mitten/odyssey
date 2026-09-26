@@ -7,7 +7,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Worldgen.Planet
 {
     /// <summary>
-    /// Builds a planet from a seed (design 57 §4b): seven passes over a flat hex grid that wraps east
+    /// Builds a planet from a seed (design 59 §4b): seven passes over a flat hex grid that wraps east
     /// to west. **Integer arithmetic throughout, each pass on its own stream**, because a planet's
     /// tile decides a colony's board and climate: it must come out the same under Mono and CoreCLR,
     /// and retuning one pass must not move another.
@@ -27,7 +27,7 @@ namespace Odyssey.Sim.Worldgen.Planet
 
         /// <summary>
         /// A planet from a seed. If a seed deals no tile a colony may land on, the planet is rebuilt on
-        /// a derived seed, up to eight times (design 57 §4b's guarantee); the view keeps the seed it
+        /// a derived seed, up to eight times (design 59 §4b's guarantee); the view keeps the seed it
         /// was asked for, because that is the one the player typed.
         /// </summary>
         public static PlanetView Generate(uint seed, PlanetDef def, IReadOnlyList<BiomeDef> biomes,
@@ -168,7 +168,7 @@ namespace Odyssey.Sim.Worldgen.Planet
         }
 
         /// <summary>
-        /// The biome of one tile (design 57 §6). A sea tile is the sea unless a biome that freezes the
+        /// The biome of one tile (design 59 §6). A sea tile is the sea unless a biome that freezes the
         /// sea holds it (Ice); a land tile is the first biome, lowest priority first, whose bands hold
         /// it. The table is sorted by priority on the way in, so this is the whole rule.
         /// </summary>

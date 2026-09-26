@@ -129,7 +129,7 @@ namespace Odyssey.Sim.Pawns
             // construction it reads sources through. Built here for the same argument as every
             // other seam on the context: an optional one is how a caller forgets it, and a
             // colony that forgot it would be a colony where nothing is ever cold.
-            // The climate is the site's when the colony stands on a planet (design 57 §7) and the
+            // The climate is the site's when the colony stands on a planet (design 59 §7) and the
             // content's temperate curve otherwise. Defaulted here, unlike the grids above, because
             // the default *is* the correct answer for every caller without a planet — a test that
             // forgets it gets exactly the world it had before sites existed.

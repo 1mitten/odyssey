@@ -10,7 +10,7 @@ using Odyssey.Sim.Worldgen.Planet;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The planet generator (design 57 §4, §6): deterministic, seamless east to west, exact in its
+    /// The planet generator (design 59 §4, §6): deterministic, seamless east to west, exact in its
     /// shares of sea and hills, total in its biome table, and never without a tile a colony can land on.
     /// </summary>
     public class PlanetTests
@@ -260,7 +260,7 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// What a planet costs to generate, recorded in design 57 §9d. Asserted only against a
+        /// What a planet costs to generate, recorded in design 59 §9d. Asserted only against a
         /// generous ceiling: the fast tier is not a benchmark, and the number to quote is the printed one.
         /// </summary>
         [Test]
@@ -278,7 +278,7 @@ namespace Odyssey.Tests.Sim
             times.Sort();
             double median = times[times.Count / 2];
             TestContext.Progress.WriteLine($"planet 64 x 32: median {median:F2} ms, worst {times[times.Count - 1]:F2} ms over {times.Count} seeds");
-            Assert.That(median, Is.LessThan(250), "a planet is a menu's wait, not a frame's; 50 ms is the budget design 57 quotes");
+            Assert.That(median, Is.LessThan(250), "a planet is a menu's wait, not a frame's; 50 ms is the budget design 59 quotes");
         }
     }
 }

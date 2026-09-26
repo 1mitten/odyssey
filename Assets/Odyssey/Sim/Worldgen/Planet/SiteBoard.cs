@@ -5,7 +5,7 @@ using Odyssey.Sim.Worldgen.Natural;
 namespace Odyssey.Sim.Worldgen.Planet
 {
     /// <summary>
-    /// What a site's hills do to the board it builds (design 57 §5): the one owner of the table.
+    /// What a site's hills do to the board it builds (design 59 §5): the one owner of the table.
     ///
     /// <para><b>Relief is set; outcrops and caverns are scaled.</b> Relief is a shape, so each band
     /// names its own. Outcrops and caverns are densities the board's preset already chose — the bare

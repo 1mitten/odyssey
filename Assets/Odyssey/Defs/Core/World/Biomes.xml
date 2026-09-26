@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The planet's biomes (design 57 §6): six, by the owner's ruling of 2026-09-26 on Claude Design's
+  The planet's biomes (design 59 §6): six, by the owner's ruling of 2026-09-26 on Claude Design's
   specification (docs/reference/mockups/world-screen-spec.md).
 
   A land tile takes the first biome, lowest priority first, whose bands hold its mean temperature
@@ -12,7 +12,7 @@
   `settleable` flag and a `board` preset.
 
   The ramps are the map's colour at t = 0 (rampFrom) and t = 1 (rampTo), from the specification;
-  `ramp` names the rule for t (design 57 §9b). The names are registry keys (ui.biome.*).
+  `ramp` names the rule for t (design 59 §9b). The names are registry keys (ui.biome.*).
 -->
 <Defs>
 

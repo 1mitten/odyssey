@@ -35,7 +35,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// The same figure without the unit, for a range that says it once: the World screen's
-        /// "2.5 to 26.0 °C" (design 57 §9a).
+        /// "2.5 to 26.0 °C" (design 59 §9a).
         /// </summary>
         public static string Number(int centiC)
         {

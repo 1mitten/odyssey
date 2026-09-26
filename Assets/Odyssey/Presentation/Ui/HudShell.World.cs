@@ -12,7 +12,7 @@ using UnityEngine.UIElements;
 namespace Odyssey.Presentation.Ui
 {
     /// <summary>
-    /// <see cref="HudShell"/>: the World screen (design 57 §9, Claude Design's specification in
+    /// <see cref="HudShell"/>: the World screen (design 59 §9, Claude Design's specification in
     /// <c>docs/reference/mockups/world-screen-spec.md</c>). The planet, the site picked on it, and the
     /// way on to the setup page.
     ///
@@ -30,7 +30,7 @@ namespace Odyssey.Presentation.Ui
     {
         /// <summary>
         /// The main screen's director with its two presenter-supplied halves: the colonist roll
-        /// (U40) and the planet (design 57), both of which need <c>Odyssey.Sim</c>. One seed field
+        /// (U40) and the planet (design 59), both of which need <c>Odyssey.Sim</c>. One seed field
         /// is shared, because the seed the World screen shows is the seed the menu starts from.
         /// </summary>
         static MenuDirector MakeMenu()
@@ -106,7 +106,7 @@ namespace Odyssey.Presentation.Ui
             var top = new VisualElement();
             top.AddToClassList("world__top");
 
-            // The one seed box in the game now: it names a planet (design 57 §8). Named "seed" so
+            // The one seed box in the game now: it names a planet (design 59 §8). Named "seed" so
             // the tests that type into the box a player types into still find it.
             TextField seedBox = Field("seed", SeedEntry.MaxDigits, text => _menu.Seed.Type(text));
             seedBox.AddToClassList("world__seed");
@@ -417,7 +417,7 @@ namespace Odyssey.Presentation.Ui
             foreach (RegionLabel place in RegionNames.For(planet))
             {
                 // Land in the panel-label step, capitals already; seas upright, since neither shipped
-                // face has an italic (design 57 §9a). The scale's own steps, so no seventh is added.
+                // face has an italic (design 59 §9a). The scale's own steps, so no seventh is added.
                 Label label = HudText.Make(place.Text, place.Sea ? HudTextRole.Row : HudTextRole.PanelLabel,
                     ussClass: place.Sea ? "world__sea" : "world__land");
                 label.pickingMode = PickingMode.Ignore;

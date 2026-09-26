@@ -14,7 +14,7 @@ using Odyssey.Sim.Worldgen.Planet;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The planet site's seam (design 57 §3–§8): a site shapes the board's hills, its climate and
+    /// The planet site's seam (design 59 §3–§8): a site shapes the board's hills, its climate and
     /// its rain, and **no site changes nothing**. That last sentence is the one every golden hangs
     /// on, so it is asserted field for field rather than trusted.
     /// </summary>
@@ -38,7 +38,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(differences, Is.Empty, string.Join("\n", differences));
         }
 
-        /// <summary>Rolling is today's board by construction (design 57 §5): relief 2 and ×1 of every density.</summary>
+        /// <summary>Rolling is today's board by construction (design 59 §5): relief 2 and ×1 of every density.</summary>
         [Test]
         public void ARollingSiteIsThePlayedBoard()
         {
@@ -118,7 +118,7 @@ namespace Odyssey.Tests.Sim
 
         /// <summary>
         /// The reference site (53°, 9 °C, 1,000 mm) is today's temperate curve to the centi-degree
-        /// (design 57 §7), so the curve is scaled round what has been played and tuned.
+        /// (design 59 §7), so the curve is scaled round what has been played and tuned.
         /// </summary>
         [Test]
         public void TheReferenceSiteIsTodaysClimate()

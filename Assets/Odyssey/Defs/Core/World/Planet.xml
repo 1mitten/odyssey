@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The planet (design 57 §4c): a flat hex grid, 64 x 32, wrapping east to west. Every number is a
+  The planet (design 59 §4c): a flat hex grid, 64 x 32, wrapping east to west. Every number is a
   proposal to tune. Temperatures are centi-degrees, like the thermal model's.
 
   What the defaults give, before height and noise: 27 °C at the equator, falling with the square of

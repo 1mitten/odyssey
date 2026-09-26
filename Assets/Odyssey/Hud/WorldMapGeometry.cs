@@ -5,7 +5,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// Where each hex of the planet is drawn, and which hex a point is over (design 57 §9a, the
+    /// Where each hex of the planet is drawn, and which hex a point is over (design 59 §9a, the
     /// specification's geometry): pointy-top hexes 18.4 px across at 1×, rows 0.75 of a hex apart,
     /// odd rows shifted half a hex east. Every coordinate here is in <b>1× map pixels</b>; the painter
     /// multiplies by its supersample and the view by its fit and zoom.

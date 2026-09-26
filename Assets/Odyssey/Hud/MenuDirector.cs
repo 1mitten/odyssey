@@ -51,7 +51,7 @@ namespace Odyssey.Hud
         Settings,
 
         /// <summary>
-        /// The planet (design 57 §9): the seed, the map and the site the colony lands on, between
+        /// The planet (design 59 §9): the seed, the map and the site the colony lands on, between
         /// the root's New game and the setup page. Present only when a <see cref="WorldChoice"/> was
         /// handed in; without one, New game goes straight to the setup page as it always did.
         ///
@@ -98,7 +98,7 @@ namespace Odyssey.Hud
         public readonly int Size;
 
         /// <summary>
-        /// The planet tile the colony lands on (design 57), or null when the flow had no World
+        /// The planet tile the colony lands on (design 59), or null when the flow had no World
         /// screen. With a site, <see cref="Seed"/> is the <b>world's</b> seed and the board's own is
         /// derived from it and the tile (<c>SiteRules.BoardSeed</c>).
         /// </summary>
@@ -343,7 +343,7 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// The World screen's model (design 57 §9), or null for a flow with no planet — every rig and
+        /// The World screen's model (design 59 §9), or null for a flow with no planet — every rig and
         /// test written before it, which keep going straight from New game to the setup page.
         /// Optional for the reason <see cref="Colonists"/> is: it needs the simulation's generator,
         /// which the presenter hands in.
@@ -457,7 +457,7 @@ namespace Odyssey.Hud
         {
             if (Screen == MenuScreen.Root) return false;
 
-            // One level at a time (design 57 §9): the setup page backs out to the planet it was
+            // One level at a time (design 59 §9): the setup page backs out to the planet it was
             // reached from, with the seed, the site and the three people all kept.
             if (Screen == MenuScreen.NewGame && World != null)
             {
@@ -547,7 +547,7 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// Press Next on the World screen: on to the setup page with the site picked (design 57 §9).
+        /// Press Next on the World screen: on to the setup page with the site picked (design 59 §9).
         /// False anywhere else, and on a site a colony cannot land on — which the page draws disabled
         /// and this refuses as well.
         /// </summary>

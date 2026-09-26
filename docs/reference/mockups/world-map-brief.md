@@ -3,7 +3,7 @@
 **2026-09-26.** The prompt below goes to Claude Design verbatim, with the attachments listed at the
 end.
 - **The decisions behind it:** `docs/research/world-generation-interview.md` (owner, 2026-09-26) and
-  `docs/design/57-world-generation.md`.
+  `docs/design/59-world-generation.md`.
 - **What comes back** is built as unit WG3 in `docs/plans/world-generation.md`. Its measurements
   become constants in code (`WorldLayout`) and its biome colours become `BiomeDef.mapColour`.
 
@@ -228,4 +228,4 @@ names, and added region names and zoom — the second and third against this bri
 do*.
 
 The owner ruled the same day: **the six biomes, our own hill names, and region names and zoom
-built**. Design 57 §6 and §9a–§9c carry what was built and every departure.
+built**. Design 59 §6 and §9a–§9c carry what was built and every departure.

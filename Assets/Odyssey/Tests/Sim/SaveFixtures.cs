@@ -10,7 +10,7 @@ namespace Odyssey.Tests.Sim
     /// tests that prove an old file still loads.
     ///
     /// <para><b>Why a helper and not a version poke.</b> Relabelling the version field alone was enough
-    /// while every format since 3 shared one header layout. Format 11 (design 57) added the planet
+    /// while every format since 3 shared one header layout. Format 11 (design 59) added the planet
     /// site to the header, so a relabelled file carried a byte no older build wrote, the reader took
     /// it for the start of the section list, and two ranged-combat tests failed on a negative length
     /// — nothing to do with what they test. This is the one place that knows what each version's

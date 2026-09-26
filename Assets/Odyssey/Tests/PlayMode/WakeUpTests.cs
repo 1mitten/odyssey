@@ -80,7 +80,7 @@ namespace Odyssey.Tests.PlayMode
                 yield return Frames(8);
                 shell.WakeTiming = Quick;
                 shell.Menu.Choose(SessionCommands.NewGameKey);
-                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 57 §9)
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 59 §9)
                 yield return Frames(8);
                 Assume.That(boot.Preferences.WakeUp, Is.True, "the wake-up is switched off on this machine");
 
@@ -193,7 +193,7 @@ namespace Odyssey.Tests.PlayMode
                 Assume.That(boot.Preferences.WakeUp, Is.True, "the wake-up is switched off on this machine");
                 shell.WakeTiming = Long;
                 shell.Menu.Choose(SessionCommands.NewGameKey);
-                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 57 §9)
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 59 §9)
                 yield return Frames(8);
                 shell.Menu.Start();
 
@@ -232,7 +232,7 @@ namespace Odyssey.Tests.PlayMode
                 boot.Preferences.SetWakeUp(false);
                 shell.WakeTiming = Quick;
                 shell.Menu.Choose(SessionCommands.NewGameKey);
-                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 57 §9)
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 59 §9)
                 yield return Frames(8);
                 shell.Menu.Start();
 

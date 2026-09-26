@@ -60,7 +60,7 @@ namespace Odyssey.Sim.Weather
         int _spellEnd;
 
         /// <summary>
-        /// How much more often it rains here than the table says, per mille (design 57 §7): a
+        /// How much more often it rains here than the table says, per mille (design 59 §7): a
         /// planet site's rainfall over the reference's 1,000 mm. Applied to every kind that rains;
         /// the draw is by the season's weight sum, so the dry kinds need no adjustment. 1000 — no
         /// site — is today's table exactly. Not saved: it is a pure function of the header's site.

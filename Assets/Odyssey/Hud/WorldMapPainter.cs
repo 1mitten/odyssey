@@ -5,7 +5,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// Paints the planet into one RGBA image, once per seed (design 57 §9a–§9b, the specification's
+    /// Paints the planet into one RGBA image, once per seed (design 59 §9a–§9b, the specification's
     /// "Map texture"): every tile in its biome's two-stop ramp, the hill marks, then the polar haze,
     /// the sheen and the vignette baked in. The page uploads the bytes to one texture, so the whole
     /// map is one draw (P10), and repaints only when the seed changes.
@@ -243,7 +243,7 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// A tile's colour: its biome's ramp at the specification's t (design 57 §9b). Ocean by depth,
+        /// A tile's colour: its biome's ramp at the specification's t (design 59 §9b). Ocean by depth,
         /// land by height with a tile-hashed jitter, and Ice on the sea by depth in a pale band.
         /// </summary>
         public static void TileColour(PlanetView planet, int tile, out float r, out float g, out float b)

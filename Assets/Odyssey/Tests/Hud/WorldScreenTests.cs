@@ -383,7 +383,7 @@ namespace Odyssey.Tests.Hud
             for (int x = 0; x < w * 4; x++) Assert.That(up[x], Is.EqualTo(down[(h - 1) * w * 4 + x]));
         }
 
-        /// <summary>What a repaint costs at the page's 2×, recorded in design 57 §9d. The fast tier is not a benchmark: the printed number is the one to quote.</summary>
+        /// <summary>What a repaint costs at the page's 2×, recorded in design 59 §9d. The fast tier is not a benchmark: the printed number is the one to quote.</summary>
         [Test]
         public void WhatAPaintCosts()
         {
@@ -476,7 +476,7 @@ namespace Odyssey.Tests.Hud
 
 namespace Odyssey.Tests.Hud
 {
-    /// <summary>The New game flow with a planet in it (design 57 §9): New game, World, Next, setup page, Start.</summary>
+    /// <summary>The New game flow with a planet in it (design 59 §9): New game, World, Next, setup page, Start.</summary>
     public class WorldFlowTests
     {
         static MenuDirector WithWorld(out WorldChoice world, params uint[] seeds)

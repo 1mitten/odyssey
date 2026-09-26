@@ -4,7 +4,7 @@ using System;
 namespace Odyssey.Sim.Contracts
 {
     /// <summary>
-    /// The planet's grid (design 57 §4a): hexes in offset rows, pointy-top, odd rows shifted half a
+    /// The planet's grid (design 59 §4a): hexes in offset rows, pointy-top, odd rows shifted half a
     /// hex east, wrapping east to west. Pure index arithmetic, shared by the generator that fills
     /// the planet and the screen that draws and picks it, so the two cannot disagree about who a
     /// tile's neighbours are.
@@ -45,13 +45,13 @@ namespace Odyssey.Sim.Contracts
         }
 
         /// <summary>
-        /// Latitude of a row in signed per-mille of a quarter-turn (design 57 §4a): row 0 is the far
+        /// Latitude of a row in signed per-mille of a quarter-turn (design 59 §4a): row 0 is the far
         /// north, the last row the far south, the equator between the middle two.
         /// </summary>
         public static int LatitudePerMille(int row, int height) => 1000 - (2 * row + 1) * 1000 / height;
     }
 
-    /// <summary>Which rule sets a biome's map ramp position (design 57 §9b).</summary>
+    /// <summary>Which rule sets a biome's map ramp position (design 59 §9b).</summary>
     public enum MapRamp
     {
         /// <summary>Depth below the sea: deep is dark, the coast light.</summary>
@@ -97,7 +97,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// A generated planet as the World screen reads it (design 57 §4): per-tile arrays and the biome
+    /// A generated planet as the World screen reads it (design 59 §4): per-tile arrays and the biome
     /// table. Built by the simulation's generator and handed across, because the interface assembly
     /// cannot call the simulation — the same shape as a colonist candidate. Never saved: it is
     /// regenerated from the world seed whenever it is wanted, and a colony keeps only its own tile.
@@ -158,7 +158,7 @@ namespace Odyssey.Sim.Contracts
         public bool[] Water { get; }
         public bool[] Coastal { get; }
 
-        /// <summary>The settleable tile nearest the reference climate, preferring Rolling (design 57 §9).</summary>
+        /// <summary>The settleable tile nearest the reference climate, preferring Rolling (design 59 §9).</summary>
         public int SuggestedTile { get; }
 
         /// <summary>
@@ -195,7 +195,7 @@ namespace Odyssey.Sim.Contracts
             return BiomeAt(tile).Settleable ? SettleVerdict.Settleable : SettleVerdict.NotYetAvailable;
         }
 
-        /// <summary>The tile as a colony would remember it (design 57 §8).</summary>
+        /// <summary>The tile as a colony would remember it (design 59 §8).</summary>
         public SiteTile Tile(int tile) => new SiteTile(tile, HexGrid.Column(tile, Width), HexGrid.Row(tile, Width),
             BiomeAt(tile).DefName, HillsAt(tile), LatitudePerMille(tile), MeanTempC[tile], RainfallMm[tile],
             ElevationM[tile], RuinPerMille[tile], Coastal[tile]);

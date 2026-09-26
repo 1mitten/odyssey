@@ -157,11 +157,11 @@ namespace Odyssey.Sim.Saving
         /// here.</summary>
         public readonly bool Wooded;
 
-        /// <summary>The planet's seed (design 57 §8), meaningful only with a <see cref="Site"/>.</summary>
+        /// <summary>The planet's seed (design 59 §8), meaningful only with a <see cref="Site"/>.</summary>
         public readonly uint WorldSeed;
 
         /// <summary>
-        /// The planet tile the board was built on, whole (format 11, design 57 §8), or null for a
+        /// The planet tile the board was built on, whole (format 11, design 59 §8), or null for a
         /// board with no world — which is every file before 11. <b>The tile is stored, not rebuilt
         /// from <see cref="WorldSeed"/></b>, so retuning the planet generator can never change a
         /// saved colony's climate or hills: the same argument <see cref="Barren"/> makes.
@@ -284,7 +284,7 @@ namespace Odyssey.Sim.Saving
         /// idempotent. <b>Do not tidy the guard away</b>: without the version it would re-deal
         /// Shooting on every load of a colonist who has never fired.</para>
         ///
-        /// <para>11 (design 57, world generation): the <b>header</b> grew the planet site — a flag,
+        /// <para>11 (design 59, world generation): the <b>header</b> grew the planet site — a flag,
         /// then the world seed and the tile's fields, the biome by Def name. A file at 10 or below
         /// reads back no site and rebuilds the board it always did. Nothing in a section moved.</para>
         /// </remarks>

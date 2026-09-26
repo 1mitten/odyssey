@@ -129,7 +129,7 @@ namespace Odyssey.Sim.Temperature
             }
         }
 
-        /// <summary>The curve this colony's outdoors follows: the content's, or a planet site's (design 57 §7).</summary>
+        /// <summary>The curve this colony's outdoors follows: the content's, or a planet site's (design 59 §7).</summary>
         public ClimateDef Climate => _climate;
 
         public TemperatureSystem(PawnContext ctx, IReadOnlyList<Worldgen.PlacedEdifice> edifices,
