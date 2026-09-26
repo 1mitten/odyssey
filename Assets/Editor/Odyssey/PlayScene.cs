@@ -1879,6 +1879,42 @@ namespace Odyssey.EditorTools
                 },
             });
 
+            // The forest animals (design 66, kinds 10 to 18): one row per form x colourway, the
+            // variant numbering running across a kind's forms (ModuleIds.Animal(kind, variant)).
+            // Synty's SIMPLE Forest Animals, licensed, so these resolve only where the pack is
+            // installed under Assets/Synty and are null on the runner (design 66 §7).
+            foreach (ForestForm form in ForestForms)
+            {
+                for (int coat = 0; coat < form.Prefabs.Length; coat++)
+                {
+                    rows.Add(new ModuleEntry
+                    {
+                        moduleId = ModuleIds.Animal(form.Kind, form.FirstVariant + coat),
+                        shape = ModuleShape.Pillar,
+                        // The rig's own model, not the pack's prefab: the prefabs were saved from
+                        // an optimised import and carry no bones, and a figure measured, posed or
+                        // stamped needs them (design 66 §6). The mesh is the colourway.
+                        prefabName = form.Rig,
+                        meshName = "SM_" + form.Prefabs[coat],
+                        // Asked for in the pack's folder only: Fox and Bear are exactly the names
+                        // another pack's prefab might carry (design 48 §14's tie rule).
+                        prefabUnder = ForestFolder,
+                        materialName = ForestMaterial,
+                        poseClipName = form.Rig + "_Idle",
+                        eatClipName = form.Rig + "_Eat",
+                        animalForm = form.Form,
+                        centreXZ = true, baseAtY = true,
+                        scale = Vector3.one * form.Scale,
+                        locomotion = new List<LocomotionEntry>
+                        {
+                            new LocomotionEntry { clipName = form.Rig + "_Idle", metresPerSecond = 0f },
+                            new LocomotionEntry { clipName = form.Rig + "_Walk", metresPerSecond = form.Walk },
+                            new LocomotionEntry { clipName = form.Rig + "_Run", metresPerSecond = form.Run },
+                        },
+                    });
+                }
+            }
+
             // One row per hair piece. A rigid prop parented to the head bone with an identity
             // transform, measured in both packs -- no offset to fit and no per-body special case
             // (docs/research/e-06-modular-colonists.md §4). It carries no pose clip and no
@@ -2435,19 +2471,33 @@ namespace Odyssey.EditorTools
 
         static ModuleCatalogue BuildCatalogueAsset()
         {
+            // Licensed art where git would commit it is refused before anything is built from it
+            // (design 66 §2): SIMPLE Forest Animals installs itself outside Assets/Synty.
+            var stray = LicensedArtGuard.Find(Directory.GetCurrentDirectory());
+            if (stray.Count > 0) throw new InvalidOperationException(LicensedArtGuard.Refusal(stray));
+
             // The animal models' import settings first, so the rows below resolve models that
             // are already life-size with looping gaits (design 29). Idempotent.
             AnimalImport.Apply();
+            // And the forest pack's one material onto URP with instancing on (design 66 §3), so a
+            // fresh install draws textured rather than magenta. Idempotent; nothing where the pack
+            // is absent.
+            SyntyImport.UpgradeForestMaterials();
 
             var rows = Rows();
             var cache = new Dictionary<string, GameObject?>(StringComparer.Ordinal);
             foreach (ModuleEntry row in rows)
             {
                 if (string.IsNullOrEmpty(row.prefabName)) continue;
-                if (!cache.TryGetValue(row.prefabName, out GameObject? prefab))
+                string key = row.prefabUnder + "|" + row.prefabName;
+                if (!cache.TryGetValue(key, out GameObject? prefab))
                 {
-                    prefab = FindSyntyPrefab(row.prefabName, row.prefabUnder) ?? FindCustomModel(row.prefabName);
-                    cache[row.prefabName] = prefab;
+                    // A forest row is its rig's FBX in the pack's own folder, and nothing else may
+                    // answer for it (design 66 §6).
+                    prefab = row.prefabUnder == ForestFolder
+                        ? FindForestModel(row.prefabName)
+                        : FindSyntyPrefab(row.prefabName, row.prefabUnder) ?? FindCustomModel(row.prefabName);
+                    cache[key] = prefab;
                 }
                 row.prefab = prefab;
             }
@@ -2470,7 +2520,7 @@ namespace Odyssey.EditorTools
                 if (string.IsNullOrEmpty(row.poseClipName)) continue;
                 if (!clips.TryGetValue(row.poseClipName, out AnimationClip? clip))
                 {
-                    clip = FindSyntyClip(row.poseClipName) ?? FindCustomClip(row.poseClipName);
+                    clip = FindForestClip(row.poseClipName) ?? FindSyntyClip(row.poseClipName) ?? FindCustomClip(row.poseClipName);
                     clips[row.poseClipName] = clip;
                 }
                 row.poseClip = clip;
@@ -2478,6 +2528,7 @@ namespace Odyssey.EditorTools
 
             ResolveGaits(rows, clips);
             foreach (ModuleEntry row in rows) row.sitClip = LookUpClip(row.sitClipName, clips);
+            foreach (ModuleEntry row in rows) row.eatClip = LookUpClip(row.eatClipName, clips);
             ResolveCombatClips(rows);
             ResolveJumpClips(rows);
 
@@ -2532,9 +2583,40 @@ namespace Odyssey.EditorTools
         {
             if (string.IsNullOrEmpty(name)) return null;
             if (cache.TryGetValue(name, out AnimationClip? cached)) return cached;
-            AnimationClip? clip = FindSyntyClip(name) ?? FindCustomClip(name);
+            AnimationClip? clip = FindForestClip(name) ?? FindSyntyClip(name) ?? FindCustomClip(name);
             cache[name] = clip;
             return clip;
+        }
+
+        /// <summary>
+        /// A clip inside one of SIMPLE Forest Animals' five FBX, by the clip's own name
+        /// (<c>Fox_Walk</c>) — the pack cuts its takes out of one file per rig, so
+        /// <see cref="FindSyntyClip"/>, which matches a file by the clip's name, finds none of them.
+        /// Only the pack's own folder is searched, so nothing else can answer for a name it has.
+        /// </summary>
+        internal static GameObject? FindForestModel(string rig)
+        {
+            if (!Directory.Exists(Path.GetFullPath(ForestFolder))) return null;
+            foreach (string guid in AssetDatabase.FindAssets($"{rig} t:Model", new[] { ForestFolder }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (string.Equals(Path.GetFileNameWithoutExtension(path), rig, StringComparison.Ordinal))
+                    return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            }
+            return null;
+        }
+
+        internal static AnimationClip? FindForestClip(string exactName)
+        {
+            if (!Directory.Exists(Path.GetFullPath(ForestFolder))) return null;
+            foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { ForestFolder }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                foreach (UnityEngine.Object asset in AssetDatabase.LoadAllAssetRepresentationsAtPath(path))
+                    if (asset is AnimationClip clip && clip.name == exactName)
+                        return clip;
+            }
+            return null;
         }
 
         /// <summary>
@@ -2590,6 +2672,76 @@ namespace Odyssey.EditorTools
 
         /// <summary>Packs imported after the catalogue's rows were chosen, which lose a name tie to any older pack.</summary>
         static readonly string[] LaterPacks = { "Assets/Synty/PolygonShops", "Assets/Synty/PolygonFantasyRivals" };
+
+        /// <summary>Synty's SIMPLE Forest Animals, moved here from where it installs itself (design 66 §2).</summary>
+        internal const string ForestFolder = "Assets/Synty/SimpleForestAnimal";
+
+        /// <summary>
+        /// The pack's one palette material. Its FBX import with no material of their own, so every
+        /// forest row names this and the figure paints it (design 66 §3).
+        /// </summary>
+        internal const string ForestMaterial = "SimpleForestAnimals";
+
+        /// <summary>
+        /// The colonists' draw factor (design 66 §5): the cast measures 2.49 m drawn against a real
+        /// person's 1.75, so "life size against a colonist" is life times this, or a bear stands
+        /// knee-high to the person beside it.
+        /// </summary>
+        internal const float ColonistDrawFactor = 1.42f;
+
+        /// <summary>
+        /// One form of a forest animal (design 66 §10): its kind, its form (0 doe and cow, 1 stag
+        /// and bull, 0 for a one-form species), the first variant number its colourways take, the
+        /// colourway prefabs, the rig whose clips it plays (<c>Rig_Idle</c> and so on), its life
+        /// shoulder height, its scale against the FBX, and the ground speeds of its Walk and Run at
+        /// scale 1.
+        /// </summary>
+        internal readonly struct ForestForm
+        {
+            public readonly int Kind, Form, FirstVariant;
+            public readonly string[] Prefabs;
+            public readonly string Rig;
+            public readonly float Life, Scale, Walk, Run;
+
+            public ForestForm(int kind, int form, int firstVariant, string[] prefabs, string rig,
+                float life, float scale, float walk, float run)
+            {
+                Kind = kind; Form = form; FirstVariant = firstVariant; Prefabs = prefabs; Rig = rig;
+                Life = life; Scale = scale; Walk = walk; Run = run;
+            }
+
+            /// <summary>The drawn shoulder this form is scaled to: life times the colonists' factor.</summary>
+            public float TargetShoulder => Life * ColonistDrawFactor;
+        }
+
+        /// <summary>
+        /// The eleven forms, kind by kind (<c>PawnKindIndex</c> 10 to 18). <b>Scale</b> is the drawn
+        /// shoulder over the withers <c>AnimalProbe.ShootForest</c> measured at scale 1;
+        /// <b>Walk</b> and <b>Run</b> are the stance speed of a fore foot through the clip at scale
+        /// 1, from the same probe, so the feet grip rather than skate (design 66 §5, §6). The
+        /// probe's readings are in the comments; <c>Logs/forest-probe.txt</c> is the whole report.
+        /// Raccoon_03 repeats Raccoon_01's colourway (a pack defect, e-15), so the raccoon has two.
+        /// </summary>
+        /// <remarks>Measured 2026-09-26 (<c>Logs/forest-probe.txt</c>), withers at scale 1 in
+        /// metres: rabbit 0.062, deer rig 0.258 (doe and stag share it), fox 0.162, raccoon 0.155,
+        /// skunk 0.166 (its tail left out), boar 0.211, moose 0.345 (cow and bull share it), wolf
+        /// 0.193, bear 0.309. Scale = target shoulder over that. Speeds are the fore ankle's stance
+        /// speed at scale 1; the rabbit's stride is three centimetres a cycle, and the boar's run is
+        /// only 1.4 times its walk, both as the clips are authored.</remarks>
+        internal static readonly ForestForm[] ForestForms =
+        {
+            new ForestForm(10, 0, 0, new[] { "Rabbit_01", "Rabbit_02", "Rabbit_03" }, "Rabbit", 0.25f, 5.72f, 0.126f, 0.216f),
+            new ForestForm(11, 0, 0, new[] { "Doe_01", "Doe_02" }, "Deer", 1.00f, 5.50f, 0.183f, 0.756f),
+            new ForestForm(11, 1, 2, new[] { "Stag_01", "Stag_02", "Stag_03" }, "Deer", 1.20f, 6.60f, 0.183f, 0.756f),
+            new ForestForm(12, 0, 0, new[] { "Fox_01", "Fox_02", "Fox_03" }, "Fox", 0.40f, 3.50f, 0.126f, 0.425f),
+            new ForestForm(13, 0, 0, new[] { "Raccoon_01", "Raccoon_02" }, "Fox", 0.30f, 2.75f, 0.126f, 0.425f),
+            new ForestForm(14, 0, 0, new[] { "Skunk_01", "Skunk_02", "Skunk_03" }, "Fox", 0.25f, 2.13f, 0.126f, 0.425f),
+            new ForestForm(15, 0, 0, new[] { "Boar_01", "Boar_02", "Boar_03" }, "Boar", 0.90f, 6.04f, 0.137f, 0.189f),
+            new ForestForm(16, 0, 0, new[] { "Moose_Female_01", "Moose_Female_02" }, "Deer", 1.80f, 7.40f, 0.183f, 0.756f),
+            new ForestForm(16, 1, 2, new[] { "Moose_Male_01", "Moose_Male_02", "Moose_Male_03" }, "Deer", 1.90f, 7.80f, 0.183f, 0.756f),
+            new ForestForm(17, 0, 0, new[] { "Wolf_01", "Wolf_02", "Wolf_03" }, "Fox", 0.80f, 5.88f, 0.126f, 0.425f),
+            new ForestForm(18, 0, 0, new[] { "Bear_01", "Bear_02", "Bear_03" }, "Bear", 1.10f, 5.06f, 0.135f, 0.301f),
+        };
 
         /// <summary>POLYGON Fantasy Rivals, the butcher's pack (design 62, research e-16).</summary>
         const string FantasyRivalsFolder = "Assets/Synty/PolygonFantasyRivals";

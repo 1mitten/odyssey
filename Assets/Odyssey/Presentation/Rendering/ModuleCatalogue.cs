@@ -379,6 +379,39 @@ namespace Odyssey.Presentation.Rendering
         public string sitClipName = string.Empty;
 
         /// <summary>
+        /// The head-down loop an animal plays while it eats (design 66 §6): the first clip an
+        /// animal plays for what it is <b>doing</b> rather than how fast it moves. Its own input on
+        /// the figure's mixer after the gaits, cross-faded in while the simulation publishes
+        /// <c>odyssey.pawn.grazing</c>, exactly as <see cref="sitClip"/> is while a colonist sits.
+        ///
+        /// <para>Null on every row that cannot graze, and on a clone without the pack.</para>
+        /// </summary>
+        public AnimationClip? eatClip;
+
+        [Tooltip("The loop this row eats in, by asset name. Used to rebuild the reference.")]
+        public string eatClipName = string.Empty;
+
+        /// <summary>
+        /// Which of its species' forms an animal row draws (design 66 §4): 0 for the doe and the
+        /// cow, 1 for the stag and the bull, 0 for every species with one form. The simulation
+        /// decides a pawn's form and publishes it; the figure picks the rows of that form and
+        /// deals one of their colourways.
+        /// </summary>
+        [Tooltip("The animal form this row draws: 0 doe/cow (and every one-form species), 1 stag/bull.")]
+        public int animalForm;
+
+        /// <summary>
+        /// The one skinned mesh of a many-mesh model this row draws, by its GameObject's name, or
+        /// empty for the whole prefab. A SIMPLE Forest Animals rig carries every species it serves
+        /// as sibling meshes — <c>Deer.fbx</c> holds the doe, the stag and both moose — and the row
+        /// is the model itself rather than the pack's prefab, because the prefabs were saved from an
+        /// optimised import and carry no bones (design 66 §6). The figure keeps this mesh and
+        /// removes the rest.
+        /// </summary>
+        [Tooltip("The one skinned mesh of a many-mesh model to keep, by name; empty keeps them all.")]
+        public string meshName = string.Empty;
+
+        /// <summary>
         /// Lay a <b>computed</b> four-legged gait over this row's idle (design 29 §8a,
         /// <c>QuadrupedGait</c>). The stride is measured off the rig's own legs at build, not
         /// declared here. Off, the default, means the row's clips are its whole locomotion. On for
@@ -773,13 +806,32 @@ namespace Odyssey.Presentation.Rendering
         public const string AnimalBase = Prefix + "pawn.animal";
 
         /// <remarks>Kinds 3 and 4 are the bandit and the gunman, people, and have no row; the frog is kind 5
-        /// (design 30 §8).</remarks>
-        public static readonly string[] AnimalNames = { string.Empty, "hog", "rat", string.Empty, string.Empty, "frog" };
+        /// (design 30 §8). Kinds 6 to 9 are the butcher's levels, drawn by <see cref="HostileNames"/>.
+        /// Kinds 10 to 18 are the forest animals (design 66, plan <c>forest-animals.md</c>), whose art
+        /// is Synty's SIMPLE Forest Animals and so resolves only where that pack is installed.</remarks>
+        public static readonly string[] AnimalNames =
+        {
+            string.Empty, "hog", "rat", string.Empty, string.Empty, "frog",
+            string.Empty, string.Empty, string.Empty, string.Empty,
+            "rabbit", "deer", "fox", "raccoon", "skunk", "boar", "moose", "wolf", "bear",
+        };
 
         /// <summary>The row for a kind, or empty for a person and for a kind past the table.</summary>
         public static string Animal(int kind) =>
             kind > 0 && kind < AnimalNames.Length && AnimalNames[kind].Length > 0
                 ? AnimalBase + "." + AnimalNames[kind] : string.Empty;
+
+        /// <summary>
+        /// One of a kind's drawn variants (design 66 §4): <c>form × colourways + colourway</c>, the
+        /// forest animals' doe and stag, cow and bull, each in the pack's colourways. Variant 0
+        /// keeps the bare id, so the hog, rat and frog rows never move; the rest are found as a
+        /// family, <c>FindFamily(Animal(kind))</c>, in catalogue order.
+        /// </summary>
+        public static string Animal(int kind, int variant)
+        {
+            string row = Animal(kind);
+            return variant <= 0 || row.Length == 0 ? row : row + "." + variant.ToString();
+        }
 
         /// <summary>
         /// The hostile people drawn as themselves rather than as a rolled person in the gang's

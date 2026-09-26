@@ -587,6 +587,12 @@ namespace Odyssey.Presentation.World
             /// </summary>
             public AnimationClip? Sit;
 
+            /// <summary>
+            /// An animal's head-down loop, or null (design 66 §6). When present it is the mixer's
+            /// last input, after every gait and after the seat.
+            /// </summary>
+            public AnimationClip? Eat;
+
             /// <summary>Gait speeds as drawn, i.e. after Scale. See <see cref="GroundSpeeds"/>.</summary>
             public float[] Speeds = Array.Empty<float>();
 
@@ -618,6 +624,12 @@ namespace Odyssey.Presentation.World
             /// </summary>
             public Material? Paint;
 
+            /// <summary>
+            /// The one skinned mesh this look keeps of its model (<c>ModuleEntry.meshName</c>), or
+            /// empty for all of it.
+            /// </summary>
+            public string Mesh = string.Empty;
+
             /// <summary>A feminine body: the draw and the sheathe are the pack's <c>_Femn</c> clips (design 33 §8b).</summary>
             public bool Feminine;
 
@@ -633,17 +645,78 @@ namespace Odyssey.Presentation.World
         readonly ModuleCatalogue? _catalogue;
 
         /// <summary>
-        /// One slot per <b>kind</b> drawn as its own row rather than as a rolled person — every
-        /// animal (<c>ModuleIds.Animal</c>) and the hostile kinds that are themselves
-        /// (<c>ModuleIds.Hostile</c>, the butcher) — indexed by kind; 0 is the colonist and is
-        /// always null here. A look index at or past <see cref="_looks"/>' length names one of
-        /// these (<see cref="AnimalLookIndex"/>), so the pool, the create and the repaint all key
-        /// on one integer whatever the figure is.
+        /// The slots of every <b>kind</b> drawn as its own row rather than as a rolled person —
+        /// every animal (<c>ModuleIds.Animal</c>) and the hostile kinds that are themselves
+        /// (<c>ModuleIds.Hostile</c>, the butcher). A kind has one slot per drawn variant (design
+        /// 66 §4): the hog, rat, frog and butcher one each, a forest animal one per form ×
+        /// colourway, all of a kind's slots together from <see cref="_kindFirst"/>. A look index at
+        /// or past <see cref="_looks"/>' length names one of these (<see cref="AnimalLookIndex"/>),
+        /// so the pool, the create and the repaint all key on one integer whatever the figure is,
+        /// and a stag and a doe pool apart for free.
         /// </summary>
         readonly Look?[] _animalLooks;
         readonly int _usableAnimalLooks;
 
-        int AnimalLookIndex(int kind) => _looks.Length + kind;
+        /// <summary>The first slot of each kind in <see cref="_animalLooks"/>, and how many it has.</summary>
+        readonly int[] _kindFirst, _kindSlots;
+
+        /// <summary>The form each slot draws (<c>ModuleEntry.animalForm</c>), parallel to <see cref="_animalLooks"/>.</summary>
+        readonly int[] _slotForm;
+
+        int AnimalLookIndex(int kind, int variant = 0) =>
+            _looks.Length + ((uint)kind < (uint)_kindFirst.Length ? _kindFirst[kind] + variant : _animalLooks.Length);
+
+        /// <summary>
+        /// Which of its kind's slots this animal wears: the rows of the form the simulation
+        /// published for it, and one of their colourways dealt from its id
+        /// (<see cref="AnimalLooks.Colourway"/>) — the one function every drawer of an animal asks,
+        /// so its coat is the same on a figure, a corpse and, after FA2, the far form. A colourway
+        /// whose art did not resolve falls back to the first of its form that did, and a form with
+        /// none to any slot of the kind that did.
+        /// </summary>
+        int AnimalVariant(int kind, int pawnId, int form)
+        {
+            if ((uint)kind >= (uint)_kindFirst.Length) return 0;
+            int first = _kindFirst[kind], slots = _kindSlots[kind];
+            if (slots <= 1) return 0;
+
+            int ofForm = 0;
+            for (int s = 0; s < slots; s++) if (_slotForm[first + s] == form) ofForm++;
+            if (ofForm == 0) form = 0;
+            if (ofForm == 0) for (int s = 0; s < slots; s++) if (_slotForm[first + s] == 0) ofForm++;
+
+            int coat = AnimalLooks.Colourway(pawnId, ofForm);
+            int fallback = -1;
+            for (int s = 0, seen = 0; s < slots; s++)
+            {
+                if (_slotForm[first + s] != form) continue;
+                if (fallback < 0 && _animalLooks[first + s] != null) fallback = s;
+                if (seen++ == coat && _animalLooks[first + s] != null) return s;
+            }
+            if (fallback >= 0) return fallback;
+            for (int s = 0; s < slots; s++) if (_animalLooks[first + s] != null) return s;
+            return 0;
+        }
+
+        /// <summary>
+        /// The form a live animal was last seen in, by pawn id, so its corpse keeps it: a corpse
+        /// carries no aspects, and a stag that fell must not lie there a doe.
+        /// </summary>
+        readonly Dictionary<int, int> _lastForm = new Dictionary<int, int>();
+
+        /// <summary>
+        /// The form the simulation published for this animal (<c>odyssey.pawn.form</c>), absent — so
+        /// form 0 — for every species with one form.
+        /// </summary>
+        int FormOf(PawnId pawn)
+        {
+            if (_frame != null && _frame.TryGetPawnAspect(pawn, Odyssey.Sim.Pawns.AnimalAspects.Form, out int form))
+            {
+                _lastForm[pawn.Value] = form;
+                return form;
+            }
+            return 0;
+        }
 
         /// <summary>Is this kind a hostile drawn as its own row, like the butcher (design 62 §8)?</summary>
         static bool HasKindRow(int kind) => ModuleIds.Hostile(kind).Length > 0;
@@ -660,41 +733,85 @@ namespace Odyssey.Presentation.World
         /// Did this kind's own row resolve to art — the question a test of a kind drawn as itself
         /// asks, never whether a catalogue exists (docs/lessons.md).
         /// </summary>
-        public bool CanDrawKind(int kind) =>
-            (uint)kind < (uint)_animalLooks.Length && _animalLooks[kind] != null;
+        /// <remarks>True when <b>any</b> variant of the kind resolved: a forest animal is drawable
+        /// when one of its forms' colourways is, and <see cref="AnimalVariant"/> falls back to it.</remarks>
+        public bool CanDrawKind(int kind)
+        {
+            if ((uint)kind >= (uint)_kindFirst.Length) return false;
+            for (int s = 0; s < _kindSlots[kind]; s++)
+                if (_animalLooks[_kindFirst[kind] + s] != null) return true;
+            return false;
+        }
 
         Look? LookAt(int look) =>
             look < _looks.Length ? _looks[look]
             : look - _looks.Length < _animalLooks.Length ? _animalLooks[look - _looks.Length]
             : null;
 
-        static Look?[] AnimalLooksFrom(ModuleCatalogue? catalogue)
+        /// <summary>
+        /// Every kind's slots, kind by kind: a hostile drawn as itself one, an animal one per row of
+        /// its family (<c>FindFamily(Animal(kind))</c>, variant 0 first), holes kept where the art
+        /// did not resolve so a variant means the same row on every machine.
+        /// </summary>
+        static Look?[] AnimalLooksFrom(ModuleCatalogue? catalogue, out int[] kindFirst, out int[] kindSlots,
+            out int[] slotForm)
         {
-            var looks = new Look?[Math.Max(ModuleIds.AnimalNames.Length, ModuleIds.HostileNames.Length)];
-            if (catalogue == null) return looks;
-            for (int kind = 1; kind < looks.Length; kind++)
+            int kinds = Math.Max(ModuleIds.AnimalNames.Length, ModuleIds.HostileNames.Length);
+            kindFirst = new int[kinds];
+            kindSlots = new int[kinds];
+            var looks = new List<Look?>();
+            var forms = new List<int>();
+            for (int kind = 1; kind < kinds; kind++)
             {
+                kindFirst[kind] = looks.Count;
+                if (catalogue == null) continue;
                 if (HasKindRow(kind))
                 {
-                    looks[kind] = HostileLookFrom(catalogue, kind);
+                    looks.Add(HostileLookFrom(catalogue, kind));
+                    forms.Add(0);
+                    kindSlots[kind] = 1;
                     continue;
                 }
-                ModuleEntry? row = catalogue.Find(ModuleIds.Animal(kind));
-                if (row == null || row.prefab == null) continue;
-                LocomotionEntry[] gaits = Gaits(row);
-                if (gaits.Length == 0) continue;
-                looks[kind] = new Look
+                string id = ModuleIds.Animal(kind);
+                if (id.Length == 0) continue;
+                List<ModuleEntry> family = catalogue.FindFamily(id);
+                // FindFamily is in catalogue order; the bare id is variant 0 and must come first.
+                family.Sort((a, b) => VariantNumber(a.moduleId, id).CompareTo(VariantNumber(b.moduleId, id)));
+                foreach (ModuleEntry row in family)
                 {
-                    Prefab = row.prefab,
-                    Scale = row.scale,
-                    Gaits = gaits,
-                    Speeds = GroundSpeeds(gaits, row.scale),
-                    Animal = true,
-                    QuadrupedGait = row.quadrupedGait,
-                    HopGait = row.hopGait,
-                };
+                    looks.Add(AnimalLookFrom(row));
+                    forms.Add(row.animalForm);
+                }
+                kindSlots[kind] = family.Count;
             }
-            return looks;
+            slotForm = forms.ToArray();
+            return looks.ToArray();
+        }
+
+        /// <summary>The variant a family row's id names: 0 for the bare id, <c>n</c> for <c>id.n</c>.</summary>
+        static int VariantNumber(string moduleId, string bare) =>
+            moduleId.Length > bare.Length + 1 && int.TryParse(moduleId.Substring(bare.Length + 1), out int n) ? n : 0;
+
+        static Look? AnimalLookFrom(ModuleEntry row)
+        {
+            if (row.prefab == null) return null;
+            LocomotionEntry[] gaits = Gaits(row);
+            if (gaits.Length == 0) return null;
+            return new Look
+            {
+                Prefab = row.prefab,
+                Scale = row.scale,
+                Gaits = gaits,
+                Speeds = GroundSpeeds(gaits, row.scale),
+                Animal = true,
+                QuadrupedGait = row.quadrupedGait,
+                HopGait = row.hopGait,
+                Eat = row.eatClip,
+                Mesh = row.meshName ?? string.Empty,
+                // The forest models import with no material of their own; the pack's palette
+                // material is the row's (design 66 §3). Null keeps whatever the model carries.
+                Paint = row.material,
+            };
         }
 
         /// <summary>
@@ -1007,7 +1124,7 @@ namespace Odyssey.Presentation.World
             _catalogue = catalogue;
             _looks = LooksFrom(catalogue);
             for (int i = 0; i < _looks.Length; i++) if (_looks[i] != null) _usableLooks++;
-            _animalLooks = AnimalLooksFrom(catalogue);
+            _animalLooks = AnimalLooksFrom(catalogue, out _kindFirst, out _kindSlots, out _slotForm);
             for (int i = 0; i < _animalLooks.Length; i++) if (_animalLooks[i] != null) _usableAnimalLooks++;
             for (int i = 0; i < _toolRows.Length; i++)
                 _toolRows[i] = catalogue != null ? catalogue.Find(Styles[i].ToolModule) : null;
@@ -1108,9 +1225,9 @@ namespace Odyssey.Presentation.World
         /// outfit they wear — a bandit's is the gang's (design 42), never the colonist lottery's.
         /// </summary>
         int LookFor(in PawnView pawn) =>
-            pawn.IsAnimal || HasKindRow(pawn.Kind)
-                ? AnimalLookIndex(pawn.Kind)
-                : Appearances.LookFor(pawn.Id.Value, RollSeedOf(pawn.Id), PawnOutfits.For(pawn));
+            HasKindRow(pawn.Kind) ? AnimalLookIndex(pawn.Kind)
+            : pawn.IsAnimal ? AnimalLookIndex(pawn.Kind, AnimalVariant(pawn.Kind, pawn.Id.Value, FormOf(pawn.Id)))
+            : Appearances.LookFor(pawn.Id.Value, RollSeedOf(pawn.Id), PawnOutfits.For(pawn));
 
         /// <summary>
         /// How far the sole sits below the ankle, on the figure whose boot is thickest.
@@ -1588,6 +1705,26 @@ namespace Odyssey.Presentation.World
         /// which is what the pawn says.
         /// </summary>
         public float? ForceSit { get; set; }
+
+        /// <summary>
+        /// Force every animal whose row has an Eat loop to an eat weight, for a harness and the
+        /// probe. Null is the game's own answer, which is what the grazing aspect says.
+        /// </summary>
+        public float? ForceEat { get; set; }
+
+        /// <summary>The mixer input an animal's Eat loop takes: after the gaits, and after the seat when there is one.</summary>
+        static int EatInput(Look look) => look.Gaits.Length + (look.Sit != null ? 1 : 0);
+
+        /// <summary>
+        /// Whether the simulation says this animal is eating (<c>odyssey.pawn.grazing</c>, design 66
+        /// §6): sparse, present only while it is. The pane's status reads the same aspect, so the
+        /// words and the lowered head cannot disagree.
+        /// </summary>
+        bool Grazing(PawnId pawn) =>
+            _frame != null && _frame.TryGetPawnAspect(pawn, Odyssey.Sim.Pawns.AnimalAspects.Grazing, out int _);
+
+        /// <summary>Whether the pawn is between cells this tick.</summary>
+        static bool Moving(in PawnView pawn) => pawn.Moving;
 
         /// <summary>Add a world-space pitch to a bone, leaving the rest of its pose alone.</summary>
         static void Pitch(Transform? bone, Vector3 axis, float degrees)
@@ -2077,6 +2214,14 @@ namespace Odyssey.Presentation.World
             figure.SitWeight = ForceSit.HasValue
                 ? ForceSit.Value
                 : SitPose.Settle(figure.SitWeight, pawn.Seated ? 1f : 0f, deltaTime);
+
+            // Eating, for an animal whose row has the loop (design 66 §6): the simulation says so
+            // by the grazing aspect, the same one the pane reads, and only a still animal lowers
+            // its head — one walking to its food walks. Eased at the sit's rate.
+            if (LookAt(figure.Look)?.Eat != null)
+                figure.EatWeight = ForceEat.HasValue
+                    ? ForceEat.Value
+                    : SitPose.Settle(figure.EatWeight, Grazing(pawn.Id) && !Moving(in pawn) ? 1f : 0f, deltaTime);
             // The weapon in the right hand, now that the tool, the load and the lie are known.
             ShowWeapon(figure, in pawn, carrying: carryDef >= 0 || carryingSomebody, deltaTime);
             // The gun's state for the frame (design 47 §4b), after the weapon has been put in the
@@ -2304,9 +2449,18 @@ namespace Odyssey.Presentation.World
                 figure.Clips[seat].SetSpeed(running ? 1f : 0f);
             }
 
+            // An eating animal's head-down loop, taken from the gaits the same way (design 66 §6).
+            float eat = look.Eat != null ? Mathf.Clamp01(figure.EatWeight) * (1f - sit) : 0f;
+            if (look.Eat != null)
+            {
+                int trough = EatInput(look);
+                figure.Mixer.SetInputWeight(trough, eat);
+                figure.Clips[trough].SetSpeed(running ? 1f : 0f);
+            }
+
             for (int i = 0; i < look.Gaits.Length; i++)
             {
-                figure.Mixer.SetInputWeight(i, blend.WeightOf(i) * (1f - sit));
+                figure.Mixer.SetInputWeight(i, blend.WeightOf(i) * (1f - sit - eat));
                 // Under a computed gait the idle underneath is frozen as the gait fades in: an
                 // idle that shifts its weight and paws the ground is noise under a trot, and
                 // its pose at the frozen frame is a perfectly good stance to trot from.
@@ -2745,6 +2899,17 @@ namespace Odyssey.Presentation.World
                         UnityEngine.Object.DestroyImmediate(all[i].gameObject);
             }
 
+            // A SIMPLE forest animal is its rig's model (design 66 §1, §6): Fox.fbx carries the
+            // fox, raccoon, skunk and wolf in all their colourways as twelve sibling meshes, all
+            // switched on. The row names the one this look is; the rest go.
+            if (face.Mesh.Length > 0)
+            {
+                var all = instance.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true);
+                for (int i = 0; i < all.Length; i++)
+                    if (all[i] != null && all[i].gameObject.name != face.Mesh)
+                        UnityEngine.Object.DestroyImmediate(all[i].gameObject);
+            }
+
             // Re-skin from the bones as they are at the moment of drawing, not as they were when
             // the animation system last looked at them.
             //
@@ -2761,18 +2926,22 @@ namespace Odyssey.Presentation.World
 
             // A butcher level wears its colourway (design 62 §4b) before its art is remembered, so
             // the repaint that puts a body's own art back puts this back.
-            if (face.OwnPaint && face.Paint != null) Repaint(skins, face.Paint);
+            if ((face.OwnPaint || face.Animal) && face.Paint != null) Repaint(skins, face.Paint);
 
             var animator = instance.GetComponent<Animator>();
             if (animator == null) animator = instance.AddComponent<Animator>();
+            // The pack's own controller (a SIMPLE animal's speed blend tree) plays nothing of ours:
+            // the graph below is the whole of what this figure does (design 66 §3).
+            if (face.Animal) animator.runtimeAnimatorController = null;
             // The simulation says where a pawn is. A clip that also moved it would fight that.
             animator.applyRootMotion = false;
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 
             var graph = PlayableGraph.Create($"Odyssey pawn {_figures.Count}");
             graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
-            // One input per gait, and the seat after them when the row has one (design 31 §18d).
-            int inputs = face.Gaits.Length + (face.Sit != null ? 1 : 0);
+            // One input per gait, the seat after them when the row has one (design 31 §18d), and
+            // an animal's Eat loop after that (design 66 §6).
+            int inputs = face.Gaits.Length + (face.Sit != null ? 1 : 0) + (face.Eat != null ? 1 : 0);
             var mixer = AnimationMixerPlayable.Create(graph, inputs);
             var clips = new AnimationClipPlayable[inputs];
 
@@ -2789,6 +2958,14 @@ namespace Odyssey.Presentation.World
                 clips[seat] = AnimationClipPlayable.Create(graph, face.Sit);
                 graph.Connect(clips[seat], 0, mixer, seat);
                 mixer.SetInputWeight(seat, 0f);
+            }
+
+            if (face.Eat != null)
+            {
+                int trough = EatInput(face);
+                clips[trough] = AnimationClipPlayable.Create(graph, face.Eat);
+                graph.Connect(clips[trough], 0, mixer, trough);
+                mixer.SetInputWeight(trough, 0f);
             }
 
             // The fight's clip layer over the gaits (design 33 §5f), for a person when the pack is

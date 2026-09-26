@@ -502,6 +502,12 @@ namespace Odyssey.Presentation.World
             public float SitWeight;
 
             /// <summary>
+            /// How far into the row's Eat loop this animal is, 0 not eating and 1 head down (design
+            /// 66 §6). Eased as the sit is, so it lowers its head and lifts it.
+            /// </summary>
+            public float EatWeight;
+
+            /// <summary>
             /// Which way the body lies, head to foot. The bed's own facing where there is a bed,
             /// and whatever the colonist was facing when it dropped where there is not.
             /// </summary>

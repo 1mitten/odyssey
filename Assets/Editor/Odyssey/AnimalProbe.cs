@@ -710,5 +710,186 @@ namespace Odyssey.EditorTools
                 if (Application.isBatchMode) EditorApplication.Exit(exitCode);
             }
         }
+
+        /// <summary>
+        /// The forest animals (design 66 §5, §6): every form of SIMPLE Forest Animals measured at
+        /// scale 1 — sole, crown, withers and length off the posed mesh, and the stance speed of a
+        /// fore foot through its Walk and Run — with the scale that stands it at its target
+        /// shoulder (life × the colonists' draw factor), then photographed at the scale the
+        /// catalogue row actually carries, side on, in a line beside a colonist and a 1 m cube.
+        /// <c>scripts/unity.sh shot Odyssey.EditorTools.AnimalProbe.ShootForest</c> →
+        /// <c>Logs/forest-probe.txt</c> and <c>Logs/forest-sheet.png</c>.
+        ///
+        /// <para>The rows' scales and speeds are literals written from this report, as the frog's
+        /// ×0.24 was; the sheet is the check that the literal stands the animal where the report
+        /// said it would.</para>
+        /// </summary>
+        public static void ShootForest()
+        {
+            int exitCode = 0;
+            GameObject? root = null;
+            try
+            {
+                SyntyImport.UpgradeForestMaterials();
+                AnimalImport.ApplyForest();
+                var sb = new StringBuilder();
+                sb.AppendLine("form        prefab            sole   crown  withers length | target  scale(now) scale(fit) drawn-shoulder | walk@1  run@1  eat");
+                root = new GameObject("ForestSheet");
+                PlayScene.BuildSheetLighting(root.transform);
+                Material? grass = null;
+                foreach (string g in AssetDatabase.FindAssets("Mat_Grass_Textures_01 t:Material"))
+                {
+                    grass = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(g));
+                    if (grass != null) break;
+                }
+
+                float cursor = 0f;
+                float tallest = 0f;
+                Material? paint = null;
+                foreach (string g in AssetDatabase.FindAssets(PlayScene.ForestMaterial + " t:Material", new[] { PlayScene.ForestFolder }))
+                {
+                    paint = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(g));
+                    if (paint != null && paint.name == PlayScene.ForestMaterial) break;
+                }
+
+                // A colonist first, at the catalogue's own scale, as the ruler the owner asked for.
+                var catalogue = AssetDatabase.LoadAssetAtPath<Odyssey.Presentation.Rendering.ModuleCatalogue>(PlayScene.CataloguePath);
+                var cast = catalogue != null ? catalogue.FindFamily(Odyssey.Presentation.Rendering.ModuleIds.ColonistBase) : null;
+                var person = cast != null ? cast.Find(r => r.prefab != null) : null;
+                if (person != null)
+                {
+                    var colonist = (GameObject)PrefabUtility.InstantiatePrefab(person.prefab, root.transform);
+                    colonist.transform.localScale = person.scale;
+                    if (person.poseClip != null) person.poseClip.SampleAnimation(colonist, person.poseClipTime);
+                    colonist.transform.position = new Vector3(cursor, 0f, 0f);
+                    colonist.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+                    cursor += 1.5f;
+                    tallest = 2.5f;
+                }
+                var ruler = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Object.DestroyImmediate(ruler.GetComponent<Collider>());
+                ruler.transform.SetParent(root.transform, false);
+                ruler.transform.position = new Vector3(cursor + 0.5f, 0.5f, 0f);
+                cursor += 2f;
+
+                foreach (PlayScene.ForestForm form in PlayScene.ForestForms)
+                {
+                    GameObject? prefab = PlayScene.FindForestModel(form.Rig);
+                    if (prefab == null)
+                    {
+                        sb.AppendLine($"{form.Rig,-16} NOT FOUND under {PlayScene.ForestFolder}");
+                        continue;
+                    }
+                    AnimationClip? idle = PlayScene.FindForestClip(form.Rig + "_Idle");
+                    AnimationClip? walk = PlayScene.FindForestClip(form.Rig + "_Walk");
+                    AnimationClip? run = PlayScene.FindForestClip(form.Rig + "_Run");
+                    AnimationClip? eat = PlayScene.FindForestClip(form.Rig + "_Eat");
+
+                    // The rig's model with the form's first colourway kept, as the figure builds it.
+                    var animal = (GameObject)PrefabUtility.InstantiatePrefab(prefab, root.transform);
+                    PrefabUtility.UnpackPrefabInstance(animal, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+                    string keep = "SM_" + form.Prefabs[0];
+                    int kept = 0;
+                    foreach (var skin in animal.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true))
+                    {
+                        if (skin.gameObject.name != keep) { Object.DestroyImmediate(skin.gameObject); continue; }
+                        if (paint != null) skin.sharedMaterial = paint;
+                        kept++;
+                    }
+                    if (kept != 1) sb.AppendLine($"            {form.Rig}.fbx has {kept} meshes called {keep}");
+                    var animator = animal.GetComponent<Animator>();
+                    if (animator != null) animator.runtimeAnimatorController = null;
+
+                    // At scale 1: what the FBX is, and what the rows' scale multiplies.
+                    animal.transform.localScale = Vector3.one;
+                    animal.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                    if (idle != null) idle.SampleAnimation(animal, 0f);
+                    var at1 = Odyssey.Presentation.World.AnimalMeasure.Measure(animal);
+                    float walk1 = walk != null ? Odyssey.Presentation.World.AnimalMeasure.StanceSpeed(animal, walk) : 0f;
+                    float run1 = run != null ? Odyssey.Presentation.World.AnimalMeasure.StanceSpeed(animal, run) : 0f;
+                    float fit = at1.Shoulder > 1e-4f ? form.TargetShoulder / at1.Shoulder : 0f;
+                    // Where the head goes through the Eat loop, at scale 1: standing (idle) and the
+                    // range while eating, so "it lowers its head" is read off the clip.
+                    string eatRange = "-";
+                    Transform? head = Odyssey.Presentation.World.AnimalMeasure.Find(animal.transform, "Head");
+                    if (eat != null && head != null)
+                    {
+                        if (idle != null) idle.SampleAnimation(animal, 0f);
+                        float up = head.position.y, lo = float.MaxValue, hi = float.MinValue;
+                        for (int k = 0; k <= 30; k++)
+                        {
+                            eat.SampleAnimation(animal, eat.length * k / 30f);
+                            lo = Mathf.Min(lo, head.position.y); hi = Mathf.Max(hi, head.position.y);
+                        }
+                        eatRange = $"head {up:0.000} idle, {lo:0.000}..{hi:0.000} eating over {eat.length:0.00}s";
+                    }
+
+                    // At the row's scale and measured again: the sheet's truth. The idle carries a
+                    // curve on the model's root, so it is sampled once, before the animal is turned
+                    // nose to +X and put in its place; sampling after would put it back at the origin.
+                    animal.transform.localScale = Vector3.one * form.Scale;
+                    if (idle != null) idle.SampleAnimation(animal, 0f);
+                    Vector3 forward = Odyssey.Presentation.World.AnimalMeasure.Forward(animal.transform);
+                    var drawn = Odyssey.Presentation.World.AnimalMeasure.Measure(animal);
+                    if (animator != null) Object.DestroyImmediate(animator);
+                    animal.transform.rotation = Quaternion.FromToRotation(forward, Vector3.right) * animal.transform.rotation;
+                    animal.transform.position = new Vector3(cursor + drawn.Length * 0.5f, -drawn.Sole, 0f);
+                    animal.name = $"{form.Prefabs[0]} x{form.Scale}";
+                    cursor += drawn.Length + 0.8f;
+                    tallest = Mathf.Max(tallest, drawn.Height);
+
+                    string name = form.Kind == 11 ? (form.Form == 0 ? "doe" : "stag")
+                        : form.Kind == 16 ? (form.Form == 0 ? "cow" : "bull")
+                        : form.Rig == "Fox" ? form.Prefabs[0].Split('_')[0].ToLowerInvariant()
+                        : form.Rig.ToLowerInvariant();
+                    sb.AppendLine(
+                        $"{name,-11} {form.Prefabs[0],-16} {at1.Sole,6:0.000} {at1.Crown,6:0.000} {at1.Withers,6:0.000} {at1.Length,6:0.000} | " +
+                        $"{form.TargetShoulder,5:0.00}  {form.Scale,6:0.00}     {fit,6:0.00}     {drawn.Shoulder,6:0.000}        | " +
+                        $"{walk1,6:0.000} {run1,6:0.000}  {(eat != null ? "yes" : "NO")}");
+                    sb.AppendLine("            eat: " + eatRange);
+                }
+
+                // The game's grass under the whole line, so the colours are judged where they live.
+                var ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Object.DestroyImmediate(ground.GetComponent<Collider>());
+                ground.transform.SetParent(root.transform, false);
+                ground.transform.position = new Vector3(cursor * 0.5f, -0.05f, 0f);
+                ground.transform.localScale = new Vector3(cursor + 4f, 0.1f, 6f);
+                if (grass != null) ground.GetComponent<MeshRenderer>().sharedMaterial = grass;
+
+                Directory.CreateDirectory("Logs");
+                File.WriteAllText("Logs/forest-probe.txt", sb.ToString());
+                Debug.Log("[AnimalProbe] forest:\n" + sb);
+
+                var cameraObject = new GameObject("ForestCamera");
+                try
+                {
+                    var cam = cameraObject.AddComponent<Camera>();
+                    cam.fieldOfView = 20f;
+                    cam.nearClipPlane = 0.3f;
+                    cam.farClipPlane = 2000f;
+                    cam.clearFlags = CameraClearFlags.SolidColor;
+                    cam.backgroundColor = new Color(0.62f, 0.72f, 0.80f);
+                    // Side on and low, so heights are read against each other and the cube.
+                    float span = Mathf.Max(cursor, tallest * 4f);
+                    PlayScene.Shoot(cam, new Vector3(cursor * 0.5f, tallest * 0.45f, 0f), 6f, 0f, span * 2.9f, "Logs/forest-sheet.png");
+                    // And the small end close up: the colonist, the cube and the first six.
+                    PlayScene.Shoot(cam, new Vector3(cursor * 0.28f, 0.8f, 0f), 8f, 0f, cursor * 1.55f, "Logs/forest-sheet-near.png");
+                }
+                finally { Object.DestroyImmediate(cameraObject); }
+                Debug.Log("[AnimalProbe] wrote Logs/forest-sheet.png, Logs/forest-sheet-near.png");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError("[AnimalProbe] forest failed: " + e);
+                exitCode = 1;
+            }
+            finally
+            {
+                if (root != null) Object.DestroyImmediate(root);
+                if (Application.isBatchMode) EditorApplication.Exit(exitCode);
+            }
+        }
+
     }
 }

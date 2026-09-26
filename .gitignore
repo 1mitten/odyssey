@@ -69,6 +69,11 @@ crashlytics-build.properties
 # presentation-side; the simulation and its tests must not depend on them.
 /Assets/Synty/
 /Assets/Synty.meta
+# SIMPLE Forest Animals installs itself here, outside Assets/Synty (design 66 §2). It belongs
+# under Assets/Synty/SimpleForestAnimal; this line makes a stray import an ignored folder, not a
+# commit, and the catalogue build refuses while it exists (LicensedArtGuard).
+/Assets/SimpleForestAnimal/
+/Assets/SimpleForestAnimal.meta
 *.unitypackage
 
 

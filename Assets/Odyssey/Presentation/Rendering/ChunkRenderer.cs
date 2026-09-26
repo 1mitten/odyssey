@@ -2232,8 +2232,22 @@ namespace Odyssey.Presentation.Rendering
 
                 // An animal is drawn only as a figure (design 29): this pass deals every pawn a
                 // colonist's face, and a hog past the figure cap wearing one would be worse than
-                // a hog not drawn. A baked animal pose is a recorded gap, not an oversight.
-                if (pawns[i].IsAnimal) continue;
+                // a hog not drawn. A baked animal pose is a recorded gap, not an oversight (FA2).
+                //
+                // Except where its kind has no art at all — a forest animal on a machine without
+                // SIMPLE Forest Animals, which is the runner and every clone (design 66 §7). That
+                // animal is never a figure, so without this it would be invisible and, to a player,
+                // unclickable: it gets a low box, as a colonist without art gets its stand-in.
+                if (pawns[i].IsAnimal)
+                {
+                    if (!AnimalKindHasArt(pawns[i].Kind))
+                    {
+                        Vector3 standIn = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out _, _model, pawns, Crowd);
+                        Vector3 offset = standIn - GroundRelief.Lift(CellMetrics.FloorCentre(cell));
+                        DrawMarker(material, cell, new Vector3(0.9f, 0.6f, 0.9f), 0.3f, offset);
+                    }
+                    continue;
+                }
                 // Nor a hostile drawn as itself (design 62 §8): a butcher with a colonist's face
                 // would be worse than a butcher not drawn. The same recorded gap.
                 if (ModuleIds.Hostile(pawns[i].Kind).Length > 0) continue;
@@ -3308,6 +3322,30 @@ namespace Odyssey.Presentation.Rendering
                 }
                 InstancesDrawn += count;
             }
+        }
+
+        /// <summary>Per animal kind: did any of its rows resolve to art? Found once, from the catalogue.</summary>
+        bool[]? _animalKindArt;
+
+        /// <summary>
+        /// Whether any variant of this animal kind has art on this machine (design 66 §7). The CC0
+        /// hog, rat and frog always do; the SIMPLE forest animals only where the pack is installed.
+        /// </summary>
+        bool AnimalKindHasArt(int kind)
+        {
+            if (_animalKindArt == null)
+            {
+                _animalKindArt = new bool[ModuleIds.AnimalNames.Length];
+                ModuleCatalogue? catalogue = _model.Library.Catalogue;
+                for (int k = 1; k < _animalKindArt.Length && catalogue != null; k++)
+                {
+                    string id = ModuleIds.Animal(k);
+                    if (id.Length == 0) continue;
+                    foreach (ModuleEntry row in catalogue.FindFamily(id))
+                        if (row.prefab != null) { _animalKindArt[k] = true; break; }
+                }
+            }
+            return (uint)kind < (uint)_animalKindArt.Length && _animalKindArt[kind];
         }
 
         void DrawMarker(Material material, CellRef cell, Vector3 size, float height, Vector3 drift = default)

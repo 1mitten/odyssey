@@ -956,12 +956,17 @@ namespace Odyssey.Presentation.World
         /// Which face a corpse wears: the book's answer for the dead pawn's own id <b>and the seed
         /// it carried</b>, so the colonist who fell is the colonist lying there (design 33 §1). The
         /// frame no longer carries the pawn, so the seed comes off the corpse and not the frame.
-        /// An animal wears its kind's row.
+        /// An animal wears its kind's row in the coat it wore alive (design 66 §4): the colourway
+        /// is its id's, and the form the one it was last seen in, since a corpse carries no aspects.
         /// </summary>
-        public int LookForCorpse(in CorpseView corpse) =>
-            (corpse.Flags & PawnFlags.Person) == 0 || HasKindRow(corpse.Kind)
-                ? AnimalLookIndex(corpse.Kind)
-                : Appearances.LookFor(corpse.Pawn.Value, corpse.RollSeed, PawnOutfits.For(corpse));
+        public int LookForCorpse(in CorpseView corpse)
+        {
+            if (HasKindRow(corpse.Kind)) return AnimalLookIndex(corpse.Kind);
+            if ((corpse.Flags & PawnFlags.Person) != 0)
+                return Appearances.LookFor(corpse.Pawn.Value, corpse.RollSeed, PawnOutfits.For(corpse));
+            int form = _lastForm.TryGetValue(corpse.Pawn.Value, out int seen) ? seen : 0;
+            return AnimalLookIndex(corpse.Kind, AnimalVariant(corpse.Kind, corpse.Pawn.Value, form));
+        }
 
         /// <summary>Whether this corpse can be drawn as a body at all; if not, a marker stands in.</summary>
         public bool CanDrawCorpse(in CorpseView corpse)

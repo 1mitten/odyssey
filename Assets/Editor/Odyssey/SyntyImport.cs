@@ -85,6 +85,58 @@ namespace Odyssey.EditorTools
         }
 
         /// <summary>
+        /// The converter over SIMPLE Forest Animals alone (design 66 §3): its one material,
+        /// <c>SimpleForestAnimals.mat</c>, ships on the built-in Standard shader and draws magenta
+        /// under URP. Scoped to the pack's folder rather than all of <c>Assets/Synty</c>, because in a
+        /// worktree the other packs are junctions to the main checkout and a pass over them writes
+        /// through into it. Instancing goes on in the same step, for the far form (FA2).
+        /// Run via: scripts/unity.sh exec Odyssey.EditorTools.SyntyImport.UpgradeForestAnimals
+        /// </summary>
+        public static void UpgradeForestAnimals()
+        {
+            int exitCode = 0;
+            try
+            {
+                if (UpgradeForestMaterials() == 0)
+                    throw new InvalidOperationException("no materials under Assets/Synty/SimpleForestAnimal");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[SyntyImport] forest upgrade failed: {e}");
+                exitCode = 1;
+            }
+            finally
+            {
+                if (Application.isBatchMode) EditorApplication.Exit(exitCode);
+            }
+        }
+
+        /// <summary>The upgrade itself, without the exit, for the probe and the catalogue build. Returns how many materials it saw.</summary>
+        internal static int UpgradeForestMaterials()
+        {
+            const string folder = "Assets/Synty/SimpleForestAnimal";
+            var upgraders = UnityEditor.Rendering.MaterialUpgrader.FetchAllUpgradersForPipeline(
+                typeof(UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset));
+            var guids = AssetDatabase.FindAssets("t:Material", new[] { folder });
+            foreach (var guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (material == null) continue;
+                var before = material.shader;
+                UnityEditor.Rendering.MaterialUpgrader.Upgrade(material, upgraders,
+                    UnityEditor.Rendering.MaterialUpgrader.UpgradeFlags.None);
+                bool dirty = material.shader != before;
+                if (!material.enableInstancing) { material.enableInstancing = true; dirty = true; }
+                if (!dirty) continue;
+                EditorUtility.SetDirty(material);
+                Debug.Log($"[SyntyImport] {path}: {before.name} -> {material.shader.name}, instancing {material.enableInstancing}");
+            }
+            AssetDatabase.SaveAssets();
+            return guids.Length;
+        }
+
+        /// <summary>
         /// Runs URP's Built-in → URP converter set over the packs under Assets/Synty, headless. The 2022.3-era Synty
         /// packs are Shader Graph native, but a handful of materials (Standard, legacy particle
         /// shaders) still target the built-in pipeline and render magenta under URP without this.

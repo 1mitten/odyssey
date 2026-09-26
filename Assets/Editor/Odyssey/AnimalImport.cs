@@ -135,6 +135,34 @@ namespace Odyssey.EditorTools
                     changed++;
                 }
             }
+            return changed + ApplyForest();
+        }
+
+        /// <summary>Where SIMPLE Forest Animals lives once moved out of its install path (design 66 §2).</summary>
+        public const string ForestFolder = "Assets/Synty/SimpleForestAnimal";
+
+        /// <summary>
+        /// The one setting the forest pack needs changed (design 66 §6): its five FBX import with
+        /// <c>optimizeGameObjects</c> on, which folds the rig away — an instance has no bone
+        /// transforms at all. The clips still play through the Animator, but nothing can find a
+        /// foot to measure a stride from, a withers to size an animal by, or a head or leg to lay a
+        /// computed warning over (FA2). Off, the joints are ordinary transforms, as the hog's,
+        /// rat's and frog's are. Everything else stays as the pack authored it: Generic, every clip
+        /// already looping (e-15), scale 1 with the size on our rows. Idempotent; nothing where
+        /// the pack is absent.
+        /// </summary>
+        public static int ApplyForest()
+        {
+            if (!AssetDatabase.IsValidFolder(ForestFolder)) return 0;
+            int changed = 0;
+            foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { ForestFolder }))
+            {
+                if (AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(guid)) is not ModelImporter importer) continue;
+                if (!importer.optimizeGameObjects) continue;
+                importer.optimizeGameObjects = false;
+                importer.SaveAndReimport();
+                changed++;
+            }
             return changed;
         }
     }

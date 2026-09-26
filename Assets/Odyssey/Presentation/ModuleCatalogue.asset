@@ -15541,6 +15541,2226 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+  - moduleId: odyssey.module.pawn.animal.rabbit
+    shape: 4
+    prefab: {fileID: 100000, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+    prefabName: Rabbit
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 5.72, y: 5.72, z: 5.72}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+    poseClipName: Rabbit_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Rabbit_Idle
+      clip: {fileID: 7400000, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Rabbit_Walk
+      clip: {fileID: 7400002, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.126
+    - clipName: Rabbit_Run
+      clip: {fileID: 7400004, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.216
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+    eatClipName: Rabbit_Eat
+    animalForm: 0
+    meshName: SM_Rabbit_01
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.rabbit.1
+    shape: 4
+    prefab: {fileID: 100000, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+    prefabName: Rabbit
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 5.72, y: 5.72, z: 5.72}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+    poseClipName: Rabbit_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Rabbit_Idle
+      clip: {fileID: 7400000, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Rabbit_Walk
+      clip: {fileID: 7400002, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.126
+    - clipName: Rabbit_Run
+      clip: {fileID: 7400004, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.216
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+    eatClipName: Rabbit_Eat
+    animalForm: 0
+    meshName: SM_Rabbit_02
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.rabbit.2
+    shape: 4
+    prefab: {fileID: 100000, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+    prefabName: Rabbit
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 5.72, y: 5.72, z: 5.72}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+    poseClipName: Rabbit_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Rabbit_Idle
+      clip: {fileID: 7400000, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Rabbit_Walk
+      clip: {fileID: 7400002, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.126
+    - clipName: Rabbit_Run
+      clip: {fileID: 7400004, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.216
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 0904c2f7f32114047ad477fc14eb29c2, type: 3}
+    eatClipName: Rabbit_Eat
+    animalForm: 0
+    meshName: SM_Rabbit_03
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.deer
+    shape: 4
+    prefab: {fileID: 100000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    prefabName: Deer
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 5.5, y: 5.5, z: 5.5}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    poseClipName: Deer_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Deer_Idle
+      clip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Deer_Walk
+      clip: {fileID: 7400002, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.183
+    - clipName: Deer_Run
+      clip: {fileID: 7400004, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.756
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    eatClipName: Deer_Eat
+    animalForm: 0
+    meshName: SM_Doe_01
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.deer.1
+    shape: 4
+    prefab: {fileID: 100000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    prefabName: Deer
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 5.5, y: 5.5, z: 5.5}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    poseClipName: Deer_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Deer_Idle
+      clip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Deer_Walk
+      clip: {fileID: 7400002, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.183
+    - clipName: Deer_Run
+      clip: {fileID: 7400004, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.756
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    eatClipName: Deer_Eat
+    animalForm: 0
+    meshName: SM_Doe_02
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.deer.2
+    shape: 4
+    prefab: {fileID: 100000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    prefabName: Deer
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 6.6, y: 6.6, z: 6.6}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    poseClipName: Deer_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Deer_Idle
+      clip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Deer_Walk
+      clip: {fileID: 7400002, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.183
+    - clipName: Deer_Run
+      clip: {fileID: 7400004, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.756
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    eatClipName: Deer_Eat
+    animalForm: 1
+    meshName: SM_Stag_01
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.deer.3
+    shape: 4
+    prefab: {fileID: 100000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    prefabName: Deer
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 6.6, y: 6.6, z: 6.6}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    poseClipName: Deer_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Deer_Idle
+      clip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Deer_Walk
+      clip: {fileID: 7400002, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.183
+    - clipName: Deer_Run
+      clip: {fileID: 7400004, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.756
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    eatClipName: Deer_Eat
+    animalForm: 1
+    meshName: SM_Stag_02
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.deer.4
+    shape: 4
+    prefab: {fileID: 100000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    prefabName: Deer
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 6.6, y: 6.6, z: 6.6}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    poseClipName: Deer_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Deer_Idle
+      clip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Deer_Walk
+      clip: {fileID: 7400002, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.183
+    - clipName: Deer_Run
+      clip: {fileID: 7400004, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.756
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    eatClipName: Deer_Eat
+    animalForm: 1
+    meshName: SM_Stag_03
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.fox
+    shape: 4
+    prefab: {fileID: 100000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    prefabName: Fox
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 3.5, y: 3.5, z: 3.5}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    poseClipName: Fox_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Fox_Idle
+      clip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Fox_Walk
+      clip: {fileID: 7400002, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.126
+    - clipName: Fox_Run
+      clip: {fileID: 7400004, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.425
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    eatClipName: Fox_Eat
+    animalForm: 0
+    meshName: SM_Fox_01
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.fox.1
+    shape: 4
+    prefab: {fileID: 100000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    prefabName: Fox
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 3.5, y: 3.5, z: 3.5}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    poseClipName: Fox_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Fox_Idle
+      clip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Fox_Walk
+      clip: {fileID: 7400002, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.126
+    - clipName: Fox_Run
+      clip: {fileID: 7400004, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.425
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    eatClipName: Fox_Eat
+    animalForm: 0
+    meshName: SM_Fox_02
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.fox.2
+    shape: 4
+    prefab: {fileID: 100000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    prefabName: Fox
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 3.5, y: 3.5, z: 3.5}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    poseClipName: Fox_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Fox_Idle
+      clip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Fox_Walk
+      clip: {fileID: 7400002, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.126
+    - clipName: Fox_Run
+      clip: {fileID: 7400004, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.425
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    eatClipName: Fox_Eat
+    animalForm: 0
+    meshName: SM_Fox_03
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.raccoon
+    shape: 4
+    prefab: {fileID: 100000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    prefabName: Fox
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 2.75, y: 2.75, z: 2.75}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    poseClipName: Fox_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Fox_Idle
+      clip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Fox_Walk
+      clip: {fileID: 7400002, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.126
+    - clipName: Fox_Run
+      clip: {fileID: 7400004, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.425
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    eatClipName: Fox_Eat
+    animalForm: 0
+    meshName: SM_Raccoon_01
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.raccoon.1
+    shape: 4
+    prefab: {fileID: 100000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    prefabName: Fox
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 2.75, y: 2.75, z: 2.75}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    poseClipName: Fox_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Fox_Idle
+      clip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Fox_Walk
+      clip: {fileID: 7400002, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.126
+    - clipName: Fox_Run
+      clip: {fileID: 7400004, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.425
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    eatClipName: Fox_Eat
+    animalForm: 0
+    meshName: SM_Raccoon_02
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.skunk
+    shape: 4
+    prefab: {fileID: 100000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    prefabName: Fox
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 2.13, y: 2.13, z: 2.13}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    poseClipName: Fox_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Fox_Idle
+      clip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Fox_Walk
+      clip: {fileID: 7400002, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.126
+    - clipName: Fox_Run
+      clip: {fileID: 7400004, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.425
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    eatClipName: Fox_Eat
+    animalForm: 0
+    meshName: SM_Skunk_01
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.skunk.1
+    shape: 4
+    prefab: {fileID: 100000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    prefabName: Fox
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 2.13, y: 2.13, z: 2.13}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    poseClipName: Fox_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Fox_Idle
+      clip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Fox_Walk
+      clip: {fileID: 7400002, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.126
+    - clipName: Fox_Run
+      clip: {fileID: 7400004, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.425
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    eatClipName: Fox_Eat
+    animalForm: 0
+    meshName: SM_Skunk_02
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.skunk.2
+    shape: 4
+    prefab: {fileID: 100000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    prefabName: Fox
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 2.13, y: 2.13, z: 2.13}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    poseClipName: Fox_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Fox_Idle
+      clip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Fox_Walk
+      clip: {fileID: 7400002, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.126
+    - clipName: Fox_Run
+      clip: {fileID: 7400004, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.425
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    eatClipName: Fox_Eat
+    animalForm: 0
+    meshName: SM_Skunk_03
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.boar
+    shape: 4
+    prefab: {fileID: 100000, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+    prefabName: Boar
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 6.04, y: 6.04, z: 6.04}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+    poseClipName: Boar_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Boar_Idle
+      clip: {fileID: 7400000, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Boar_Walk
+      clip: {fileID: 7400002, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.137
+    - clipName: Boar_Run
+      clip: {fileID: 7400004, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.189
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+    eatClipName: Boar_Eat
+    animalForm: 0
+    meshName: SM_Boar_01
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.boar.1
+    shape: 4
+    prefab: {fileID: 100000, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+    prefabName: Boar
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 6.04, y: 6.04, z: 6.04}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+    poseClipName: Boar_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Boar_Idle
+      clip: {fileID: 7400000, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Boar_Walk
+      clip: {fileID: 7400002, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.137
+    - clipName: Boar_Run
+      clip: {fileID: 7400004, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.189
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+    eatClipName: Boar_Eat
+    animalForm: 0
+    meshName: SM_Boar_02
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.boar.2
+    shape: 4
+    prefab: {fileID: 100000, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+    prefabName: Boar
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 6.04, y: 6.04, z: 6.04}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+    poseClipName: Boar_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Boar_Idle
+      clip: {fileID: 7400000, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Boar_Walk
+      clip: {fileID: 7400002, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.137
+    - clipName: Boar_Run
+      clip: {fileID: 7400004, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.189
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 443c31e33ca3b9a43b0cdb83b16fde66, type: 3}
+    eatClipName: Boar_Eat
+    animalForm: 0
+    meshName: SM_Boar_03
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.moose
+    shape: 4
+    prefab: {fileID: 100000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    prefabName: Deer
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 7.4, y: 7.4, z: 7.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    poseClipName: Deer_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Deer_Idle
+      clip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Deer_Walk
+      clip: {fileID: 7400002, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.183
+    - clipName: Deer_Run
+      clip: {fileID: 7400004, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.756
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    eatClipName: Deer_Eat
+    animalForm: 0
+    meshName: SM_Moose_Female_01
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.moose.1
+    shape: 4
+    prefab: {fileID: 100000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    prefabName: Deer
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 7.4, y: 7.4, z: 7.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    poseClipName: Deer_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Deer_Idle
+      clip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Deer_Walk
+      clip: {fileID: 7400002, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.183
+    - clipName: Deer_Run
+      clip: {fileID: 7400004, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.756
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    eatClipName: Deer_Eat
+    animalForm: 0
+    meshName: SM_Moose_Female_02
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.moose.2
+    shape: 4
+    prefab: {fileID: 100000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    prefabName: Deer
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 7.8, y: 7.8, z: 7.8}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    poseClipName: Deer_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Deer_Idle
+      clip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Deer_Walk
+      clip: {fileID: 7400002, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.183
+    - clipName: Deer_Run
+      clip: {fileID: 7400004, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.756
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    eatClipName: Deer_Eat
+    animalForm: 1
+    meshName: SM_Moose_Male_01
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.moose.3
+    shape: 4
+    prefab: {fileID: 100000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    prefabName: Deer
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 7.8, y: 7.8, z: 7.8}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    poseClipName: Deer_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Deer_Idle
+      clip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Deer_Walk
+      clip: {fileID: 7400002, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.183
+    - clipName: Deer_Run
+      clip: {fileID: 7400004, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.756
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    eatClipName: Deer_Eat
+    animalForm: 1
+    meshName: SM_Moose_Male_02
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.moose.4
+    shape: 4
+    prefab: {fileID: 100000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    prefabName: Deer
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 7.8, y: 7.8, z: 7.8}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    poseClipName: Deer_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Deer_Idle
+      clip: {fileID: 7400000, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Deer_Walk
+      clip: {fileID: 7400002, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.183
+    - clipName: Deer_Run
+      clip: {fileID: 7400004, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.756
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: 3751d6025630be542a1062112f2bcae5, type: 3}
+    eatClipName: Deer_Eat
+    animalForm: 1
+    meshName: SM_Moose_Male_03
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.wolf
+    shape: 4
+    prefab: {fileID: 100000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    prefabName: Fox
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 5.88, y: 5.88, z: 5.88}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    poseClipName: Fox_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Fox_Idle
+      clip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Fox_Walk
+      clip: {fileID: 7400002, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.126
+    - clipName: Fox_Run
+      clip: {fileID: 7400004, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.425
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    eatClipName: Fox_Eat
+    animalForm: 0
+    meshName: SM_Wolf_01
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.wolf.1
+    shape: 4
+    prefab: {fileID: 100000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    prefabName: Fox
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 5.88, y: 5.88, z: 5.88}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    poseClipName: Fox_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Fox_Idle
+      clip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Fox_Walk
+      clip: {fileID: 7400002, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.126
+    - clipName: Fox_Run
+      clip: {fileID: 7400004, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.425
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    eatClipName: Fox_Eat
+    animalForm: 0
+    meshName: SM_Wolf_02
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.wolf.2
+    shape: 4
+    prefab: {fileID: 100000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    prefabName: Fox
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 5.88, y: 5.88, z: 5.88}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    poseClipName: Fox_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Fox_Idle
+      clip: {fileID: 7400000, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Fox_Walk
+      clip: {fileID: 7400002, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.126
+    - clipName: Fox_Run
+      clip: {fileID: 7400004, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.425
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: f000ecb3e2f790d45bb3459ad897cb3e, type: 3}
+    eatClipName: Fox_Eat
+    animalForm: 0
+    meshName: SM_Wolf_03
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.bear
+    shape: 4
+    prefab: {fileID: 100000, guid: bd230207ae5490e448055f036d3af422, type: 3}
+    prefabName: Bear
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 5.06, y: 5.06, z: 5.06}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: bd230207ae5490e448055f036d3af422, type: 3}
+    poseClipName: Bear_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Bear_Idle
+      clip: {fileID: 7400000, guid: bd230207ae5490e448055f036d3af422, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Bear_Walk
+      clip: {fileID: 7400002, guid: bd230207ae5490e448055f036d3af422, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.135
+    - clipName: Bear_Run
+      clip: {fileID: 7400004, guid: bd230207ae5490e448055f036d3af422, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.301
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: bd230207ae5490e448055f036d3af422, type: 3}
+    eatClipName: Bear_Eat
+    animalForm: 0
+    meshName: SM_Bear_01
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.bear.1
+    shape: 4
+    prefab: {fileID: 100000, guid: bd230207ae5490e448055f036d3af422, type: 3}
+    prefabName: Bear
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 5.06, y: 5.06, z: 5.06}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: bd230207ae5490e448055f036d3af422, type: 3}
+    poseClipName: Bear_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Bear_Idle
+      clip: {fileID: 7400000, guid: bd230207ae5490e448055f036d3af422, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Bear_Walk
+      clip: {fileID: 7400002, guid: bd230207ae5490e448055f036d3af422, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.135
+    - clipName: Bear_Run
+      clip: {fileID: 7400004, guid: bd230207ae5490e448055f036d3af422, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.301
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: bd230207ae5490e448055f036d3af422, type: 3}
+    eatClipName: Bear_Eat
+    animalForm: 0
+    meshName: SM_Bear_02
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.bear.2
+    shape: 4
+    prefab: {fileID: 100000, guid: bd230207ae5490e448055f036d3af422, type: 3}
+    prefabName: Bear
+    prefabUnder: Assets/Synty/SimpleForestAnimal
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 5.06, y: 5.06, z: 5.06}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 2100000, guid: a47734c228690c7408645b04cd1a2550, type: 2}
+    materialName: SimpleForestAnimals
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7400000, guid: bd230207ae5490e448055f036d3af422, type: 3}
+    poseClipName: Bear_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Bear_Idle
+      clip: {fileID: 7400000, guid: bd230207ae5490e448055f036d3af422, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: Bear_Walk
+      clip: {fileID: 7400002, guid: bd230207ae5490e448055f036d3af422, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.135
+    - clipName: Bear_Run
+      clip: {fileID: 7400004, guid: bd230207ae5490e448055f036d3af422, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.301
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    eatClip: {fileID: 7400006, guid: bd230207ae5490e448055f036d3af422, type: 3}
+    eatClipName: Bear_Eat
+    animalForm: 0
+    meshName: SM_Bear_03
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.meal
     shape: 4
     prefab: {fileID: 8752115278972753073, guid: 53e689cdb89924f4eacb5b2f01c0bae0, type: 3}
