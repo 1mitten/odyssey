@@ -14015,6 +14015,131 @@ The wake also reached `main` as design 56 first, so the ride is **design 57**
 (`docs/design/57-ride-along.md`), by the precedent cover set when the birds took 50. Only the
 lines this branch wrote were renumbered; the wake's references to 56 are its own.
 
+## 2026-09-26 — Cracks: a struck wall and a face being mined, drawn broken
+
+The owner asked for damage levels on walls, "a general effect for cracks … after there is so many
+hps left", then for rock being mined too. Everything the look needed was already published — a
+struck building's hit points since design 33 §13, a mining order's progress since the cut moved on
+to the cell — and both design 33 §13k and 53 §7d had listed "cracks, or a darker tint" as owed. Four
+answers settled it: three stages at 25/50/75 % gone, cracks only (no destroyed-wall mesh yet), walls
+and rock first, and the cracks replace the pale cut slab. Design 58.
+
+**The option chosen was the one that is general.** Decals were not switched on in the pipeline, want
+a scene object each (which the project avoids), and bleed on to whoever stands beside the wall; a
+destroyed-model swap is walls only and licensed art. Drawing the cell's own meshes again in a multiply
+shader cracks whatever `ChunkMesher.MeshCell` emits — core and panels, the walls-down stump, a rock's
+boulder — by the selection highlight's route, so it cannot drift from the chunk. It batches by mesh
+and stage, so a run of walls costs one wall's calls (P10 was named before a line was written).
+
+**The one simulation change came out of the second answer.** A cancelled mining order zeroed its
+cell's ledger, so a half-cut face healed, which nobody could see until it was drawn as cracks. The
+owner: "Keep its state." The work now moves to a sparse `PartMinedRock` on the cancel and comes back
+with the next order, keyed by the terrain it was cut from so a changed cell cannot inherit a head
+start. Hashed only while non-empty and saved as an appended section: no golden moved, and the fast
+tier passed unchanged on the first run. The control was run — with the keep disabled, three of the
+five tests fail.
+
+**Built without an editor.** The Presentation half — the pass, `Odyssey/Crack`, the wiring and
+`CrackPassTests` — is uncompiled until the next Unity run, which is the first thing owed.
+
+## 2026-09-26 — Cracks, the first look: burst from a point, six levels for rock, and the break
+
+The owner played design 58 the same day and moved three things (§1a). **The heavy stages read as
+shapes.** The pattern was the borders of a Voronoi tiling, and a tiling closes every line into a
+cell, so a face covered in it looks like paving however it is warped. What a blow leaves is a few
+long cracks running out from one place, so the pattern now bursts from an impact point hashed per
+cell: tapering rays with their own length and wander, branches forking off them that web the face
+only late, a crushed patch and grime at the end. One severity drives it all, so the ladder could grow
+without a tuning table. **Rock got six levels** from a tenth of the cut; a wall's three stages became
+every other rung of the same ladder, so a wall and a face at one level look equally broken.
+
+**The break.** A cracked cell that comes down now shudders, halves, quarters, falls and sinks — the
+felled tree's topple is the precedent. The crack pass already held each cracked cell's own meshes, so
+a cell that stops being listed hands its batch to a watch rather than dropping it. **The first rule
+for "it came down" was wrong on paper before it ran**: fewer drawn parts than before. A wall built
+beside a cracked one hides a panel, so the cracked wall would have broken for gaining a neighbour.
+The watch asks the mirror instead — rock no longer solid, the building gone — and that is the test
+that pins it. The pieces are the cell's meshes clipped to quarters in a shader of our own, because the
+art's shaders cannot clip and the pack's meshes are not all readable for a CPU cut; the cost is a
+shading of our own for 1.6 s, which the shudder is there to hide.
+
+**Found on the way:** the first build listed `Odyssey/Crack` in `ShaderInclusion.Required` without
+the instancing keep-alive material that `EveryKeptShaderAlsoHasAnInstancingKeepAliveMaterial`
+requires of every entry, so that test would have failed. Both crack shaders have one now. No tier
+was run on this round, at the owner's word; the Hud half builds clean with `dotnet build`.
+
+## 2026-09-26 — Cracks: the sound of it coming down
+
+The owner supplied two Pixabay recordings — a wood smash and a boulder impact — for wood broken or
+taken apart and for a mined face collapsing, "processed as necessary and blended into the
+environment". Design 58 §9. Both masters measured brick-walled over full scale (+2.5 and +3.3 dBFS
+in the float decode, the boulder at full-scale RMS for a third of a second), so the bake is the
+gunshot's: −12 dB in float first, band-limited, the synthesised outdoor space and slapback, three
+takes at three speeds with their own tails, levelled on loudness into a limiter. The level was set
+against what leads up to it, measured rather than guessed: the pick is −24 LUFS, the melee thud −18.5,
+so a collapse at −19 is the payoff of the strokes without shouting over a fight.
+
+**When to play it was the design question.** The simulation says nothing when a wall is taken apart
+or a face mined out. The break's watch (§7) only sees cracked cells, and a deconstruct never cracks,
+so the sounds have their own watch over every cell with work on it — mining orders, deconstruct
+orders, struck buildings — which writes down what stood there on first sight and listens for it to
+go. Written down on first sight, because the snapshot's views can run a publish ahead of the mirror:
+the same lesson the break taught an hour earlier. Unity-free behind a five-method interface the render
+mirror already satisfied word for word, so the fast tier tests it.
+
+**Later the same day: the one-blow gap, closed.** The owner confirmed both recordings are Pixabay and
+asked for the gap to be fixed: a wooden building broken from whole in a single blow was never struck,
+so never tracked, so silent. The combat log already reports `Demolished` with the anchor cell — but
+the material is the problem, not the moment: by the time the event is published the building has
+left the mirror. So the mirror now notes every non-tree building leaving it with its stuff, the way it
+already noted felled trees for the topple, and the watch pairs the event with the note in either
+order. A cell heard is held for a second so a struck-then-broken wall, which both paths see, is heard
+once. Nine watch tests, run on their own (17 ms); no tier.
+
+**And renumbered to design 58 on the merge.** PR #242 (the ride along) reached `main` while this was
+in review and took design 57, and its code cites "design 57 §…" throughout — so two designs sharing
+the number would have made every such reference ambiguous. The cracks are `58-cracks.md` now; the
+rewrite touched only lines this branch added (49, found from the diff against `main`, plus one
+split across a comment break), and no ride-along file. Commit messages keep the old number.
+
+## 2026-09-26 — A second Windows machine, from nothing (`D:\dev\odyssey`)
+
+A clone with no editor, no Python and no packs, on an RTX 2080 with C: 97% full. Python 3.13 went
+in per `local-dev.md` §10; the fast tier and all three content gates were green before Unity
+existed. **The editor took three attempts**: Hub's headless install stopped at a UAC prompt without
+a word in its log, a hand-run `/S` install exited 2 twice (the prompt declined), and the owner's own
+run failed extracting into `%TEMP%` on a full C:. With room made it installed to
+`D:\Unity\Hub\Editor` (`UNITY_HUB_EDITORS` points `unity.sh` there).
+
+**The packs were unpacked rather than imported** (`tools/synty/unpack.py`, new), because two of the
+ten ship PolygonGeneric under the same GUIDs and Unity's importer cannot leave a folder out. The five
+PolygonGeneric copies were compared file by file before choosing: 1,267 of 1,268 identical, the odd
+one newer in Sci-Fi City 1.3.4 (the old machine had 1.3.3), so that is the one installed. Before any
+editor opened, every GUID the committed assets reference into `Assets/Synty` resolved, the whole of
+`ModuleCatalogue.asset` included.
+
+**The first open changed a committed file.** `UpgradeBuiltInMaterials` ran URP's project-wide
+upgrader, which rewrote `Resources/OdysseyKeepAlive/Standard.mat` — the material that keeps the
+built-in Standard shader in a player build — to URP Lit. Restored, and the upgrade now walks
+`Assets/Synty` only (566 materials; a re-run leaves the tree clean). `docs/lessons.md`.
+
+**EditMode on `main`: 4,363 total, 4,324 passed, 1 failed** — `WeaponSheathGapTests`, the bat on
+`Character_MilitaryMale_01` at 3.2 cm against 0.8–3.0, which the 2026-09-25 entry above found on a
+clean `main` with the same number. Identical to the tenth of a centimetre on a different machine
+with separately unpacked packs, which is the best evidence available that the art matches. It
+still needs its own fix.
+
+**Then the machine became a second Unity runner** (`UPSTAIRS`, owner: *"fix it up with the unity
+label"*). Two things stood in the way. `unity.sh` found editors only under `C:\Program Files` or an
+environment variable a runner started before `setx` never sees, so it now also reads Hub's own
+install location. And `HudStressTests` asserted one budget, laptop ÷ 3, written for a Ryzen 7
+9800X3D: here the dense HUD read 1.285 ms against 1.167. The ruler for "how much slower is this
+box" is the per-label figure, the only quantity `docs/lessons.md` (2026-09-23) found stable —
+17.0 us quiet there, 30.9 here — so the headroom is now a table of known CPUs (3 for the 9800X3D,
+unchanged; 3 × 17.0 / 30.9 ≈ 1.65 here, a 2.12 ms budget), and an unknown machine keeps the strict
+3. The label goes on after the fix is merged, or every PR branched from the old `main` could fail
+on whichever runner picked it up.
+
 ### 2026-09-26 — the inspect header: two toggles, and the response leaves it
 
 Claude Design's mockup 24c replaced the colonist header's four checkbox buttons with two large
@@ -14038,3 +14163,6 @@ is what makes that safe: nothing else in the header depended on it.
 
 The response (Fight back, Defend, Flee) left the header. It is a setting rather than an action, and
 the Assign tab's column holds it for every colonist at once.
+
+The owner played it the same day: *"it's great - happy to get this resolved and get it ready for a
+merge"*. Nothing moved, so Z for First Person and the 40 px tile stand.

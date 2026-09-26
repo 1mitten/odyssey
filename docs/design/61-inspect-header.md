@@ -1,6 +1,6 @@
 # 61 — The inspect pane's header actions
 
-**Status: built 2026-09-26, not yet played.** Branch `claude/inspect-header-actions`, worktree
+**Status: built and played 2026-09-26; ready to merge — PR #245** (owner: *"it's great"*). Branch `claude/inspect-header-actions`, worktree
 `D:\code\odyssey-header`. The brief is Claude Design's mockup 24c, pasted by the owner with *"we
 just need to clean up the icons ... adjust according to the current style/format"*.
 

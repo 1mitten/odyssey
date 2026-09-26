@@ -357,7 +357,7 @@ stump, which is correct.
 The health bar over a struck building that design 33 §13k owes is **built here, for every building**,
 from the published `EdificeDamage` table. The cover pieces are simply its first frequent customers.
 
-A damaged look (cracks, a darker tint) stays owed.
+A damaged look (cracks, a darker tint) is built for walls by design 58; sandbags join it by one line (`CrackModel.Cracks`).
 
 ### 7e. A covered hit
 

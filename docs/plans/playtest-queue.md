@@ -23,17 +23,6 @@ the next session learns to ignore.
 
 ## Open
 
-- **The inspect header's two toggles** (`claude/inspect-header-actions`, design 61, mockup 24c).
-  Select a colonist and look at the pane's top right.
-  - Press Draft, then T. Wrong: the shield does not fill red and read *Drafted*, or the two
-    disagree.
-  - Box-select two colonists and draft one of them from its own pane. Wrong: no red line along the
-    foot of the Draft tile, or a press releases the drafted one instead of drafting the other.
-  - Select two colonists. Wrong: First Person still looks pressable. Select one and press Z, then Z
-    again. Wrong: you do not come back to where the camera was.
-  - Read the caps T and Z, and hover each tile. Wrong: the cap is lost in the corner of the 40 px
-    tile, or the hover does nothing you can see.
-
 - **First Person: does the shoulder camera show a colonist's day and a fight clearly?**
   (`claude/planning-session-fok6wm`, design 57.) Select a colonist, press **First Person** on her
   card, and let her work, walk up a terrace and go through a door.
@@ -57,6 +46,7 @@ the next session learns to ignore.
   hops or lurches backwards at the start of one; frogs far from water; a frog too small to find from
   your normal camera height; a green that still sinks into the grass; or frogs you would rather see swimming, which
   is a cost stated in §8b.
+
 - **Polish batch: trees, drops, the fire, the roster, the pane, the fade** (`claude/polish-batch`,
   designs 20 §14, 23 §11, 31 §20, 25 §10, 14 §10–§11, 38 §27).
   - Gather six or more colonists round a campfire at night. Each should be on their own tile, with
@@ -1399,6 +1389,8 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-26 | **The inspect header's two toggles** (PR #245, `docs/design/61-inspect-header.md`): Draft and First Person as icon toggles, the mixed draft, First Person on Z, Close over Info | working — owner: *"it's great - happy to get this resolved and get it ready for a merge"* | none; ready to merge. Z for First Person and the 40 px tile stand |
+| 2026-09-26 | **Cracks, the break and the demolition sounds, two rounds** (PR #243, `docs/design/58-cracks.md`): walls and mined rock cracking, the break into quarters, rock's six levels, the wood smash and the boulder impact | working — owner, after the second round and the sounds: *"happy to get ready to merge into main"* | the first look moved three things (cracks from an impact point, six rock levels, the break, §1a); the sounds' one-blow gap was closed (§9). Ready to merge |
 | 2026-09-26 | **Waking into the world** (PR #241 on PR #240, `docs/design/56-wake-up.md`): the fade to black, the build behind it, the five-second dream, the held clock, the skip and the setting | working — owner: *"perfect"* | none; ready to merge after PR #240. The Unity tier found the blur's keep-alive material missing (design 56 §11) |
 | 2026-09-25 | **Ambient birds** (PR #230, `docs/design/50-ambient-birds.md`): rooks and a buzzard, their size at every zoom, perching, the scatter, the rookery, the weather | working — owner: *"superb - if this is performant - get it ready to be merged in"* | measured, then ready to merge: `FrameSection.Birds` 0.018–0.032 ms, and the frame at 640 x 480 and 4K is inside its own noise with the birds on (design 50 §8a) |
 | 2026-09-25 | **Ranged combat, three rounds** (PR #225, `docs/design/47-ranged-combat.md` §10a–§12): the aim, the shot, the tracer, the sound, then accuracy from a height, weapon quality and the reach rule | working — owner, first play: *"it's really decent and everything seemed to work well"*; after the reach rule: *"great job - just played a big battle"* | the first play raised the accuracy, sent a miss past its target into the ground and landed a hit on the body wherever it stands (§10a); asked for weapon quality (§11) and the reach rule (§12), both built and played in the big battle. Ready to merge. The frame with gunfire (P4) is still unmeasured |
