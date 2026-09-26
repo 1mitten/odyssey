@@ -505,6 +505,8 @@ namespace Odyssey.Sim.Pathing
                     int idx = rowBase + (x - x0);
                     if (_cellRegion[idx] != NoRegion) continue;
 
+                    // Air, deep water and — since design 62 §2c — solid ground: no region. Rock
+                    // nobody has opened is skipped here and so costs no pass that walks regions.
                     RegionKind kind = Grid.KindOf(idx);
                     if (kind == RegionKind.None) continue;
 
