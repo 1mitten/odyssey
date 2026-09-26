@@ -12,7 +12,8 @@ namespace Odyssey.EditorTools
     /// <summary>
     /// Writes <c>Assets/Odyssey/Presentation/Resources/OdysseyLook/MeadowLook.asset</c>: references,
     /// by GUID, to the Meadow Forest terrain textures and the demo scene's URP volume profile
-    /// (<c>docs/design/38-meadow-overhaul.md</c> §17).
+    /// (<c>docs/design/38-meadow-overhaul.md</c> §17), and to its cloud rings and their material
+    /// (design 63), whose sizes it logs.
     ///
     /// <para>Generated rather than hand-authored, like the module catalogue, and for the same
     /// reason: the asset points into the gitignored <c>Assets/Synty</c>, and a rebuild on a machine
@@ -52,16 +53,49 @@ namespace Odyssey.EditorTools
             // The marsh round water, blended in by the ground field (design 38 §24).
             look.wet = Texture("Moss_Texture_01");
             look.grade = Asset<VolumeProfile>("Global Volume Profile", "Assets/Synty/PolygonNatureBiomes");
+            // The Meadow demo's sky (design 63): its two rings and the material both wear there.
+            look.cloudRing = MeshOf("Env_CloudRing_Larger_01_Smooth_03", "Assets/Synty/PolygonNatureBiomes");
+            look.cloudRingHigh = MeshOf("SM_Env_Cloud_Ring_01", "Assets/Synty/PNB_Core");
+            look.clouds = Asset<Material>("Synty_Clouds_Meadows", "Assets/Synty/PolygonNatureBiomes");
 
             if (created) AssetDatabase.CreateAsset(look, AssetPath);
             else EditorUtility.SetDirty(look);
             AssetDatabase.SaveAssets();
 
             Debug.Log($"[MeadowLook] wrote {AssetPath}: ground {(look.HasGround ? "complete" : "INCOMPLETE")}, " +
-                      $"grade {(look.grade != null ? look.grade.name : "missing")}");
+                      $"grade {(look.grade != null ? look.grade.name : "missing")}, " +
+                      $"clouds {(look.HasClouds ? "complete" : "INCOMPLETE")}");
+            Describe("cloudRing", look.cloudRing);
+            Describe("cloudRingHigh", look.cloudRingHigh);
+        }
+
+        /// <summary>A ring's size in its own units and what it costs to draw, for design 63's arithmetic.</summary>
+        static void Describe(string field, Mesh? mesh)
+        {
+            if (mesh == null)
+            {
+                Debug.Log($"[MeadowLook] {field}: missing");
+                return;
+            }
+            Bounds b = mesh.bounds;
+            // The inside of the ring: the nearest any vertex comes to its middle, across the ground.
+            float inner = float.MaxValue;
+            foreach (Vector3 v in mesh.vertices)
+                inner = Mathf.Min(inner, new Vector2(v.x - b.center.x, v.z - b.center.z).magnitude);
+            Debug.Log($"[MeadowLook] {field}: {mesh.name} centre {b.center.ToString("F3")} size {b.size.ToString("F3")} " +
+                      $"inner radius {inner:F1} (outer {Mathf.Max(b.extents.x, b.extents.z):F1}) " +
+                      $"vertices {mesh.vertexCount} triangles {mesh.triangles.Length / 3} submeshes {mesh.subMeshCount}");
         }
 
         static Texture2D? Texture(string exactName) => Asset<Texture2D>(exactName, "Assets/Synty/PolygonNatureBiomes");
+
+        /// <summary>The first mesh inside a model file, found by the file's exact name.</summary>
+        static Mesh? MeshOf(string modelName, string folder)
+        {
+            GameObject? model = Asset<GameObject>(modelName, folder);
+            if (model == null) return null;
+            return AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(model)).OfType<Mesh>().FirstOrDefault();
+        }
 
         static T? Asset<T>(string exactName, string folder) where T : UnityEngine.Object
         {

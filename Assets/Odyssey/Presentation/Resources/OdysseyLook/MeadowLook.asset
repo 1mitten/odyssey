@@ -20,3 +20,6 @@ MonoBehaviour:
   earth: {fileID: 2800000, guid: 90e1d4ee0eac50d47bb8979169cf1302, type: 3}
   wet: {fileID: 2800000, guid: 6b5b2538082234a48832046b0a5365ba, type: 3}
   grade: {fileID: 11400000, guid: 7679a2a2468dc7742a7ece2dea61ab3b, type: 2}
+  cloudRing: {fileID: 3818531326662567632, guid: 808d3d8b5942fae4ea185a4ab8467d42, type: 3}
+  cloudRingHigh: {fileID: 126315953321181073, guid: 65b3037c0d89ade49a643720e46ea2f1, type: 3}
+  clouds: {fileID: 2100000, guid: aa55010050d4b7f46806e6fd74241423, type: 2}
