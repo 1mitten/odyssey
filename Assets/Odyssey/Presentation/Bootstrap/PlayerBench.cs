@@ -603,7 +603,13 @@ namespace Odyssey.Presentation.Bootstrap
             }
             float at = Time.realtimeSinceStartup + 1f;
             while (Time.realtimeSinceStartup < at) yield return null;
-            string path = System.IO.Path.Combine("Logs", "wake-mid.png");
+            // Beside the -logFile, absolute. A relative path is not resolved against the working
+            // directory in a player, and a capture that cannot be written fails without a word:
+            // "Logs/wake-mid.png" was logged as captured and never existed (2026-09-26).
+            string? logDir = string.IsNullOrEmpty(Application.consoleLogPath)
+                ? null : System.IO.Path.GetDirectoryName(Application.consoleLogPath);
+            string path = System.IO.Path.Combine(
+                string.IsNullOrEmpty(logDir) ? Application.persistentDataPath : logDir!, "wake-mid.png");
             ScreenCapture.CaptureScreenshot(path);
             Odyssey.Presentation.Rendering.WakeBlur? blur = shell.WakeBlurNow;
             Log($"[Hitch] wake: captured {path} at blur {shell.Wake.Look.Blur:0.00}, haze {shell.Wake.Look.Haze:0.00}; " +
