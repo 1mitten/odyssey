@@ -136,14 +136,23 @@ namespace Odyssey.Sim.Designations
         /// Place an order, or say why not. Out of the map is <see cref="IntentRejection.OutOfBounds"/>;
         /// a kind the cell cannot take is <see cref="IntentRejection.NotPermitted"/>; the same order
         /// twice is <see cref="IntentRejection.AlreadyInThatState"/>.
+        ///
+        /// <para><paramref name="rockOnly"/> is a drag's answer, decided once from the cell it was
+        /// begun on (<see cref="DesignateRun.RockOnly"/>, design 62 §4): a Mine drag begun on rock
+        /// refuses the soft ground it crosses. It is applied here to every cell alike and never
+        /// re-decided from the cell in hand, which is the whole of <c>docs/bug-patterns.md</c> P4.
+        /// Nothing else about the order changes — a soft cell dug is the same job, work and yield
+        /// it always was.</para>
         /// </summary>
-        public IntentRejection Designate(CellRef cell, DesignationKind kind)
+        public IntentRejection Designate(CellRef cell, DesignationKind kind, bool rockOnly = false)
         {
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
             if (kind == DesignationKind.None) return IntentRejection.NotPermitted;
 
             int index = TreeAbove(_grid.Index(cell), kind);
             if (!Allows(index, kind)) return IntentRejection.NotPermitted;
+            if (rockOnly && kind == DesignationKind.Mine && !TerrainHandle.IsRockLike(_grid.Terrain[index]))
+                return IntentRejection.NotPermitted;
             if (_kinds[index] == (byte)kind) return IntentRejection.AlreadyInThatState;
 
             // A face somebody started on and left carries on from where the cut stopped (design
@@ -482,7 +491,7 @@ namespace Odyssey.Sim.Designations
         public IntentRejection HandleDesignate(Intent intent)
         {
             if (intent.A <= 0 || intent.A > (int)DesignationKind.Harvest) return IntentRejection.NotPermitted;
-            return Designate(intent.Cell, (DesignationKind)intent.A);
+            return Designate(intent.Cell, (DesignationKind)intent.A, intent.B == DesignateRun.RockOnly);
         }
 
         /// <summary><c>CancelDesignation(cell)</c>.</summary>
