@@ -86,7 +86,7 @@ namespace Odyssey.Sim.Pawns
 
             // A colonist in the way of another colonist's bullet does not turn on her (design 47
             // §2c): the memory of it is SwingResolved's, above; fighting back is for being attacked.
-            if (stray && attacker.IsColonist && target.IsColonist) return;
+            if (stray && Allegiance.AreAllies(attacker, target)) return;
 
             React(target, attacker, tick);
         }
@@ -245,7 +245,7 @@ namespace Odyssey.Sim.Pawns
             // nearest, which on a tie was the lower id, not the hitter (review, 2026-09-23).
             if (target.IsHostile)
             {
-                if (!attacker.IsColonist || Melee.IsAttacking(target, attacker)) return;
+                if (!Allegiance.AreHostile(target, attacker) || Melee.IsAttacking(target, attacker)) return;
                 target.RetaliateAgainst = attacker.Id.Value;
                 target.RetaliateUntilTick = tick + combat.retaliationTicks;
                 if (!FightingBeside(target)) _jobs.Interrupt(target, JobStatus.Failed);

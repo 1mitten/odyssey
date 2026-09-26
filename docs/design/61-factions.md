@@ -7,7 +7,7 @@ Plan `docs/plans/factions.md`. Branch `claude/lucid-euler-9puelu`, documents onl
 > *"We need to explore factions and how this could work - could you explore, plan come up with
 > ideas. Ask me questions."* — the owner, 2026-09-26
 
-**Status: designed, nothing built. The plan waits for approval.** Every number in this document is
+**Status: plan approved 2026-09-26 (the orcs later). F0 built (§5a); F1 next.** Every number in this document is
 a proposal for the owner to tune; none is a measurement.
 
 ## 1. What a faction is, and why now
@@ -290,6 +290,48 @@ fails on any `.IsHostile &&` / `.IsColonist &&` pairing outside `Allegiance`.
 
 **Merge order.** F0 edits the same files as the prisoner line, so it **branches from it, or waits
 for it to merge**. It never forks `Allegiance`.
+
+### 5a. As built (2026-09-26)
+
+F0 is built on `claude/lucid-euler-9puelu`, stacked on the prisoner line, which is merged in
+underneath. `Allegiance` gained three answers:
+
+| Answer | At F0 | Replaces |
+|---|---|---|
+| `AreHostile(a, b)` | one is hostile and the other a colonist; symmetric | the hunt's target (`HostileThinkNode`, both the retaliation and the nearest), a raid member's hand-over (`RaidThinkNode`), and whom a struck hostile remembers (`CombatSystem.React`) |
+| `IsFoe(me, other)` | an enemy, or, for a colonist, anybody attacking her | `Melee.IsThreatTo`, `Melee.DangerTo`, and both copies of the ternary (`Ranged.NearestTargetInSight`, `CombatJobs.EnemyInReach`) |
+| `AreAllies(a, b)` | both colonists | friendly fire (`FriendlyFireListener`) and a stray that starts no fight (`CombatSystem.Apply`) |
+
+**One deliberate difference.**
+- The old ternary made every colonist a foe of *any* non-colonist who asked, a held prisoner or a
+  hog included.
+- Neither ever asks: a prisoner thinks as a prisoner, and an animal has no gun and hunts only its
+  attacker.
+- `IsFoe` gives them no enemies, and a test says so.
+
+**Left colony-centred on purpose.** Each of these asks about the colony, not about a pair:
+- `Melee.AnythingHostile`: is anything hostile to *us* about;
+- `Melee.ColonistUnderAttackBy`: is one of *ours* under attack;
+- the raid's early trigger (`RaidSystem`: a colonist near the band) and its size census
+  (`RaidWorker`);
+- `Surrender`, `WeaponDraw`, and the mind choice in `JobSystem` all read the pawn's own stance
+  (`IsHostile`), which `Allegiance` already owns.
+
+F1 revisits the raid trigger when a visitor can stand near a band.
+
+**Proof.**
+- `HostilityHasOneOwnerTests` (six tests) holds the three answers to the old expressions, written
+  out as an oracle, over a cast of every kind of pawn:
+  - a colonist, a recruit and an escapee;
+  - a bandit, a gunman, a held bandit and a released one;
+  - a hog.
+- It fails the build on a second copy of a side rule anywhere in `Assets/Odyssey/Sim`. There are
+  three patterns and an allow-list of two files, each with its reason, and a test that the patterns
+  catch the four lines F0 replaced.
+- **Every golden is identical** and the Long tier's combat gate passes beside its lockstep twin,
+  so no hash moved.
+- Fast tier 2,044 Sim + 1,302 Hud; Long 55.
+- Unity has not compiled it yet: it touches only Sim, which the fast tier compiles.
 
 ## 6. The contract with the trade line
 

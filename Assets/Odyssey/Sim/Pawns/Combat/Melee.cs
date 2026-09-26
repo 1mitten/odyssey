@@ -52,7 +52,7 @@ namespace Odyssey.Sim.Pawns
         /// anybody standing who is attacking her — a hog that turned, a colonist who struck her.
         /// </summary>
         public static bool IsThreatTo(Pawn other, Pawn me) =>
-            other != me && IsStanding(other) && (other.IsHostile || IsAttacking(other, me));
+            IsStanding(other) && Allegiance.IsFoe(me, other);
 
         /// <summary>
         /// The first threat within reach of <paramref name="me"/>, in id order, or null. <b>Scales
@@ -194,7 +194,7 @@ namespace Odyssey.Sim.Pawns
             {
                 Pawn other = pawns[i];
                 if (other == me || !IsStanding(other)) continue;
-                bool danger = other.IsHostile || IsAttacking(other, me)
+                bool danger = Allegiance.IsFoe(me, other)
                     || (!other.IsPerson && ColonistUnderAttackBy(ctx, other) != null);
                 if (!danger || !WithinHelp(size, m, other.Cell, radius)) continue;
 

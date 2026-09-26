@@ -56,7 +56,7 @@ namespace Odyssey.Sim.Pawns
             {
                 Pawn other = pawns[i];
                 if (other == me || !Melee.IsStanding(other)) continue;
-                bool foe = me.IsColonist ? Melee.IsThreatTo(other, me) : other.IsColonist;
+                bool foe = Allegiance.IsFoe(me, other);
                 if (foe && Melee.InReach(ctx, me, other, mode)) return other;
             }
             return null;

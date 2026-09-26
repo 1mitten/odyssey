@@ -41,7 +41,7 @@ namespace Odyssey.Sim.Pawns
         {
             Pawn? by = report.Attacker;
             Pawn target = report.Target;
-            if (by == null || by == target || !by.IsColonist || !target.IsColonist || Melee.IsDead(target)) return;
+            if (by == null || !Allegiance.AreAllies(by, target) || Melee.IsDead(target)) return;
             target.AddMemory(ThoughtIndex.AttackedByColonist, report.Tick);
         }
 

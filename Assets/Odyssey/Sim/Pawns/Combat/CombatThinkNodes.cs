@@ -189,7 +189,7 @@ namespace Odyssey.Sim.Pawns
             if (pawn.RetaliateAgainst != 0 && ctx.CurrentTick < pawn.RetaliateUntilTick)
             {
                 Pawn? foe = ctx.Pawns.Get(new PawnId(pawn.RetaliateAgainst));
-                if (foe != null && foe.IsColonist && Melee.IsStanding(foe) && ctx.CanTravel(pawn, foe.Cell, mode))
+                if (foe != null && Allegiance.AreHostile(pawn, foe) && Melee.IsStanding(foe) && ctx.CanTravel(pawn, foe.Cell, mode))
                     return foe;
             }
 
@@ -199,7 +199,7 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < pawns.Count; i++)
             {
                 Pawn other = pawns[i];
-                if (!other.IsColonist || !Melee.IsStanding(other)) continue;
+                if (!Allegiance.AreHostile(pawn, other) || !Melee.IsStanding(other)) continue;
                 int distance = ctx.Distance(pawn.Cell, other.Cell);
                 if (distance >= bestDistance) continue;
                 if (!ctx.CanTravel(pawn, other.Cell, mode)) continue;

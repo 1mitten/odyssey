@@ -14101,3 +14101,16 @@ frogs, which is the frog work it did not have.
 their conflict markers still in. The merge's list of conflicts was cut short by a `tail`, and
 `git add -A` staged everything. The fast tier caught it at compile time (CS8300), and the follow-up
 commit resolves each hunk. The lesson is in `docs/lessons.md`.
+
+**F0 built the same day.** `Allegiance` now answers three pairwise questions: are these two enemies,
+would she fight that one unordered, and are these two on the same side. Eight call sites ask it
+instead of writing the rule themselves.
+- The test holds each answer to the old expression it replaced, written out as an oracle, over every
+  kind of pawn the game has. A source scan fails the build on a second copy.
+- **One answer differs, deliberately.** The old ternary made every colonist a foe of any non-colonist
+  who asked, a held prisoner or a hog included. Neither ever asks, and the one rule says they have
+  no enemies.
+- What stays colony-centred is recorded in design 61 §5a, with the reason for each: "is anything
+  hostile to us about" is not a pairing.
+- **No golden moved** and the combat gate passed beside its twin. That is the whole claim of a
+  behaviour-preserving unit, and it was checked rather than assumed.

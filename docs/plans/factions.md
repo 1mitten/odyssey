@@ -4,7 +4,7 @@ The design is `docs/design/61-factions.md`; the interview is `docs/research/fact
 The branch for the documents is `claude/lucid-euler-9puelu`. Each unit below gets a branch of its
 own once the plan is approved: one commit per unit, one PR per unit.
 
-**Phase gate: this plan waits for the owner's approval. No unit is started.**
+**Approved by the owner 2026-09-26** (*"plan approved - we'll sort out the orcs later"*), so F3 and F4 wait. **F0 is built** (design 61 §5a), stacked on the prisoner line.
 
 | Unit | What | Gate |
 |---|---|---|

@@ -170,7 +170,7 @@ namespace Odyssey.Sim.Events
             for (int i = 0; i < pawns.Count; i++)
             {
                 Pawn other = pawns[i];
-                if (!other.IsColonist || !Melee.IsStanding(other)) continue;
+                if (!Allegiance.AreHostile(pawn, other) || !Melee.IsStanding(other)) continue;
                 if (Cells(size, pawn.Cell, other.Cell) <= reach && ctx.Reachable(pawn, other.Cell, mode)) return true;
             }
             return false;

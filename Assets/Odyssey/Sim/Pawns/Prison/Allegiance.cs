@@ -47,6 +47,44 @@ namespace Odyssey.Sim.Pawns
         /// as her kind does — and a recruit as a colonist, whatever her kind, because she opens the
         /// colony's doors now.
         /// </summary>
+        /// <summary>
+        /// Do <paramref name="a"/> and <paramref name="b"/> fight each other on sight? <b>The one
+        /// answer to who is whose enemy</b> (design 61 §2d, §5; unit F0). It is symmetric, and
+        /// nobody is her own enemy.
+        /// <para>Today there is only one side, the colony's, so the answer is: one of them is hostile
+        /// and the other is a colonist. Custody is already in both words, so a held prisoner is
+        /// nobody's enemy and an escapee is everybody's. Factions (F1) change this function and
+        /// nothing else: the colony against a people by goodwill, and one people against another by
+        /// their Defs.</para>
+        /// </summary>
+        public static bool AreHostile(Pawn a, Pawn b) =>
+            a != b && ((IsHostile(a) && IsColonist(b)) || (IsHostile(b) && IsColonist(a)));
+
+        /// <summary>
+        /// Would <paramref name="me"/> fight <paramref name="other"/> without being told to?
+        /// <list type="bullet">
+        /// <item>Anybody she is hostile to (<see cref="AreHostile"/>).</item>
+        /// <item><b>For a colonist</b>, also anybody attacking her right now
+        /// (<see cref="Melee.IsAttacking"/>): a hog that turned, or a colonist who struck her
+        /// (design 33 §1).</item>
+        /// </list>
+        /// Whether the other is standing is the caller's to ask. What this replaces is the two
+        /// copies of <c>me.IsColonist ? IsThreatTo(other, me) : other.IsColonist</c> in the target
+        /// scans (design 47 §2d). That ternary also made every colonist a foe of a held prisoner or
+        /// an animal at peace. Neither ever asks, and here neither has an enemy.
+        /// </summary>
+        public static bool IsFoe(Pawn me, Pawn other) =>
+            other != me && (AreHostile(me, other) || (IsColonist(me) && Melee.IsAttacking(other, me)));
+
+        /// <summary>
+        /// Are <paramref name="a"/> and <paramref name="b"/> on the same side? It asks whether a
+        /// blow between them is friendly fire (design 33 §14f) and whether a stray between them
+        /// starts a fight (design 47 §2c). At F0 only the colony is a side, so it asks whether both
+        /// are colonists. F1 makes each people a side.
+        /// </summary>
+        public static bool AreAllies(Pawn a, Pawn b) =>
+            a != b && IsColonist(a) && IsColonist(b);
+
         public static TraverseMode ModeOf(Pawn pawn)
         {
             if (IsPrisoner(pawn)) return TraverseMode.Bandit;
