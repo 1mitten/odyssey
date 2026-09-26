@@ -329,7 +329,14 @@ namespace Odyssey.Tests.Sim
         // The frog merged with cover, 2026-09-26: re-taken from the merged pack.
         // The frog merged with raids, 2026-09-26: the gunman keeps kind 4 and the frog moves to 5;
         // re-taken from the merged pack.
-        const ulong ContentFingerprint = 11744128507824195914UL;
+                //
+        // The kit (design 54), 2026-09-26: ItemDef gained kitCap (5 on medical supplies, 3 on the
+        // ration pack, nought on everything else) and Job_TakeIntoKit was appended at 28. No golden
+        // moved: the job's counters reach the hash only once one has run, and the kit's ledger adds
+        // nothing while every kit is empty.
+        // The kit merged with main (the ride, the wake, part-mined rock), 2026-09-26: re-taken
+        // from the merged pack.
+        const ulong ContentFingerprint = 5852814635696034407UL;
 
 
         [Test]

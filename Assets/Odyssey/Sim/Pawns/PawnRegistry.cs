@@ -431,6 +431,8 @@ namespace Odyssey.Sim.Pawns
             // let go of it through the drop listener, so this is a no-op there; it is for every
             // other way off the board — a bandit that flees off the edge (integration, 2026-09-23).
             if (pawn.EquippedItem != 0) WeaponHand.PutDown(pawn, _ctx, pawn.Cell);
+            // The kit, for the same reason (design 54 §5).
+            Kit.LayAll(pawn, _ctx, pawn.Cell);
             _pawns.RemoveAt(index);
             _byId.Remove(pawn.Id.Value);
             for (int i = index; i < _pawns.Count; i++) _byId[_pawns[i].Id.Value] = i;
@@ -484,6 +486,8 @@ namespace Odyssey.Sim.Pawns
             new Cooking.CookJobDriver(),
             // The ranged attack (design 47 §2d), JobHandle 27, after the kitchen's.
             new AttackRangedJobDriver(),
+            // The kit (design 54 §3), JobHandle 28, after the ranged attack.
+            new TakeIntoKitJobDriver(),
         };
 
         /// <summary>
@@ -662,6 +666,8 @@ namespace Odyssey.Sim.Pawns
                         writer.AddPawnAspect(pawn.Id, CombatAspects.Weapon, weapon.DefIndex);
                         if (weapon.Quality != 0) writer.AddPawnAspect(pawn.Id, CombatAspects.WeaponQuality, weapon.Quality);
                 }
+                // The kit (design 54 §6), sparse: a filled slot, nothing for an empty one.
+                KitAspects.Publish(writer, pawn, _ctx);
 
                 // An animal publishes its kind and its pace and nothing else of what follows
                 // (design 29 §2): it has no skills, no work, no schedule, no name and nothing in
@@ -836,6 +842,7 @@ namespace Odyssey.Sim.Pawns
             if (job == null) return -1;
             if (job.DefIndex == JobIndex.Goto && pawn.Drafted) return job.TargetCell;
             if (job.DefIndex == JobIndex.Equip && job.PlayerForced) return job.TargetCell;
+            if (job.DefIndex == JobIndex.TakeIntoKit) return job.TargetCell;
             // A building has no pawn id to draw a line to, so it rides the order cell (design 33
             // §5d, §13i): the cell of it she strikes at.
             if (CombatJobs.IsAttack(job.DefIndex) && job.PlayerForced && pawn.CombatTarget == 0) return job.TargetCell;

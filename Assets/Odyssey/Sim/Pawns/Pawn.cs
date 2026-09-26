@@ -310,6 +310,13 @@ namespace Odyssey.Sim.Pawns
         public int EquippedItem { get; internal set; }
 
         /// <summary>
+        /// The kit (design 54): one <see cref="ThingId"/> value a slot, or 0 for an empty one. The
+        /// things stay in <c>ColonyItems</c>, carried by her with no cell, as the hand's weapon does;
+        /// <see cref="Kit"/> is the only code that writes here.
+        /// </summary>
+        public readonly int[] KitItems = new int[Kit.Slots];
+
+        /// <summary>
         /// The pawn this one is under orders to attack or rescue, as a <see cref="PawnId"/> value,
         /// or 0. On the pawn rather than the job record because the job record is read
         /// sequentially inside the pawns section, and a field there would be a save-format bump.

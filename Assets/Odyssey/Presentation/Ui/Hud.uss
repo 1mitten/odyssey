@@ -1169,7 +1169,7 @@
    below, so between tabs only the rows change. HudLayout.InspectTabBody is the same number and
    HudStyleSheetTests holds the two together. */
 .inspect__tabbody {
-    height: 157px;
+    height: 244px;
     margin-top: 9px;
 }
 

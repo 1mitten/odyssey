@@ -83,7 +83,9 @@ namespace Odyssey.Tests.Sim
             Assert.That(JobHandle.Cook, Is.EqualTo(26));
             // And the ranged line's (design 47 §3a), 27 after the kitchen's.
             Assert.That(JobHandle.AttackRanged, Is.EqualTo(27));
-            Assert.That(JobHandle.Count, Is.EqualTo(28));
+            // And the kit's (design 54 §3), 28 after the ranged attack.
+            Assert.That(JobHandle.TakeIntoKit, Is.EqualTo(28));
+            Assert.That(JobHandle.Count, Is.EqualTo(29));
             Assert.That(new[] { ItemHandle.Bat, ItemHandle.Crowbar, ItemHandle.Machete, ItemHandle.ArcBlade },
                 Is.EqualTo(new[] { 7, 8, 9, 10 }));
             // Medical supplies at 11 (design 37), the wild foods at 12 and 13 (design 45 §6), and
@@ -130,7 +132,7 @@ namespace Odyssey.Tests.Sim
             PawnContent content = ContentPack.Pawns();
             Assert.That(content.Jobs.Skip(17).Select(j => j.defName), Is.EqualTo(new[]
                 { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue", "Job_Steal",
-                  "Job_Treat", "Job_Patient", "Job_Forage", "Job_Cook", "Job_AttackRanged" }));
+                  "Job_Treat", "Job_Patient", "Job_Forage", "Job_Cook", "Job_AttackRanged", "Job_TakeIntoKit" }));
             for (int i = 0; i < content.Jobs.Length; i++)
                 Assert.That(content.Jobs[i].driver, Is.EqualTo(i), content.Jobs[i].defName + " names another driver");
             Assert.That(content.Jobs[JobIndex.AttackMelee].trainsSkill, Is.EqualTo(SkillIndex.Melee));

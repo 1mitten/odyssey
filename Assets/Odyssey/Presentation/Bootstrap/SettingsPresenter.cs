@@ -137,6 +137,7 @@ namespace Odyssey.Presentation.Bootstrap
             switch (_director.Escape(
                         // A ride holds the view until Escape (design 57 §5), so it is asked first.
                         _bootstrap?.Directors?.Ride.Riding == true,
+                        _shell != null && _shell.GearPopoverOpen,
                         _shell != null && _shell.ContextMenuOpen,
                         _designate != null && _designate.ToolArmed,
                         _shell != null && _shell.BuildPaletteOpen,
@@ -158,6 +159,10 @@ namespace Odyssey.Presentation.Bootstrap
                     // The menu a right-click raised at the pointer (design 33 §7a): the last thing
                     // raised, so the first thing Escape puts away.
                     _shell?.CloseContextMenu();
+                    break;
+                case EscapeAction.CloseGearPopover:
+                    // A popover the Gear tab raised beside the pane (design 47 §3).
+                    _shell?.CloseGearPopovers();
                     break;
                 case EscapeAction.DisarmTool:
                     _designate?.PutToolAway();

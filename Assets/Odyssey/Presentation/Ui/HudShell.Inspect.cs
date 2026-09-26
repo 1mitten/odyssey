@@ -219,6 +219,9 @@ namespace Odyssey.Presentation.Ui
                 : DisplayStyle.None;
         }
 
+        /// <summary>Is the activity line drawn in the warning colour? Written only when it changes.</summary>
+        bool _stateWarn;
+
         void RefreshInspect()
         {
             var world = _boot!.World;
@@ -319,6 +322,15 @@ namespace Odyssey.Presentation.Ui
                 HudText.Set(_inspectState, StateLine(), HudTextRole.Meta);
             }
 
+            // A downed colonist's activity line is the warning colour (design 47 §2, the
+            // specification's 21f), on every tab: it is the one fact every control below answers to.
+            bool downedLine = _inspect.ShowsColonistBody && !_inspect.Tombstoned && _inspect.Gear.Downed;
+            if (downedLine != _stateWarn)
+            {
+                _stateWarn = downedLine;
+                _inspectState.style.color = downedLine ? new StyleColor(HudTokens.Warn) : new StyleColor(StyleKeyword.Null);
+            }
+
             // The pace (design 17 §5a): a colonist's only, the third line of the header, which
             // the 60 px portrait already made room for — the pane does not grow. Rebuilt only when
             // the model composed a new string, which it does only when a factor moved.
@@ -326,6 +338,7 @@ namespace Odyssey.Presentation.Ui
             {
                 _statePace = _inspect.Pace;
                 HudText.Set(_inspectPace, _inspect.Pace, HudTextRole.Meta);
+                _inspectPace.style.color = HudTokens.Convert(_inspect.PaceInk);
                 _inspectPace.tooltip = _inspect.PaceTip;
             }
             _inspectPace.style.display = _inspect.ShowsColonistBody && _inspect.Pace.Length > 0
@@ -352,6 +365,7 @@ namespace Odyssey.Presentation.Ui
             }
 
             SyncHealthTab();
+            SyncGearTab();
         }
 
         /// <summary>
@@ -365,17 +379,20 @@ namespace Odyssey.Presentation.Ui
         void ShowActiveTab()
         {
             string active = _inspect.ActiveTabName;
-            bool skills = active == "Skills";
+            bool skills = _inspect.Showing(InspectModel.TabSkills);
 
             // The Health tab (design 33 §5): its body is lane C's, in HudShell.Combat.cs. While it
-            // is the active tab the needs grid steps aside, as it does for Skills.
-            bool health = active == "Health";
+            // is the active tab the needs grid steps aside, as it does for Skills — and for Gear
+            // (design 47), whose body is HudShell.Gear.cs. The names are the registry's, asked by key.
+            bool health = _inspect.Showing(InspectModel.TabHealth);
+            bool gear = _inspect.Showing(InspectModel.TabGear);
 
             if (_needsGrid != null)
-                _needsGrid.style.display = skills || health ? DisplayStyle.None : DisplayStyle.Flex;
+                _needsGrid.style.display = skills || health || gear ? DisplayStyle.None : DisplayStyle.Flex;
             if (_skillsGrid != null)
                 _skillsGrid.style.display = skills ? DisplayStyle.Flex : DisplayStyle.None;
             ShowHealthTab(health);
+            ShowGearTab(gear);
 
             // A store's two tabs stand in the same box and one of them is drawn, exactly as the
             // colonist's needs and skills do — so changing tab changes which rows are shown and
@@ -662,6 +679,7 @@ namespace Odyssey.Presentation.Ui
             _needsGrid = null;
             _skillsGrid = null;
             ForgetHealthTab();
+            ForgetGearTab();
             _cellRowsGrid = null;
             _locationRow = null;
             _locationValue = null;
@@ -858,6 +876,9 @@ namespace Odyssey.Presentation.Ui
 
                 // The Health tab's body, in the same fixed-height box (design 33 §5).
                 BuildHealthTab(tabBody);
+
+                // And the Gear tab's (design 47), whose 244 is the box's height for every tab.
+                BuildGearTab(tabBody);
 
                 _inspectBody.Add(tabBody);
 

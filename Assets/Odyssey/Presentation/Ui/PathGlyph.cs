@@ -142,6 +142,8 @@ namespace Odyssey.Presentation.Ui
         const float Dash = 3f;
         const float Gap = 3f;
 
+        Color _colour = HudTokens.Convert(HudTheme.EmptySlot);
+
         public DashedOutline()
         {
             pickingMode = PickingMode.Ignore;
@@ -153,13 +155,29 @@ namespace Odyssey.Presentation.Ui
             generateVisualContent += Paint;
         }
 
+        /// <summary>
+        /// The dash's ink. The settings window's empty slots keep <see cref="HudTheme.EmptySlot"/>;
+        /// the Gear tab draws an empty slot in the control border and a locked pack slot in the
+        /// panel border (design 47 §2).
+        /// </summary>
+        public Color Colour
+        {
+            get => _colour;
+            set
+            {
+                if (_colour == value) return;
+                _colour = value;
+                MarkDirtyRepaint();
+            }
+        }
+
         void Paint(MeshGenerationContext context)
         {
             Rect r = contentRect;
             if (r.width <= 2f || r.height <= 2f) return;
 
             Painter2D painter = context.painter2D;
-            painter.strokeColor = HudTokens.Convert(HudTheme.EmptySlot);
+            painter.strokeColor = _colour;
             painter.lineWidth = 1f;
             painter.lineCap = LineCap.Butt;
 

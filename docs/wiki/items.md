@@ -2,7 +2,9 @@
 
 Things a colonist carries, wears or fights with, as distinct from the bulk commodities above. A commodity is counted; an item is an object with a quality and a history.
 
-34 entries, 8 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+66 entries, 40 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+
+## Items and equipment
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
@@ -39,7 +41,44 @@ Things a colonist carries, wears or fights with, as distinct from the bulk commo
 | **Binoculars** | `ui.item.binoculars` | See further than you can shoot | sheet 08 (salvage gear), high | M3 |
 | **Toolkit** | `ui.item.toolkit` | Better work, faster | sheet 08 (salvage gear), med | M3 |
 | **Canteen** | `ui.item.canteen` | Water, carried | sheet 08 (salvage gear), high | M3 |
+| **Wool cap** | `ui.item.woolcap` | Warm on the head. A placeholder name: nothing is worn yet, and the Gear tab shows it only in its preview | no art | GE |
+| **Gas mask** | `ui.item.gasmask` | Filters smoke and worse. A placeholder name: nothing is worn yet, and the Gear tab shows it only in its preview | no art | GE |
+| **Field coat** | `ui.item.fieldcoat` | A long coat for cold and rain. A placeholder name: nothing is worn yet, and the Gear tab shows it only in its preview | no art | GE |
+| **Padded vest** | `ui.item.paddedvest` | Worn over the garment; turns a blow aside. A placeholder name: nothing is worn yet, and the Gear tab shows it only in its preview | no art | GE |
 | **Bedroll** | `ui.item.bedroll` | Sleep away from home | sheet 03 (camp and crafting), high | M3 |
+
+## The Gear tab's words
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Head** | `ui.gear.slot.head` | A cap, a hood or a helmet | no art | GE |
+| **Face** | `ui.gear.slot.face` | Glasses, a mask or a gas mask | no art | GE |
+| **Body** | `ui.gear.slot.body` | One garment. With nothing here she wears the issued jumpsuit | no art | GE |
+| **Back** | `ui.gear.slot.back` | A pack: four more kit slots | no art | GE |
+| **Armour** | `ui.gear.slot.armour` | A vest worn over the garment | no art | GE |
+| **Nothing worn** | `ui.gear.nothingworn` | An empty worn slot | no art | GE |
+| **Issued jumpsuit** | `ui.gear.jumpsuit` | What every colonist wears when the Body slot is empty. Not an item: it cannot be taken off | no art | GE |
+| **Always worn** | `ui.gear.alwaysworn` | The jumpsuit's meta word | no art | GE |
+| **Kit** | `ui.gear.kit` | Small things kept on her: two on the belt, four more with a pack | no art | GE |
+| **Wear a pack for 4 more** | `ui.gear.packhint` | Shown beside the locked kit slots | no art | GE |
+| **Armour** | `ui.gear.effect.armour` | How much of a blow what she wears turns aside | no art | GE |
+| **Warmth** | `ui.gear.effect.warmth` | The temperatures she is comfortable in | no art | GE |
+| **Rain** | `ui.gear.effect.rain` | How much of the rain's slowdown what she wears buys back | no art | GE |
+| **Kit** | `ui.gear.effect.kit` | How many kit slots are used of how many she has | no art | GE |
+| **{used} of {capacity}** | `ui.gear.kitcount` | The kit's count on the effects line, e.g. 4 of 6 | no art | GE |
+| **Loadout** | `ui.gear.loadout` | The rule she follows about what to wear and carry | no art | GE |
+| **None** | `ui.gear.loadout.none` | No loadout: she keeps what she has | no art | GE |
+| **Doctor** | `ui.gear.loadout.doctor` | A preview loadout: medical supplies and a ration | no art | GE |
+| **Winter** | `ui.gear.loadout.winter` | A preview loadout: a coat and a cap | no art | GE |
+| **Loadouts arrive with their editor** | `ui.gear.loadout.later` | Shown in the loadout picker until loadouts exist | no art | GE |
+| **Pick from stores** | `ui.gear.pick.title` | What the stores hold that fits this slot | no art | GE |
+| **Click a row to fetch it** | `ui.gear.pick.hint` | The foot of the Pick from stores list | no art | GE |
+| **Nothing in the stores fits** | `ui.gear.pick.empty` | The Pick from stores list with nothing in it | no art | GE |
+| **Downed. Only the Strip order can take this.** | `ui.gear.downedreason` | Why a downed colonist's gear cannot be changed | no art | GE |
+| **Preview** | `ui.gear.preview` | Marks a made-up item on the Gear tab while the preview is on | no art | GE |
+| **Kit full** | `ui.gear.reason.kitfull` | Why Take into kit is greyed: no slot has room for this | no art | GE |
+| **Not hurt** | `ui.gear.reason.nothurt` | Why Use is greyed on medical supplies: nothing to treat | no art | GE |
+| **Not hungry** | `ui.gear.reason.nothungry` | Why Use is greyed on a ration: she is full | no art | GE |
 
 ---
 

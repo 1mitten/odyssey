@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-137 entries, 111 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+147 entries, 121 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -93,6 +93,16 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Menu** | `ui.tab.menu` | Save, load, settings, quit <br>**Needs:** a settings or menu mark | no art | M1 |
 | **Storage** | `ui.tab.storage` | What a store takes, and how much it matters <br>**Needs:** an open crate seen from above | no art | M3 |
 | **Tile** | `ui.tab.tile` | The ground itself, under whatever is standing on it <br>**Needs:** a single square of ground, in plan | no art | M3 |
+| **Needs** | `ui.tab.needs` | Food, rest and mood | no art | M2 |
+| **Skills** | `ui.tab.skills` | What she is good at, and how far to the next level | no art | M2 |
+| **Gear** | `ui.tab.gear` | What she holds, wears and keeps on her | no art | GE |
+| **Thoughts** | `ui.tab.thoughts` | What is on her mind | no art | M2 |
+| **Social** | `ui.tab.social` | Who she gets on with | no art | M6 |
+| **Health** | `ui.tab.health` | Hit points, condition and the weapon in her hand | no art | CB |
+| **Log** | `ui.tab.log` | What she has done lately | no art | M6 |
+| **arrives with the thought log** | `ui.tab.later.thoughts` | Why the Thoughts tab is not live yet | no art | M2 |
+| **arrives with relationships** | `ui.tab.later.social` | Why the Social tab is not live yet | no art | M6 |
+| **arrives with the colonist log** | `ui.tab.later.log` | Why the Log tab is not live yet | no art | M6 |
 | **Inventory** | `ui.tab.inventory` | Everything in the colony's stores, and which store holds it | no art | INV |
 | **Assign** | `ui.tab.assign` | Where each colonist may work, and what she does about danger <br>**Needs:** drawn with ui.tab.colonists' art (HudCommands.IconOf) | no art | HA |
 

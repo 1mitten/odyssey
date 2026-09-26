@@ -825,8 +825,8 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The fixed body is tall enough for every tab that has content, and is the taller of the
-        /// two rather than a number somebody typed. A fourteenth skill or a fourth need moves it;
+        /// The fixed body is tall enough for every tab that has content, and is the tallest of the
+        /// three live bodies (needs, skills, gear) rather than a number somebody typed. A fourteenth skill or a fourth need moves it;
         /// clipping is what the acceptance criteria forbid.
         /// </summary>
         [Test]
@@ -841,8 +841,13 @@ namespace Odyssey.Tests.Hud
                 "the needs grid would clip");
             Assert.That(HudLayout.InspectTabBody, Is.GreaterThanOrEqualTo(skills),
                 "the skills grid would clip");
-            Assert.That(HudLayout.InspectTabBody, Is.EqualTo(System.Math.Max(needs, skills)),
+            Assert.That(HudLayout.InspectTabBody, Is.GreaterThanOrEqualTo(GearLayout.BodyHeight),
+                "the gear tab would clip");
+            Assert.That(HudLayout.InspectTabBody,
+                Is.EqualTo(System.Math.Max(System.Math.Max(needs, skills), GearLayout.BodyHeight)),
                 "no more slack than the tallest tab needs");
+            Assert.That(HudLayout.InspectTabBody, Is.EqualTo(244),
+                "the specification's body (design 47): the gear tab is the tallest");
         }
 
         /// <summary>

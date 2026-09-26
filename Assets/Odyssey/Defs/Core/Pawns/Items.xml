@@ -26,6 +26,8 @@
          exactly what every food was thought of before the kitchen (Thought_AteRation, +20). -->
     <foodTier>1</foodTier>
     <ateThought>8</ateThought>
+    <!-- Design 54: three a kit slot, the owner's own example. -->
+    <kitCap>3</kitCap>
   </ItemDef>
 
   <!--
@@ -224,6 +226,8 @@
     <stackLimit>10</stackLimit>
     <category>Medicine</category>
     <healPerUnit>40</healPerUnit>
+    <!-- Design 54: five a kit slot, the owner's own example. -->
+    <kitCap>5</kitCap>
   </ItemDef>
 
   <!--

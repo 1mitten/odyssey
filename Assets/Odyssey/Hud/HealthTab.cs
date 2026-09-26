@@ -182,7 +182,7 @@ namespace Odyssey.Hud
                 Name = Registry.Label(PainKey),
                 Value = Percent(pain),
                 Bar = Clamp(pain),
-                Ink = Lost(pain, 300, 600),
+                Ink = StatInks.Ink(StatInks.Pain, pain, StatPalette.World),
                 Region = -1,
                 Tip = Registry.Label(PainKey) + " — " + Percent(pain) + " per cent",
             };
@@ -214,7 +214,7 @@ namespace Odyssey.Hud
                 Name = Registry.Label(BloodKey),
                 Value = Percent(blood),
                 Bar = Clamp(blood),
-                Ink = Lost(blood, 150, 450),
+                Ink = StatInks.Ink(StatInks.BloodLoss, blood, StatPalette.World),
                 Region = -1,
                 Tip = Registry.Label(BloodKey) + " — " + Percent(blood) + " per cent",
             };
@@ -278,7 +278,7 @@ namespace Odyssey.Hud
             Name = Registry.Label(key),
             Value = Percent(perMille),
             Bar = Clamp(perMille),
-            Ink = Remaining(perMille),
+            Ink = StatInks.Ink(StatInks.Capacity, perMille, StatPalette.World),
             Region = -1,
             Tip = Registry.Label(key) + " — " + Percent(perMille) + " per cent",
         };
@@ -298,14 +298,8 @@ namespace Odyssey.Hud
             return any && allTended ? HealthMark.Tended : HealthMark.None;
         }
 
-        /// <summary>A bar of what is left: the need bars' bands, the health bar's deeper inks.</summary>
-        static HudColour Remaining(int perMille) => CombatFeedbackModel.HealthBarColour(perMille, 1000);
-
-        /// <summary>A bar of what is lost: good below the first line, warn below the second, bad past it.</summary>
-        static HudColour Lost(int perMille, int warnAt, int badAt) =>
-            perMille >= badAt ? CombatFeedbackModel.HealthBad
-            : perMille >= warnAt ? CombatFeedbackModel.HealthWarn
-            : CombatFeedbackModel.HealthGood;
+        /// <summary>A bar of what is left, on <see cref="StatInks.Health"/> in the world's deeper inks.</summary>
+        static HudColour Remaining(int perMille) => StatInks.Ink(StatInks.Health, perMille, StatPalette.World);
 
         static int Clamp(int perMille) => perMille < 0 ? 0 : perMille > 1000 ? 1000 : perMille;
 

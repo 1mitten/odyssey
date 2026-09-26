@@ -477,6 +477,9 @@ namespace Odyssey.Hud
         /// <summary>The factors of <see cref="Pace"/> that are not the standard walk, joined.</summary>
         public string PaceTip = string.Empty;
 
+        /// <summary><see cref="Pace"/>'s colour: <see cref="StatInks.Pace"/>.</summary>
+        public HudColour PaceInk = HudTheme.Good;
+
         // What the two pace strings were last built from. The same argument as _positionFor: they
         // are composed, and the pane refreshes fifteen times a second.
         PaceModel.Factors _paceFor;
@@ -489,6 +492,7 @@ namespace Odyssey.Hud
             _paceFor = factors;
             _paceWritten = true;
             Pace = factors.Published ? PaceModel.Line(factors) : string.Empty;
+            PaceInk = StatInks.Ink(StatInks.Pace, factors.Published ? PaceModel.PerMille(factors) : 1000);
             PaceTip = factors.Published ? PaceModel.Tooltip(factors) : string.Empty;
         }
 
@@ -731,6 +735,7 @@ namespace Odyssey.Hud
                     SetPosition(pawn.Cell);
                     Layer = pawn.Cell.Y;
                     RefreshHealth(snapshot, pawn);
+                    Gear.Refresh(snapshot, Pawn);
                 }
                 else
                 {
@@ -1428,8 +1433,8 @@ namespace Odyssey.Hud
                     : netKnown ? PowerLabels.Colour(net.State) : (HudColour?)null;
                 Row(n++, "power", PowerLabels.Status(device, netKnown, net), tint);
                 if (device.BurnsFuel)
-                    Row(n++, "fuel", PowerLabels.Fuel(device),
-                        device.FuelMilli * 2 < device.FuelCapacityMilli ? HudTheme.Warn : (HudColour?)null);
+                    Row(n++, "fuel", PowerLabels.Fuel(device), StatInks.Ink(StatInks.Fuel,
+                        device.FuelCapacityMilli > 0 ? (int)((long)device.FuelMilli * 1000 / device.FuelCapacityMilli) : 0));
                 if (netKnown)
                     Row(n++, "net", PowerLabels.Balance(net) + " — " + PowerLabels.State(net.State),
                         PowerLabels.Colour(net.State));
@@ -1531,7 +1536,7 @@ namespace Odyssey.Hud
             // detail that was never told, which in the game never happens.
             if (detail.AmbientTempC != int.MinValue)
                 Row(n++, "temperature", TemperatureLabels.Describe(detail.AmbientTempC),
-                    HudTheme.Temperature(detail.AmbientTempC));
+                    StatInks.Temperature(detail.AmbientTempC));
 
             Row(n++, "walk speed", detail.MoveCostPerMille == 0
                 ? "cannot walk"
@@ -1707,19 +1712,47 @@ namespace Odyssey.Hud
             }
         }
 
+        /// <summary>
+        /// The colonist's seven tabs, every name and reason from the registry (design 33 §9d asked
+        /// for them to leave C# when the Gear tab went live, and they left in that commit).
+        /// </summary>
         void AddColonistTabs()
         {
-            Tabs.Add(new InspectTab { Name = "Needs", Enabled = true, Reason = string.Empty });
-            Tabs.Add(new InspectTab { Name = "Skills", Enabled = true, Reason = string.Empty });
-            Tabs.Add(new InspectTab { Name = "Gear", Enabled = false, Reason = "equipment arrives with the inventory" });
-            Tabs.Add(new InspectTab { Name = "Thoughts", Enabled = false, Reason = "arrives with the thought log" });
-            Tabs.Add(new InspectTab { Name = "Social", Enabled = false, Reason = "M6" });
+            Tabs.Add(Live(TabNeeds));
+            Tabs.Add(Live(TabSkills));
+            // Live since design 47: the hand is real, the rest is the preview's or empty.
+            Tabs.Add(Live(TabGear));
+            Tabs.Add(Later(TabThoughts, "ui.tab.later.thoughts"));
+            Tabs.Add(Later(TabSocial, "ui.tab.later.social"));
             // Live from the combat contracts step (design 33 §5): a colonist can be hurt now. The
-            // tab's body is lane C's (HudShell.Combat.cs, CombatFeedbackModel) and is empty until
-            // it is written.
-            Tabs.Add(new InspectTab { Name = "Health", Enabled = true, Reason = string.Empty });
-            Tabs.Add(new InspectTab { Name = "Log", Enabled = false, Reason = "M6" });
+            // tab's body is lane C's (HudShell.Combat.cs, CombatFeedbackModel).
+            Tabs.Add(Live(TabHealth));
+            Tabs.Add(Later(TabLog, "ui.tab.later.log"));
         }
+
+        static InspectTab Live(string key) =>
+            new InspectTab { Name = Registry.Label(key), Enabled = true, Reason = string.Empty };
+
+        static InspectTab Later(string key, string reasonKey) =>
+            new InspectTab { Name = Registry.Label(key), Enabled = false, Reason = Registry.Label(reasonKey) };
+
+        /// <summary>The colonist's tab names, as registry keys; the view asks which one is showing by these.</summary>
+        public const string TabNeeds = "ui.tab.needs", TabSkills = "ui.tab.skills", TabGear = "ui.tab.gear",
+            TabThoughts = "ui.tab.thoughts", TabSocial = "ui.tab.social", TabHealth = "ui.tab.health",
+            TabLog = "ui.tab.log";
+
+        /// <summary>Is <paramref name="tabKey"/> the tab being shown?</summary>
+        public bool Showing(string tabKey) => ActiveTabName == Registry.Label(tabKey);
+
+        /// <summary>
+        /// The Gear tab's model (design 47): the hand, the worn slots, the kit, the effects and the
+        /// loadout of the colonist on the pane, refreshed with the Health tab on the pane's cadence
+        /// and rebuilt only when something it shows moved.
+        /// </summary>
+        public readonly GearModel Gear = new GearModel { Preview = new GearPreview() };
+
+        /// <summary>The Gear tab's preview (design 47 §4), the debug menu's switch: the one the model reads.</summary>
+        public GearPreview GearPreview => Gear.Preview!;
 
         /// <summary>
         /// The Draft toggle's key (design 33 §2f). Public so the shell that draws the header can tell

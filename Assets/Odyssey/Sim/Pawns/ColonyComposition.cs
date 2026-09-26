@@ -244,6 +244,9 @@ namespace Odyssey.Sim.Pawns
                 // The bullets in the air (design 47 §2c): hashed only while one flies, so this line
                 // moved no golden either, and published for the tracer.
                 .AddHashable(pawns.Projectiles)
+                // The kit (design 54 §6): hashed only while any kit holds anything, so this line
+                // moved no golden either.
+                .AddHashable(pawns.Kits)
                 .AddSnapshotContributor(pawns.Pawns)
                 .AddSnapshotContributor(pawns.Corpses)
                 .AddSnapshotContributor(pawns.Projectiles)
@@ -274,6 +277,11 @@ namespace Odyssey.Sim.Pawns
                 // refuses until its lane writes it.
                 .AddIntentHandler(IntentKind.OrderAttack, pipeline.HandleOrderAttack)
                 .AddIntentHandler(IntentKind.OrderEquip, pipeline.HandleOrderEquip)
+                .AddIntentHandler(IntentKind.OrderUnequip, pipeline.HandleOrderUnequip)
+                // The kit's three orders (design 54 §3).
+                .AddIntentHandler(IntentKind.OrderTakeIntoKit, pipeline.HandleOrderTakeIntoKit)
+                .AddIntentHandler(IntentKind.OrderKitDrop, pipeline.HandleOrderKitDrop)
+                .AddIntentHandler(IntentKind.OrderUseKit, pipeline.HandleOrderUseKit)
                 .AddIntentHandler(IntentKind.OrderRescue, pipeline.HandleOrderRescue)
                 // A colonist's response to danger (design 33 §18c), on the pipeline because a new
                 // setting may end a fight or a flight she started under the old one.

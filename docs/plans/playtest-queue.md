@@ -23,6 +23,38 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do the numbers read at a glance by colour?** (`claude/vigilant-bardeen-8idplc`, design 59.)
+  Every judged number now blends red, amber, green from one table (`StatInks`). Open **Gear** on a
+  bare colonist: 0% armour red, warmth green in mild weather, rain and the kit plain white. Debug →
+  Cheats → *Preview full kit*: armour turns amber-green. Skip a month or two into Rime: the clock and
+  the warmth figure go red together, and the coat's warmth line stays greener than the jumpsuit's.
+  Hurt someone (Debug): the need and health bars fade through amber rather than jumping. Hover an
+  enemy with a gunman drafted: the chance to hit is coloured. A wrong answer is a colour that tells
+  you less than the number beside it, a blend you would rather see as three plain bands (one switch,
+  `StatInks.Blend`), or losing the blue for cold.
+
+- **Can you keep medical supplies on a colonist and use them?** (`claude/gear-kit`, design 54, now
+  merged into the Gear tab, #231.) Debug → *Give medical supplies*, let them be hauled
+  to a stockpile. Select a colonist, open **Gear**, press an empty belt tile: *Pick from stores*
+  lists them; choose it and she walks over and takes **five**, one slot's worth. Right-click a
+  loose pile with her selected: *Take into kit · medical supplies*. Press the filled tile: **Use**
+  reads *Not hurt* and is grey until she is hurt (Debug → *Hurt a colonist*), then she treats herself on the
+  spot and the count drops by one. Hurt somebody else and watch a doctor with a kit treat without
+  walking to the shelf. **Remove** lays the stack at her feet for the haulers; **Drop** leaves it
+  forbidden. Rations: take three, and she eats one from her kit only when there is no other food she
+  can reach. A wrong answer is a tile that does not update when a count changes, a Use that greys
+  when she is plainly hurt, a doctor still walking to the shelf with supplies on her belt, or one
+  take filling both slots.
+
+- **Does the Gear tab read at a glance?** (`claude/vigilant-bardeen-8idplc`, design 47.) Select a
+  colonist, open **Gear**: she should show the issued jumpsuit, empty slots and two empty belt slots
+  with four locked. Arm her (Debug → Spawn a weapon, right-click *Equip*), then press the weapon tile
+  and try **Unequip** (it lies at her feet and a hauler takes it) and **Drop** (it stays, forbidden).
+  With an empty hand, the weapon tile's *Pick from stores* should list the stored weapons. Then Debug
+  → Cheats → **Preview full kit** and judge the full 21c look. A wrong answer is the pane jumping when
+  you change tab, a popover over the doll, the kit row or the effects line clipped, or you still
+  opening every tile to know what she wears.
+
 - **First Person: does the shoulder camera show a colonist's day and a fight clearly?**
   (`claude/planning-session-fok6wm`, design 57.) Select a colonist, press **First Person** on her
   card, and let her work, walk up a terrace and go through a door.

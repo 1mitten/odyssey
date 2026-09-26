@@ -33,7 +33,7 @@ SECTIONS = [
      "wilderness colony sim would have, because the setting is a dead city and the ground is already "
      "full of manufactured things. These names appear in the resource ledger, in every bill and in "
      "every trade, so they are the names worth arguing about first."),
-    ("items", "Items and equipment", ["ui.item"],
+    ("items", "Items and equipment", ["ui.item", "ui.gear"],
      "Things a colonist carries, wears or fights with, as distinct from the bulk commodities above. "
      "A commodity is counted; an item is an object with a quality and a history."),
     ("buildings", "Buildings and orders", ["ui.arch.category", "ui.arch.tool"],
@@ -77,7 +77,7 @@ SECTIONS = [
 ]
 NS_TITLES = {
     "ui.terrain": "Terrain",
-    "ui.res": "Commodities", "ui.item": "Items and equipment",
+    "ui.res": "Commodities", "ui.item": "Items and equipment", "ui.gear": "The Gear tab's words",
     "ui.arch.category": "Architect categories", "ui.arch.tool": "Architect tools",
     "ui.command": "Commands", "ui.menu": "The context menu", "ui.work": "Work types", "ui.skill": "Skills",
     "ui.schedule": "Schedule blocks",

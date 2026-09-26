@@ -216,6 +216,9 @@ namespace Odyssey.Sim.Pawns
                 // no format bump. A save from before has no section and loads with none kept —
                 // which is what a cancel then left.
                 designations.PartMined,
+                // The kit (design 54 §6): appended, no format bump. A save from before the kit has
+                // no section and loads with every kit empty, as every kit then was.
+                pawns.Kits,
             };
         }
 

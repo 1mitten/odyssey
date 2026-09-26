@@ -198,7 +198,9 @@ namespace Odyssey.Tests.Hud
         public void TheBarIsGreenWhenWellAndRedWhenLow()
         {
             Assert.That(CombatFeedbackModel.HealthBarColour(Pool, Pool), Is.EqualTo(CombatFeedbackModel.HealthGood));
-            Assert.That(CombatFeedbackModel.HealthBarColour(50_000, Pool), Is.EqualTo(CombatFeedbackModel.HealthWarn));
+            Assert.That(CombatFeedbackModel.HealthBarColour(40_000, Pool), Is.EqualTo(CombatFeedbackModel.HealthWarn));
+            Assert.That(CombatFeedbackModel.HealthBarColour(50_000, Pool),
+                Is.EqualTo(StatInks.Ink(StatInks.Health, 500, StatPalette.World)), "between, blended (design 59)");
             Assert.That(CombatFeedbackModel.HealthBarColour(20_000, Pool), Is.EqualTo(CombatFeedbackModel.HealthBad));
             Assert.That(CombatFeedbackModel.HealthBarColour(0, Pool), Is.EqualTo(CombatFeedbackModel.HealthBad));
         }

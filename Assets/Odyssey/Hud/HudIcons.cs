@@ -55,6 +55,12 @@ namespace Odyssey.Hud
         /// <summary>Add a bill's plus, heavier because it sits on the accent fill.</summary>
         public const float AddStroke = 2.6f;
 
+        /// <summary>
+        /// The Gear tab's mark (design 47 §2, Claude Design's path): the lock on a pack slot
+        /// with no pack. The loadout cell's down chevron is <see cref="ChevronDown"/> above, the same path.
+        /// </summary>
+        public const string Lock = "M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5z";
+
         // ---- the inspect pane's header (design 61, mockup 24c), paths exactly as the mockup gives them
 
         /// <summary>

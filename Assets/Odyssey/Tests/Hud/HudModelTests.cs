@@ -435,9 +435,10 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.Tabs[0].Name, Is.EqualTo("Needs"));
             Assert.That(pane.Tabs[0].Enabled, Is.True);
             Assert.That(pane.Tabs[1].Name, Is.EqualTo("Skills"));
-            Assert.That(pane.Tabs.Count(t => t.Enabled), Is.EqualTo(3),
-                "Needs, Skills and Health are live (Health since the combat contracts step, design " +
-                "33 §5); Gear, Thoughts, Social and Log are visible with reasons");
+            Assert.That(pane.Tabs.Count(t => t.Enabled), Is.EqualTo(4),
+                "Needs, Skills, Gear and Health are live (Health since the combat contracts step, design " +
+                "33 §5; Gear since design 47); Thoughts, Social and Log are visible with reasons");
+            Assert.That(pane.Tabs.Single(t => t.Name == "Gear").Enabled, Is.True);
             Assert.That(pane.Tabs.Single(t => t.Name == "Health").Enabled, Is.True);
 
             // The header's two toggles (design 61, mockup 24c): Draft, then First Person, and nothing
@@ -615,8 +616,8 @@ namespace Odyssey.Tests.Hud
             pane.ShowTab(1);
             Assert.That(pane.ActiveTabName, Is.EqualTo("Skills"));
 
-            int gear = pane.Tabs.FindIndex(t => t.Name == "Gear");
-            pane.ShowTab(gear);
+            int thoughts = pane.Tabs.FindIndex(t => t.Name == "Thoughts");
+            pane.ShowTab(thoughts);
             Assert.That(pane.ActiveTabName, Is.EqualTo("Skills"),
                 "a disabled tab must not become the active one");
 

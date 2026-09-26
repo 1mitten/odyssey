@@ -3574,10 +3574,14 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             string? text = null;
+            HudColour? ink = null;
             if (target.IsValid && snapshot.TryGetShotReport(out ShotReportView report)
                 && report.Shooter == shooter && report.Target == target)
+            {
                 text = ShotReadout.Text(report);
-            _hudShell?.SetShotReadout(text, pointer);
+                ink = ShotReadout.Ink(report);
+            }
+            _hudShell?.SetShotReadout(text, pointer, ink);
         }
 
         /// <summary>One bar's pieces, reused for every bar every frame.</summary>

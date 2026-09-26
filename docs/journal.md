@@ -13644,6 +13644,94 @@ cost. The rerun repeated both states and added a no-shadow arm, and gave +0.15 a
 0.40. A floor measured on one state only understates the noise at 4K by four to six times, so
 **repeat both states before quoting a 4K difference**.
 
+## 2026-09-25 — Gear: interviewed, briefed, nothing built
+
+The owner asked for gear "like an RPG": a weapon equipped, small things carried with a limit, heavy
+things still carried, and hats and clothes. Twenty-two answers in six rounds
+(`docs/research/gear-interview.md`), a Claude Design brief for the end state
+(`docs/reference/mockups/gear-brief.md`), and eight staged units (`docs/plans/gear.md`). No code.
+
+**Slots, not weight.** The kit is two belt slots and four more with a pack, each a small stack of
+one kind of thing. A mass budget was the other serious candidate and was turned down on
+readability: a player can count six tiles at a glance and cannot do arithmetic on twenty
+colonists' kilograms, and nothing in `ItemDef` has a mass to budget. An item gets a *size*
+(pocket / pack / arms) instead, and the arms-only things — logs, stone, ore, scrap — never compete
+with the kit at all.
+
+**A trip cap, not a slowdown.** Heavy loads were the one place a weight model would have earned its
+keep, and the owner took the cap: a commodity says how many one colonist lifts in one trip, and a
+heavy haul costs trips rather than pace. It keeps clear of the standing rule that nobody invents an
+urgency model (design 24, WS4), and it is content rather than a rate.
+
+**The jumpsuit is the empty Body slot.** So no colonist is ever naked, no save needs a uniform
+invented for every existing colonist, and the Gear tab's empty Body tile reads *Issued jumpsuit* as
+a real entry. Design 29 §9's second open question is answered by it; its first (quality and
+condition) is answered as quality only, reusing the beds' five tiers, with no wear.
+
+**The first unit moves no golden**: the Gear tab with the weapon live and Unequip / Drop, every
+later slot drawn empty with its reason. It is the first time the colonist pane's tab body may grow
+past the Skills tab, which design 14 said would happen "once, when they arrive".
+
+## 2026-09-25 — The Gear tab, built to Claude Design's specification (design 47)
+
+Claude Design answered the gear brief with a written specification of the Gear tab, 21a to 21f, and
+the owner asked for all of it. Asked what "all" meant — 21c's cap, coat, vest, pack and kit need a
+simulation that does not exist — the owner took the recommendation: **the whole tab, the hand
+real, everything else a debug-menu preview**, and the tab body at 244 on every tab rather than a
+pane that grows when Gear is chosen.
+
+**The hand got the one thing it lacked, a way to let go.** `OrderUnequip` is one appended intent
+through `WeaponHand.PutDown`; Unequip and Drop differ by the forbidden flag alone, which is the
+difference their registry descriptions ("put it down", "leave this here") already drew. Pick from
+stores sends the right-click menu's own equip order through one shared builder, because two
+buttons that send different orders for the same weapon is the one-rule-two-owners fault (P1).
+
+**The preview is the Research tab's bargain again**: interface state, never saved or hashed, off
+each session, and never the hand. It lets the owner judge 21c in the running game before a single
+garment exists, and it cannot leak into a colony.
+
+**Three corrections to the brief came out of building it.** The degree sign is in both fonts —
+the brief had told Claude Design otherwise — so the warmth reads "4 to 26 °C" through a new
+`TemperatureLabels.Range`, the form's one owner. The registry has always called the flashlight a
+Torch. And a weapon has no quality in the simulation, so the tile says none rather than inventing
+"Normal".
+
+**Presentation was not compiled.** This session had .NET but no Unity; the models are covered by
+the fast tier (35 new Hud tests, 7 Sim), the view by a Roslyn syntax parse and a read-through. The
+Unity tier is owed before merge.
+
+## 2026-09-25 — Gear tab merged with `main` for its first play
+
+Fifty-five commits behind, eleven files in conflict. Three were more than text. **`OrderUnequip`
+moved to the end of `IntentKind`**, after `main`'s `EditBill`, `DebugHealth` and `OrderTend`, so no
+recorded intent renumbers. **Weapons have a quality now** (ranged combat), which the tab had been
+built without and design 47 §5 recorded as a reason to write none: the weapon tile, its popover and
+*Pick from stores* now carry the real tier the way a worn thing does, and the model's rebuild key
+includes it or an upgrade in the hand would not redraw. And **design 47 is two documents** —
+`47-gear-tab.md` and `47-ranged-combat.md` reached `main` separately; left as the known collision
+it is rather than renaming either and breaking their cross-references.
+
+## 2026-09-26 — The kit (G3, design 54)
+
+The owner, after the Gear tab: *"I should be able to pick up medical supplies into my inventory and
+use"*. Three answers the same day: automatic use plus a Use button, the general kit rather than
+medical supplies alone, and a branch stacked on #231.
+
+**The kit thing is where the held weapon is** — carried by her with no cell — so every search in the
+game already skips it and the unit wrote no exclusion anywhere. **It is spent in place, never
+lifted**: the treatment's own supplies are split off and carried, which is what drops a unit on the
+floor when a treatment is cut short, and a kit that did the same would leak.
+
+Two things the first build got wrong, both found by its own tests. **One take filled both slots from
+a stack of eight** — the design allowed two slots of one kind and the room sum counted both, so a
+big stack silently took the player's choice away; one take is one slot's worth now. And the design
+said the new job would **move every golden**; a job above `HashedAlways` is hashed only once one has
+run, and nothing did.
+
+**Use is published rather than derived**: the rule is `Kit.UseOf`, the order asks it and the
+snapshot carries it, so the button can never offer what the order refuses. On the way the survey
+for this unit found the weapon-quality publish outside its null check (PR #236).
+
 ## 2026-09-25 — Cover: ground, interview, research and design 53
 
 The owner asked for cover in the reference's mould, with sandbags and barricades, built on the ranged
@@ -14139,6 +14227,45 @@ box" is the per-label figure, the only quantity `docs/lessons.md` (2026-09-23) f
 unchanged; 3 × 17.0 / 30.9 ≈ 1.65 here, a 2.12 ms budget), and an unknown machine keeps the strict
 3. The label goes on after the fix is merged, or every PR branched from the old `main` could fail
 on whichever runner picked it up.
+
+## 2026-09-26 — Gear tab and kit merged with `main` again, for the playtest
+
+PR #231 had taken the kit (#238) and fallen 114 commits behind; sixteen files in conflict. **One
+was more than text**: `main`'s ride (design 57) and the Gear popovers each added a twelve-parameter
+`SettingsDirector.Escape` overload of the same signature, which does not compile. They are one
+rule now — the ride, then the right-click menu, then a Gear popover, then the old ladder — and
+`AssignModelTests` asserts a ride beats an open popover. Intents: `QueryShot` keeps its place and
+the kit's four follow it. The kit's save section goes after the raids and part-mined rock. The job
+handle did not collide (`main` stopped at 27; the kit's `TakeIntoKit` stays 28). Content
+fingerprint re-taken from the merged pack; **no golden moved**.
+
+Fast tier 1,971 + 1,364, Long 55, all green. EditMode **4,534 / 4,496 / 1 failed**, the known
+`WeaponSheathGapTests` bat on `main`; PlayMode **166 / 148 / 0 failed**. The first EditMode run
+also failed `JumpClipRowTests`, and that was the worktree rather than the branch: its `Library`
+had never imported the Base Locomotion jump clips, so the catalogue's correct GUID resolved to
+nothing. A forced reimport of `Assets/Synty/AnimationBaseLocomotion` fixed it. The same test
+passes in a worktree that imported the pack. Any worktree made before that pack arrived owes the
+same reimport, or the jump plays the walk.
+
+## 2026-09-26 — One table for how good a number is (design 59)
+
+The owner asked for the Gear tab's figures to be coloured, 0 % armour red, temperature green to
+amber to red, rain white, and then, mid-build, for the same thing **everywhere and from one
+place**. Five surfaces already coloured a number by its goodness, each with its own thresholds:
+the need bars stepped at 40/60 in Presentation, the health bar at the same steps in another
+assembly, the Health tab's pain and blood loss at two more pairs, generator fuel at half, and
+temperature as a hue (blue cold, red hot), not a verdict. That is the one-rule-several-owners
+shape again (`docs/bug-patterns.md` P1), and it is why a request for "consistency" had something
+to fix.
+
+`Odyssey.Hud.StatInks` now owns every scale (three anchors in the figure's own units, running
+either way), the ramp, the two palettes (the panel's tokens and the world bar's deeper inks,
+which moved here from `CombatFeedbackModel`), and one switch between a blend and three bands.
+**Temperature is judged against a comfortable range**, and the Gear tab's warmth is the same
+judgement with her worn range against the outdoor reading, so the bare colonist's warmth and the
+clock always agree. The blend is the default because the owner's words were "more towards red if
+not good"; the bands are one switch away if it reads worse. Tests that asserted a band now ask the
+table for the ink, so retuning a scale moves only `StatInksTests`.
 
 ### 2026-09-26 — the inspect header: two toggles, and the response leaves it
 

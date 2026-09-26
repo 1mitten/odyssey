@@ -1004,6 +1004,10 @@ namespace Odyssey.Presentation.Ui
 
         void OnSessionChanged()
         {
+            // The Gear tab's preview is a session's, never a save's (design 47 §4): off in each new one.
+            _gearPreview.Reset();
+            CloseGearPopovers();
+            RefreshGearPreviewRow();
             // The wake owns the veil from the press to the end of the dream (design 56). A load
             // raises this three times inside its build — torn down, built, read — and none of
             // them may lift a cover the wake is still counting.

@@ -21,7 +21,7 @@ namespace Odyssey.Presentation.Ui
         /// mouse's own, bottom-left origin), or put the readout away with null or empty text.
         /// Never pickable, so it cannot take the hover it is answering.
         /// </summary>
-        public void SetShotReadout(string? text, Vector2 screenPosition)
+        public void SetShotReadout(string? text, Vector2 screenPosition, HudColour? ink = null)
         {
             if (string.IsNullOrEmpty(text))
             {
@@ -41,7 +41,14 @@ namespace Odyssey.Presentation.Ui
                 _worldUi.Add(_shotReadout);
             }
 
-            if (_shotReadoutText != null) HudText.Set(_shotReadoutText, text!, HudTextRole.Row);
+            if (_shotReadoutText != null)
+            {
+                HudText.Set(_shotReadoutText, text!, HudTextRole.Row);
+                // The chance to hit, judged on StatInks.HitChance (design 59); neutral with none.
+                _shotReadoutText.style.color = ink.HasValue
+                    ? new StyleColor(HudTokens.Convert(ink.Value))
+                    : new StyleColor(StyleKeyword.Null);
+            }
             Vector2 at = ToPanel(screenPosition);
             _shotReadout.style.left = at.x + ShotReadoutOffset;
             _shotReadout.style.top = at.y + ShotReadoutOffset;

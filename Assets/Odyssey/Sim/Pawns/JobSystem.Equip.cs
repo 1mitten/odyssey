@@ -55,5 +55,31 @@ namespace Odyssey.Sim.Pawns
             job.PlayerForced = true;
             return StartJob(pawn, job, tick) ? IntentRejection.None : IntentRejection.NotPermitted;
         }
+
+        /// <summary>
+        /// <c>OrderUnequip(A = colonist, B = 0 put away / 1 leave here)</c> (design 47 §3): empty
+        /// the hand at once and lay the weapon at her feet, or the nearest cell that can take it
+        /// (<see cref="WeaponHand.PutDown"/>, the same door a swap and a death use).
+        ///
+        /// <para><b>The two words differ by one flag.</b> <b>Unequip</b> ("put it down") leaves an
+        /// ordinary loose thing, so a hauler carries it to a store that takes weapons; <b>Drop</b>
+        /// ("leave this here") forbids it, so nobody moves it until the player allows it again.</para>
+        ///
+        /// <para>Instant, with no job and no gesture, like the swap it shares a door with: the job in
+        /// hand is left alone, and a fight in progress carries on with the bare hands, because the
+        /// armament is asked afresh at every blow. Refused (<c>NotPermitted</c>) for a pawn that does
+        /// not exist, is not a colonist of ours, or is downed — a downed colonist's gear is reached
+        /// only by the strip order, when it exists. <c>AlreadyInThatState</c> for the bare hands.</para>
+        /// </summary>
+        public IntentRejection HandleOrderUnequip(Intent intent)
+        {
+            Pawn? pawn = _ctx.Pawns.Get(new PawnId(intent.A));
+            if (pawn == null || !pawn.IsColonist || pawn.Downed) return IntentRejection.NotPermitted;
+            if (WeaponHand.Held(pawn, _ctx) == null) return IntentRejection.AlreadyInThatState;
+
+            ColonyItem? laid = WeaponHand.PutDown(pawn, _ctx, pawn.Cell);
+            if (laid != null && intent.B != 0) laid.Forbidden = true;
+            return IntentRejection.None;
+        }
     }
 }

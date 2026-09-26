@@ -109,6 +109,11 @@ namespace Odyssey.Presentation.Ui
                     + "climbs out on the far side. Off by default; a new colony starts with it off",
                 ToggleJumpsFail);
             _debugCheats.Add(_debugJumpsFailRow);
+            _debugGearPreviewRow = DebugToggleRow(DebugDirector.GearPreviewKey,
+                "Dresses every colonist's Gear tab in a made-up kit, to judge the tab. Interface "
+                    + "only: nothing is worn, saved or sent, and a new session starts with it off",
+                ToggleGearPreview);
+            _debugCheats.Add(_debugGearPreviewRow);
             _debugCheats.Add(DebugActionRow(DebugDirector.MarkTraceKey,
                 "Writes a marker into this session's performance trace, so the seconds around "
                     + "this moment can be found afterwards - press it when something felt wrong",
@@ -221,6 +226,19 @@ namespace Odyssey.Presentation.Ui
             _debugJumpsFailColony = on ? _boot!.Colony : null;
             RefreshJumpsFailRow();
         }
+
+        VisualElement? _debugGearPreviewRow;
+
+        /// <summary>The Gear tab's preview (design 47 §4): on or off, and the row says which.</summary>
+        void ToggleGearPreview()
+        {
+            _gearPreview.Set(!_gearPreview.On);
+            CloseGearPopovers();
+            RefreshGearPreviewRow();
+        }
+
+        void RefreshGearPreviewRow() =>
+            _debugGearPreviewRow?.EnableInClassList("settings__row--on", _gearPreview.On);
 
         void RefreshJumpsFailRow() => _debugJumpsFailRow?.EnableInClassList("settings__row--on", DebugJumpsFailOn);
 
@@ -467,6 +485,7 @@ namespace Odyssey.Presentation.Ui
                 RefreshTraceRow();
                 // And the jumps switch, which a new colony has quietly turned off.
                 RefreshJumpsFailRow();
+                RefreshGearPreviewRow();
             }
         }
 

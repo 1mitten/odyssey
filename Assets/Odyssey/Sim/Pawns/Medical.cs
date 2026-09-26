@@ -111,6 +111,16 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// What <paramref name="pawn"/> would treat with (design 54 §4): her own kit's supplies
+        /// first, then the nearest she can reach. The one question every treatment's giver asks —
+        /// the doctor's round, self-treatment and the Tend order — so none can forget the kit.
+        /// A kit's supplies answer -1 to <see cref="PawnContext.WhereIs"/>, which is how the job
+        /// knows to spend them in place rather than fetch them.
+        /// </summary>
+        public static ColonyItem? SuppliesFor(Pawn pawn, PawnContext ctx) =>
+            Kit.Supplies(pawn, ctx) ?? NearestSupplies(pawn, ctx);
+
+        /// <summary>
         /// The nearest supplies <paramref name="pawn"/> can reach and claim — anything whose Def
         /// heals, so a weaker item later is found by the same scan — or null.
         /// </summary>
@@ -236,7 +246,7 @@ namespace Odyssey.Sim.Pawns
         public static bool WouldSelfTreat(Pawn pawn, PawnContext ctx) =>
             WantsSelfTreatment(pawn, ctx)
             && !DoctorCanReach(pawn, ctx)
-            && NearestSupplies(pawn, ctx) != null;
+            && SuppliesFor(pawn, ctx) != null;
 
         /// <summary>
         /// Would treating herself do anything: bleeding, or under the self-treatment cap and outside
@@ -336,7 +346,7 @@ namespace Odyssey.Sim.Pawns
 
             if (best == null) return false;
 
-            ColonyItem? supplies = Medical.NearestSupplies(pawn, ctx);
+            ColonyItem? supplies = Medical.SuppliesFor(pawn, ctx);
             job.Reset(JobIndex.Treat);
             job.WorkTicks = best.Id.Value;
             job.DestCell = best.Cell;
@@ -370,8 +380,8 @@ namespace Odyssey.Sim.Pawns
 
             if (Medical.WantsSelfTreatment(pawn, ctx) && !Medical.DoctorCanReach(pawn, ctx))
             {
-                // NearestSupplies is asked here rather than through WouldSelfTreat so the scan runs once.
-                ColonyItem? supplies = Medical.NearestSupplies(pawn, ctx);
+                // SuppliesFor is asked here rather than through WouldSelfTreat so the scan runs once.
+                ColonyItem? supplies = Medical.SuppliesFor(pawn, ctx);
                 if (supplies != null)
                 {
                     job.Reset(JobIndex.Treat);
@@ -424,8 +434,9 @@ namespace Odyssey.Sim.Pawns
             base.Begin(pawn, job);
             // The pool reuses one driver per pawn, and a loaded job re-begins its kneel.
             _kneeling = false;
-            // No supplies named: a bare dressing, so nothing to fetch.
-            if (job.TargetItem == ThingId.None) ToilIndex = ToilGo;
+            // No supplies named: a bare dressing, so nothing to fetch. Supplies with no cell are her
+            // own kit's (design 54 §4): spent where she stands, so nothing to fetch either.
+            if (job.TargetItem == ThingId.None || job.TargetCell < 0) ToilIndex = ToilGo;
         }
 
         public override bool TryMakeReservations(PawnContext ctx)
@@ -433,10 +444,15 @@ namespace Odyssey.Sim.Pawns
             if (Job.TargetItem != ThingId.None)
             {
                 var item = ctx.Items.Get(Job.TargetItem);
-                if (item == null || ctx.WhereIs(item) < 0) return false;
-                long itemKey = ReservationManager.Key(ReservationTargetKind.Item, Job.TargetItem.Value);
-                if (!ctx.Reservations.Reserve(Pawn.Id, itemKey)) return false;
-                Pawn.HeldReservations.Add(itemKey);
+                if (item == null) return false;
+                // Her own kit's (design 54 §4): nobody else can see it, so there is nothing to claim.
+                if (!Kit.IsHers(Pawn, ctx, item))
+                {
+                    if (ctx.WhereIs(item) < 0) return false;
+                    long itemKey = ReservationManager.Key(ReservationTargetKind.Item, Job.TargetItem.Value);
+                    if (!ctx.Reservations.Reserve(Pawn.Id, itemKey)) return false;
+                    Pawn.HeldReservations.Add(itemKey);
+                }
             }
 
             long patientKey = ReservationManager.Key(ReservationTargetKind.Pawn, Job.WorkTicks);
@@ -526,8 +542,13 @@ namespace Odyssey.Sim.Pawns
                     _kneeling = true;
 
                     ColonyItem? carried = Job.CarriedItem >= 0 ? ctx.Items.Get(new ThingId(Job.CarriedItem)) : null;
-                    if (Job.TargetItem != ThingId.None && carried == null) return JobStatus.Failed;
-                    int suppliesDef = carried != null ? carried.DefIndex : -1;
+                    // Her own kit's supplies (design 54 §4) are never lifted: spent in place at the
+                    // end, so a treatment cut short leaves the kit as it was.
+                    ColonyItem? kit = carried == null && Job.TargetItem != ThingId.None ? ctx.Items.Get(Job.TargetItem) : null;
+                    if (kit != null && !Kit.IsHers(Pawn, ctx, kit)) kit = null;
+                    ColonyItem? used = carried ?? kit;
+                    if (Job.TargetItem != ThingId.None && used == null) return JobStatus.Failed;
+                    int suppliesDef = used != null ? used.DefIndex : -1;
 
                     CombatDef combat = ctx.Content.Combat;
                     long totalTicks = (long)ctx.Content.Jobs[Job.DefIndex].workTicks
@@ -557,13 +578,14 @@ namespace Odyssey.Sim.Pawns
                     Pawn.BeginGesture(PawnGesture.None);
                     _kneeling = false;
                     // The tend (design 43 §5): every injury tended at her quality, every bleed stopped.
-                    Medical.Tend(patient, Pawn, ctx, supplies: carried != null);
+                    Medical.Tend(patient, Pawn, ctx, supplies: used != null);
                     if (heals) patient.TreatedUntilTick = ctx.CurrentTick + combat.treatedCooldownTicks;
                     if (carried != null)
                     {
                         ctx.Items.Despawn(carried);
                         Job.CarriedItem = -1;
                     }
+                    else if (kit != null) Kit.Spend(Pawn, ctx, kit);
                     return JobStatus.Succeeded;
                 }
             }

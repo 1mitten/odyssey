@@ -615,13 +615,9 @@ namespace Odyssey.Presentation.Ui
         public static Color Category(Odyssey.Hud.HudCategory category) =>
             Convert(Odyssey.Hud.HudTheme.ColourOf(category));
 
-        /// <summary>
-        /// The band a need's value falls in, as the spec colours it: at or above 60% good,
-        /// 40 to 59% warn, under 40% bad. Thousandths in, because that is the scale the
-        /// simulation publishes needs on.
-        /// </summary>
+        /// <summary>A need bar's colour: <see cref="Odyssey.Hud.StatInks.Need"/>, in thousandths full.</summary>
         public static Color NeedBand(int thousandths) =>
-            thousandths >= 600 ? Good : thousandths >= 400 ? Warn : Bad;
+            Convert(Odyssey.Hud.StatInks.Ink(Odyssey.Hud.StatInks.Need, thousandths));
 
         /// <summary>
         /// One <see cref="Odyssey.Hud.HudColour"/> as a Unity colour.

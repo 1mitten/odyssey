@@ -240,25 +240,8 @@ namespace Odyssey.Hud
             _ => null,                             // Normal, and tier 0 which is never shown
         };
 
-        /// <summary>
-        /// The colour a temperature is named in, anywhere the interface names one (design 28
-        /// §8): null is comfortable and means "leave it alone", exactly as <see cref="Quality"/>'s
-        /// null is Normal. Cold reuses <see cref="Info"/>'s blue and heat <see cref="Warn"/>'s
-        /// orange, sweltering <see cref="Bad"/>'s red — the same reuse discipline the quality
-        /// tiers follow, and for the same reason: a reading is not an alarm until it is one.
-        ///
-        /// <para>The thresholds are the interface's own approximations of the content's bands
-        /// (the Hud cannot read the simulation's tuning), restated rather than shared — the two
-        /// disagreeing would be a display quibble, not a rules bug, and the day that distinction
-        /// stops holding they belong in the registry beside the labels.</para>
-        /// </summary>
-        public static HudColour? Temperature(int centiC) => centiC switch
-        {
-            > 3_500 => Bad,                               // sweltering
-            > 3_000 => Warn,                              // hot
-            < 1_000 => Info,                              // cold, however deep
-            _ => null,                                    // comfortable, and the work band
-        };
+        // A temperature's colour is StatInks.Temperature since 2026-09-26 (design 59): judged
+        // against the comfortable range on the one red-amber-green ramp, not blue for cold.
 
         /// <summary>The tint laid over a stores row whose stock is falling.</summary>
         public static readonly HudColour FallingRow = Warn.WithAlpha(0.09f);
