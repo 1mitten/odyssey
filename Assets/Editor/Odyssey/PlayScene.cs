@@ -76,7 +76,7 @@ namespace Odyssey.EditorTools
         /// does not load is worse than no benchmark, because it still produces a number.
         /// </summary>
         internal const int PlaySizeXZ = 120;
-        internal const int PlayLayers = 16;
+        internal const int PlayLayers = GridSize.OfferedLayers;
 
         [MenuItem("Odyssey/Presentation/Build play scene")]
         public static void BuildFromMenu() => BuildInternal(exitWhenDone: false);

@@ -53,12 +53,13 @@ namespace Odyssey.Presentation.Bootstrap
     {
         [Header("World")]
         // A 60-cell board read as cramped once the camera pulled back far enough to see it all:
-        // there was nowhere to walk to. 120 gives room to spread out, and 16 layers leave depth to
-        // mine and headroom to build in. Well inside the 250-cell scale target the renderer is
-        // built for, so this costs nothing that has not already been measured.
+        // there was nowhere to walk to. 120 gives room to spread out, and 32 layers (16 until the
+        // deep-mining work, design 62 §2d) leave a mine worth going down and headroom to build in.
+        // Well inside the 250-cell scale target the renderer is built for; the extra depth is
+        // rock nobody has opened, which costs memory and generation time and nothing per edit.
         public int sizeX = 120;
         public int sizeZ = 120;
-        public int layers = 16;
+        public int layers = GridSize.OfferedLayers;
         public uint seed = 1;
 
         [Tooltip("What a colony started from this scene is called, when the setup page did not ask. Leave it empty to take the naming registry's default, which is the one the setup page prefills and the one place that word is written.")]
@@ -872,7 +873,7 @@ namespace Odyssey.Presentation.Bootstrap
             GridSize size = from != null
                 ? from.Size
                 : sizeOverride ?? new GridSize(sizeX, sizeZ, layers);
-            // A mountainous site is 24 layers deep (design 59 §5) — decided here, with the rest of
+            // A mountainous site is at least SiteRules.MountainLayers deep (design 59 §5) — decided here, with the rest of
             // the size, so the chunk grid and the render model below are built at the same depth
             // as the world. A load needs nothing: the header's size already carries it.
             if (from == null && sessionSite is SiteTile hillSite)
