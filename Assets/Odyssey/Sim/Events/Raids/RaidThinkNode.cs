@@ -46,8 +46,18 @@ namespace Odyssey.Sim.Events
             if (group == null || pawn.Downed) return false;
             TraverseMode mode = pawn.OwnMode;
 
-            if (group.Phase == RaidPhase.Withdrawing) return Theft.FillLeave(ctx, pawn, mode, job);
-            if (pawn.RetaliateAgainst != 0 && ctx.CurrentTick < pawn.RetaliateUntilTick) return false;
+            if (group.Phase == RaidPhase.Withdrawing)
+            {
+                if (Theft.FillLeave(ctx, pawn, mode, job)) return true;
+                // No edge it can reach: let it go, or it holds the band open for ever (design 53 §6).
+                ctx.Raids!.Release(pawn);
+                return false;
+            }
+            if (pawn.RetaliateAgainst != 0 && ctx.CurrentTick < pawn.RetaliateUntilTick)
+            {
+                if (group.Phase == RaidPhase.Assaulting) ctx.Raids!.Engage(pawn);
+                return false;
+            }
 
             switch (group.Phase)
             {
@@ -57,8 +67,20 @@ namespace Odyssey.Sim.Events
                 case RaidPhase.Probing:
                     return Mill(pawn, ctx, job, group.ProbeCell, group.MillRadius, mode);
                 default:
-                    return Advance(pawn, ctx, job, group.TargetCell, mode);
+                    // Once it has turned to fight, the fight is its own mind's until the withdrawal:
+                    // a chase that re-chooses must not send it back to the target (RaidMember.Engaged).
+                    if (IsEngaged(group, pawn.Id.Value)) return false;
+                    if (Advance(pawn, ctx, job, group.TargetCell, mode)) return true;
+                    ctx.Raids!.Engage(pawn);
+                    return false;
             }
+        }
+
+        static bool IsEngaged(RaidGroup group, int pawn)
+        {
+            for (int i = 0; i < group.Members.Count; i++)
+                if (group.Members[i].Pawn == pawn) return group.Members[i].Engaged;
+            return false;
         }
 
         /// <summary>
@@ -104,7 +126,7 @@ namespace Odyssey.Sim.Events
         {
             GridSize size = ctx.Size;
             if ((uint)target >= (uint)size.CellCount) return false;
-            if (ColonistWithin(ctx, pawn, EngageCells)) return false;
+            if (ColonistWithin(ctx, pawn, EngageCells, mode)) return false;
             if (Cells(size, pawn.Cell, target) <= ArriveCells) return false;
             if (!ctx.Reachable(pawn, target, mode)) return false;
 
@@ -135,8 +157,13 @@ namespace Odyssey.Sim.Events
             return cell >= 0 && cell != pawn.Cell && ctx.Reachable(pawn, cell, mode) ? cell : target;
         }
 
-        /// <summary>A standing colonist within <paramref name="reach"/> cells on the ground plan. One pass over the pawns.</summary>
-        static bool ColonistWithin(PawnContext ctx, Pawn pawn, int reach)
+        /// <summary>
+        /// A standing colonist within <paramref name="reach"/> cells on the ground plan that the
+        /// member can reach. One pass over the pawns, and a reachability question only for one that
+        /// is near: a colonist behind a wall is not something to fight, and handing over to it would
+        /// send the member off after whoever else its own mind finds nearest.
+        /// </summary>
+        static bool ColonistWithin(PawnContext ctx, Pawn pawn, int reach, TraverseMode mode)
         {
             GridSize size = ctx.Size;
             var pawns = ctx.Pawns.All;
@@ -144,7 +171,7 @@ namespace Odyssey.Sim.Events
             {
                 Pawn other = pawns[i];
                 if (!other.IsColonist || !Melee.IsStanding(other)) continue;
-                if (Cells(size, pawn.Cell, other.Cell) <= reach) return true;
+                if (Cells(size, pawn.Cell, other.Cell) <= reach && ctx.Reachable(pawn, other.Cell, mode)) return true;
             }
             return false;
         }

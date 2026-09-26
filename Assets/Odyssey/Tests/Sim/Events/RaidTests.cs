@@ -410,5 +410,189 @@ namespace Odyssey.Tests.Sim.Events
                 Assert.That(Hash(a), Is.EqualTo(Hash(b)), $"parted at tick {a.World.CurrentTick}");
             }
         }
+
+        // ---- the review's findings (2026-09-26) ----------------------------------------------
+
+        /// <summary>
+        /// The published middle of the band is where the band stands. <see cref="CellRef"/> takes
+        /// (x, z, y), and the view was built (x, y, z): on a 60 × 60 × 16 board the alert asked the
+        /// slice for layer 40-odd and sent the camera to the band's layer as a depth. The control is
+        /// the mean taken here from the members themselves.
+        /// </summary>
+        [Test]
+        public void TheRaidViewIsPublishedWhereTheBandStands()
+        {
+            ColonyWorld colony = Board();
+            Assert.That(Fire(colony, 6), Is.EqualTo(IntentRejection.None));
+            RaidGroup group = Raid(colony);
+            group.EarlyTriggerCells = -1;
+            TickUntil(colony, () => group.Phase == RaidPhase.Gathering, 400, "the band never finished arriving");
+            colony.World.Tick();
+
+            long sx = 0, sy = 0, sz = 0;
+            var standing = Members(colony, group).Where(Melee.IsStanding).ToList();
+            foreach (Pawn member in standing)
+            {
+                CellRef at = Size.FromIndex(member.Cell);
+                sx += at.X;
+                sy += at.Y;
+                sz += at.Z;
+            }
+            int x = (int)(sx / standing.Count), y = (int)(sy / standing.Count), z = (int)(sz / standing.Count);
+            Assume.That(z, Is.Not.EqualTo(y), "the band's depth is its layer, so a swap would not show");
+
+            RaidView view = colony.World.Views.Current.Raids[0];
+            Assert.That(view.Standing, Is.EqualTo(standing.Count));
+            Assert.That((view.Centre.X, view.Centre.Z, view.Centre.Y), Is.EqualTo((x, z, y)));
+            Assert.That(Size.Contains(view.Centre), Is.True, "the centre is off the board");
+        }
+
+        /// <summary>
+        /// A member that has handed over to its own mind in the assault is not marched on the target
+        /// again (design 53 §5). Before this, one that chased a colonist away from the hearth was
+        /// sent back to it the moment the chase re-chose, and handed over again on arriving: out and
+        /// back for ever. The control is a second member of the same band, never engaged, which is
+        /// given its leg. The withdrawal still takes the engaged one off the board.
+        /// </summary>
+        [Test]
+        public void AMemberThatTurnsToFightIsNotSentBackToTheTarget()
+        {
+            ColonyWorld colony = Board();
+            Assert.That(Fire(colony, 4), Is.EqualTo(IntentRejection.None));
+            RaidGroup group = Raid(colony);
+            group.EarlyTriggerCells = -1;
+            TickUntil(colony, () => group.Phase == RaidPhase.Gathering, 400, "the band never finished arriving");
+
+            // Nothing on the board to fight, so only the target decides where a member goes.
+            CombatSystem combat = colony.Pawns.Combat!;
+            foreach (Pawn colonist in colony.Pawns.Pawns.All.Where(p => p.IsColonist).ToList())
+                combat.Down(colonist, null, -1, colony.World.CurrentTick);
+            colony.Pawns.Raids!.SetPhase(group, RaidPhase.Assaulting, colony.World.CurrentTick);
+            int target = group.TargetCell;
+
+            var members = Members(colony, group).ToList();
+            Pawn fighter = members[0], other = members[1];
+            Assume.That(RaidThinkNode.Cells(Size, fighter.Cell, target), Is.GreaterThan(RaidThinkNode.ArriveCells));
+            var node = new RaidThinkNode();
+            var job = new Job();
+            Assert.That(node.TryGiveJob(fighter, colony.Pawns, job), Is.True, "the control: a leg toward the target");
+            Assert.That(job.DefIndex, Is.EqualTo(JobIndex.Wander));
+
+            // It reaches the target and hands over: engaged.
+            group.TargetCell = fighter.Cell;
+            Assert.That(node.TryGiveJob(fighter, colony.Pawns, new Job()), Is.False, "at the target it did not hand over");
+            Assert.That(group.Members.Single(m => m.Pawn == fighter.Id.Value).Engaged, Is.True);
+
+            // The target is far again, as it is once a chase has carried the member away.
+            group.TargetCell = target;
+            Assert.That(node.TryGiveJob(fighter, colony.Pawns, new Job()), Is.False, "an engaged member was sent back to the target");
+            Assert.That(node.TryGiveJob(other, colony.Pawns, new Job()), Is.True, "the control: a member never engaged is given its leg");
+
+            colony.Pawns.Raids!.SetPhase(group, RaidPhase.Withdrawing, colony.World.CurrentTick);
+            job = new Job();
+            Assert.That(node.TryGiveJob(fighter, colony.Pawns, job), Is.True, "an engaged member did not withdraw");
+            Assert.That(job.DefIndex, Is.EqualTo(JobIndex.Steal));
+        }
+
+        /// <summary>
+        /// A member killed outright while the band stages starts the assault, as a struck one does:
+        /// one blow that kills strikes no grudge, and before this a colonist picking raiders off from
+        /// beyond the early-trigger reach went unnoticed until half the band was gone. Removal
+        /// without leaving is what a death looks like to the band. The untouched band is the control.
+        /// </summary>
+        [Test]
+        public void AMemberKilledOutrightWhileStagingStartsTheAssault()
+        {
+            ColonyWorld untouched = Board();
+            ColonyWorld killed = Board();
+            foreach (ColonyWorld colony in new[] { untouched, killed })
+            {
+                Assert.That(Fire(colony, 6), Is.EqualTo(IntentRejection.None));
+                Raid(colony).EarlyTriggerCells = -1;
+                TickUntil(colony, () => Raid(colony).Phase == RaidPhase.Gathering, 400, "the band never finished arriving");
+            }
+
+            killed.Pawns.Pawns.Despawn(Members(killed, Raid(killed)).First());
+
+            untouched.World.Tick(RaidSystem.CheckTicks + 1);
+            killed.World.Tick(RaidSystem.CheckTicks + 1);
+            Assert.That(Raid(untouched).Phase, Is.EqualTo(RaidPhase.Gathering));
+            Assert.That(Raid(killed).Phase, Is.EqualTo(RaidPhase.Assaulting));
+        }
+
+        /// <summary>
+        /// A band that breaks while it is still walking on calls the rest off: nobody arrives after
+        /// the withdrawal, and the band closes once those on the board have gone. The count at the
+        /// withdrawal is the control.
+        /// </summary>
+        [Test]
+        public void ABandThatBreaksWhileArrivingCallsTheRestOff()
+        {
+            ColonyWorld colony = Board();
+            Assert.That(Fire(colony, 10), Is.EqualTo(IntentRejection.None));
+            RaidGroup group = Raid(colony);
+            colony.World.Tick(20);
+            Assume.That(group.Pending, Is.Not.Empty, "the whole band had arrived already");
+            int arrived = group.Members.Count;
+
+            colony.Pawns.Raids!.SetPhase(group, RaidPhase.Withdrawing, colony.World.CurrentTick);
+            Assert.That(group.Pending, Is.Empty);
+            Assert.That(colony.Pawns.Raids!.PendingArrivals, Is.Zero);
+
+            TickUntil(colony, () => colony.Pawns.Raids!.Count == 0, 4_000, "the band never closed");
+            Assert.That(group.Members, Has.Count.EqualTo(arrived), "a member walked on after the withdrawal");
+            Assert.That(colony.Pawns.Pawns.All.Count(p => p.IsHostile), Is.Zero);
+        }
+
+        /// <summary>A member's engagement is saved and hashed: a save mid-assault resumes it.</summary>
+        [Test]
+        public void AnEngagedMemberSurvivesASave()
+        {
+            ColonyWorld original = Board();
+            Assert.That(Fire(original, 4), Is.EqualTo(IntentRejection.None));
+            RaidGroup group = Raid(original);
+            group.EarlyTriggerCells = -1;
+            TickUntil(original, () => group.Phase == RaidPhase.Gathering, 400, "the band never finished arriving");
+            original.Pawns.Raids!.SetPhase(group, RaidPhase.Assaulting, original.World.CurrentTick);
+            Pawn member = Members(original, group).First();
+            ulong before = Hash(original);
+            original.Pawns.Raids!.Engage(member);
+            Assert.That(Hash(original), Is.Not.EqualTo(before), "engaging a member did not move the hash");
+
+            ColonyWorld restored = ColonyWorld.Build(Size, 7u, BoardScenario(), barren: true, wooded: false);
+            restored.Load(original.Save());
+            Assert.That(Hash(restored), Is.EqualTo(Hash(original)));
+            Assert.That(Raid(restored).Members.Single(m => m.Pawn == member.Id.Value).Engaged, Is.True);
+            for (int i = 0; i < 5; i++)
+            {
+                original.World.Tick(100);
+                restored.World.Tick(100);
+                Assert.That(Hash(restored), Is.EqualTo(Hash(original)), $"the worlds parted {100 * (i + 1)} ticks after the load");
+            }
+        }
+
+        /// <summary>
+        /// Room a raid has promised its members still to walk on is not the debug menu's to spend:
+        /// with the band filling the board to the ceiling, a spawn is refused until they are on. A
+        /// board with no raid is the control.
+        /// </summary>
+        [Test]
+        public void ARaidStillArrivingHoldsItsRoomUnderTheCeiling()
+        {
+            ColonyWorld control = Board();
+            ColonyWorld raided = Board();
+            int room = PawnRegistry.PawnCeiling - raided.Pawns.Pawns.Count;
+            Assert.That(Fire(raided, room), Is.EqualTo(IntentRejection.None));
+            Assume.That(Raid(raided).Pending, Is.Not.Empty);
+
+            foreach (ColonyWorld colony in new[] { control, raided })
+            {
+                colony.World.Intents.ClearRejected();
+                colony.World.Intents.Submit(new Intent(IntentKind.SpawnPawn, Size.FromIndex(colony.Pawns.Pawns.All[0].Cell), PawnKindIndex.Bandit));
+                colony.World.Tick();
+            }
+            Assert.That(control.World.Intents.Rejected, Is.Empty);
+            Assert.That(raided.World.Intents.Rejected.Single().Reason, Is.EqualTo(IntentRejection.NotPermitted));
+        }
     }
 }

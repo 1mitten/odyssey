@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Saving;
 
@@ -64,16 +65,33 @@ namespace Odyssey.Sim.Events
         public bool Staging => Phase == RaidPhase.Arriving || Phase == RaidPhase.Gathering || Phase == RaidPhase.Probing;
     }
 
-    /// <summary>A member of a raid: the pawn, and whether it walked off the board (which is not dying).</summary>
+    /// <summary>
+    /// A member of a raid: the pawn, whether it is gone from the band without dying, and whether
+    /// it has turned to fight in the assault.
+    /// </summary>
     public struct RaidMember
     {
         public int Pawn;
+
+        /// <summary>
+        /// Gone from the band without dying: it walked off the board, or it was stranded in the
+        /// withdrawal with no edge to reach and fights on as a lone bandit (<see cref="RaidSystem.Release"/>).
+        /// </summary>
         public bool Left;
 
-        public RaidMember(int pawn, bool left)
+        /// <summary>
+        /// It has handed over to its own mind in the assault (design 53 §5) and does not march on
+        /// the target again. Without this a member that chased a colonist more than
+        /// <see cref="RaidThinkNode.ArriveCells"/> from the target was sent back to it when the
+        /// chase re-chose, and handed over again on arrival: out and back for ever.
+        /// </summary>
+        public bool Engaged;
+
+        public RaidMember(int pawn, bool left, bool engaged = false)
         {
             Pawn = pawn;
             Left = left;
+            Engaged = engaged;
         }
     }
 
@@ -101,7 +119,8 @@ namespace Odyssey.Sim.Events
     /// a member that arrives this tick thinks this tick and a phase change is seen by the think
     /// that follows it.</para>
     ///
-    /// <para><b>Scales with the members of live raids</b>: an arrival is a spawn, and every
+    /// <para><b>Scales with the members of live raids</b>: an arrival is a spawn, every tick each
+    /// group counts who is standing (a lookup per member, to know whether it can close), and every
     /// <see cref="CheckTicks"/> each group counts its members once and, while staging, compares its
     /// bounding box with every standing colonist — members one by one only for a colonist inside it.
     /// Nothing at all while there is no raid, which is nearly always.</para>
@@ -122,8 +141,8 @@ namespace Odyssey.Sim.Events
         /// </summary>
         public const int StaggerTicks = 20;
 
-        /// <summary>The record layout this build writes. 1: the first.</summary>
-        public const int Layout = 1;
+        /// <summary>The record layout this build writes. 1: the first. 2: a member's <see cref="RaidMember.Engaged"/>.</summary>
+        public const int Layout = 2;
 
         readonly PawnContext _ctx;
         readonly List<RaidGroup> _groups = new List<RaidGroup>();
@@ -201,9 +220,42 @@ namespace Odyssey.Sim.Events
         {
             RaidGroup? group = GroupOf(pawn.Id.Value);
             if (group == null) return;
-            for (int i = 0; i < group.Members.Count; i++)
-                if (group.Members[i].Pawn == pawn.Id.Value)
-                    group.Members[i] = new RaidMember(pawn.Id.Value, left: true);
+            int i = IndexOf(group, pawn.Id.Value);
+            if (i >= 0) group.Members[i] = new RaidMember(pawn.Id.Value, left: true, group.Members[i].Engaged);
+        }
+
+        /// <summary>
+        /// The member has turned to fight in the assault (<see cref="RaidMember.Engaged"/>): from now
+        /// until the withdrawal its own mind has it. Once per member; a scan of its band.
+        /// </summary>
+        public void Engage(Pawn pawn)
+        {
+            RaidGroup? group = GroupOf(pawn.Id.Value);
+            if (group == null) return;
+            int i = IndexOf(group, pawn.Id.Value);
+            if (i >= 0 && !group.Members[i].Engaged)
+                group.Members[i] = new RaidMember(pawn.Id.Value, group.Members[i].Left, engaged: true);
+        }
+
+        /// <summary>
+        /// Let a withdrawing member go that has no edge it can reach. Walled in, it would otherwise
+        /// hold its band open, saved, hashed and published, for ever. It counts as having left and
+        /// thinks from now on as a lone bandit, which is what a downed raider does once its band has
+        /// gone (design 53 §6).
+        /// </summary>
+        public void Release(Pawn pawn)
+        {
+            RaidGroup? group = GroupOf(pawn.Id.Value);
+            if (group == null) return;
+            int i = IndexOf(group, pawn.Id.Value);
+            if (i >= 0) group.Members[i] = new RaidMember(pawn.Id.Value, left: true, group.Members[i].Engaged);
+            _byPawn.Remove(pawn.Id.Value);
+        }
+
+        static int IndexOf(RaidGroup group, int pawn)
+        {
+            for (int i = 0; i < group.Members.Count; i++) if (group.Members[i].Pawn == pawn) return i;
+            return -1;
         }
 
         public void Tick(SimWorld world)
@@ -224,7 +276,9 @@ namespace Odyssey.Sim.Events
             {
                 RaidGroup group = _groups[g];
                 if (group.Pending.Count > 0 || Standing(group) > 0) continue;
-                for (int m = 0; m < group.Members.Count; m++) _byPawn.Remove(group.Members[m].Pawn);
+                for (int m = 0; m < group.Members.Count; m++)
+                    if (_byPawn.TryGetValue(group.Members[m].Pawn, out RaidGroup? of) && of == group)
+                        _byPawn.Remove(group.Members[m].Pawn);
                 _groups.RemoveAt(g);
             }
         }
@@ -239,7 +293,16 @@ namespace Odyssey.Sim.Events
             for (int i = 0; i < due; i++)
             {
                 RaidArrival arrival = group.Pending[i];
-                int cell = _ctx.Pawns.FreeSpawnCell(arrival.Cell);
+                // The slot was standable when the raid fired. A wall raised on it since is stood
+                // beside rather than in, or the member arrives entombed.
+                int anchor = arrival.Cell;
+                if (!_ctx.Cells.IsWalkable(anchor))
+                {
+                    CellRef at = _ctx.Size.FromIndex(anchor);
+                    int column = _ctx.Cells.NearestWalkableInColumn(at.X, at.Z, at.Y);
+                    if (column >= 0) anchor = column;
+                }
+                int cell = _ctx.Pawns.FreeSpawnCell(anchor, TraverseMode.Bandit);
                 Pawn pawn = _ctx.Pawns.Spawn(cell, arrival.Kind);
                 group.Members.Add(new RaidMember(pawn.Id.Value, left: false));
                 _byPawn[pawn.Id.Value] = group;
@@ -292,6 +355,9 @@ namespace Odyssey.Sim.Events
             if (group.Phase == phase) return;
             group.Phase = phase;
             group.PhaseTick = tick;
+            // A band that breaks while it is still walking on calls the rest off. They would arrive
+            // only to turn round, and the group could not close while any were still to come.
+            if (phase == RaidPhase.Withdrawing) group.Pending.Clear();
             if (phase == RaidPhase.Assaulting) group.TargetCell = RaidTargets.Resolve(_ctx, group.GatherCell);
         }
 
@@ -316,18 +382,22 @@ namespace Odyssey.Sim.Events
             }
         }
 
-        /// <summary>Half the band — or whatever share the incident says — down or dead.</summary>
+        /// <summary>
+        /// Half the band — or whatever share the incident says — down or dead, of the band still in
+        /// it. A member that walked off with loot counts as neither (design 53 §6), so it leaves the
+        /// base too, or a band of ten that lost six to theft could never break.
+        /// </summary>
         bool Broken(RaidGroup group)
         {
-            int lost = 0;
+            int lost = 0, left = 0;
             for (int m = 0; m < group.Members.Count; m++)
             {
                 RaidMember member = group.Members[m];
-                if (member.Left) continue;
+                if (member.Left) { left++; continue; }
                 Pawn? pawn = _ctx.Pawns.Get(new PawnId(member.Pawn));
                 if (pawn == null || !Melee.IsStanding(pawn)) lost++;
             }
-            return lost > 0 && lost * 1000 >= group.RetreatPerMille * group.StartingSize;
+            return lost > 0 && lost * 1000 >= group.RetreatPerMille * (group.StartingSize - left);
         }
 
         /// <summary>
@@ -343,7 +413,8 @@ namespace Odyssey.Sim.Events
             for (int m = 0; m < group.Members.Count; m++)
             {
                 Pawn? pawn = _ctx.Pawns.Get(new PawnId(group.Members[m].Pawn));
-                if (pawn == null) continue;
+                // Gone without leaving is dead: killed by one blow, which strikes no grudge.
+                if (pawn == null) { if (!group.Members[m].Left) return true; continue; }
                 if (pawn.Downed) return true;
                 if (pawn.RetaliateAgainst != 0 && tick < pawn.RetaliateUntilTick) return true;
                 CellRef at = size.FromIndex(pawn.Cell);
@@ -415,6 +486,7 @@ namespace Odyssey.Sim.Events
                 {
                     hash.Add(group.Members[m].Pawn);
                     hash.Add(group.Members[m].Left ? 1 : 0);
+                    hash.Add(group.Members[m].Engaged ? 1 : 0);
                 }
                 hash.Add(group.Pending.Count);
                 for (int p = 0; p < group.Pending.Count; p++)
@@ -448,7 +520,7 @@ namespace Odyssey.Sim.Events
                     standing++;
                 }
                 CellRef centre = standing > 0
-                    ? new CellRef((int)(sx / standing), (int)(sy / standing), (int)(sz / standing))
+                    ? new CellRef((int)(sx / standing), (int)(sz / standing), (int)(sy / standing))
                     : size.FromIndex(group.GatherCell);
                 writer.AddRaid(new RaidView(group.Id, group.Phase, group.Mix, group.StartingSize, standing, centre,
                     size.FromIndex(group.TargetCell)));
@@ -486,6 +558,7 @@ namespace Odyssey.Sim.Events
                 {
                     writer.Write(group.Members[m].Pawn);
                     writer.Write(group.Members[m].Left);
+                    writer.Write(group.Members[m].Engaged);
                 }
                 writer.Write(group.Pending.Count);
                 for (int p = 0; p < group.Pending.Count; p++)
@@ -502,7 +575,7 @@ namespace Odyssey.Sim.Events
             _groups.Clear();
             _byPawn.Clear();
             int layout = reader.ReadInt();
-            if (layout != Layout)
+            if (layout != 1 && layout != Layout)
                 throw new SaveLoadException($"{SaveKey} layout {layout} is not one this build reads ({Layout}).");
             _nextId = reader.ReadInt();
             int groups = reader.ReadInt();
@@ -530,8 +603,10 @@ namespace Odyssey.Sim.Events
                 {
                     int pawn = reader.ReadInt();
                     bool left = reader.ReadBool();
-                    group.Members.Add(new RaidMember(pawn, left));
-                    _byPawn[pawn] = group;
+                    bool engaged = layout >= 2 && reader.ReadBool();
+                    group.Members.Add(new RaidMember(pawn, left, engaged));
+                    // A member that left or was released is in no band's lookup (Release).
+                    if (!left) _byPawn[pawn] = group;
                 }
                 int pending = reader.ReadInt();
                 for (int p = 0; p < pending; p++)

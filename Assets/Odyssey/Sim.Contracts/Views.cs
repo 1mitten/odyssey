@@ -756,16 +756,6 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// A bullet in flight (design 47 §2c): the skyfaller's shape, sideways. The simulation owns the
-    /// flight — who fired it, where it started and ends, when it left and when it lands — and
-    /// presentation draws the streak wherever along that line the frame falls. <b>The hit, the
-    /// damage and the end cell are the simulation's; the muzzle, the streak and the flash are
-    /// presentation's.</b>
-    ///
-    /// <para>What the bullet hits is not here: it is decided on <see cref="ImpactTick"/>, against
-    /// whoever is on the line then, and published as a <see cref="CombatEventView"/>.</para>
-    /// </summary>
-    /// <summary>
     /// What a raid is doing (design 53 §3), in order. The phase is the simulation's; the words and
     /// the horn are presentation's.
     /// </summary>
@@ -829,6 +819,16 @@ namespace Odyssey.Sim.Contracts
         }
     }
 
+    /// <summary>
+    /// A bullet in flight (design 47 §2c): the skyfaller's shape, sideways. The simulation owns the
+    /// flight — who fired it, where it started and ends, when it left and when it lands — and
+    /// presentation draws the streak wherever along that line the frame falls. <b>The hit, the
+    /// damage and the end cell are the simulation's; the muzzle, the streak and the flash are
+    /// presentation's.</b>
+    ///
+    /// <para>What the bullet hits is not here: it is decided on <see cref="ImpactTick"/>, against
+    /// whoever is on the line then, and published as a <see cref="CombatEventView"/>.</para>
+    /// </summary>
     public readonly struct ProjectileView
     {
         public readonly PawnId Shooter;

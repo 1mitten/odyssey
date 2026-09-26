@@ -180,8 +180,9 @@ namespace Odyssey.Sim.Pawns
                 || _ctx.Content.Items[weaponDef].weapon == null)) return IntentRejection.NotPermitted;
 
             // The ceiling. Refused rather than clamped, and refused before anything is built, so a
-            // caller that has asked for one too many is told so rather than quietly ignored.
-            if (Count >= PawnCeiling) return IntentRejection.NotPermitted;
+            // caller that has asked for one too many is told so rather than quietly ignored. A
+            // raid's members still to walk on are already promised the room (design 53 §9).
+            if (Count + (_ctx.Raids?.PendingArrivals ?? 0) >= PawnCeiling) return IntentRejection.NotPermitted;
 
             CellRef cell = intent.Cell;
             if (!_ctx.Size.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
@@ -290,10 +291,12 @@ namespace Odyssey.Sim.Pawns
         /// down — the same lift a move order uses — and a tile must be standable, unoccupied and
         /// reachable from the spawn point, so a pawn never arrives walled into a pocket. Falls back
         /// to the spawn cell itself if every ring is full. Every kind, not only bandits: a
-        /// shared tile is the same fault whoever stands on it. A debug command, so it costs a scan
-        /// of the pawns per candidate and nothing per tick.
+        /// shared tile is the same fault whoever stands on it. Reachability is asked in
+        /// <paramref name="mode"/>: a raider arriving (design 53 §4) asks it in the bandit's, or
+        /// it could be put on a ledge only a colonist can leave. It costs a scan of the pawns per
+        /// candidate: a debug command, or one raider walking on, and never a tick's worth of pawns.
         /// </summary>
-        internal int FreeSpawnCell(int anchor)
+        internal int FreeSpawnCell(int anchor, TraverseMode mode = TraverseMode.Colonist)
         {
             if (!Occupied(anchor)) return anchor;
 
@@ -311,7 +314,7 @@ namespace Odyssey.Sim.Pawns
                     if (!size.Contains(x, z, y)) continue;
                     int c = size.Index(x, z, y);
                     if (!_ctx.Cells.IsWalkable(c) || Occupied(c)) continue;
-                    if (!_ctx.Nav.Reachable(anchor, c, TraverseMode.Colonist)) continue;
+                    if (!_ctx.Nav.Reachable(anchor, c, mode)) continue;
                     return c;
                 }
             }
