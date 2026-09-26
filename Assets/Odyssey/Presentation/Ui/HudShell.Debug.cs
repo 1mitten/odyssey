@@ -45,6 +45,9 @@ namespace Odyssey.Presentation.Ui
         /// <summary>The content the event rows were last built from, so a new colony rebuilds them and a reopen does not.</summary>
         IncidentContent? _debugEventsFrom;
 
+        /// <summary>Under the Raid row: why the last raid asked for was refused, hidden while none was.</summary>
+        Label? _raidNote;
+
         void BuildDebug()
         {
             _debugPanel = Window("debug", Registry.Label(DebugDirector.PanelKey),
@@ -302,6 +305,9 @@ namespace Odyssey.Presentation.Ui
                         content.Defs[i].description ?? string.Empty, () => InvokeRaid(def)));
                     _debugEvents.Add(DebugRaidSizeRow());
                     _debugEvents.Add(DebugRaidMixRow());
+                    _raidNote = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "settings__note");
+                    _raidNote.style.display = DisplayStyle.None;
+                    _debugEvents.Add(_raidNote);
                     continue;
                 }
 
@@ -483,12 +489,32 @@ namespace Odyssey.Presentation.Ui
             world.Intents.Submit(new Intent(IntentKind.InvokeIncident, default, def));
         }
 
-        /// <summary>Fire a raid of the size and mix the two controls hold (design 53 §9).</summary>
+        /// <summary>
+        /// Fire a raid of the size and mix the two controls hold (design 53 §9). The incident's own
+        /// door is asked first, so a refusal is said on the row rather than only in the console: a
+        /// second band of 200 beside the first does not fit under the ceiling, and a press that
+        /// does nothing visible reads as a broken button. The intent is sent either way; the
+        /// simulation is the judge and this is only its answer read early.
+        /// </summary>
         void InvokeRaid(int def)
         {
             var world = _boot!.World;
             if (world == null || _directors == null) return;
-            world.Intents.Submit(_directors.Debug.RaidIntent(def));
+            Intent intent = _directors.Debug.RaidIntent(def);
+
+            var colony = _boot.Colony;
+            if (colony != null && _raidNote != null)
+            {
+                bool fires = colony.Incidents.CanFire(new IncidentParms(def, intent.B, null, intent.C - 1));
+                RaidParams? p = colony.Incidents.Content.Defs[def].raid;
+                string note = fires || p == null ? string.Empty
+                    : DebugDirector.RaidRefusal(RaidWorker.SizeFor(colony.Pawns, p, intent.B, world.CurrentTick),
+                        RaidWorker.Room(colony.Pawns));
+                _raidNote.text = note;
+                _raidNote.style.display = note.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            world.Intents.Submit(intent);
         }
 
         /// <summary>

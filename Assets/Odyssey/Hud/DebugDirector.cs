@@ -418,6 +418,16 @@ namespace Odyssey.Hud
             if (mix >= 0 && mix < RaidMixLabels.Keys.Length) RaidMix = mix;
         }
 
+        /// <summary>
+        /// What the Raid row says when the raid it was asked for will not fire (design 53 §9:
+        /// refused, not trimmed, and says so): too many for the room left under the pawn ceiling,
+        /// or, when there is room, no edge the band can reach. A debug line, so plain ASCII.
+        /// </summary>
+        public static string RaidRefusal(int wanted, int room) =>
+            wanted > room
+                ? $"Refused: {wanted} will not fit, room for {Math.Max(0, room)} under the ceiling"
+                : "Refused: no edge the band can reach";
+
         /// <summary>What the size slider's figure reads: the number, or <i>Auto</i> at 0.</summary>
         public static string RaidSizeText(int size) => size <= 0 ? Registry.Label(RaidAutoKey) : size.ToString();
 

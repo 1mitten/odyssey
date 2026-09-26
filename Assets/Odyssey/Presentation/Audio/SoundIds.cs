@@ -323,20 +323,7 @@ namespace Odyssey.Presentation.Audio
         }
     }
 
-    /// <summary>
-    /// Which chime an alert row gets.
-    ///
-    /// <para><b>Severity first, key second.</b> The alerts panel already sorts every condition
-    /// into notice, warning and danger, and that is the distinction a chime can carry: "look
-    /// when you can" against "go and fix it". So the default is the severity's sound and nothing
-    /// has to be listed here to be audible — the nineteen <c>ui.alert.*</c> keys in
-    /// <c>icon-keys.csv</c> that nothing raises yet will chime correctly on the day they are
-    /// implemented, without anybody remembering to come back to this file.</para>
-    ///
-    /// <para><see cref="Overrides"/> is for the few conditions that want their own sound
-    /// because severity undersells them. A raid is a danger like a starving colonist is a
-    /// danger, and they should plainly not make the same noise.</para>
-    /// </summary>
+    /// <summary>Which chime an Events row gets when it arrives (design 53 §7).</summary>
     public static class BulletinChime
     {
         /// <summary>
@@ -354,11 +341,24 @@ namespace Odyssey.Presentation.Audio
             };
     }
 
+    /// <summary>
+    /// Which chime an alert row gets.
+    ///
+    /// <para><b>Severity first, key second.</b> The alerts panel already sorts every condition
+    /// into notice, warning and danger, and that is the distinction a chime can carry: "look
+    /// when you can" against "go and fix it". So the default is the severity's sound and nothing
+    /// has to be listed here to be audible — the nineteen <c>ui.alert.*</c> keys in
+    /// <c>icon-keys.csv</c> that nothing raises yet will chime correctly on the day they are
+    /// implemented, without anybody remembering to come back to this file.</para>
+    ///
+    /// <para><see cref="Overrides"/> is for the few conditions that want their own sound
+    /// because severity undersells them. A raid is a danger like a starving colonist is a
+    /// danger, and they should plainly not make the same noise.</para>
+    /// </summary>
     public static class AlertChime
     {
         /// <summary>The raid alert's key, as <c>docs/design/icon-keys.csv</c> declares it.
-        /// Nothing raises it yet; the row below is what makes that a seam rather than a
-        /// to-do.</summary>
+        /// Raised while a band assaults (design 53 §7); the row below gives it the assault horn.</summary>
         public const string RaidKey = "ui.alert.raid";
 
         /// <summary>Conditions whose own sound beats their severity's. Ordinal, and short

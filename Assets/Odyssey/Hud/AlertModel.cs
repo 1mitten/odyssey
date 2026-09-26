@@ -67,7 +67,8 @@ namespace Odyssey.Hud
             CellRef? cell = null,
             string targetPrefix = "",
             string detail = "",
-            bool dismissByKey = false)
+            bool dismissByKey = false,
+            int identity = 0)
         {
             Key = key;
             TargetName = targetName;
@@ -80,8 +81,11 @@ namespace Odyssey.Hud
             Pawn = pawn;
             Cell = cell;
             // A row whose cell follows something moving — a raid's centre — is dismissed by its key,
-            // or a dismiss would last only until the band took a step.
-            DismissKey = ComputeDismissKey(key, pawn, dismissByKey ? null : cell);
+            // or a dismiss would last only until the band took a step; and by the identity of what
+            // it is about (the band's id), or dismissing one raid would dismiss the next.
+            DismissKey = dismissByKey
+                ? ComputeDismissKey(key, new PawnId(identity), null)
+                : ComputeDismissKey(key, pawn, cell);
         }
 
         public AlertRow(string key, string lead, string detail, AlertSeverity severity, int count)
@@ -237,6 +241,10 @@ namespace Odyssey.Hud
         long _wasInjuredIds;
         int _wasNoMedicine = -1;
         int _wasRaid = -1;
+        int _wasRaidId;
+
+        /// <summary>The dismiss key of the band the Raid row is about, so it can be forgotten when that band stops.</summary>
+        int _raidDismiss;
         int _latchVersion;
         int _wasLatchVersion = -1;
         int _dismissVersion;
@@ -438,7 +446,7 @@ namespace Odyssey.Hud
             // A raid assaulting (design 53 §7): the standing raiders of every assaulting band, and the
             // first band's middle and mix for the row. The middle is coarsened to eight cells in the
             // signature, so the row's jump follows the band without a rebuild on every step.
-            int raidStanding = 0, raidMix = -1;
+            int raidStanding = 0, raidMix = -1, raidId = 0;
             CellRef raidCentre = default;
             System.ReadOnlySpan<RaidView> raids = snapshot.Raids;
             for (int i = 0; i < raids.Length; i++)
@@ -448,10 +456,11 @@ namespace Odyssey.Hud
                 if (raidMix >= 0) continue;
                 raidMix = raids[i].Mix;
                 raidCentre = raids[i].Centre;
+                raidId = raids[i].Id;
             }
             int raidSignature = raidMix < 0 ? -1 : raidStanding * 1_000_000 + raidCentre.X / 8 * 1_000 + raidCentre.Z / 8;
 
-            if (raidSignature == _wasRaid &&
+            if (raidSignature == _wasRaid && raidId == _wasRaidId &&
                 starving == _wasStarving && breaking == _wasBreaking &&
                 (noHearth ? keptHome : 0) == _wasNoHearth && (hearthDown ? hearth : -1) == _wasHearthDown &&
                 dark == _wasDark && shortW == _wasShortW && dry == _wasDry &&
@@ -479,10 +488,18 @@ namespace Odyssey.Hud
             _wasLatchVersion = _latchVersion;
             _wasDismissVersion = _dismissVersion;
             _wasRaid = raidSignature;
+            _wasRaidId = raidId;
             Rows.Clear();
 
             // Worst of all first: a band in the colony.
-            int raidDismiss = AlertRow.ComputeDismissKey(RaidKey, default, null);
+            // Dismissed by the band, not the key alone: a raid that follows another in the same
+            // refresh is news, and its assault horn with it.
+            int raidDismiss = AlertRow.ComputeDismissKey(RaidKey, new PawnId(raidId), null);
+            if (raidMix >= 0 && raidDismiss != _raidDismiss)
+            {
+                _dismissed.Remove(_raidDismiss);
+                _raidDismiss = raidDismiss;
+            }
             if (raidMix >= 0)
             {
                 if (!_dismissed.Contains(raidDismiss))
@@ -494,9 +511,14 @@ namespace Odyssey.Hud
                         count: raidStanding,
                         cell: raidCentre,
                         detail: RaidMixLabels.Label(raidMix),
-                        dismissByKey: true));
+                        dismissByKey: true,
+                        identity: raidId));
             }
-            else _dismissed.Remove(raidDismiss);
+            else
+            {
+                _dismissed.Remove(_raidDismiss);
+                _raidDismiss = 0;
+            }
 
             // Worst first: Danger (starving), then Warning (breaking), then Notice (idle).
             for (int i = 0; i < pawns.Length; i++)

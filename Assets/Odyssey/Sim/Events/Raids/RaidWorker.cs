@@ -221,11 +221,22 @@ namespace Odyssey.Sim.Events
 
         /// <summary>The caller's size, or the incident's own when the caller named none.</summary>
         static int SizeFor(IncidentContext ctx, in IncidentParms parms, RaidParams p) =>
-            parms.Points > 0 ? parms.Points : RaidBudget.AutoSize(RaidBudget.StandingColonists(ctx.Pawns), ctx.Tick, p);
+            SizeFor(ctx.Pawns, p, parms.Points, ctx.Tick);
 
         /// <summary>Would a band of <paramref name="size"/> fit under the pawn ceiling, with every raid still arriving?</summary>
-        public static bool Fits(PawnContext pawns, int size) =>
-            pawns.Pawns.Count + (pawns.Raids?.PendingArrivals ?? 0) + size <= PawnRegistry.PawnCeiling;
+        public static bool Fits(PawnContext pawns, int size) => size <= Room(pawns);
+
+        /// <summary>
+        /// How many more pawns the board can take under <see cref="PawnRegistry.PawnCeiling"/>, the
+        /// members of every raid still walking on counted as already here. The one owner of that
+        /// sum: the debug row reads it to say why a raid was refused (design 53 §9).
+        /// </summary>
+        public static int Room(PawnContext pawns) =>
+            PawnRegistry.PawnCeiling - pawns.Pawns.Count - (pawns.Raids?.PendingArrivals ?? 0);
+
+        /// <summary>How many a raid of this incident would bring: the caller's size, or its own at 0.</summary>
+        public static int SizeFor(PawnContext pawns, RaidParams p, int size, int tick) =>
+            size > 0 ? size : RaidBudget.AutoSize(RaidBudget.StandingColonists(pawns), tick, p);
 
         /// <summary>
         /// Where the census is taken from and the fallback target: the colony's start, else the

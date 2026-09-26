@@ -61,13 +61,26 @@ namespace Odyssey.Tests.Hud
             Assert.That(RaidMixLabels.Keys[RaidMixLabels.Default], Is.EqualTo("ui.raid.mix.mixed"));
         }
 
+        /// <summary>
+        /// A refused raid says why on its row (design 53 §9): too many for the room, with the room;
+        /// and with room enough, the one other reason the door refuses. Never a negative room.
+        /// </summary>
+        [Test]
+        public void ARefusedRaidSaysWhy()
+        {
+            Assert.That(DebugDirector.RaidRefusal(200, 37), Is.EqualTo("Refused: 200 will not fit, room for 37 under the ceiling"));
+            Assert.That(DebugDirector.RaidRefusal(10, -3), Does.Contain("room for 0 "));
+            Assert.That(DebugDirector.RaidRefusal(10, 40), Is.EqualTo("Refused: no edge the band can reach"));
+        }
+
         static readonly GridSize Size = new GridSize(40, 40, 4);
 
-        static WorldSnapshot Frame(RaidPhase phase, int standing, CellRef centre)
+        // CellRef is (x, z, y): these bands stand on layer 1 of a four-layer board.
+        static WorldSnapshot Frame(RaidPhase phase, int standing, CellRef centre, int id = 1)
         {
             var frame = new WorldSnapshot();
             frame.BeginWrite(tick: 0, Size, sliceLayer: 1);
-            frame.AddRaid(new RaidView(1, phase, 2, 20, standing, centre, new CellRef(20, 1, 20)));
+            frame.AddRaid(new RaidView(id, phase, 2, 20, standing, centre, new CellRef(20, 20, 1)));
             return frame;
         }
 
@@ -86,18 +99,18 @@ namespace Odyssey.Tests.Hud
         public void TheRaidAlertIsRaisedWhileABandAssaults()
         {
             var model = new AlertModel();
-            model.Refresh(Frame(RaidPhase.Gathering, 12, new CellRef(3, 1, 20)), 0);
+            model.Refresh(Frame(RaidPhase.Gathering, 12, new CellRef(3, 20, 1)), 0);
             Assert.That(RaidRow(model), Is.Null, "a band gathering at the edge raised the alert");
 
-            model.Refresh(Frame(RaidPhase.Assaulting, 12, new CellRef(9, 1, 20)), 1);
+            model.Refresh(Frame(RaidPhase.Assaulting, 12, new CellRef(9, 20, 1)), 1);
             AlertRow? row = RaidRow(model);
             Assert.That(row, Is.Not.Null, "an assault raised no alert");
             Assert.That(row!.Value.Severity, Is.EqualTo(AlertSeverity.Danger));
             Assert.That(row.Value.Count, Is.EqualTo(12));
-            Assert.That(row.Value.Cell, Is.EqualTo(new CellRef(9, 1, 20)));
+            Assert.That(row.Value.Cell, Is.EqualTo(new CellRef(9, 20, 1)));
             Assert.That(row.Value.Detail, Is.EqualTo("Mixed"));
 
-            model.Refresh(Frame(RaidPhase.Assaulting, 0, new CellRef(9, 1, 20)), 2);
+            model.Refresh(Frame(RaidPhase.Assaulting, 0, new CellRef(9, 20, 1)), 2);
             Assert.That(RaidRow(model), Is.Null, "a band with nobody standing still raised the alert");
         }
 
@@ -106,16 +119,33 @@ namespace Odyssey.Tests.Hud
         public void ADismissedRaidAlertStaysDismissedAsTheBandMoves()
         {
             var model = new AlertModel();
-            model.Refresh(Frame(RaidPhase.Assaulting, 12, new CellRef(9, 1, 20)), 0);
+            model.Refresh(Frame(RaidPhase.Assaulting, 12, new CellRef(9, 20, 1)), 0);
             model.Dismiss(RaidRow(model)!.Value.DismissKey);
-            model.Refresh(Frame(RaidPhase.Assaulting, 12, new CellRef(30, 1, 20)), 1);
+            model.Refresh(Frame(RaidPhase.Assaulting, 12, new CellRef(30, 20, 1)), 1);
             Assert.That(RaidRow(model), Is.Null, "the dismiss lasted only until the band moved");
 
             var empty = new WorldSnapshot();
             empty.BeginWrite(tick: 0, Size, sliceLayer: 1);
             model.Refresh(empty, 2);
-            model.Refresh(Frame(RaidPhase.Assaulting, 5, new CellRef(9, 1, 20)), 3);
+            model.Refresh(Frame(RaidPhase.Assaulting, 5, new CellRef(9, 20, 1)), 3);
             Assert.That(RaidRow(model), Is.Not.Null, "the next raid was dismissed in advance");
+        }
+
+        /// <summary>
+        /// A raid whose assault begins in the same refresh the dismissed one's ends is its own alert:
+        /// the dismiss belongs to the band, not to the key. The same band carrying on is the control.
+        /// </summary>
+        [Test]
+        public void ADismissedRaidDoesNotDismissTheRaidAfterIt()
+        {
+            var model = new AlertModel();
+            model.Refresh(Frame(RaidPhase.Assaulting, 12, new CellRef(9, 20, 1), id: 1), 0);
+            model.Dismiss(RaidRow(model)!.Value.DismissKey);
+            model.Refresh(Frame(RaidPhase.Assaulting, 11, new CellRef(9, 20, 1), id: 1), 1);
+            Assert.That(RaidRow(model), Is.Null, "the control: the dismissed band is still dismissed");
+
+            model.Refresh(Frame(RaidPhase.Assaulting, 8, new CellRef(30, 20, 1), id: 2), 2);
+            Assert.That(RaidRow(model), Is.Not.Null, "the next band inherited the last one's dismiss");
         }
 
         /// <summary>
