@@ -1255,6 +1255,7 @@ namespace Odyssey.Presentation.World
                     World, pawns, Crowd, out Vector3 steer);
                 Figure figure = Lease(in pawns[i], position);
                 Pose(figure, in pawns[i], position, heading, steer, deltaTime, running);
+                NoteFace(figure, in pawns[i]);
                 if (figure.Speed > FastestSpeed) FastestSpeed = figure.Speed;
                 Drawn.Add(pawns[i].Id.Value);
             }
@@ -2409,6 +2410,8 @@ namespace Odyssey.Presentation.World
                         a.Gaze.StateTimer = 0f;
                         a.Gaze.StateDuration = 1.3f;
                         a.Gaze.SocialCooldown = 20f;
+                        // And the brows go up and down again: the eyebrow flash of a greeting (design 59 §5d).
+                        if (FacesEnabled) a.Face.Flash();
                         break;
                     }
                 }
@@ -2583,6 +2586,10 @@ namespace Odyssey.Presentation.World
             figure.Fight.Forget();
             // And somebody else's blink: seeded by this pawn, so her rhythm is her own (design 59 §4).
             figure.Face = Odyssey.Hud.FaceMotion.Start(pawn.Value);
+            figure.ContextFace = Odyssey.Hud.FaceExpression.Neutral;
+            figure.CanChat = false;
+            figure.HandsFree = false;
+            figure.TalkHands = 0f;
             // And somebody else's weapon, until this pawn's own is read on the first pose — and
             // whether it was drawn: the new pawn's is taken as the frame finds it (design 33 §8b).
             HideWeapon(figure);

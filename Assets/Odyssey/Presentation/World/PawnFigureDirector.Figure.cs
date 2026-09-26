@@ -275,6 +275,18 @@ namespace Odyssey.Presentation.World
             /// <summary>The blink and the talking rhythm. Restarted on every lease; the expression and the conversation are the director's.</summary>
             public Odyssey.Hud.FaceMotion Face;
 
+            /// <summary>The face this pawn's own state calls for this frame (design 59 §3a), read in <c>NoteFace</c>.</summary>
+            public Odyssey.Hud.FaceExpression ContextFace;
+
+            /// <summary>At leisure enough to strike up a conversation (§5c).</summary>
+            public bool CanChat;
+
+            /// <summary>Nothing in hand and not at table: free to talk with her hands (§5b).</summary>
+            public bool HandsFree;
+
+            /// <summary>How free the hands are to gesture, eased, so starting to walk lowers a raised hand rather than dropping it.</summary>
+            public float TalkHands;
+
             // The legs. Bound for the crouch; see BindWorkBones.
             public Transform? Hips;
             public Transform? LeftUpperLeg;

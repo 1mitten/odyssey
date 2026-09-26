@@ -396,6 +396,14 @@ namespace Odyssey.Hud
 
         const string FaceWho = " Held by the selected colonist, or by every colonist when nobody is selected";
 
+        /// <summary>The row that hands a face back to its context (design 59 §3a): the one lit by default.</summary>
+        public const string AutoFaceKey = "ui.debug.face.auto";
+
+        public const string AutoFaceTooltip =
+            "Faces follow what the colonist is doing and feeling: stern drafted or fighting, alarmed fleeing, "
+            + "pained when hurt, tired, glum when unhappy, eyes shut asleep. For the selected colonist, or for "
+            + "every colonist when nobody is selected";
+
         /// <summary>The Faces tab's expression rows, one per <see cref="FaceExpression"/>, in its order.</summary>
         public static readonly FaceRow[] FaceRows =
         {
@@ -410,6 +418,11 @@ namespace Odyssey.Hud
                 FaceExpression.Sceptical),
             new FaceRow("ui.debug.face.tired", "Brows a little down and eyes half shut." + FaceWho,
                 FaceExpression.Tired),
+            new FaceRow("ui.debug.face.pained", "Brows down and eyes screwed up: hurt." + FaceWho,
+                FaceExpression.Pained),
+            new FaceRow("ui.debug.face.glum", "Brows a touch down and eyes a little heavy: unhappy." + FaceWho,
+                FaceExpression.Glum),
+            new FaceRow("ui.debug.face.asleep", "Eyes shut." + FaceWho, FaceExpression.Asleep),
         };
 
         public bool Open { get; private set; }

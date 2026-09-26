@@ -51,6 +51,8 @@ namespace Odyssey.Tests.PlayMode
 
                 var world = boot.World!;
                 var colony = boot.Colony!;
+                // This test counts conversations: only the ones it asks for.
+                PawnFigureDirector.AmbientConversations = false;
                 // A face holds still while the world is paused (§6), so the world must be running.
                 world.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, SpeedControl.Normal));
                 world.Tick();
@@ -60,22 +62,37 @@ namespace Odyssey.Tests.PlayMode
                 foreach (Pawn pawn in colony.Pawns.Pawns.All)
                 {
                     if (!world.Views.Current.TryGetPawn(pawn.Id, out PawnView view) || !PawnFigureDirector.CanTalk(in view)) continue;
-                    if (!figures.TryGetFace(pawn.Id.Value, out _, out _, out _, out _)) continue;
+                    if (!figures.TryGetFace(pawn.Id.Value, out _, out _, out _, out _, out _, out _)) continue;
                     if (a < 0) a = pawn.Id.Value;
                     else if (b < 0) { b = pawn.Id.Value; break; }
                 }
                 Assert.That(a > 0 && b > 0, Is.True, "two awake colonists with faces on screen");
 
                 // ---- the control: nothing has been asked of the face, so the brows are at rest.
-                figures.TryGetFace(a, out float restLift, out _, out _, out _);
-                Assert.That(restLift, Is.EqualTo(0f).Within(1e-4f), "a face nobody touched is the art as painted");
+                // Neutral forced, so the brows' rest is measured whatever her context would ask.
+                figures.SetEveryoneExpression(FaceExpression.Neutral);
+                yield return Wait(0.8f);
+                figures.TryGetFace(a, out float restLift, out _, out _, out _, out _, out _);
+                Assert.That(restLift, Is.EqualTo(0f).Within(1e-4f), "a neutral face is the art as painted");
 
                 // ---- an expression reaches the bone.
                 figures.SetEveryoneExpression(FaceExpression.Raised);
                 yield return Wait(0.8f);
-                figures.TryGetFace(a, out float raised, out _, out _, out _);
+                figures.TryGetFace(a, out float raised, out _, out _, out _, out _, out _);
                 Assert.That(raised, Is.EqualTo(FacePose.Of(FaceExpression.Raised).BrowLift).Within(0.001f),
                     "the brows sit where Raised puts them");
+                // ---- context (design 59 §3a): drafted, her own face goes stern with nothing forced.
+                figures.SetEveryoneExpression(null);
+                world.Intents.Submit(new Intent(IntentKind.SetDrafted, default, a, 1));
+                world.Tick();
+                yield return Wait(0.8f);
+                figures.TryGetFace(a, out float drafted, out _, out _, out _, out FaceExpression context, out _);
+                Assert.That(context, Is.EqualTo(FaceExpression.Stern), "drafted, her context is stern");
+                Assert.That(drafted, Is.EqualTo(FacePose.Of(FaceExpression.Stern).BrowLift).Within(0.001f),
+                    "and her brows are where Stern puts them");
+                world.Intents.Submit(new Intent(IntentKind.SetDrafted, default, a, 0));
+                world.Tick();
+                yield return Wait(0.3f);
                 figures.SetEveryoneExpression(FaceExpression.Neutral);
 
                 // ---- a talk: nods, the two looking at each other, and a blink along the way.
@@ -88,7 +105,7 @@ namespace Odyssey.Tests.PlayMode
                     yield return null;
                     foreach (int who in new[] { a, b })
                     {
-                        if (!figures.TryGetFace(who, out _, out float open, out float nod, out GazePriority gaze)) continue;
+                        if (!figures.TryGetFace(who, out _, out float open, out float nod, out GazePriority gaze, out _, out _)) continue;
                         mostNod = Mathf.Max(mostNod, nod);
                         leastOpen = Mathf.Min(leastOpen, open);
                         // Work, a ladder and sleep all pre-empt a conversation's gaze; count only
@@ -110,13 +127,14 @@ namespace Odyssey.Tests.PlayMode
                 figures.EndConversations();
                 // A listener's nod under way finishes (half a second) rather than snapping off.
                 yield return Wait(0.8f);
-                figures.TryGetFace(a, out _, out _, out float after, out GazePriority afterGaze);
+                figures.TryGetFace(a, out _, out _, out float after, out GazePriority afterGaze, out _, out _);
                 Assert.That(after, Is.LessThan(0.2f), "the head settles");
                 Assert.That(afterGaze, Is.Not.EqualTo(GazePriority.Conversation), "and looks elsewhere");
             }
             finally
             {
                 PawnFigureDirector.FacesEnabled = true;
+                PawnFigureDirector.AmbientConversations = true;
                 Object.Destroy(root);
             }
         }

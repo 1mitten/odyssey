@@ -188,6 +188,8 @@ namespace Odyssey.Presentation.Ui
             _debugFaces.AddToClassList("settings__body");
             _debugTalkRow = DebugToggleRow(DebugDirector.TalkKey, DebugDirector.TalkTooltip, ToggleTalk);
             _debugFaces.Add(_debugTalkRow);
+            _debugAutoFaceRow = DebugToggleRow(DebugDirector.AutoFaceKey, DebugDirector.AutoFaceTooltip, () => SetFace(null));
+            _debugFaces.Add(_debugAutoFaceRow);
             foreach (DebugDirector.FaceRow face in DebugDirector.FaceRows)
             {
                 FaceExpression expression = face.Expression;
@@ -439,6 +441,7 @@ namespace Odyssey.Presentation.Ui
 
         VisualElement _debugFaces = null!;
         VisualElement? _debugTalkRow;
+        VisualElement? _debugAutoFaceRow;
         readonly List<VisualElement> _debugFaceRows = new();
 
         /// <summary>
@@ -466,9 +469,10 @@ namespace Odyssey.Presentation.Ui
 
         /// <summary>
         /// An expression row: the selected colonist holds it, or, with nobody selected, the whole
-        /// colony does — so the colony can be compared at a distance.
+        /// colony does — so the colony can be compared at a distance. Null is the From context row,
+        /// which hands the face back to what the colonist is doing and feeling.
         /// </summary>
-        void SetFace(FaceExpression expression)
+        void SetFace(FaceExpression? expression)
         {
             var figures = _boot?.Figures;
             if (figures == null) return;
@@ -483,11 +487,12 @@ namespace Odyssey.Presentation.Ui
             if (_debugPanel == null || _debugPanel.style.display == DisplayStyle.None) return;
             var figures = _boot?.Figures;
             _debugTalkRow?.EnableInClassList("settings__row--on", figures != null && figures.ConversationCount > 0);
-            FaceExpression shown = figures == null ? FaceExpression.Neutral
-                : _directors != null && _directors.Selection.HasPawn ? figures.ExpressionOf(_directors.Selection.Pawn)
+            FaceExpression? forced = figures == null ? null
+                : _directors != null && _directors.Selection.HasPawn ? figures.ForcedExpressionOf(_directors.Selection.Pawn)
                 : figures.EveryoneExpression;
+            _debugAutoFaceRow?.EnableInClassList("settings__row--on", forced == null);
             for (int i = 0; i < _debugFaceRows.Count; i++)
-                _debugFaceRows[i].EnableInClassList("settings__row--on", DebugDirector.FaceRows[i].Expression == shown);
+                _debugFaceRows[i].EnableInClassList("settings__row--on", DebugDirector.FaceRows[i].Expression == forced);
         }
 
         /// <summary>

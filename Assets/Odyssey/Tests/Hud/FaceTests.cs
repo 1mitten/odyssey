@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using NUnit.Framework;
 using Odyssey.Hud;
+using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Tests.Hud
 {
@@ -48,7 +49,9 @@ namespace Odyssey.Tests.Hud
                 FacePose p = FacePose.Of(e);
                 Assert.That(p.BrowLift, Is.InRange(-0.008f, 0.020f), e.ToString());
                 Assert.That(Math.Abs(p.BrowRoll), Is.LessThanOrEqualTo(12f), e.ToString());
-                Assert.That(p.EyeOpen, Is.InRange(0.45f, 1.2f), e.ToString());
+                // Asleep is shut; Pained is screwed up tighter than tired.
+                float least = e == FaceExpression.Asleep ? FaceMotion.BlinkShutOpen : 0.35f;
+                Assert.That(p.EyeOpen, Is.InRange(least, 1.2f), e.ToString());
                 Assert.That(p.EyeSize, Is.InRange(1f, 1.2f), e.ToString());
             }
         }
@@ -204,7 +207,8 @@ namespace Odyssey.Tests.Hud
                 face.Step(Frame);
                 most = Math.Max(most, face.NodPitch);
                 browMost = Math.Max(browMost, face.Pose.BrowLift);
-                Assert.That(face.NodPitch, Is.GreaterThanOrEqualTo(0f), "a nod goes down, never up");
+                Assert.That(face.NodPitch, Is.GreaterThanOrEqualTo(-FaceMotion.QuestionChin - 0.01f),
+                    "a question lifts the chin, and nothing lifts it further");
                 if (phrasing && !face.InPhrase) { pauses++; pausedFor = 0f; }
                 if (!face.InPhrase) pausedFor += Frame;
                 if (!phrasing && face.InPhrase && pausedFor >= FaceMotion.PauseMin - Frame) endOfPause.Add(lastNod);
@@ -240,9 +244,11 @@ namespace Odyssey.Tests.Hud
                 Assert.That(listener.NodPitch, Is.LessThanOrEqualTo(FaceMotion.ListenNod + 1e-4f));
             }
             // Thirty seconds at one nod every 1.6-3.6 s (plus the half second of the nod itself).
-            Assert.That(listenerPeaks, Is.InRange(6, 16), $"{listenerPeaks} listener nods");
+            // Some replies are a brow raise or a tilt rather than a nod, so fewer nods than replies.
+            Assert.That(listenerPeaks, Is.InRange(4, 16), $"{listenerPeaks} listener nods");
             Assert.That(speakerPeaks, Is.GreaterThan(listenerPeaks * 3), "a speaker beats; a listener agrees");
-            Assert.That(browMost, Is.EqualTo(0f), "a listener's brows stay where the expression put them");
+            Assert.That(browMost, Is.LessThanOrEqualTo(FaceMotion.ListenBrow + 1e-5f),
+                "a listener raises her brows now and then, never further than that");
         }
 
         [Test]
@@ -317,6 +323,186 @@ namespace Odyssey.Tests.Hud
             Assert.That(talk.Involves(5) && talk.Involves(6) && !talk.Involves(7), Is.True);
         }
 
+        // ------------------------------------------------------------------ context (§3a)
+
+        static FaceSignals Signals(bool asleep = false, bool downed = false, bool stunned = false,
+            bool fleeing = false, bool fighting = false, bool drafted = false, int pain = 0, int rest = 800,
+            int mood = 600) =>
+            new FaceSignals(asleep, downed, stunned, fleeing, fighting, drafted, pain, rest, mood);
+
+        [Test]
+        public void AColonistAtEaseWearsTheFaceAsPainted()
+        {
+            Assert.That(FaceContext.Expression(Signals()), Is.EqualTo(FaceExpression.Neutral));
+            Assert.That(FaceContext.Expression(FaceSignals.AtEase), Is.EqualTo(FaceExpression.Neutral));
+        }
+
+        [Test]
+        public void EachContextHasItsFace()
+        {
+            Assert.That(FaceContext.Expression(Signals(drafted: true)), Is.EqualTo(FaceExpression.Stern), "drafted");
+            Assert.That(FaceContext.Expression(Signals(fighting: true)), Is.EqualTo(FaceExpression.Stern), "fighting");
+            Assert.That(FaceContext.Expression(Signals(rest: FaceContext.TiredBelow - 1)), Is.EqualTo(FaceExpression.Tired));
+            Assert.That(FaceContext.Expression(Signals(rest: FaceContext.TiredBelow)), Is.EqualTo(FaceExpression.Neutral),
+                "rested enough not to want a bed");
+            Assert.That(FaceContext.Expression(Signals(fleeing: true)), Is.EqualTo(FaceExpression.Alarmed));
+            Assert.That(FaceContext.Expression(Signals(stunned: true)), Is.EqualTo(FaceExpression.Alarmed));
+            Assert.That(FaceContext.Expression(Signals(pain: FaceContext.PainedAbove + 1)), Is.EqualTo(FaceExpression.Pained));
+            Assert.That(FaceContext.Expression(Signals(pain: FaceContext.PainedAbove)), Is.EqualTo(FaceExpression.Neutral));
+            Assert.That(FaceContext.Expression(Signals(downed: true)), Is.EqualTo(FaceExpression.Pained));
+            Assert.That(FaceContext.Expression(Signals(asleep: true)), Is.EqualTo(FaceExpression.Asleep));
+            Assert.That(FaceContext.Expression(Signals(mood: MoodBands.Strained - 1)), Is.EqualTo(FaceExpression.Glum));
+            Assert.That(FaceContext.Expression(Signals(mood: MoodBands.Strained)), Is.EqualTo(FaceExpression.Neutral));
+        }
+
+        [Test]
+        public void WhatSheIsDoingToSurviveBeatsHowSheFeels()
+        {
+            Assert.That(FaceContext.Expression(Signals(drafted: true, rest: 10, mood: 10)), Is.EqualTo(FaceExpression.Stern),
+                "a drafted colonist looks stern however tired or unhappy");
+            Assert.That(FaceContext.Expression(Signals(drafted: true, pain: 300)), Is.EqualTo(FaceExpression.Stern),
+                "a little pain does not show through a fight");
+            Assert.That(FaceContext.Expression(Signals(drafted: true, pain: FaceContext.AgonyAbove + 1)),
+                Is.EqualTo(FaceExpression.Pained), "agony does");
+            Assert.That(FaceContext.Expression(Signals(fighting: true, fleeing: true)), Is.EqualTo(FaceExpression.Alarmed),
+                "running away is not fighting");
+            Assert.That(FaceContext.Expression(Signals(rest: 10, mood: 10)), Is.EqualTo(FaceExpression.Tired),
+                "tired shows before unhappy");
+            Assert.That(FaceContext.Expression(Signals(asleep: true, drafted: true, pain: 900)), Is.EqualTo(FaceExpression.Asleep),
+                "nothing wakes a sleeping face");
+        }
+
+        [Test]
+        public void TheSignalsAreReadOffThePublishedPawn()
+        {
+            var drafted = new PawnView(new PawnId(1), default, 800, 800, 600,
+                flags: PawnFlags.Person | PawnFlags.Drafted);
+            Assert.That(FaceContext.Expression(FaceSignals.Of(in drafted, 0)), Is.EqualTo(FaceExpression.Stern));
+            var swinging = new PawnView(new PawnId(1), default, 800, 800, 600, jobDef: JobHandle.AttackMelee);
+            Assert.That(FaceContext.Expression(FaceSignals.Of(in swinging, 0)), Is.EqualTo(FaceExpression.Stern));
+            var tired = new PawnView(new PawnId(1), default, 800, 100, 600);
+            Assert.That(FaceContext.Expression(FaceSignals.Of(in tired, 0)), Is.EqualTo(FaceExpression.Tired));
+            var hurt = new PawnView(new PawnId(1), default, 800, 800, 600);
+            Assert.That(FaceContext.Expression(FaceSignals.Of(in hurt, 600)), Is.EqualTo(FaceExpression.Pained));
+        }
+
+        [Test]
+        public void OnlyAColonistAtLeisureStrikesUpAConversation()
+        {
+            Assert.That(FaceContext.CanChat(new PawnView(new PawnId(1), default, 800, 800, 600)), Is.True, "idle");
+            Assert.That(FaceContext.CanChat(new PawnView(new PawnId(1), default, 800, 800, 600, JobHandle.Wander)), Is.True);
+            Assert.That(FaceContext.CanChat(new PawnView(new PawnId(1), default, 800, 800, 600, JobHandle.Eat)), Is.True,
+                "over a meal");
+            Assert.That(FaceContext.CanChat(new PawnView(new PawnId(1), default, 800, 800, 600, JobHandle.Haul)), Is.False);
+            Assert.That(FaceContext.CanChat(new PawnView(new PawnId(1), default, 800, 800, 600, working: true)), Is.False);
+            Assert.That(FaceContext.CanChat(new PawnView(new PawnId(1), default, 800, 800, 600, asleep: true)), Is.False);
+            Assert.That(FaceContext.CanChat(new PawnView(new PawnId(1), default, 800, 800, 600,
+                flags: PawnFlags.Person | PawnFlags.Drafted)), Is.False);
+        }
+
+        // ------------------------------------------------------------------ variety (§5a, §5b)
+
+        [Test]
+        public void ASpeakerUsesEveryMannerAndBothHands()
+        {
+            FaceMotion face = FaceMotion.Start(31);
+            face.Role = TalkRole.Speaking;
+            var manners = new System.Collections.Generic.HashSet<TalkManner>();
+            var arms = new System.Collections.Generic.HashSet<TalkArm>();
+            float mostYaw = 0f, mostRoll = 0f, mostBrow = 0f, mostBrowRoll = 0f, mostArm = 0f, mostBeat = 0f;
+            for (int f = 0; f < 60 * 180; f++)
+            {
+                face.Step(Frame);
+                if (face.InPhrase) manners.Add(face.Manner);
+                if (face.ArmLift > 0.9f) arms.Add(face.Arm);
+                mostYaw = Math.Max(mostYaw, Math.Abs(face.NodYaw));
+                mostRoll = Math.Max(mostRoll, Math.Abs(face.NodRoll));
+                mostBrow = Math.Max(mostBrow, face.Pose.BrowLift);
+                mostBrowRoll = Math.Max(mostBrowRoll, Math.Abs(face.Pose.BrowRoll));
+                mostArm = Math.Max(mostArm, face.ArmLift);
+                mostBeat = Math.Max(mostBeat, Math.Abs(face.ElbowBeat));
+            }
+            Assert.That(manners, Is.EquivalentTo(Enum.GetValues(typeof(TalkManner))), "three minutes uses every manner");
+            Assert.That(arms, Is.EquivalentTo(new[] { TalkArm.Right, TalkArm.Left, TalkArm.Both }), "and every hand");
+            Assert.That(mostYaw, Is.GreaterThan(5f).And.LessThanOrEqualTo(FaceMotion.MusingYaw + FaceMotion.ShakeYaw),
+                "a shake or a glance away turns the head");
+            Assert.That(mostRoll, Is.GreaterThan(5f), "a question or a doubt tilts it");
+            Assert.That(mostBrow, Is.GreaterThanOrEqualTo(FaceMotion.QuestionBrow * 0.95f), "a question lifts the brows");
+            Assert.That(mostBrowRoll, Is.GreaterThan(FaceMotion.TiltBrowRoll * 0.9f), "doubt tilts them");
+            Assert.That(mostArm, Is.GreaterThan(0.95f));
+            Assert.That(mostBeat, Is.InRange(FaceMotion.ElbowBeatDegrees * 0.5f, FaceMotion.ElbowBeatDegrees + 1e-3f),
+                "the talking hand beats with the phrase");
+        }
+
+        [Test]
+        public void NobodyTalkingMovesAHand()
+        {
+            FaceMotion face = FaceMotion.Start(37);
+            face.Role = TalkRole.Listening;
+            for (int f = 0; f < 60 * 60; f++)
+            {
+                face.Step(Frame);
+                Assert.That(face.ArmLift, Is.EqualTo(0f), "a listener keeps her hands down");
+                Assert.That(face.Arm, Is.EqualTo(TalkArm.None));
+            }
+        }
+
+        [Test]
+        public void AListenerRepliesInMoreThanOneWay()
+        {
+            FaceMotion face = FaceMotion.Start(41);
+            face.Role = TalkRole.Listening;
+            float mostBrow = 0f, mostRoll = 0f, mostNod = 0f;
+            for (int f = 0; f < 60 * 120; f++)
+            {
+                face.Step(Frame);
+                mostBrow = Math.Max(mostBrow, face.Pose.BrowLift);
+                mostRoll = Math.Max(mostRoll, Math.Abs(face.NodRoll));
+                mostNod = Math.Max(mostNod, face.NodPitch);
+            }
+            Assert.That(mostNod, Is.GreaterThan(FaceMotion.ListenNod * 0.9f), "nods");
+            Assert.That(mostBrow, Is.GreaterThan(FaceMotion.ListenBrow * 0.9f), "a brow raised in surprise");
+            Assert.That(mostRoll, Is.GreaterThan(FaceMotion.ListenTiltRoll * 0.9f), "a tilt of the head");
+            Assert.That(Math.Abs(face.NodYaw), Is.EqualTo(0f), "and a listener does not look away from the speaker");
+        }
+
+        [Test]
+        public void AGreetingIsAnEyebrowFlash()
+        {
+            FaceMotion face = FaceMotion.Start(43);
+            Run(ref face, 0.5f);
+            float before = face.Pose.BrowLift;
+            face.Flash();
+            float most = 0f;
+            for (float t = 0f; t < FaceMotion.FlashSeconds; t += Frame) { face.Step(Frame); most = Math.Max(most, face.Pose.BrowLift); }
+            Assert.That(most - before, Is.GreaterThan(FaceMotion.FlashBrow * 0.95f), "up");
+            Run(ref face, 0.2f);
+            Assert.That(face.Pose.BrowLift, Is.EqualTo(before).Within(1e-5f), "and straight back down");
+            Assert.That(face.NodPitch, Is.EqualTo(0f), "with the brows alone");
+        }
+
+        [Test]
+        public void AQuestionIsHeldThroughThePauseAfterIt()
+        {
+            FaceMotion face = FaceMotion.Start(47);
+            face.Role = TalkRole.Speaking;
+            bool heard = false;
+            bool wasQuestion = false, phrasing = false;
+            for (int f = 0; f < 60 * 120 && !heard; f++)
+            {
+                face.Step(Frame);
+                if (phrasing && !face.InPhrase) wasQuestion = face.Manner == TalkManner.Question;
+                if (!face.InPhrase && wasQuestion && face.Pose.BrowLift > FaceMotion.QuestionBrow * 0.8f)
+                {
+                    Assert.That(face.NodPitch, Is.LessThan(0f), "chin up");
+                    Assert.That(Math.Abs(face.NodRoll), Is.GreaterThan(FaceMotion.QuestionRoll * 0.5f), "head on one side");
+                    heard = true;
+                }
+                phrasing = face.InPhrase;
+            }
+            Assert.That(heard, Is.True, "two minutes of talk held no question through a pause");
+        }
+
         // ------------------------------------------------------------------ the debug tab
 
         [Test]
@@ -325,7 +511,8 @@ namespace Odyssey.Tests.Hud
             Assert.That(DebugDirector.FaceRows.Length, Is.EqualTo(All.Length));
             for (int i = 0; i < All.Length; i++)
                 Assert.That(DebugDirector.FaceRows[i].Expression, Is.EqualTo(All[i]));
-            var keys = new System.Collections.Generic.HashSet<string> { DebugDirector.TalkKey };
+            var keys = new System.Collections.Generic.HashSet<string> { DebugDirector.TalkKey, DebugDirector.AutoFaceKey };
+            Assert.That(Registry.Label(DebugDirector.AutoFaceKey), Is.Not.EqualTo(DebugDirector.AutoFaceKey));
             foreach (DebugDirector.FaceRow row in DebugDirector.FaceRows)
             {
                 Assert.That(keys.Add(row.Key), Is.True, $"{row.Key} twice");

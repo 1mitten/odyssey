@@ -102,13 +102,15 @@ namespace Odyssey.Presentation.World
         /// just turned it to. About the face's own axes as they point now, so a colonist looking
         /// sideways at her partner nods at her rather than tilting an ear.
         /// </summary>
-        public void Nod(Transform head, float pitch, float roll)
+        public void Nod(Transform head, float pitch, float roll, float yaw = 0f)
         {
-            if (pitch == 0f && roll == 0f) return;
+            if (pitch == 0f && roll == 0f && yaw == 0f) return;
             Vector3 face = head.TransformDirection(_headForward);
             Vector3 across = Vector3.Cross(Vector3.up, face);
             if (across.sqrMagnitude < 1e-6f) return;
-            head.rotation = Quaternion.AngleAxis(pitch, across.normalized) * Quaternion.AngleAxis(roll, face) * head.rotation;
+            // The turn last, about the neck's own upright, so a shake stays a shake whatever the nod.
+            head.rotation = Quaternion.AngleAxis(yaw, Vector3.up) * Quaternion.AngleAxis(pitch, across.normalized) *
+                            Quaternion.AngleAxis(roll, face) * head.rotation;
         }
 
         static int MostNearly(Transform bone, Vector3 direction)
