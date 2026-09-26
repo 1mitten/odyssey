@@ -37,7 +37,9 @@ namespace Odyssey.Presentation.World
     /// resolves one; this class turns each id into a <see cref="ModuleLibrary"/> index exactly
     /// once, at construction, so the mesher deals only in integers.
     /// </summary>
-    public sealed class WorldRenderModel
+    // IDemolitionCells: the five questions the demolition sounds ask are already this class's own
+    // (design 57 §9), so the mirror answers them as it stands.
+    public sealed class WorldRenderModel : Odyssey.Hud.IDemolitionCells
     {
         readonly ushort[] _terrain;
         readonly ushort[] _floor;

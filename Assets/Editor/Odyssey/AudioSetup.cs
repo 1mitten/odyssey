@@ -206,6 +206,13 @@ namespace Odyssey.EditorTools
                 mono: true, loadInBackground: false, placeholder: null, normalize: false),
             new("combat-shot-far", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            // Something coming down (design 57 §9), baked by tools/audio/bake_demolition.sh: wood
+            // broken or taken apart, and a mined face collapsing. The gunshot's class and its
+            // reason for **not normalising** — the bake levels every take at -19 LUFS.
+            new("break-wood", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            new("break-rock", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
             new("alert-normal", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: false, loadInBackground: false, Alert),
             new("alert-negative", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
@@ -756,6 +763,29 @@ namespace Odyssey.EditorTools
                     Volume = 0.8f, VolumeVariance = 0.10f, PitchVariance = 0.03f,
                     SpatialBlend = 1f, MinDistance = 50f, MaxDistance = 400f,
                     Priority = 120, Cooldown = 0.06f,
+                },
+                // Something coming down (design 57 §9): wood broken or taken apart, and a mined
+                // face collapsing. Placed at the cell and heard across the view like the pick that
+                // leads up to it (20 / 200 m against the pick's 20 / 210). The cooldown makes a
+                // gallery of faces finishing on one tick one collapse rather than a pile-up; the
+                // priority sits among the blows, below the gunshot.
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.BreakWood,
+                    Clips = Variants("break-wood"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.85f, VolumeVariance = 0.12f, PitchVariance = 0.05f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = 110, Cooldown = 0.1f,
+                },
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.BreakRock,
+                    Clips = Variants("break-rock"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.85f, VolumeVariance = 0.12f, PitchVariance = 0.05f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = 110, Cooldown = 0.1f,
                 },
                 // The alerts. Zero variance on all five: a chime is a signal and a signal that
                 // wobbles reads as a fault, which is the opposite of what the work sounds want

@@ -1032,6 +1032,8 @@ namespace Odyssey.Presentation.Bootstrap
                        "the fallback only; every colonist is dealt from their own roll seed"));
 
             Lap("colony ready");
+            // Per session, so no cell of the last world is watched against this one's mirror.
+            _demolitions = new DemolitionWatch(NaturalContent.StuffWood);
             _renderer = new ChunkRenderer(_model)
             {
                 CastShadows = castShadows,
@@ -1685,6 +1687,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             DrawStandingOrders(_world.Views.Current);
             DrawCracks(_world.Views.Current);
+            HearDemolitions(_world.Views.Current);
             DrawZones(_world.Views.Current);
             DrawBuildingSites(_world.Views.Current);
             DrawToolPreview();
@@ -1993,6 +1996,27 @@ namespace Odyssey.Presentation.Bootstrap
                 bool cracked = kind == DesignationKind.Mine && _renderer.CracksAvailable;
                 if (orders[i].Progress > 0 && !cracked)
                     _renderer.DrawCellCut(cell, orders[i].Progress / 255f, CutColour);
+            }
+        }
+
+        DemolitionWatch? _demolitions;
+        readonly List<Demolished> _demolished = new List<Demolished>();
+
+        /// <summary>
+        /// Something coming down, heard (design 57 §9): wood broken or taken apart, a mined face
+        /// collapsing. <see cref="DemolitionWatch"/> says which cells went this frame — on the same
+        /// evidence the break (§7) is drawn on, so the sound and the shudder start together — and
+        /// each is played from the middle of its cell.
+        /// </summary>
+        void HearDemolitions(WorldSnapshot snapshot)
+        {
+            if (_demolitions == null || _model == null) return;
+            if (_demolitions.Step(snapshot, _model, _demolished) == 0 || _audio == null) return;
+            for (int i = 0; i < _demolished.Count; i++)
+            {
+                CellRef cell = _model.Size.FromIndex(_demolished[i].CellIndex);
+                string id = _demolished[i].Kind == Demolition.Rock ? SoundIds.BreakRock : SoundIds.BreakWood;
+                _audio.PlayOneShot(id, CellMetrics.Centre(cell.X, cell.Z, cell.Y));
             }
         }
 
@@ -4470,6 +4494,7 @@ namespace Odyssey.Presentation.Bootstrap
             _floaterView = null;
             _colonistMaterials = null;
             _renderer = null;
+            _demolitions = null;
             _actorMaterial = null;
             _model = null;
             _colony = null;
