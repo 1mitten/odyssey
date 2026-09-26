@@ -1302,40 +1302,56 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public static int Find(PawnContext ctx, int origin, TraverseMode mode)
         {
+            int best = -1, bestDist = int.MaxValue;
+            for (int edge = 0; edge < 4; edge++) ScanEdge(ctx, origin, edge, mode, ref best, ref bestDist);
+            return best;
+        }
+
+        /// <summary>
+        /// The nearest reachable cell on one side of the board, or -1 (design 64 §6b): where an
+        /// expedition walks off, the side that faces the hex it is going to, and where it walks back
+        /// on. The side numbers are <see cref="Expeditions.BoardSide"/>'s, which are this scan's.
+        /// </summary>
+        public static int FindOnSide(PawnContext ctx, int origin, int side, TraverseMode mode)
+        {
+            int best = -1, bestDist = int.MaxValue;
+            ScanEdge(ctx, origin, side, mode, ref best, ref bestDist);
+            return best;
+        }
+
+        // One edge, stepping out from the origin's projection on it. The best so far is shared
+        // across edges by Find, so an edge stops as soon as it cannot beat another edge's find.
+        static void ScanEdge(PawnContext ctx, int origin, int edge, TraverseMode mode, ref int best, ref int bestDist)
+        {
             GridSize size = ctx.Size;
             CellRef from = size.FromIndex(origin);
-            int best = -1, bestDist = int.MaxValue;
             int reach = System.Math.Max(size.SizeX, size.SizeZ);
-            for (int edge = 0; edge < 4; edge++)
+            for (int k = 0; k < reach; k++)
             {
-                for (int k = 0; k < reach; k++)
+                bool found = false;
+                for (int sgn = -1; sgn <= 1; sgn += 2)
                 {
-                    bool found = false;
-                    for (int sgn = -1; sgn <= 1; sgn += 2)
+                    if (k == 0 && sgn == 1) continue;
+                    int x, z;
+                    switch (edge)
                     {
-                        if (k == 0 && sgn == 1) continue;
-                        int x, z;
-                        switch (edge)
-                        {
-                            case 0: x = 0; z = from.Z + sgn * k; break;
-                            case 1: x = size.SizeX - 1; z = from.Z + sgn * k; break;
-                            case 2: z = 0; x = from.X + sgn * k; break;
-                            default: z = size.SizeZ - 1; x = from.X + sgn * k; break;
-                        }
-                        if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
-                        int dist = System.Math.Max(System.Math.Abs(x - from.X), System.Math.Abs(z - from.Z));
-                        if (dist >= bestDist) { found = true; break; }
-                        int cell = ctx.Cells.NearestWalkableInColumn(x, z, from.Y);
-                        if (cell < 0 || cell == origin || !Reachable(ctx, origin, cell, mode)) continue;
-                        best = cell;
-                        bestDist = dist;
-                        found = true;
-                        break;
+                        case 0: x = 0; z = from.Z + sgn * k; break;
+                        case 1: x = size.SizeX - 1; z = from.Z + sgn * k; break;
+                        case 2: z = 0; x = from.X + sgn * k; break;
+                        default: z = size.SizeZ - 1; x = from.X + sgn * k; break;
                     }
-                    if (found) break;
+                    if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
+                    int dist = System.Math.Max(System.Math.Abs(x - from.X), System.Math.Abs(z - from.Z));
+                    if (dist >= bestDist) { found = true; break; }
+                    int cell = ctx.Cells.NearestWalkableInColumn(x, z, from.Y);
+                    if (cell < 0 || cell == origin || !Reachable(ctx, origin, cell, mode)) continue;
+                    best = cell;
+                    bestDist = dist;
+                    found = true;
+                    break;
                 }
+                if (found) break;
             }
-            return best;
         }
 
         /// <summary><see cref="PawnContext.Reachable(Pawn, int, TraverseMode)"/> from a cell rather than a pawn.</summary>

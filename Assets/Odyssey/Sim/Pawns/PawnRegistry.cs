@@ -945,45 +945,7 @@ namespace Odyssey.Sim.Pawns
                 writer.Write(pawn.Id.Value);
                 writer.Write(pawn.Cell);
 
-                writer.Write(pawn.Needs.Length);
-                for (int n = 0; n < pawn.Needs.Length; n++) writer.Write(pawn.Needs[n]);
-
-                writer.Write(pawn.Mood);
-                writer.Write(pawn.MoodTarget);
-
-                writer.Write(pawn.Skills.Length);
-                for (int s = 0; s < pawn.Skills.Length; s++) writer.Write(pawn.Skills[s]);
-
-                // Passions as ints, for the same reason the work priorities are below.
-                writer.Write(pawn.Passions.Length);
-                for (int s = 0; s < pawn.Passions.Length; s++) writer.Write((int)pawn.Passions[s]);
-
-                writer.Write(pawn.SkillGainedToday.Length);
-                for (int s = 0; s < pawn.SkillGainedToday.Length; s++) writer.Write(pawn.SkillGainedToday[s]);
-                writer.Write(pawn.SkillDay);
-
-                writer.Write(pawn.WorkPriorities.Length);
-                // Written as an int, not as the byte it is stored in: the reader asks for an int,
-                // and a width mismatch here corrupts every field after it.
-                for (int w = 0; w < pawn.WorkPriorities.Length; w++) writer.Write((int)pawn.WorkPriorities[w]);
-
-                // The day's schedule (design 27 §12). Format 7. Ints for the reason the two
-                // arrays above are ints: the reader asks for an int and a width mismatch here
-                // corrupts every field after it.
-                writer.Write(pawn.ScheduleHours.Length);
-                for (int h = 0; h < pawn.ScheduleHours.Length; h++) writer.Write((int)pawn.ScheduleHours[h]);
-
-                writer.Write(pawn.BreakTicksLeft);
-                writer.Write(pawn.Asleep);
-                writer.Write(pawn.JobStartsInWindow);
-                writer.Write(pawn.WindowStartTick);
-
-                writer.Write(pawn.Memories.Count);
-                for (int m = 0; m < pawn.Memories.Count; m++)
-                {
-                    writer.Write(pawn.Memories[m].ThoughtIndex);
-                    writer.Write(pawn.Memories[m].ExpiryTick);
-                }
+                WriteCharacter(writer, pawn);
 
                 writer.Write(pawn.Destination);
                 writer.Write(pawn.MoveProgress);
@@ -1008,21 +970,7 @@ namespace Odyssey.Sim.Pawns
                 writer.Write(pawn.HeldReservations.Count);
                 for (int r = 0; r < pawn.HeldReservations.Count; r++) writer.Write(pawn.HeldReservations[r]);
 
-                // Last in the section on purpose (WS3): a v5 file ends here, so the field sits
-                // where an older reader stops rather than where it would shift every read after
-                // it. Format 6, see WorldSave's version history.
-                writer.Write(pawn.StarvationSeverity);
-
-                // And last again, for the same reason one field later (design 28 §9): format 8
-                // ends at the severity above, and the temperature bar is appended where an
-                // older reader stops rather than where it would shift nothing and mean it.
-                writer.Write(pawn.TemperatureSeverity);
-
-                // The ambient the colonist last felt, beside the bar it feeds. It is a sample,
-                // not a derivation — the cell and the room may both have moved since — and for
-                // up to an interval after a load the work rate reads it, so a file that left it
-                // out diverged from its own game (design 28 §12, F8). Format 9 with the bar.
-                writer.Write(pawn.AmbientTempC);
+                WriteCondition(writer, pawn);
             }
         }
 
@@ -1041,67 +989,7 @@ namespace Odyssey.Sim.Pawns
                 pawn.DriverPool = BuildDrivers();
                 pawn.Context = _ctx;
 
-                int needCount = reader.ReadInt();
-                for (int n = 0; n < needCount; n++)
-                {
-                    int value = reader.ReadInt();
-                    if (n < pawn.Needs.Length) pawn.Needs[n] = value;
-                }
-
-                pawn.Mood = reader.ReadInt();
-                pawn.MoodTarget = reader.ReadInt();
-
-                int skillCount = reader.ReadInt();
-                for (int s = 0; s < skillCount; s++)
-                {
-                    int value = reader.ReadInt();
-                    if (s < pawn.Skills.Length) pawn.Skills[s] = value;
-                }
-
-                int passionCount = reader.ReadInt();
-                for (int s = 0; s < passionCount; s++)
-                {
-                    int value = reader.ReadInt();
-                    if (s < pawn.Passions.Length) pawn.Passions[s] = (byte)value;
-                }
-
-                int todayCount = reader.ReadInt();
-                for (int s = 0; s < todayCount; s++)
-                {
-                    int value = reader.ReadInt();
-                    if (s < pawn.SkillGainedToday.Length) pawn.SkillGainedToday[s] = value;
-                }
-                pawn.SkillDay = reader.ReadInt();
-
-                int workCount = reader.ReadInt();
-                for (int w = 0; w < workCount; w++)
-                {
-                    int value = reader.ReadInt();
-                    if (w < pawn.WorkPriorities.Length) pawn.WorkPriorities[w] = (byte)value;
-                }
-
-                // Format 7 added the schedule. An older save has none, and the constructor's
-                // default day is the right answer for it: a colony saved before schedules existed
-                // was being played without one, so it gets the shape every new colonist gets
-                // rather than twenty-four blank hours.
-                if (reader.FormatVersion >= 7)
-                {
-                    int hourCount = reader.ReadInt();
-                    for (int h = 0; h < hourCount; h++)
-                    {
-                        int value = reader.ReadInt();
-                        if (h < pawn.ScheduleHours.Length) pawn.ScheduleHours[h] = (byte)value;
-                    }
-                }
-
-                pawn.BreakTicksLeft = reader.ReadInt();
-                pawn.Asleep = reader.ReadBool();
-                pawn.JobStartsInWindow = reader.ReadInt();
-                pawn.WindowStartTick = reader.ReadInt();
-
-                int memoryCount = reader.ReadInt();
-                for (int m = 0; m < memoryCount; m++)
-                    pawn.Memories.Add(new Memory { ThoughtIndex = reader.ReadInt(), ExpiryTick = reader.ReadInt() });
+                ReadCharacter(reader, pawn);
 
                 pawn.Destination = reader.ReadInt();
                 pawn.MoveProgress = Rates.FromSave(reader.ReadInt(), reader.FormatVersion);
@@ -1135,21 +1023,164 @@ namespace Odyssey.Sim.Pawns
                     pawn.HeldReservations.Add(key);
                 }
 
-                // Last in the section from format 6 on; a v5 file simply ends here, and a
-                // colonist from one had never been starving by a definition that did not exist.
-                if (reader.FormatVersion >= 6)
-                    pawn.StarvationSeverity = reader.ReadInt();
-
-                // And last again, from format 9 on (design 28 §9): a colonist from an older
-                // file had never been cold by a definition that did not exist.
-                if (reader.FormatVersion >= 9)
-                {
-                    pawn.TemperatureSeverity = reader.ReadInt();
-                    pawn.AmbientTempC = reader.ReadInt();
-                }
+                ReadCondition(reader, pawn);
 
                 _byId[pawn.Id.Value] = _pawns.Count;
                 _pawns.Add(pawn);
+            }
+        }
+
+        // ---- one pawn's own record, shared with the expedition codec ------------------------
+        //
+        // The blocks a colonist carries from board to board (design 64 §12): who she is and how she
+        // is, as opposed to where she is and what she is doing. Written here for the board's own
+        // section and called by Expeditions.PawnRecord for a colonist on the road, so the field
+        // order has one owner. Moving a line here moves it in both files, which is the point.
+
+        /// <summary>Needs, mood, skills and passions, work priorities, schedule, break, sleep and memories.</summary>
+        internal static void WriteCharacter(SaveWriter writer, Pawn pawn)
+        {
+            writer.Write(pawn.Needs.Length);
+            for (int n = 0; n < pawn.Needs.Length; n++) writer.Write(pawn.Needs[n]);
+
+            writer.Write(pawn.Mood);
+            writer.Write(pawn.MoodTarget);
+
+            writer.Write(pawn.Skills.Length);
+            for (int s = 0; s < pawn.Skills.Length; s++) writer.Write(pawn.Skills[s]);
+
+            // Passions as ints, for the same reason the work priorities are below.
+            writer.Write(pawn.Passions.Length);
+            for (int s = 0; s < pawn.Passions.Length; s++) writer.Write((int)pawn.Passions[s]);
+
+            writer.Write(pawn.SkillGainedToday.Length);
+            for (int s = 0; s < pawn.SkillGainedToday.Length; s++) writer.Write(pawn.SkillGainedToday[s]);
+            writer.Write(pawn.SkillDay);
+
+            writer.Write(pawn.WorkPriorities.Length);
+            // Written as an int, not as the byte it is stored in: the reader asks for an int,
+            // and a width mismatch here corrupts every field after it.
+            for (int w = 0; w < pawn.WorkPriorities.Length; w++) writer.Write((int)pawn.WorkPriorities[w]);
+
+            // The day's schedule (design 27 §12). Format 7. Ints for the reason the two
+            // arrays above are ints: the reader asks for an int and a width mismatch here
+            // corrupts every field after it.
+            writer.Write(pawn.ScheduleHours.Length);
+            for (int h = 0; h < pawn.ScheduleHours.Length; h++) writer.Write((int)pawn.ScheduleHours[h]);
+
+            writer.Write(pawn.BreakTicksLeft);
+            writer.Write(pawn.Asleep);
+            writer.Write(pawn.JobStartsInWindow);
+            writer.Write(pawn.WindowStartTick);
+
+            writer.Write(pawn.Memories.Count);
+            for (int m = 0; m < pawn.Memories.Count; m++)
+            {
+                writer.Write(pawn.Memories[m].ThoughtIndex);
+                writer.Write(pawn.Memories[m].ExpiryTick);
+            }
+        }
+
+        /// <summary>The reader of <see cref="WriteCharacter"/>, honouring the file's format version.</summary>
+        internal static void ReadCharacter(SaveReader reader, Pawn pawn)
+        {
+            int needCount = reader.ReadInt();
+            for (int n = 0; n < needCount; n++)
+            {
+                int value = reader.ReadInt();
+                if (n < pawn.Needs.Length) pawn.Needs[n] = value;
+            }
+
+            pawn.Mood = reader.ReadInt();
+            pawn.MoodTarget = reader.ReadInt();
+
+            int skillCount = reader.ReadInt();
+            for (int s = 0; s < skillCount; s++)
+            {
+                int value = reader.ReadInt();
+                if (s < pawn.Skills.Length) pawn.Skills[s] = value;
+            }
+
+            int passionCount = reader.ReadInt();
+            for (int s = 0; s < passionCount; s++)
+            {
+                int value = reader.ReadInt();
+                if (s < pawn.Passions.Length) pawn.Passions[s] = (byte)value;
+            }
+
+            int todayCount = reader.ReadInt();
+            for (int s = 0; s < todayCount; s++)
+            {
+                int value = reader.ReadInt();
+                if (s < pawn.SkillGainedToday.Length) pawn.SkillGainedToday[s] = value;
+            }
+            pawn.SkillDay = reader.ReadInt();
+
+            int workCount = reader.ReadInt();
+            for (int w = 0; w < workCount; w++)
+            {
+                int value = reader.ReadInt();
+                if (w < pawn.WorkPriorities.Length) pawn.WorkPriorities[w] = (byte)value;
+            }
+
+            // Format 7 added the schedule. An older save has none, and the constructor's
+            // default day is the right answer for it: a colony saved before schedules existed
+            // was being played without one, so it gets the shape every new colonist gets
+            // rather than twenty-four blank hours.
+            if (reader.FormatVersion >= 7)
+            {
+                int hourCount = reader.ReadInt();
+                for (int h = 0; h < hourCount; h++)
+                {
+                    int value = reader.ReadInt();
+                    if (h < pawn.ScheduleHours.Length) pawn.ScheduleHours[h] = (byte)value;
+                }
+            }
+
+            pawn.BreakTicksLeft = reader.ReadInt();
+            pawn.Asleep = reader.ReadBool();
+            pawn.JobStartsInWindow = reader.ReadInt();
+            pawn.WindowStartTick = reader.ReadInt();
+
+            int memoryCount = reader.ReadInt();
+            for (int m = 0; m < memoryCount; m++)
+                pawn.Memories.Add(new Memory { ThoughtIndex = reader.ReadInt(), ExpiryTick = reader.ReadInt() });
+        }
+
+        /// <summary>The three condition fields that close a pawn's record: starvation, temperature and the ambient she last felt.</summary>
+        internal static void WriteCondition(SaveWriter writer, Pawn pawn)
+        {
+            // Last in the section on purpose (WS3): a v5 file ends here, so the field sits
+            // where an older reader stops rather than where it would shift every read after
+            // it. Format 6, see WorldSave's version history.
+            writer.Write(pawn.StarvationSeverity);
+
+            // And last again, for the same reason one field later (design 28 §9): format 8
+            // ends at the severity above, and the temperature bar is appended where an
+            // older reader stops rather than where it would shift nothing and mean it.
+            writer.Write(pawn.TemperatureSeverity);
+
+            // The ambient the colonist last felt, beside the bar it feeds. It is a sample,
+            // not a derivation — the cell and the room may both have moved since — and for
+            // up to an interval after a load the work rate reads it, so a file that left it
+            // out diverged from its own game (design 28 §12, F8). Format 9 with the bar.
+            writer.Write(pawn.AmbientTempC);
+        }
+
+        /// <summary>The reader of <see cref="WriteCondition"/>, honouring the file's format version.</summary>
+        internal static void ReadCondition(SaveReader reader, Pawn pawn)
+        {
+            // Last in the section from format 6 on; a v5 file simply ends here, and a
+            // colonist from one had never been starving by a definition that did not exist.
+            if (reader.FormatVersion >= 6)
+                pawn.StarvationSeverity = reader.ReadInt();
+
+            // And last again, from format 9 on (design 28 §9): a colonist from an older
+            // file had never been cold by a definition that did not exist.
+            if (reader.FormatVersion >= 9)
+            {
+                pawn.TemperatureSeverity = reader.ReadInt();
+                pawn.AmbientTempC = reader.ReadInt();
             }
         }
     }

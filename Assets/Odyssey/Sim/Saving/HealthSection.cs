@@ -45,18 +45,7 @@ namespace Odyssey.Sim.Saving
                 Pawn pawn = _scratch[i];
                 PawnHealth health = pawn.Health!;
                 writer.Write(pawn.Id.Value);
-                writer.Write(health.BloodLossMicro);
-                writer.Write(health.Count);
-                for (int r = 0; r < health.Count; r++)
-                {
-                    ref Affliction record = ref health[r];
-                    writer.Write(record.Region);
-                    writer.Write((int)record.Kind);
-                    writer.Write(record.SeverityMilli);
-                    writer.Write(record.Tended);
-                    writer.Write(record.TendQualityPerMille);
-                    writer.Write(record.Tick);
-                }
+                WriteRecord(writer, health);
             }
             _scratch.Clear();
         }
@@ -72,27 +61,54 @@ namespace Odyssey.Sim.Saving
             for (int i = 0; i < count; i++)
             {
                 int id = reader.ReadInt();
-                int blood = reader.ReadInt();
-                int records = reader.ReadInt();
-                var health = new PawnHealth { BloodLossMicro = blood };
-                for (int r = 0; r < records; r++)
-                {
-                    var record = new Affliction
-                    {
-                        Region = reader.ReadInt(),
-                        Kind = (AfflictionKind)reader.ReadInt(),
-                        SeverityMilli = reader.ReadInt(),
-                        Tended = reader.ReadBool(),
-                        TendQualityPerMille = reader.ReadInt(),
-                        Tick = reader.ReadInt(),
-                    };
-                    health.Restore(record);
-                }
+                PawnHealth health = ReadRecord(reader);
 
                 Pawn? pawn = _pawns.Get(new Contracts.PawnId(id));
                 if (pawn == null || pawn.Body == null) continue;
                 pawn.Health = health;
             }
+        }
+
+        /// <summary>
+        /// One pawn's ledger after its id (design 64 §12): shared with the expedition codec so the
+        /// field order has one owner.
+        /// </summary>
+        internal static void WriteRecord(SaveWriter writer, PawnHealth health)
+        {
+            writer.Write(health.BloodLossMicro);
+            writer.Write(health.Count);
+            for (int r = 0; r < health.Count; r++)
+            {
+                ref Affliction record = ref health[r];
+                writer.Write(record.Region);
+                writer.Write((int)record.Kind);
+                writer.Write(record.SeverityMilli);
+                writer.Write(record.Tended);
+                writer.Write(record.TendQualityPerMille);
+                writer.Write(record.Tick);
+            }
+        }
+
+        /// <summary>The reader of <see cref="WriteRecord"/>.</summary>
+        internal static PawnHealth ReadRecord(SaveReader reader)
+        {
+            int blood = reader.ReadInt();
+            int records = reader.ReadInt();
+            var health = new PawnHealth { BloodLossMicro = blood };
+            for (int r = 0; r < records; r++)
+            {
+                var record = new Affliction
+                {
+                    Region = reader.ReadInt(),
+                    Kind = (AfflictionKind)reader.ReadInt(),
+                    SeverityMilli = reader.ReadInt(),
+                    Tended = reader.ReadBool(),
+                    TendQualityPerMille = reader.ReadInt(),
+                    Tick = reader.ReadInt(),
+                };
+                health.Restore(record);
+            }
+            return health;
         }
     }
 }

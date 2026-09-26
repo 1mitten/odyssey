@@ -86,33 +86,7 @@ namespace Odyssey.Sim.Saving
             {
                 Pawn pawn = _scratch[i];
                 writer.Write(pawn.Id.Value);
-                writer.Write((pawn.Drafted ? FlagDrafted : 0) | (pawn.Downed ? FlagDowned : 0)
-                    | ((int)pawn.Response << ResponseShift));
-                writer.Write(pawn.DraftQuietSinceTick);
-                writer.Write(pawn.FinishingStepTo);
-
-                // Layout 2.
-                writer.Write(pawn.HpMilli);
-                writer.Write(pawn.NextSwingTick);
-                writer.Write(pawn.StunnedUntilTick);
-                writer.Write(pawn.RetaliateAgainst);
-                writer.Write(pawn.RetaliateUntilTick);
-                writer.Write(pawn.EquippedItem);
-                writer.Write(pawn.CombatTarget);
-                writer.Write(pawn.CarriedBy);
-
-                // Layout 3.
-                writer.Write(pawn.KnockedDownUntilTick);
-                writer.Write(pawn.PendingSwing);
-                writer.Write(pawn.PendingDamageMilli);
-                writer.Write(pawn.PendingStunTicks);
-
-                // Layout 4.
-                writer.Write(pawn.JumpLanding);
-
-                // Layout 5: medical supplies (design 37), after the jump — the jump reached main
-                // first and a shipped layout number is a save contract.
-                writer.Write(pawn.TreatedUntilTick);
+                WriteRecord(writer, pawn);
             }
             _scratch.Clear();
         }
@@ -128,75 +102,119 @@ namespace Odyssey.Sim.Saving
             for (int i = 0; i < count; i++)
             {
                 int id = reader.ReadInt();
-                int flags = reader.ReadInt();
-                int quiet = reader.ReadInt();
-                int finishing = reader.ReadInt();
+                ReadRecord(reader, layout, _pawns.Get(new Contracts.PawnId(id)));
+            }
+        }
 
-                // A layout-1 record ends here and its pawn is whole: C1 had no hit points to save.
-                bool two = layout >= 2;
-                int hp = two ? reader.ReadInt() : int.MinValue;
-                int nextSwing = two ? reader.ReadInt() : 0;
-                int stunnedUntil = two ? reader.ReadInt() : 0;
-                int retaliateAgainst = two ? reader.ReadInt() : 0;
-                int retaliateUntil = two ? reader.ReadInt() : 0;
-                int equipped = two ? reader.ReadInt() : 0;
-                int target = two ? reader.ReadInt() : 0;
-                int carriedBy = two ? reader.ReadInt() : 0;
+        /// <summary>
+        /// One pawn's record after its id, as the section writes it (design 64 §12): shared with the
+        /// expedition codec so the field order has one owner.
+        /// </summary>
+        internal static void WriteRecord(SaveWriter writer, Pawn pawn)
+        {
+            writer.Write((pawn.Drafted ? FlagDrafted : 0) | (pawn.Downed ? FlagDowned : 0)
+                | ((int)pawn.Response << ResponseShift));
+            writer.Write(pawn.DraftQuietSinceTick);
+            writer.Write(pawn.FinishingStepTo);
 
-                // Layout 3: nobody knocked down and no swing in the air before it.
-                bool three = layout >= 3;
-                int knockedUntil = three ? reader.ReadInt() : 0;
-                int pendingSwing = three ? reader.ReadInt() : 0;
-                int pendingDamage = three ? reader.ReadInt() : 0;
-                int pendingStun = three ? reader.ReadInt() : 0;
+            // Layout 2.
+            writer.Write(pawn.HpMilli);
+            writer.Write(pawn.NextSwingTick);
+            writer.Write(pawn.StunnedUntilTick);
+            writer.Write(pawn.RetaliateAgainst);
+            writer.Write(pawn.RetaliateUntilTick);
+            writer.Write(pawn.EquippedItem);
+            writer.Write(pawn.CombatTarget);
+            writer.Write(pawn.CarriedBy);
 
-                // Layout 4: nobody in the air before it.
-                int jumpLanding = layout >= 4 ? reader.ReadInt() : -1;
+            // Layout 3.
+            writer.Write(pawn.KnockedDownUntilTick);
+            writer.Write(pawn.PendingSwing);
+            writer.Write(pawn.PendingDamageMilli);
+            writer.Write(pawn.PendingStunTicks);
 
-                // Layout 5: nobody had been treated before medicine existed.
-                int treatedUntil = layout >= 5 ? reader.ReadInt() : 0;
+            // Layout 4.
+            writer.Write(pawn.JumpLanding);
 
-                Pawn? pawn = _pawns.Get(new Contracts.PawnId(id));
-                if (pawn == null) continue;
+            // Layout 5: medical supplies (design 37), after the jump — the jump reached main
+            // first and a shipped layout number is a save contract.
+            writer.Write(pawn.TreatedUntilTick);
+        }
 
-                pawn.Drafted = (flags & FlagDrafted) != 0;
-                pawn.DraftQuietSinceTick = pawn.Drafted ? quiet : 0;
+        /// <summary>
+        /// The reader of <see cref="WriteRecord"/> at a <paramref name="layout"/>. Reads every field
+        /// whether or not <paramref name="pawn"/> is there to take them, so a record for a pawn the
+        /// file names and the world does not still leaves the reader at the next one.
+        /// </summary>
+        internal static void ReadRecord(SaveReader reader, int layout, Pawn? pawn)
+        {
+            int flags = reader.ReadInt();
+            int quiet = reader.ReadInt();
+            int finishing = reader.ReadInt();
 
-                pawn.Downed = (flags & FlagDowned) != 0;
-                int response = (flags >> ResponseShift) & ResponseMask;
-                pawn.Response = response < HostilityResponses.Count ? (HostilityResponse)response : HostilityResponse.FightBack;
-                pawn.HpMilli = hp == int.MinValue ? pawn.HpMaxMilli : hp;
-                pawn.NextSwingTick = nextSwing;
-                pawn.StunnedUntilTick = stunnedUntil;
-                pawn.RetaliateAgainst = retaliateAgainst;
-                pawn.RetaliateUntilTick = retaliateUntil;
-                pawn.EquippedItem = equipped;
-                pawn.CombatTarget = target;
-                pawn.CarriedBy = carriedBy;
-                pawn.KnockedDownUntilTick = knockedUntil;
-                pawn.PendingSwing = pendingSwing;
-                pawn.PendingDamageMilli = pendingDamage;
-                pawn.PendingStunTicks = pendingStun;
-                pawn.TreatedUntilTick = treatedUntil;
+            // A layout-1 record ends here and its pawn is whole: C1 had no hit points to save.
+            bool two = layout >= 2;
+            int hp = two ? reader.ReadInt() : int.MinValue;
+            int nextSwing = two ? reader.ReadInt() : 0;
+            int stunnedUntil = two ? reader.ReadInt() : 0;
+            int retaliateAgainst = two ? reader.ReadInt() : 0;
+            int retaliateUntil = two ? reader.ReadInt() : 0;
+            int equipped = two ? reader.ReadInt() : 0;
+            int target = two ? reader.ReadInt() : 0;
+            int carriedBy = two ? reader.ReadInt() : 0;
 
-                // A step an order interrupted, rebuilt as the one-step path it was (design 33
-                // §2d). The pawn section has already restored the progress into it, and
-                // AdoptPath leaves progress alone for exactly this case — a resume.
-                if (finishing >= 0)
-                {
-                    pawn.AdoptPath(new[] { pawn.Cell, finishing }, 2);
-                    pawn.FinishingStepTo = finishing;
-                }
+            // Layout 3: nobody knocked down and no swing in the air before it.
+            bool three = layout >= 3;
+            int knockedUntil = three ? reader.ReadInt() : 0;
+            int pendingSwing = three ? reader.ReadInt() : 0;
+            int pendingDamage = three ? reader.ReadInt() : 0;
+            int pendingStun = three ? reader.ReadInt() : 0;
 
-                // A jump in the air (design 46 §6), rebuilt as the one step it is, landing where it
-                // was rolled to land. Never rolled again: the roll is made only while no landing
-                // is set. When an order interrupted the jump the finishing step is this same cell
-                // and the path above is already right.
-                if (jumpLanding >= 0)
-                {
-                    if (finishing < 0) pawn.AdoptPath(new[] { pawn.Cell, jumpLanding }, 2);
-                    pawn.JumpLanding = jumpLanding;
-                }
+            // Layout 4: nobody in the air before it.
+            int jumpLanding = layout >= 4 ? reader.ReadInt() : -1;
+
+            // Layout 5: nobody had been treated before medicine existed.
+            int treatedUntil = layout >= 5 ? reader.ReadInt() : 0;
+
+            if (pawn == null) return;
+
+            pawn.Drafted = (flags & FlagDrafted) != 0;
+            pawn.DraftQuietSinceTick = pawn.Drafted ? quiet : 0;
+
+            pawn.Downed = (flags & FlagDowned) != 0;
+            int response = (flags >> ResponseShift) & ResponseMask;
+            pawn.Response = response < HostilityResponses.Count ? (HostilityResponse)response : HostilityResponse.FightBack;
+            pawn.HpMilli = hp == int.MinValue ? pawn.HpMaxMilli : hp;
+            pawn.NextSwingTick = nextSwing;
+            pawn.StunnedUntilTick = stunnedUntil;
+            pawn.RetaliateAgainst = retaliateAgainst;
+            pawn.RetaliateUntilTick = retaliateUntil;
+            pawn.EquippedItem = equipped;
+            pawn.CombatTarget = target;
+            pawn.CarriedBy = carriedBy;
+            pawn.KnockedDownUntilTick = knockedUntil;
+            pawn.PendingSwing = pendingSwing;
+            pawn.PendingDamageMilli = pendingDamage;
+            pawn.PendingStunTicks = pendingStun;
+            pawn.TreatedUntilTick = treatedUntil;
+
+            // A step an order interrupted, rebuilt as the one-step path it was (design 33
+            // §2d). The pawn section has already restored the progress into it, and
+            // AdoptPath leaves progress alone for exactly this case — a resume.
+            if (finishing >= 0)
+            {
+                pawn.AdoptPath(new[] { pawn.Cell, finishing }, 2);
+                pawn.FinishingStepTo = finishing;
+            }
+
+            // A jump in the air (design 46 §6), rebuilt as the one step it is, landing where it
+            // was rolled to land. Never rolled again: the roll is made only while no landing
+            // is set. When an order interrupted the jump the finishing step is this same cell
+            // and the path above is already right.
+            if (jumpLanding >= 0)
+            {
+                if (finishing < 0) pawn.AdoptPath(new[] { pawn.Cell, jumpLanding }, 2);
+                pawn.JumpLanding = jumpLanding;
             }
         }
     }
