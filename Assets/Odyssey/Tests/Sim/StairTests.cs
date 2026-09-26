@@ -164,6 +164,40 @@ namespace Odyssey.Tests.Sim
                 Assert.That(colony.Pawns.Reachable(pawn, landing, mode), Is.True, $"{mode} may climb a stair");
         }
 
+        /// <summary>
+        /// <b>A stairwell climbs more than one storey</b> (review, 2026-09-26): a second stair stands
+        /// in the open shaft cell at the top of the first and carries a colonist on up. The order
+        /// rule said so in a comment and refused it in fact, because a stair is non-blocking and the
+        /// cell over it has no floor — the ladder chain's fault, met again.
+        /// </summary>
+        [Test]
+        public void AStairStandsOnAStairAndTheStairwellClimbsTwoStoreys()
+        {
+            ColonyWorld colony = Board();
+            AStoreyWithNothingLeadingToIt(colony, out int first, out int beside, out int landing);
+            RaiseNow(colony, first, BuildingHandle.Stair, facing: 1);
+            colony.World.Tick();
+
+            // A second storey on the first landing: a wall standing on it, a slab on the wall.
+            RaiseNow(colony, landing, BuildingHandle.Wall);
+            colony.World.Tick();
+            int upper = Above(Above(beside));
+            RaiseNow(colony, upper, BuildingHandle.Floor);
+            colony.World.Tick();
+
+            Pawn pawn = TheColonist(colony);
+            Assert.That(colony.Pawns.Reachable(pawn, upper, TraverseMode.Hauler), Is.False,
+                "the control: one stair does not reach the second storey");
+
+            int second = Above(first);
+            RaiseNow(colony, second, BuildingHandle.Stair, facing: 1);
+            colony.World.Tick();
+
+            Assert.That(colony.Grid.Edifice[second], Is.GreaterThanOrEqualTo(0), "the second stair stands");
+            Assert.That(colony.Pawns.Reachable(pawn, upper, TraverseMode.Hauler), Is.True,
+                "and the stairwell carries a hauler up two storeys");
+        }
+
         // ---- one cell, one record ---------------------------------------------------------------
 
         /// <summary>

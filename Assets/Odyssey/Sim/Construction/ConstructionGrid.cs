@@ -237,7 +237,13 @@ namespace Odyssey.Sim.Construction
             // A click names a surface and an order names a cell, and which surface depends on what
             // is armed. WhereItWouldLand is that one answer, public so the build cursor asks it
             // rather than working it out again.
-            int index = WhereItWouldLand(_grid.Index(cell), building);
+            //
+            // **Less RF1's clause, because an order arrives already lifted.** Every build intent
+            // the interface sends has been through RunLayerFor, which asks WhereItWouldLand with
+            // the clause in; asking it again here lifted any cell of the run that already held a
+            // slab a second time, one storey above its ghost (review, 2026-09-26, design 59 §3a).
+            // A slab ordered where a slab is, at the layer it was ordered at, is refused.
+            int index = Lift(_grid.Index(cell), building, offASlab: false);
 
             if (def.footprint > 1)
             {
@@ -384,7 +390,13 @@ namespace Odyssey.Sim.Construction
             return best == int.MinValue ? 0 : best;
         }
 
-        public int WhereItWouldLand(int index, int building)
+        public int WhereItWouldLand(int index, int building) => Lift(index, building, offASlab: true);
+
+        /// <summary>
+        /// <see cref="WhereItWouldLand"/>, with RF1's slab-on-a-slab clause switchable: on for what
+        /// a pointer means, off for an order that has already been lifted (<see cref="Place"/>).
+        /// </summary>
+        int Lift(int index, int building, bool offASlab)
         {
             if ((uint)index >= (uint)_grid.Size.CellCount) return index;
 
@@ -398,7 +410,7 @@ namespace Odyssey.Sim.Construction
             // block and paving goes in the air cell above it, which is exactly what StandingOn
             // already does. Only structure is lifted over things that fill a cell (U42).
             return what.slab && !what.covering
-                ? StandingOver(index, building)
+                ? StandingOver(index, building, offASlab)
                 : StandingOn(index);
         }
 
@@ -478,13 +490,13 @@ namespace Odyssey.Sim.Construction
         /// roof above it, <see cref="AllowsSlab"/> refuses that for the same reason, and the
         /// refusal is reported at the cell the player clicked. The rule cannot walk a column.</para>
         /// </summary>
-        int StandingOver(int index, int building)
+        int StandingOver(int index, int building, bool offASlab)
         {
             // Anything that fills the cell, which is the same set the solver calls grounding: a
             // slab laid over it has something underneath to rest on. Or anything that already
             // carries a slab, which is the same question asked from above (RF1).
             if (!_grid.IsSolidTerrain(index) && _grid.Edifice[index] < 0 &&
-                _grid.Floor[index] == CoreContent.SlabNone) return index;
+                (!offASlab || _grid.Floor[index] == CoreContent.SlabNone)) return index;
 
             int above = index + _grid.Size.LayerStride;
             return above < _grid.Size.CellCount && Allows(above, building) ? above : index;
@@ -549,12 +561,12 @@ namespace Odyssey.Sim.Construction
                 ? AllowsSlab(index)
                 : building == BuildingHandle.Ladder
                 ? StandsOnSomething(index) && AllowsLadder(index)
-                // A stair wants a floor under each of its halves and an open cell over each of
-                // them. Both clauses are already spent above for the cell in hand; this is the
-                // footing, which is the ladder's StandsOnSomething and not SomethingUnderfoot,
-                // because a stair may start from the open shaft cell at the top of another one.
+                // A stair wants something under it and an open cell over it. The footing is the
+                // ladder's StandsOnSomething widened by one clause, because a stair may start from
+                // the open shaft cell at the top of another one: that is how a stairwell climbs
+                // more than one storey.
                 : building == BuildingHandle.Stair
-                ? StandsOnSomething(index) && AllowsStair(index)
+                ? StairStandsOnSomething(index) && AllowsStair(index)
                 // Something underfoot. A wall hanging in the air is the fault the whole support
                 // model exists to prevent, and refusing it at the order is far better than
                 // collapsing it afterwards: the player never gave an order that could not be
@@ -747,6 +759,31 @@ namespace Odyssey.Sim.Construction
         /// silently had no connector.</para>
         /// </summary>
         bool StandsOnAFooting(int cell) => _grid.IsWalkable(cell) || IsLadder(BelowOf(cell));
+
+        /// <summary>
+        /// <see cref="StandsOnSomething"/> for a stair: anything a ladder may stand on, or a
+        /// colony stair built or ordered in the cell below.
+        ///
+        /// <para><b>Without it a stairwell was one storey</b> (review, 2026-09-26). The comment on
+        /// the order rule already said a stair may start from the top of another, and
+        /// <see cref="StairArrivesAt"/> already had its "another stair above" clause, but a stair is
+        /// non-blocking and the open shaft cell over it has no floor, so the second stair of a
+        /// stack was refused in silence — the ladder's own chain fault, met again. Only the
+        /// colony's own one-cell stair: a stamped half-flight below is a different shape.</para>
+        /// </summary>
+        bool StairStandsOnSomething(int index)
+        {
+            if (StandsOnSomething(index)) return true;
+            int below = BelowOf(index);
+            return (uint)below < (uint)_grid.Size.CellCount
+                && (IsFullStair(below) || _building[below] == BuildingHandle.Stair);
+        }
+
+        /// <summary>
+        /// <see cref="StandsOnAFooting"/> for a stair's connector: a built colony stair below counts,
+        /// never an ordered one, for the ladder's reason — a blueprint must never open a way up.
+        /// </summary>
+        bool StairStandsOnAFooting(int cell) => StandsOnAFooting(cell) || IsFullStair(BelowOf(cell));
 
         /// <summary>
         /// Whether a slab may be built at this cell's lower boundary.
@@ -1341,7 +1378,7 @@ namespace Odyssey.Sim.Construction
             int above = cell + _grid.Size.LayerStride;
             bool wanted = IsFullStair(cell)
                 && above < _grid.Size.CellCount
-                && StandsOnAFooting(cell)
+                && StairStandsOnAFooting(cell)
                 && StairArrivesAt(above);
 
             int existing = ctx.Nav.OneCellConnectorAt(cell, ConnectorKind.Stair);

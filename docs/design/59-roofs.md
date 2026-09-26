@@ -155,6 +155,24 @@ U29's and is untouched; `TheFloorOfAnUpperStoreyIsRoofedByPointingAtIt` asserts 
 `WhereItWouldLand` routes it through `StandingOn` and never reaches this rule — which is the same
 reason U42 had to be kept out of decision 12. A wall is not a slab and takes `StandingOn` too.
 
+### 3a. What a pointer means, and what an order means (review, 2026-09-26)
+
+The clause was first written into the one lift everything shares, `WhereItWouldLand`, and `Place`
+asked it too. But every build order the interface sends has already been lifted — `RunLayerFor`
+picks the run's layer by asking `WhereItWouldLand` of each named cell — so `Place` lifted a second
+time any cell of the run that already held a slab. Wherever the storey above could carry a slab (a
+second-storey wall, a hillside two layers high) that cell's order landed **one storey above its
+ghost**, and because the run takes the highest lift, a half-roofed room could carry the whole drag up
+with it. The run rule's own idempotence comment said a cell on the run's layer "holds neither
+terrain nor an edifice"; the clause had made that false.
+
+So the clause belongs to **what a pointer means**, not to what an order means. `WhereItWouldLand`
+(the cursor, the ghost, `RunLayerFor`) keeps it; `Place` lifts with it off, so a slab ordered where a
+slab already is, at the layer it was ordered at, is refused. Nothing a player does changes — every
+build click and drag reaches `Place` through `RunLayerFor` — and
+`RoofsTests.AnOrderAtARoofedCellIsRefusedWhereItWasNamedNotLiftedAgain` is the guard, confirmed red
+against the old lift.
+
 ## 4. Seeing under a roof
 
 **The fault.** Above the surface `SliceSettings.AboveAt` returns `AboveMode.Full`: every layer above

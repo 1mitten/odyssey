@@ -907,7 +907,10 @@ the next session learns to ignore.
   the stair reads as one flight **with walls-down on**, which it has never been seen beside; whether
   the climb reads as walking up steps; whether the pillar's price and the cell it eats feel fair; and
   whether a roof two storeys up hides anything in **build mode**, where walls-down steps aside
-  (`59-roofs.md` §4a — the old "never draw a roof two layers up" rule was dropped on the merge).
+  (`59-roofs.md` §4a — the old "never draw a roof two layers up" rule was dropped on the merge);
+  whether a **stack of stairs** (new on the merge) reads as a stairwell; and whether the **one open
+  cell left in a roof over each stair's top** reads as a stairwell or as a roof that failed
+  (`60-stairs.md` §12a).
 - **Does the horizon repeat now there are eight kinds of tree instead of sixteen?**
   (`claude/huge-map`, `docs/design/06-rendering-and-camera.md` §6c.4.) The surround costs its
   batch count, and the count was sixteen tree kinds multiplying every spatial cell — so it now

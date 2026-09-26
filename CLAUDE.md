@@ -670,6 +670,9 @@ is the project's real constraint, and the audit says why (`docs/audit/2026-09-19
   ladder-only storey unbuildable, a deadlock, and was reversed on the owner's word the same day
   (*"Ladders are fine as they are"*). `LadderTests.ABuildingOrderOnALadderOnlyStoreyIsFedAndFinished`
   is the outcome test; `docs/design/60-stairs.md` §10a, `docs/bug-patterns.md` P19.
+- **A collapse does not refresh a ladder's or a stair's connector** (`60-stairs.md` §12a).
+  `SupportSystem.ApplyConsequences` never calls `RefreshLaddersAround` or `RefreshStairsAround`, so
+  a way up whose landing fell in can still be pathed until something else is built beside it.
 - **A stamped stairwell cannot be deconstructed with its connector.** `RefreshStair` deliberately
   leaves the generator's stairs alone — a stamped one carries no facing to derive its partner from —
   so taking one apart would leave its portal behind. Reclaim is the line that answers it.

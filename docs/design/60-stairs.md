@@ -668,3 +668,30 @@ refuses a raise while a colonist walks through the cell, so a blocking thing ord
 was never built, and a downstream `Assume` turned the rest into a skip. The helper now waits for the
 cell, bounded at 600 ticks, and asserts the site is gone. `EveryModeMayUseAStair` walks every
 `TraverseMode` there is, rather than a list naming one `main` has since removed.
+
+### 12a. The review on the merged tree, 2026-09-26
+
+An independent review of the diff against `main` found five things; two are fixed here.
+
+- **A stair could not stand on a stair** (fixed). The order rule's comment said a stair may start
+  from the open shaft at the top of another, and `StairArrivesAt` had the clause for it, but a stair
+  is non-blocking and the cell over it has no floor, so the second stair of a stack was refused in
+  silence and would have had no connector if it had not been. `StairStandsOnSomething` (built or
+  ordered below, for the order) and `StairStandsOnAFooting` (built only, for the connector) are the
+  ladder chain's two rules, and `AStairStandsOnAStairAndTheStairwellClimbsTwoStoreys` carries a
+  hauler up two storeys — red before the fix.
+- **A dragged roof could land a storey above its ghost** (fixed): design 59 §3a.
+- **A slab over a stair's arrival cell is refused** (kept, and a question for the owner). The shaft
+  rule refuses a slab two cells above a stair exactly as it does above a ladder, which is §5's
+  decision and the owner's ladder ruling. It means **a storey reached by a stair keeps one open cell
+  in its roof, over the cell the stair arrives in**, and roofing that storey leaves that hole. It
+  also newly refuses a roof over the storey above each of the ruined city's stamped stairwells,
+  which `main` allowed; the city is not the played map. On the playtest list.
+- **A collapse does not refresh a stair's or a ladder's connector** (recorded, not fixed).
+  `SupportSystem.ApplyConsequences` drops pawns and items and lays rubble, and never calls
+  `RefreshStairsAround` or `RefreshLaddersAround`, so a way up whose landing fell can still be
+  pathed. `main` has this for ladders already; the stair inherits it. A known gap in `CLAUDE.md`.
+- **The committed head did not compile** — the two `EdificeFacing`s, fixed before the review reported.
+
+Combat destroying a stair or pillar was checked and is clean: `CombatSystem.Buildings` goes through
+`Demolish`, which refreshes the stairs around and marks support dirty.

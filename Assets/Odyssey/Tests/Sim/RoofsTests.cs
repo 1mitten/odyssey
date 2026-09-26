@@ -58,6 +58,17 @@ namespace Odyssey.Tests.Sim
 
         static int Above(int cell) => cell + Size.LayerStride;
 
+        /// <summary>
+        /// Order a slab the way the Build tool does: the layer is <c>RunLayerFor</c>'s answer for
+        /// the cells named, and each order is placed at that layer — <c>DesignatePresenter</c>'s
+        /// path, which is the only way a player's order reaches <c>Place</c>.
+        /// </summary>
+        static IntentRejection PlaceAsTheToolDoes(ColonyWorld colony, CellRef named, int building)
+        {
+            int y = colony.Construction.RunLayerFor(new[] { named }, building);
+            return colony.Construction.Place(new CellRef(named.X, named.Z, y), building, StuffHandle.Wood);
+        }
+
         /// <summary>A hollow square of walls, `wide` cells on a side, on the start layer.</summary>
         static void AHall(ColonyWorld colony, int wide, out int x0, out int z0, out int y)
         {
@@ -150,11 +161,45 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(y + 2),
                 "now the order means the boundary above the slab, not the slab's own cell");
 
-            Assert.That(colony.Construction.Place(inside, BuildingHandle.Floor, StuffHandle.Wood),
+            Assert.That(PlaceAsTheToolDoes(colony, inside, BuildingHandle.Floor),
                 Is.EqualTo(IntentRejection.None),
                 "and it is taken, from the storey the player is standing on");
             Assert.That(colony.Construction.SiteAt(new CellRef(x0 + 2, z0 + 2, y + 2)),
-                Is.Not.EqualTo(BuildingHandle.None), "the site is one layer up");
+                Is.GreaterThanOrEqualTo(0), "the site is one layer up");
+        }
+
+        /// <summary>
+        /// <b>But an order that arrives at a slab is not lifted again</b> (review, 2026-09-26).
+        /// Every order the tool sends has been through <c>RunLayerFor</c> already, so a cell of the
+        /// run that holds a slab is a cell already roofed at the layer the player chose. Lifting it
+        /// a second time put its slab one storey above its ghost wherever the storey above could
+        /// carry one — the second-storey walls here — and a whole dragged run could climb with it.
+        /// </summary>
+        [Test]
+        public void AnOrderAtARoofedCellIsRefusedWhereItWasNamedNotLiftedAgain()
+        {
+            ColonyWorld colony = Board();
+            AHall(colony, 6, out int x0, out int z0, out int y);
+            RoofIt(colony, 6, x0, z0, y);
+            var inside = new CellRef(x0 + 2, z0 + 2, y + 1);
+            for (int dz = 0; dz < 6; dz++)
+            for (int dx = 0; dx < 6; dx++)
+            {
+                if (dx != 0 && dz != 0 && dx != 5 && dz != 5) continue;
+                RaiseNow(colony, Size.Index(x0 + dx, z0 + dz, y + 1), BuildingHandle.Wall);
+                colony.World.Tick();
+            }
+
+            // The control: what a pointer at that cell means is the storey above, so a lift from
+            // here WOULD land somewhere, and the refusal below is the order rule and not an
+            // accident of support.
+            Assume.That(Size.FromIndex(colony.Construction.WhereItWouldLand(
+                Size.Index(inside), BuildingHandle.Floor)).Y, Is.EqualTo(y + 2));
+
+            Assert.That(colony.Construction.Place(inside, BuildingHandle.Floor, StuffHandle.Wood),
+                Is.Not.EqualTo(IntentRejection.None), "an order at a roofed cell is refused");
+            Assert.That(colony.Construction.SiteAt(new CellRef(inside.X, inside.Z, y + 2)),
+                Is.EqualTo(-1), "and nothing was ordered on the storey above it");
         }
 
         /// <summary>
