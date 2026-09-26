@@ -3010,3 +3010,28 @@ UI. PlayMode `StartScreenTests.ALoadedWorldIsCoveredLikeANewOne` is the regressi
 reading state its own previous call may have written. Ask of any event: can it fire twice in one
 frame, and does the second call ask a question the first one answered? Decide from a counter or the
 cause, not from the screen.
+
+## A measurement taken in whatever pose the last setup step left (2026-09-26)
+
+**Symptom.** `WeaponSheathGapTests` failed on every branch after the kitchen merged: the military
+build's sheathed bat stood 3.2 cm off the thigh against a 3.0 cm bound. Nothing in the kitchen
+touches a weapon, a hip or a body.
+
+**Cause.** A figure is built in steps, and `BindWorkBones` poses it in each work style's struck
+pose to fit that style's tool, leaving it in the last. The sole, the height and the hip relief are
+measured straight after, off the posed mesh, and the loop's comment said the pose "is thrown away
+by the next animation update" — true of the picture, false of the build. So a colonist's measured
+height was the height of the last tool's blow: 2.38–2.48 m in the hammer's stoop, 2.55–2.57 once
+the cook's pan was appended after it, 2.58–2.59 standing. The hip fit is sized in fractions of that
+height, so appending a work style moved a sheathed bat.
+
+**Measurement that found it.** A `git bisect run` over `main`'s merges, then over the kitchen's own
+commits, with the one test and its logged gap as the verdict; then the pan's style taken out at the
+bad commit, which restored 2.3 cm; then the good and bad tables diffed row by row, where every
+body's *height* column had moved and nothing else consistently had.
+
+- **The pattern:** *one rule, two owners*, in time rather than space. "The figure is in its idle"
+  was owned by the next animation update, and the measurements ran before it did.
+- **The check:** a build step that poses a rig puts it back before it returns; a measurement that
+  says "in the idle" evaluates the idle itself or asserts it. Ask of any `Measure*` at build: *what
+  pose is the rig in when this runs, and who put it there?*

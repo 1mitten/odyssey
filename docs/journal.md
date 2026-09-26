@@ -14562,3 +14562,39 @@ of its own. The item-only landing would have made a rock vanish on arrival. It i
 a perch, or at whoever it cannot reach, so on open ground it is still a thing that walks at you with
 a cleaver.
 
+
+## 2026-09-26 — Three red tests on `main`, and a colonist measured mid-blow
+
+A full Unity run of the butcher line, taken after PR #248 had merged, came back with three failures:
+one EditMode and two PlayMode. None was the butcher's own fault.
+
+**The butcher's spawn test never reached the butcher.** World generation (#246, design 59 §9) put
+a planet page between New game and the setup page, and every other PlayMode test that starts a
+colony had learned to press Next on it. The butcher's three tests were written in parallel and had
+not, so `Start()` was asked from the planet page and refused. One line each.
+
+**The rescue test was refused twice in about twenty runs, and not since.** It failed in the
+original run and again when run right after the three failing butcher tests, with the rescuer
+standing drafted and the order refused. With the butcher tests fixed it passed seven times in seven,
+the full tier included. Six more runs behind the *failing* butcher tests also passed, so the
+failures cannot be pinned on either the leftover state or the random world. The test now switches
+off Doctor beside Rescue, because a doctor reserves a downed colonist exactly as the order does.
+Its refusal now names which of the order's rules said no. That is an instrument for the next time,
+not a diagnosis: the first theory, a doctor taking the patient, was tested and did not reproduce.
+
+**The sheath was the one worth the evening.** `WeaponSheathGapTests` had failed on every branch
+since the kitchen merged: the military build's bat stood 3.2 cm off against 3.0. Two bisects, over
+`main`'s merges and then the kitchen's own commits, put it on the cook's pan (`80bd67af`), and
+taking that one work style back out restored 2.3 cm. The cause was older than the pan.
+`BindWorkBones` poses each figure in every tool's blow to fit that tool, and leaves it in the last
+one. The height, the sole and the hip relief were measured straight after, so every colonist's
+height was the height of the hammer's stoop (2.38–2.48 m) until the pan went after the hammer
+(2.55–2.57). Standing, all four test bodies are 2.58–2.59. The figure now returns to its idle when
+the loop ends. The relief's cell went from 0.006 to 0.004 of height, because at the true height a
+1.55 cm cell was half the window the gap is held to. The bat reads 2.7 cm and every ordinary weapon
+1.1–2.7. The hip measurement costs 65–69 ms a look instead of 40–42, once a session. Design 33
+§9c-bis, `docs/bug-patterns.md`.
+
+**The general lesson** is the bisect's, not the fix's. Reading the kitchen's diff for anything
+touching a weapon found nothing, because the fault was in no line the kitchen changed. It was in an
+ordering the kitchen extended.

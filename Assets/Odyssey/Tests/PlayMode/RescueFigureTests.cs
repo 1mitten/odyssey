@@ -58,7 +58,13 @@ namespace Odyssey.Tests.PlayMode
 
                 Pawn rescuer = colony.Pawns.Pawns.All[0], patient = colony.Pawns.Pawns.All[1];
                 float standingHead;
-                foreach (Pawn pawn in colony.Pawns.Pawns.All) pawn.WorkPriorities[WorkTypeIndex.Rescue] = 0;
+                // Nobody else may claim her: not a rescuer, and not a doctor, who treats a colonist
+                // where she fell (design 37 §3) and holds the same reservation the order asks for.
+                foreach (Pawn pawn in colony.Pawns.Pawns.All)
+                {
+                    pawn.WorkPriorities[WorkTypeIndex.Rescue] = 0;
+                    pawn.WorkPriorities[WorkTypeIndex.Doctor] = 0;
+                }
                 var at = new CellRef(colony.Start.X, colony.Start.Z, colony.Start.Y);
                 // Speed one: at three, a bed four cells off is reached inside the two seconds the
                 // sample waits, and the "carried" reading was her head on the pillow (2026-09-24).
@@ -83,7 +89,21 @@ namespace Odyssey.Tests.PlayMode
                 world.Intents.Submit(new Intent(IntentKind.OrderRescue, colony.Pawns.Size.FromIndex(patient.Cell),
                     rescuer.Id.Value, patient.Id.Value));
                 world.Tick();
-                Assert.That(rescuer.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.Rescue), "the order was refused");
+                if (rescuer.CurrentJob?.DefIndex != JobIndex.Rescue)
+                {
+                    // Which of the order's own rules said no (JobSystem.HandleOrderRescue), so a
+                    // refusal names itself rather than arriving as one word.
+                    PawnContext ctx = colony.Pawns;
+                    var jobs = new System.Text.StringBuilder();
+                    foreach (Pawn pawn in ctx.Pawns.All)
+                        jobs.Append($" {pawn.Id.Value}:{(pawn.CurrentJob == null ? "none" : pawn.CurrentJob.DefIndex.ToString())}");
+                    Assert.Fail("the order was refused: " +
+                                $"rescuer drafted {rescuer.Drafted}, downed {rescuer.Downed}, broken {rescuer.IsBroken}; " +
+                                $"she needs rescue {RescueRules.NeedsRescue(patient, ctx)}, " +
+                                $"reservable {ctx.Reservations.CanReserve(rescuer.Id, RescueRules.PatientKey(patient))}, " +
+                                $"reachable {ctx.Reachable(rescuer, patient.Cell, RescueRules.Mode)}, " +
+                                $"bed {RescueRules.BedFor(patient, rescuer, ctx)} of {ctx.Items.Beds.Count}; every pawn's job:{jobs}");
+                }
 
                 float until = Time.realtimeSinceStartup + 60f;
                 while (patient.CarriedBy == 0 && Time.realtimeSinceStartup < until) yield return null;

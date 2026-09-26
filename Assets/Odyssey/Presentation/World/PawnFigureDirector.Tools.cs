@@ -394,6 +394,15 @@ namespace Odyssey.Presentation.World
                 MeasureStrike(figure, style);
                 MeasureDippedStrike(figure, style);
             }
+
+            // **And back to the clip pose after the last one.** "Thrown away by the next animation
+            // update" is true of the picture and not of the build: the sole, the height and the
+            // sheath are measured straight after this, off the posed mesh, and they were being
+            // measured in the last style's struck pose. The hammer, last until the cook's pan
+            // (2026-09-25), bowed the spine into its blow and every body read 2.38–2.48 m; the
+            // stir, last after it, read 2.55–2.57; the idle is 2.58–2.59 on all four bodies
+            // WeaponSheathGapTests measures (2026-09-26). The hip fit is sized by that height.
+            figure.Graph.Evaluate(0f);
         }
 
         /// <summary>Show the tool for the style in use and hide every other, or hide them all.</summary>
