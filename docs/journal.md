@@ -14209,7 +14209,7 @@ jumpsuit are Presentation code the fast tier never sees.
 ## 2026-09-26 — The prisoner line reviewed: ten faults, and what the first build's tests could not see
 
 A high-effort review of the whole branch returned ten findings, reviewed and unverified. Each was
-checked in the code before any fix; **all ten were real**. Design 59 §15e tables them.
+checked in the code before any fix; **all ten were real**. Design 59 §15d tables them.
 
 **The worst was one the tests were built to catch and did not.** `CustodyTests` already
 round-tripped a prisoner through a save and compared hashes, but it set every field of the record
@@ -14230,3 +14230,41 @@ its keep.
 (six failed, six then passed). The first build's tests had passed on their first run more often
 than was comfortable, and running the negative controls is what makes a green result mean
 something. No golden moved.
+
+## 2026-09-26 — Prisoners, the second review: merged, renumbered, and nineteen faults
+
+The owner asked for the prisoner branch to be reviewed, changed where it needed it, and made ready.
+It was 63 commits behind `main`, so it was merged first, in its own worktree
+(`D:\dev\odyssey-prisoners`, the packs junctioned). Sixteen conflicts, every one two appends at one
+place. The one that needed a decision was the colonist pane: the branch added Arrest and `main` added
+First Person, each "last". First Person's comment says it goes last so the response keeps its place
+beside Draft, so the order is Draft, response, Arrest, First Person, and `RideTests` now asserts
+"last" rather than "straight after the response", which is what it had meant.
+
+**Design 58 was taken.** `main` had renumbered cracks from 57 to 58 that morning because the ride
+along took 57, so prisoners became 59. The branch's 255 lines that said "design 58" were rewritten
+from the diff's own added lines, which keeps every cracks reference that also says 58; a grep for
+prisoner words beside a 58 found none left.
+
+**No collision git could not see.** Custody's hash bit 28 is free on `main`, and `main` added the
+frog's kind and species while prisoners added none. The played-board golden was re-baked from the
+merge and measured with `GoldenColonyProbe` on three checkouts: the merge equals `main` in every
+number, and differs from the branch only by `main`'s seven frogs.
+
+**Three passes, then every finding checked before any fix.** Simulation, interface, and whether the
+tests and docs bear out their claims, each in its own context. Nine simulation findings, eight
+interface, and a docs list; one (the shackled walk) needed its test strengthened before it could
+fail. **The tenth simulation fault was found by a test for the fourth**: an arrest with no bed left
+timed out rather than failing the way it should. A trace every 300 ticks showed the arrester
+walking a cell every 200 ticks after a colonist walking one every 100: the prisoner drivers chose a
+new place beside her every tick she moved, and each new destination snapped his step back. The
+melee chase had met it in C7. One rule now (`PrisonerFollow.StandFor`), and 2,261 ticks to catch
+her. The branch's own arrest test had passed because its target stood still.
+
+**What the numbers were.** A bleeding prisoner lying down is treated by about tick 3,600 on the test
+board: the doctor fetches supplies and walks round to the cell door. The window was 3,000 on the
+first try and the test failed for that, not for the fault, which the trace showed.
+
+**Unity found one more.** `PrisonBedTests` had never been compiled by Unity, and Unity's older NUnit
+takes only a string for `Does.Not.Contain`. EditMode on the merge: 4,612 / 4,574 / 1 failed, the
+`WeaponSheathGapTests` bat that fails on `main` too. Design 59 §16 tables all of it.

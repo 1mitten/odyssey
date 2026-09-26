@@ -8,8 +8,9 @@ Branch `claude/prisoner-bed-assignment-98afc0`. Plan: `docs/plans/prisoners.md`.
 > prison bed to assign room. We need to create some systems here that could help bring this
 > together."* — the owner, 2026-09-26
 
-**Status: designed, nothing built.** Every number below is a proposal the owner confirms at the
-first play (§8, §9, §10).
+**Status: built (P1–P12), reviewed twice, merged with `main` and not yet played** (§15, §16).
+**Renumbered 58 → 59 on 2026-09-26**: `main` took 58 for cracks first. Every number below is a
+proposal the owner confirms at the first play (§8, §9, §10).
 
 ## 1. What a prisoner is
 
@@ -324,12 +325,12 @@ Nothing is recruited that the player did not choose.
 
 ### 9a. The risk
 
-**One owner: `EscapeRisk.PerDay(pawn, ctx)`.** It returns per-mille per day and a reasons mask, in
-integers.
+**One owner: `EscapeRisk.Odds(pawn, ctx)`.** It returns parts per million per day and a reasons
+mask, in integers (designed in per mille; §15a says why it moved).
 
 | Factor | Effect |
 |---|---|
-| Base | 20‰ a day, a mean of 50 days for one prisoner |
+| Base | 20,000 ppm (2 %) a day, a mean of 50 days for one prisoner |
 | Mood | below 300 ×3; 300–499 ×1.5; above 700 ×0.5 |
 | A door of their room open, or shackled | ×2 |
 | No free, standing colonist within 10 cells (x/z), on their layer or the ones either side | ×1.5 |
@@ -343,12 +344,14 @@ colony's total doubles rather than quadruples.
 ### 9b. The roll
 
 - **When:** once an hour per prisoner, staggered by `(tick + id) % 2500`.
-- **Threshold:** per million = perDay × 1000 / 24.
+- **Threshold:** per million an hour = the day's ppm / 24 (`EscapeOdds.PerHourPpm`).
 - **Draw:** `DeterministicRandom.ForTick` with a new `PrisonPurpose.Escape` constant.
   - Check it against every existing purpose value; the raids review found cover and raids sharing
     streams (design 55 §15).
-- **The risk shown is the risk rolled.** `EscapeRiskAgreementTests` derives the roll's threshold
-  from the published aspect, with a negative control.
+- **The risk shown is the risk rolled.** `EscapeTests.ThePublishedRiskIsExactlyWhatIsRolled`
+  derives the roll's threshold from the published aspect, with a doubled-threshold negative control;
+  `PrisonAspectNamesTests` and `PrisonContractTests.TheAspectNamesAreSpelledAsTheInterfaceReadsThem`
+  hold the interface's copy of the names and bits to the simulation's (§16).
 
 ### 9c. What an escape is
 
@@ -378,8 +381,9 @@ colony's total doubles rather than quadruples.
 
 ### Arrest
 
-- **How it is given:** a context-menu row on a standing colonist, with a drafted colonist selected
-  (`OfferArrest`).
+- **How it is given:** ~~a context-menu row on a standing colonist, with a drafted colonist
+  selected (`OfferArrest`)~~ — **superseded as built** (§15a): a command on her own pane, which sends
+  the nearest colonist on his feet; dim with its reason when it would be refused (§16 H2).
 - **On contact** the target rolls resistance: 20 % + (500 − mood) / 20, clamped to 5–60 %.
 - **If she resists**, she is Escaping: she fights the arrester or flees, and is downed, then
   captured.
@@ -388,7 +392,7 @@ colony's total doubles rather than quadruples.
   - every free colonist takes *Colonist arrested* (−40, a proposal);
   - on release she takes *Was arrested* (−80, a proposal).
 - **Design 33's gate says an unordered fight ends in downs, never deaths.** An arrest is an ordered
-  fight, but P12 still asserts it ends in downs.
+  fight. P12 was to assert it ends in downs; **no test does**, and §15e owes it.
 
 ## 11. The interface
 
@@ -440,7 +444,10 @@ The values arrive as pawn aspects (`odyssey.pawn.prison.*`), written by one writ
 
 ### 11e. New registry keys
 
-These land with the unit that uses each: P4, P6, P8–P12.
+These land with the unit that uses each: P4, P6, P8–P12. **As built, the tab and its readouts were
+not needed** (§15a: the facts are rows on her pane, named by row, not by registry key), so
+`ui.tab.prisoner`, `ui.bed.prisoner`, `ui.prisoner.willingness`, `ui.prisoner.escaperisk` and
+`ui.prisoner.shackled` were never made. §16 added `ui.pawn.released` (*Let go*).
 - **Tab and bed:** `ui.tab.prisoner`, `ui.bed.prisoner`.
 - **Mode chips and readouts:** `ui.prisoner.hold`, `ui.prisoner.recruit`, `ui.prisoner.release`,
   `ui.prisoner.exile`, `ui.prisoner.ransom`, `ui.prisoner.willingness`, `ui.prisoner.escaperisk`,
@@ -461,7 +468,7 @@ These land with the unit that uses each: P4, P6, P8–P12.
 | Warden work type | Priorities array grows by one | **Yes — same bake, P3** |
 | `TryClaimForSleeper` counting only colonists (P1) | Behaviour | Possibly, on boards with animals. Measured in P1; if it moves them, it lands in P3's bake |
 | `Pawn.Custody` | Pawn word bits 28–29, zero while Free | No |
-| `odyssey.prison`, `odyssey.bedpurpose` | New sections, appended to `ColonyWorld.SaveComponents`, layout byte first, hashed only while non-empty | No |
+| `odyssey.prison`, `odyssey.bedpurpose` | New sections, appended to `ColonyWorld.SaveComponents` after `main`'s part-mined section, a layout `int` first, hashed only while non-empty | No |
 | Job defs 28–35 | Appended | No |
 
 **Every golden move is measured with `GoldenColonyProbe`** against `main`. P3 is the only unit that
@@ -512,8 +519,8 @@ surrender roll draws nothing unless a free prison bed exists, which no golden ha
 
 | Designed | Built | Why |
 |---|---|---|
-| A **Prisoner tab** with mode chips (§11b) | The prisoner's facts are **rows on her pane** — mode, willing, joins in, slowed by, shackled, escape risk, because — and **pressing the mode row moves it on**: Hold → Recruit → Release → Exile → Hold | A prisoner's pane is the bandit's bare shape with no tab box. The rows reuse the tile readout's grid and the bed-purpose row's pick affordance, so there is no new layout to measure. Chips are a later look if rows read badly |
-| *Ransom* drawn dim among the chips | Never offered by the cycle; refused by the intent | Nothing to draw it on without chips |
+| A **Prisoner tab** with mode chips (§11b) | The prisoner's facts are **rows on her pane** — mode, willing, joins in, slowed by, shackled, escape risk, because — and **pressing the mode row opens the four modes to choose from** (§16 H4; it cycled them until the second review) | A prisoner's pane is the bandit's bare shape with no tab box. The rows reuse the tile readout's grid and the bed-purpose row's pick affordance, so there is no new layout to measure. Chips are a later look if rows read badly |
+| *Ransom* drawn dim among the chips | Never offered (`InspectModel.OfferedModes`); refused by the intent | Nothing to draw it on without chips |
 | The ETA **names its warden** | It does not | The warden is not published; `Recruitment.BestWarden` is the arithmetic and the pane shows its result |
 | **Arrest** from a right-click on a standing colonist with a drafted colonist selected (§10, §11c) | **A command on the colonist's own pane**; the nearest colonist on her feet who can reach her is sent (`OrderArrest` with `A = 0`) | A right-click that touches a colonist is a **move**, and three tests pin it (design 33 §2f: the hit box covers the cell behind her, and the review found every order just behind the squad doing nothing). A menu there would take that away |
 | `ui.alert.prisonerescape` **cycles** every escapee on click | **One row per escapee**, Danger, each jumping to her | The alert panel's per-pawn rows already do it; a cycling row is a new control |
@@ -540,17 +547,17 @@ surrender roll draws nothing unless a free prison bed exists, which no golden ha
 | Whether a raider yields | `Surrender.Consider`, called by `CombatSystem.Hurt`, the one owner of damage |
 | Whether an arrest is resisted | `Arrest.Contact` |
 
-### 15d. A fault on `main` the escape found
+### 15c. A fault on `main` the escape found
 
 A broken cell door did not open the cell. `EnclosureGrid.FillLayer` cut a flood short at the room
 limit and left its queued frontier marked visited, and the next region's flood treated those cells
 as walls. The fill now flags the limit and carries on (`docs/bug-patterns.md`, 2026-09-26). No golden
 moved. It is temperature's code, and every room on `main` is judged by it.
 
-### 15e. The review (2026-09-26)
+### 15d. The review (2026-09-26)
 
 A high-effort review of the whole line found ten faults, and each was confirmed in the code before
-it was fixed. Every fix below has a test that fails without it and passes with it, except §15e-6,
+it was fixed. Every fix below has a test that fails without it and passes with it, except §15d-6,
 which is a guard against a case no board here can build. No golden moved.
 
 | # | Fault | Fix |
@@ -566,14 +573,80 @@ which is a guard against a case no board here can build. No golden moved.
 | 9 | **A pawn let go got a colonist's full pane**, whose commands the simulation refuses | Every custody other than Free gets the bare pane; a released pawn's one row says *let go* |
 | 10 | **Capture's bed choice was a copy of the rescue's** (bug-patterns P1) | `RescueRules.BedFor` takes the pool to judge from; the rescue driver's `StillFree` asks a virtual `UserFor` |
 
-### 15c. Still owed
+### 15e. Still owed
 
-- **Unity.** The fast tier compiles neither Presentation nor Editor: the pane's mode row, the
-  Arrest button, the bed-purpose row and the prison jumpsuit are unproven until both Unity tiers
-  have compiled and run them.
-- **The Arrest button is enabled without a free prison bed** and the intent is then refused
-  silently. The Hud cannot see beds; a published "a prison bed is free" scalar is the fix.
+- ~~**Unity.**~~ Compiled and run on the merge (§16).
+- ~~**The Arrest button is enabled without a free prison bed.**~~ `WorldSnapshot.PrisonBedFree` (§16 H2).
+- **An arrest ends in downs** (§10): asserted by nothing.
 - **How long a door holds an unarmed escapee** is the building attack's arithmetic, unmeasured at
   play; `EscapeTests.AnEscapeeBreaksTheDoorRunsAndIsGone` proves only that it ends.
 - **Every number is a proposal**: the recruitment gain, the escape factors, surrender's quarter,
   arrest's 5–60 %. The owner confirms them at the first play.
+
+## 16. The second review, on the merge with `main` (2026-09-26)
+
+The branch was merged with `main` first (wake, frog, First Person, cracks): sixteen conflicts, all
+two appends at one place. The colonist pane's commands became Draft, the response, **Arrest, then
+First Person last**, as First Person's own comment asks. Design 58 was `main`'s by then, so this
+document is **59**. The played-board golden was re-baked and measured with `GoldenColonyProbe`: equal
+to `main` in every number, and different from this branch only by `main`'s seven frogs.
+
+Three independent passes then read the simulation, the interface, and whether the tests and docs
+bear out their claims. Every finding was checked in the code before anything changed, and every fix
+has a test in `PrisonReviewTests` (Sim) or the Hud tests that failed on the code before it, unless
+the row says otherwise.
+
+### Simulation
+
+| # | Fault | Fix |
+|---|---|---|
+| 1 | **A load swept the beds as if their purposes had changed.** The sweep's memory is not saved, so the first tick after a load raised `BedOwnershipChanged` and woke a sleeper the twin that never saved left asleep | `BedPurposes.Loaded` primes the sweep instead (`ALoadDoesNotSweepTheBedsAsIfTheirPurposesHadChanged`) |
+| 2 | **A prisoner's meal and sleep were walked as a colonist's**, who opens doors, so two doors on one corridor were a way out and in and raised her own risk | Her own mode (`APrisonersMealAndSleepAreWalkedInHerOwnMode`) |
+| 3 | **A bleeding prisoner stood untended until she dropped**: a doctor goes only to somebody lying still, and her tree had no patient | `PrisonerPatientThinkNode`; the patient driver's self-treatment exit is a colonist's alone (`ABleedingPrisonerLiesDownAndIsTreatedBeforeSheDrops`) |
+| 4 | **An arrest took her with no bed left** when the arrester arrived | The bed is asked again at the touch (`AnArrestWithNoBedLeftWhenHeArrivesTakesNobody`) |
+| 5 | **A recruit's corpse was a bandit's**: the corpse read its side off her kind | `Corpse.Joined`, carried above the facing's three bits in the int it was always saved as, so no format bump and no golden moved (`ARecruitDiesOnTheColonysSide`; it reads the new field, so it cannot run on the old code) |
+| 6 | **A shackled prisoner in a gated yard** was sent to her bed in a mode the gate holds, every think | Walked as `ToMyCell` walks her into a cell (`AShackledPrisonerIsWalkedThroughTheGateToHerBed`) |
+| 7 | **The publish walked every pawn once per prisoner**, twice: the prisoner count and the best warden | Found once a publish (`PrisonAspects.Shared`). Values unchanged by construction; not timed |
+| 8 | **The feed finished for a prisoner who had walked off** mid-meal | The feed follows her with the plate (`AWardenFeedsAPrisonerOnlyAtHerSide`) |
+| 9 | Stale comments: the drivers "stubs"; a summary on the wrong method | Corrected |
+| 10 | **Found writing #4's test: the arrester followed a walking colonist at half pace** and never caught her in 4,000 ticks; a new place beside her every tick snapped his step back | One rule, `PrisonerFollow.StandFor`, for every job that goes to her side: choose again only at a step boundary, as the melee chase does. 2,261 ticks now (`AnArresterCatchesAColonistWhoWalksOn`; `docs/bug-patterns.md`) |
+
+### Interface
+
+| # | Fault | Fix |
+|---|---|---|
+| H1 | **Four labelled buttons in the colonist's header**, where design 57 §6 took the fourth out because it runs her name under them | **Measured, and open: the owner's call** (below) |
+| H2 | **Arrest was always live** and a refused press did nothing | Dim with its reason — she is down, no free prison bed, nobody else on their feet — from the new `WorldSnapshot.PrisonBedFree` (`ArrestIsDimWithItsReasonWhenItWouldBeRefused`, `WhetherAPrisonBedStandsFreeIsPublished`) |
+| H3 | **Capture was offered on a prisoner lying in her own bed**, refused in silence, and a drafted right-click on her cell opened the menu instead of moving | A sparse `stray` aspect from `CaptureRules.WantsCapture`, the order's own rule (`APrisonerInHerBedIsOfferedNothingAndTheClickIsAMove`) |
+| H4 | **The mode row cycled Hold → Recruit → Release → Exile**, so going back to Hold passed through Release and Exile while the game ran | A popover of the four to choose from, the bed owner picker's (`InspectModel.OfferedModes`) |
+| H5 | **Willingness showed 0 % on Hold** where nothing could move it | Shown in Recruit, or once a warden has made a start (`AHoldPrisonerNobodyHasTalkedToShowsNoWillingness`) |
+| H6 | **A pawn let go was still labelled Prisoner** | *Let go*, `ui.pawn.released` (`APawnLetGoIsNotCalledAPrisoner`) |
+| H7 | A stale outfit comment | Corrected |
+| H8 | **First Person kept riding a colonist once she was arrested** | A ride keeps a colonist only; she is lost to it as if gone (`TheRideEndsWhenSheIsTakenIntoCustody`) |
+
+The interface's copy of the prison aspect names and bits is held to the simulation's by a pair of
+tests, as `CombatAspectNamesTests` does for combat: "the risk shown is the risk rolled" stopped at
+the simulation until then.
+
+### Unity
+
+The fast tier compiles neither Presentation nor Editor. Unity's own NUnit also refused a
+`Does.Not.Contain` on an int in `PrisonBedTests`, which had never been compiled there (`docs/lessons.md`,
+the two tiers' NUnit).
+
+### H1, the header, measured (1920 × 1080, `DockedTabGeometryTests.TheLongestNameStillClearsTheColonistsButtons`)
+
+| Control | Width + margin |
+|---|---|
+| Draft | 74 + 4 |
+| Fight back | 105 + 4 |
+| **Arrest** | **80 + 4** |
+| First Person | 113 + 4 |
+| Almanac, Close | 26 + 4 each |
+
+The six take 448 of a 560 pane whose titles start 82 in, leaving **17 px** for the name line; the
+longest given name, *Charlotte*, and *colonist · L6* after it need **173**. **Without Arrest it is
+101, so `main` already clips a long name** since First Person's 117 went in (design 57 §6 counted
+three buttons with Prioritise gone, not their widths). The test fails until the header is decided,
+and it is the number any later header change starts from.
+

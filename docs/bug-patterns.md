@@ -3018,3 +3018,49 @@ golden moved.
 **The check for the next one.** A search that stops early must either leave no marks or treat its
 marks as its own, never as a verdict another search reads. Ask of any `break` inside a flood,
 Dijkstra or BFS that shares a visited array: what does the next search think of the cells I queued?
+
+## A place beside a moving target chosen afresh every tick snaps the walk back (2026-09-26)
+
+**Symptom.** An arrest of a colonist going about her day never landed: the arrester followed her at
+about half her pace, two cells in 400 ticks, for 4,000 ticks. The prisoner line's own test passed,
+because its target stood still beside him.
+
+**Cause.** `BesidePrisonerJobDriver` (and the feed, a copy of it) chose a new cell beside her every
+tick she was not already beside it. Each new destination restarts the step in hand, so every tick
+she moved took back the progress he had made. The melee chase met the same thing in C7 and chooses
+again only at a step boundary; the prisoner drivers were written without it.
+
+**Measurement that found it.** A test written for another fault (an arrest with no bed left) timed
+out, and a trace of both pawns every 300 ticks showed the arrester's cells against the target's:
+100 ticks a cell for her, 200 for him. With the fix both walk a cell a hundred ticks and the arrest
+lands at 2,261 (`PrisonReviewTests.AnArresterCatchesAColonistWhoWalksOn`).
+
+**Fix.** One rule, `PrisonerFollow.StandFor`, used by every job that goes to a prisoner's side:
+keep the place while it is beside her; choose again only once it is not, and then only at a step
+boundary (`MoveProgress < MoveRatePerMille()`) or standing still.
+
+**The check for the next one.** Any driver that walks to a target that moves: does it change its
+destination mid-step? Grep for `StandBeside` or `ChooseSide` outside a boundary test. And a test of
+a follow must make the target walk, or it proves only the approach.
+
+## A load is not a change: a sweep whose memory is not saved (2026-09-26)
+
+**Symptom.** None seen in play; found by review. With any bed marked for prisoners, the first tick
+after a load woke a colonist asleep away from the bed she owned, and the twin that never saved left
+her asleep, so the hashes parted.
+
+**Cause.** `ConstructionGrid.SweepBedPurposes` compares a key against the one it last swept at, in
+fields nobody saves. After a load they start empty, so the first sweep takes the loaded purposes for
+a change and raises `BedOwnershipChanged`, which the job system answers by waking sleepers.
+
+**Measurement that found it.** The control and the loaded colony side by side: `SweepBedPurposes()`
+on each, then `BedOwnershipChanged` (`PrisonReviewTests.ALoadDoesNotSweepTheBedsAsIfTheirPurposesHadChanged`).
+
+**Fix.** The loaded section says it was loaded (`BedPurposes.Loaded`), and the first sweep after it
+primes its memory from what was loaded instead of acting. The owners had been stripped before the
+save, so priming is exactly the state the twin holds.
+
+**The check for the next one.** Any "has this changed since I last looked" cache in the simulation:
+is the last-looked value saved, or primed on load? If neither, the first tick after a load acts on a
+change that did not happen. The same family as "a derived value written on an interval, and not on
+a load" (2026-09-25) above.

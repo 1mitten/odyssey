@@ -152,6 +152,15 @@ namespace Odyssey.Tests.PlayMode
                 float needed = nameWidth + meta.resolvedStyle.marginLeft + metaWidth;
                 float room = actions!.worldBound.xMin - titles!.worldBound.xMin;
                 int buttons = actions.childCount;
+                var parts = new System.Text.StringBuilder();
+                for (int i = 0; i < actions.childCount; i++)
+                {
+                    VisualElement c = actions[i];
+                    string what = c.tooltip ?? c.name;
+                    if (what.Length > 18) what = what.Substring(0, 18);
+                    parts.Append($" [{what}: {c.worldBound.width:0} + {c.resolvedStyle.marginLeft:0}]");
+                }
+                Debug.Log($"[Header] the controls:{parts}; the pane {inspect.worldBound.width:0} wide, the titles start {titles!.worldBound.xMin - inspect.worldBound.xMin:0} in");
                 Debug.Log($"[Header] {buttons} controls in the actions ({actions.worldBound.width:0} wide); room for the name line " +
                           $"{room:0}, the longest name '{longest}' and '{meta.text}' need {needed:0}; margin {room - needed:0}");
                 Assert.That(needed, Is.LessThanOrEqualTo(room),

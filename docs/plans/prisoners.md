@@ -3,8 +3,9 @@
 - **Design:** `docs/design/59-prisoners.md`.
 - **Interview:** `docs/research/prisoner-interview.md`.
 - **Reference:** `docs/research/a-20-prisoners.md`.
-- **Branch:** `claude/prisoner-bed-assignment-98afc0` for P0. Each later unit gets a short-lived
-  `claude/*` branch and a PR, in unit order.
+- **Branch:** `claude/prisoner-bed-assignment-98afc0` for P0. Each later unit was to get a
+  short-lived `claude/*` branch and a PR, in unit order; **as built, all twelve landed on P0's branch**
+  and were reviewed together (design 59 §15d, §16).
 
 **Phase gate.** P0 is documents only. **No unit below P0 starts until the owner approves this
 plan.**

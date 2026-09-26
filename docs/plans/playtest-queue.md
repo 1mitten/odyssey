@@ -46,21 +46,29 @@ the next session learns to ignore.
   hops or lurches backwards at the start of one; frogs far from water; a frog too small to find from
   your normal camera height; a green that still sinks into the grass; or frogs you would rather see swimming, which
   is a cost stated in §8b.
-- **Prisoners, the whole line** (`claude/prisoner-bed-assignment-98afc0`, design 59 §15). Build a
-  small walled, roofed room with a door and a bed; select the bed and press *for prisoners*. Spawn
-  a bandit from the debug menu, fight it down, right-click it and choose *Capture*.
+- **Prisoners, the whole line** (`claude/prisoner-bed-assignment-98afc0`, design 59 §15–§16, reviewed
+  twice and merged with `main`). Build a small walled, roofed room with a door and a bed; select the
+  bed and press *for prisoners*. Spawn a bandit from the debug menu, fight it down, right-click it and
+  choose *Capture*.
   - Wrong: the captured bandit is not carried to the bed, or wakes and walks out through the shut
     door.
-  - Select the prisoner and press the mode row until it says *Recruit*. Wrong: *joins in* never
-    falls, or the reasons under it do not match what you can see (hungry, no warden).
-  - Debug → Spawn → *Break out nearest prisoner*. Wrong: she stands still, or the door survives her
-    for longer than a fight would last, or she is not brought back after being downed.
-  - Set a prisoner to *Release*. Wrong: nobody comes, or she cannot find her way out of the room.
-  - Press *Arrest* on a colonist's pane with a free prison bed. Wrong: nobody goes, or everybody
-    does, or the colony's mood does not dip.
-  - Right-click beside a drafted squad standing near another colonist. Wrong: a menu appears
-    instead of the move.
-
+  - Does the orange jumpsuit read as a prisoner at a glance, beside the colony's pale suits? Wrong:
+    you have to click her to tell.
+  - Select the prisoner and press the mode row: a small list of four opens. Choose *Recruit*. Wrong:
+    the list opens somewhere you have to look for, or *joins in* never falls, or the reasons under
+    it do not match what you can see (hungry, no warden).
+  - Debug → Spawn → *Break out nearest prisoner*. Wrong: the door survives her far longer than a
+    fight would last, or she is not brought back after being downed.
+  - With a prison bed free, fight a raid (Debug → Events → Raid, size 5) until one surrenders: she is
+    usually bleeding, walks herself to the cell, lies down, and a doctor comes. Wrong: she stays on
+    her feet bleeding, or the doctor's walk round to the cell takes so long it feels broken.
+  - Open a colonist's pane with no free prison bed: *Arrest* is dim, and hovering it says why. Free a
+    bed and press it. Wrong: the dim state is not noticeable, or the colony's mood does not dip.
+  - The colonist's header now holds four buttons (Draft, the response, Arrest, First Person). Wrong:
+    it looks crowded, or Arrest sits too close to Draft for something that serious.
+  - **The numbers are yours to confirm** (design 59 §8–§10): 2 % a day escape risk for one prisoner,
+    a quarter of badly hurt raiders surrendering, arrests resisted 5–60 % by mood, recruitment taking
+    days. Say which feel wrong.
 - **Polish batch: trees, drops, the fire, the roster, the pane, the fade** (`claude/polish-batch`,
   designs 20 §14, 23 §11, 31 §20, 25 §10, 14 §10–§11, 38 §27).
   - Gather six or more colonists round a campfire at night. Each should be on their own tile, with
