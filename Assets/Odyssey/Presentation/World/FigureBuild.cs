@@ -134,7 +134,7 @@ namespace Odyssey.Presentation.World
             // centimetres for an animal (design 29), which is a quarter of a metre and not a
             // failed bake.
             float height = highest - Mathf.Min(lowest, rootY);
-            return height >= minimum && height <= 5f ? height : fallback;
+            return height >= minimum && height <= MaximumHeight ? height : fallback;
         }
 
         /// <summary>
@@ -142,5 +142,12 @@ namespace Odyssey.Presentation.World
         /// scale, which is half again life size (<c>PawnFigureDirector.GroundSpeeds</c> says why).
         /// </summary>
         public const float FallbackHeight = 2.5f;
+
+        /// <summary>
+        /// The tallest reading taken as a body rather than a failed bake. 5 m until the butcher
+        /// (design 62 §8a), whose levels stand 4.4 to 6 m; a failed bake is out by a factor of a
+        /// hundred, so 8 m still catches every one.
+        /// </summary>
+        public const float MaximumHeight = 8f;
     }
 }

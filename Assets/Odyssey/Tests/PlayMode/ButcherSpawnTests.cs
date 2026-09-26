@@ -65,7 +65,7 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(figures.HasFigureFor(butcher.Id.Value), Is.True, "the butcher has no figure");
                 Assert.That(figures.TryGetAnimalBox(butcher.Id, out _, out Vector3 box), Is.True,
                     "the butcher carries no box of its own, so its bar and cursor are a colonist's");
-                Assert.That(box.y, Is.InRange(3.3f, 4.0f), $"drawn {box.y:0.00} m tall: not the 3.64 m design 62 §8a measured");
+                Assert.That(box.y, Is.InRange(4.0f, 4.8f), $"drawn {box.y:0.00} m tall: not the 4.37 m design 62 §8a measured");
                 Assert.That(Mathf.Max(box.x, box.z), Is.LessThan(3.0f),
                     $"a box {box.x:0.00} x {box.z:0.00} m across: the bind pose's arm span or the pack's other giants, not the body");
                 Assert.That(figures.WeaponOf(butcher.Id), Is.Not.Null, "the cleaver is not in its hand");
@@ -119,15 +119,31 @@ namespace Odyssey.Tests.PlayMode
                 Directory.CreateDirectory(Path.GetFullPath("Logs/look"));
 
                 bool telegraphed = false, flung = false;
-                for (int frame = 0; frame < 3_000 && !(telegraphed && flung); frame++)
+                int swingFrames = -1;
+                var log = new System.Text.StringBuilder();
+                for (int frame = 0; frame < 3_000 && !(telegraphed && flung && swingFrames >= 40); frame++)
                 {
                     world.Tick();
-                    rig.FocusOn(colony.Pawns.Size.FromIndex(butcher.Cell), 20f);
+                    rig.FocusOn(colony.Pawns.Size.FromIndex(butcher.Cell), telegraphed && swingFrames < 40 ? 11f : 20f);
                     yield return null;
                     if (!telegraphed && butcher.HeldFacing != 0)
                     {
                         telegraphed = true;
+                        swingFrames = 0;
                         yield return Photograph("butcher-windup", target);
+                    }
+                    if (swingFrames >= 0 && swingFrames < 40)
+                    {
+                        // What the figure shows through its first swing, frame by frame: the role on
+                        // the action layer, how much of it shows, and where the cleaver is.
+                        boot.Figures!.TryGetFight(butcher.Id, out CombatRole role, out float weight, out _, out bool computed);
+                        Transform? cleaver = boot.Figures.WeaponOf(butcher.Id);
+                        string where = cleaver == null ? "no cleaver"
+                            : $"cleaver {(cleaver.gameObject.activeInHierarchy ? "shown" : "hidden")} at {cleaver.position} up {cleaver.up} scale {cleaver.lossyScale}";
+                        log.AppendLine($"swing frame {swingFrames}: tick {world.CurrentTick} role {role} weight {weight:0.00} computed {computed} pending {butcher.HasPendingSwing}; {where}");
+                        if (swingFrames == 8 || swingFrames == 20 || swingFrames == 32)
+                            yield return Photograph($"butcher-swing-{swingFrames:00}", target);
+                        swingFrames++;
                     }
                     if (!flung && FlungBy(world.Views.Current, butcher.Id))
                     {
@@ -136,6 +152,7 @@ namespace Odyssey.Tests.PlayMode
                         yield return Photograph("butcher-fling", target);
                     }
                 }
+                TestContext.WriteLine(log.ToString());
                 TestContext.WriteLine($"telegraphed {telegraphed}, flung {flung}");
             }
             finally

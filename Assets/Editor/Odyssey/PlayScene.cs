@@ -2598,7 +2598,7 @@ namespace Odyssey.EditorTools
         /// a colonist's 2.51 m — the design's target — and taller than a 3 m storey, which the first
         /// play judges indoors.
         /// </summary>
-        const float ButcherScale = 2.0f;
+        const float ButcherScale = 2.4f;
         /// <summary>POLYGON Battle Royale, which the pistol is pinned to (design 47 §4a).</summary>
         const string BattleRoyaleFolder = "Assets/Synty/PolygonBattleRoyale";
 

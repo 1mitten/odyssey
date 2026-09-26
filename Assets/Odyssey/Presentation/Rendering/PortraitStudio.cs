@@ -192,8 +192,46 @@ namespace Odyssey.Presentation.Rendering
         /// The portrait of a person in the published frame, in what they are wearing. One pawn at
         /// a time: the outfit is found by a scan of the frame (<see cref="PawnOutfits.Of"/>).
         /// </summary>
-        public Texture2D? For(WorldSnapshot snapshot, PawnId id) =>
-            For(ColonistNames.RollSeedOf(snapshot, id), id, PawnOutfits.Of(snapshot, id));
+        public Texture2D? For(WorldSnapshot snapshot, PawnId id)
+        {
+            // A hostile drawn as itself (the butcher, design 62 §8) is photographed as itself: its
+            // own row, in the pack's own paint. Dealt a person's look it came out a bandit, because
+            // the outfit rule makes every hostile person one (owner, 2026-09-26: "it showed a
+            // bandit portrait when it's a pig butcher").
+            if (snapshot.TryGetPawn(id, out PawnView pawn) && ModuleIds.Hostile(pawn.Kind).Length > 0)
+                return ForKind(pawn.Kind);
+            return For(ColonistNames.RollSeedOf(snapshot, id), id, PawnOutfits.Of(snapshot, id));
+        }
+
+        readonly Dictionary<int, Texture2D?> _kinds = new Dictionary<int, Texture2D?>();
+
+        /// <summary>
+        /// The portrait of a kind drawn as its own row (<c>ModuleIds.Hostile</c>), or null where the
+        /// row has no art. One picture per kind — every butcher is the same butcher — and a miss is
+        /// cached as a colonist's is.
+        /// </summary>
+        public Texture2D? ForKind(int kind)
+        {
+            if (_kinds.TryGetValue(kind, out Texture2D? cached)) return cached;
+            Texture2D? taken = null;
+            ModuleEntry? row = _catalogue?.Find(ModuleIds.Hostile(kind));
+            if (row != null && row.prefab != null)
+            {
+                EnsureRig();
+                if (_camera != null && _target != null)
+                {
+                    // Its own subject key, below every look index, so a colonist's body is never
+                    // mistaken for it or it for one.
+                    GameObject? subject = Subject(row, KindSubject - kind, ownPaint: true);
+                    if (subject != null) taken = Photograph(subject, row);
+                }
+            }
+            _kinds[kind] = taken;
+            return taken;
+        }
+
+        /// <summary>The subject key of a kind's own row: <c>KindSubject − kind</c>, never a look index.</summary>
+        const int KindSubject = -1000;
 
         /// <summary>
         /// The portrait of one appearance. **A miss is cached too**: a look with no prefab is a
@@ -232,6 +270,9 @@ namespace Odyssey.Presentation.Rendering
                 if (row.Value != null) UnityEngine.Object.Destroy(row.Value);
 
             _cache.Clear();
+            foreach (KeyValuePair<int, Texture2D?> row in _kinds)
+                if (row.Value != null) UnityEngine.Object.Destroy(row.Value);
+            _kinds.Clear();
             Generation++;
         }
 
@@ -272,6 +313,13 @@ namespace Odyssey.Presentation.Rendering
             if (subject == null) return null;
 
             Paint(subject, row, appearance);
+            return Photograph(subject, row);
+        }
+
+        /// <summary>Frame the subject and take the picture: the half of a portrait every subject shares.</summary>
+        Texture2D? Photograph(GameObject subject, ModuleEntry row)
+        {
+            if (_camera == null || _target == null) return null;
             if (!Frame(subject, row)) return null;
 
             // Everything in the rig is off except for the length of this call, which is
@@ -504,7 +552,7 @@ namespace Odyssey.Presentation.Rendering
         /// changes, because the common case is a colony of one or two families of body and
         /// instantiating a Synty character is not free.
         /// </summary>
-        GameObject? Subject(ModuleEntry row, int look)
+        GameObject? Subject(ModuleEntry row, int look, bool ownPaint = false)
         {
             if (_subject != null && _subjectLook == look) return _subject;
 
@@ -523,6 +571,27 @@ namespace Odyssey.Presentation.Rendering
 
             var colliders = instance.GetComponentsInChildren<Collider>(includeInactive: true);
             for (int i = 0; i < colliders.Length; i++) colliders[i].enabled = false;
+
+            if (ownPaint)
+            {
+                // A body in its own paint, as the figure director draws it (design 62 §8): its own
+                // head, no slots, and the pack's other giants — inactive siblings in the prefab —
+                // gone, or the framing measures them.
+                var all = instance.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true);
+                for (int i = 0; i < all.Length; i++)
+                    if (all[i] != null && !all[i].gameObject.activeInHierarchy)
+                        UnityEngine.Object.DestroyImmediate(all[i].gameObject);
+                _hairMesh = null;
+                _hairRenderer = null;
+                _beardMesh = null;
+                _beardRenderer = null;
+                _headMesh = null;
+                _headRenderer = null;
+                instance.SetActive(false);
+                _subject = instance;
+                _subjectLook = look;
+                return instance;
+            }
 
             // The same bare head the figure director gives, or a colonist's portrait and the
             // colonist would be wearing different things.
