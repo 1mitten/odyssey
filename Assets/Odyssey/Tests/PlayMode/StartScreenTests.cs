@@ -802,8 +802,12 @@ namespace Odyssey.Tests.PlayMode
 
                     VisualElement page = doc.rootVisualElement.Q("setup")!;
                     VisualElement story = page.Q(className: "story")!;
-                    Assert.That(page.ClassListContains("setup--compact"), Is.EqualTo(scale == 150),
-                        $"at {scale}% the page chose the wrong layout");
+                    // At 150% the canvas is at most 1280 wide, under the full layout's 1692, on any
+                    // aspect; at 100% which layout applies depends on the game view's aspect, so
+                    // only the fit is asserted there.
+                    if (scale == 150)
+                        Assert.That(page.ClassListContains("setup--compact"), Is.True,
+                            "at 150% the page kept the full layout it has no room for");
 
                     Rect bounds = page.worldBound;
                     foreach (VisualElement part in story.Query(className: "story__card").ToList()
