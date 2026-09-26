@@ -49,14 +49,16 @@ namespace Odyssey.Tests.PlayMode
                 world.Intents.Submit(new Intent(IntentKind.SpawnPawn, at, PawnKindIndex.DuctRat));
                 world.Tick();
                 Assert.That(world.Intents.Rejected, Is.Empty);
-                int hogs = 0, rats = 0;
+                // Every animal, not only the two kinds counted by name: the meadow seeds frogs on
+                // its banks too (design 30 §8), and a row is drawn for each of them.
+                int hogs = 0, rats = 0, animals = 0;
                 Pawn? aHog = null;
                 foreach (Pawn pawn in colony.Pawns.Pawns.All)
                 {
+                    if (!pawn.IsPerson) animals++;
                     if (pawn.Kind == PawnKindIndex.MiddenHog) { hogs++; aHog ??= pawn; }
                     else if (pawn.Kind == PawnKindIndex.DuctRat) rats++;
                 }
-                int animals = hogs + rats;
                 Assert.That(animals, Is.InRange(3, AnimalsLayout.RowsPerPage), "a page's worth, so no pager");
 
                 directors!.Animals.SetOpen(true);

@@ -264,6 +264,101 @@ namespace Odyssey.EditorTools
         }
 
         /// <summary>
+        /// The frog hopping under the figure director's own path (design 30 §8): a real colony, a
+        /// real frog, the snapshot the game publishes, four seconds at sixty frames. Every frame
+        /// prints how far the drawn figure moved and how high its body bone is, so the hop pacing
+        /// can be read as numbers — a hop is a run of frames with the figure still and the body
+        /// low, then a run with it moving fast and the body high — and the frame with the body
+        /// highest is photographed from the flank.
+        /// <c>scripts/unity.sh shot Odyssey.EditorTools.AnimalProbe.ShootMovingFrog</c> →
+        /// <c>Logs/frog-moving.txt</c>, <c>Logs/frog-moving.png</c>.
+        /// </summary>
+        public static void ShootMovingFrog()
+        {
+            int exitCode = 0;
+            GameObject? root = null;
+            Odyssey.Presentation.World.PawnFigureDirector? director = null;
+            try
+            {
+                var catalogue = AssetDatabase.LoadAssetAtPath<Odyssey.Presentation.Rendering.ModuleCatalogue>(PlayScene.CataloguePath);
+                AnimalImport.Apply();
+                root = new GameObject("MovingFrog");
+                PlayScene.BuildSheetLighting(root.transform);
+                director = new Odyssey.Presentation.World.PawnFigureDirector(catalogue, root.transform, 0);
+                var sb = new StringBuilder();
+                sb.AppendLine($"director enabled {director.Enabled}");
+
+                var size = new Odyssey.Sim.Contracts.GridSize(40, 40, 16);
+                Odyssey.Sim.Pawns.ScenarioDef scenario = Odyssey.Sim.Pawns.ScenarioDef.Bare();
+                scenario.colonists = 1;
+                scenario.beds = 1;
+                scenario.startingFellRadius = 0;
+                Odyssey.Sim.Pawns.ColonyWorld colony = Odyssey.Sim.Pawns.ColonyWorld.Build(size, 1u, scenario, barren: true, wooded: false);
+                Odyssey.Sim.Contracts.CellRef start = colony.Start;
+                int cell = size.Index(start.X + 3, start.Z, start.Y);
+                Odyssey.Sim.Pawns.Pawn frog = colony.Pawns.Pawns.Spawn(cell, Odyssey.Sim.Pawns.PawnKindIndex.CulvertFrog);
+                int waited = 0;
+                while (!frog.HasPath && waited < 20_000) { colony.World.Tick(); waited++; }
+                sb.AppendLine($"frog set off after {waited} ticks; path length {frog.PathLength}");
+
+                const float dt = 1f / 60f;
+                var slice = new Odyssey.Presentation.CameraRig.SliceSettings();
+                Vector3? last = null;
+                float highest = float.MinValue, travelled = 0f;
+                int stillFrames = 0, movingFrames = 0;
+                Vector3 photoAt = Vector3.zero;
+                for (int frame = 0; frame < 240; frame++)
+                {
+                    colony.World.Tick();
+                    director.Sync(colony.World.Views.Current, start.Y, slice, 0f, colony.Pawns.Content.Movement.movePerTick, dt);
+                    director.Evaluate(dt);
+                    Transform? figure = FigureOf(director, frog.Id.Value);
+                    if (figure == null) continue;
+                    Transform? body = FindDeep(figure, "Body");
+                    float bodyUp = body != null ? body.position.y - figure.position.y : 0f;
+                    float moved = last.HasValue ? Vector3.Distance(new Vector3(figure.position.x, 0f, figure.position.z),
+                        new Vector3(last.Value.x, 0f, last.Value.z)) : 0f;
+                    last = figure.position;
+                    travelled += moved;
+                    if (frog.HasPath) { if (moved < 0.004f) stillFrames++; else movingFrames++; }
+                    if (bodyUp > highest && frog.HasPath) { highest = bodyUp; photoAt = figure.position; }
+                    sb.AppendLine($"frame {frame,3} path {(frog.HasPath ? 1 : 0)} moved {moved * 1000f,5:F0} mm  body {bodyUp * 1000f,4:F0} mm  {GaitReport(director, frog.Id.Value)}");
+                }
+                sb.AppendLine($"travelled {travelled:F2} m; while pathing {stillFrames} frames still and {movingFrames} moving");
+                Debug.Log("[AnimalProbe] moving frog " + sb);
+                File.WriteAllText("Logs/frog-moving.txt", sb.ToString());
+
+                Transform? posed = FigureOf(director, frog.Id.Value);
+                if (posed != null)
+                {
+                    var cam = new GameObject("MovingCamera");
+                    try
+                    {
+                        var c = cam.AddComponent<Camera>();
+                        c.fieldOfView = 30f; c.nearClipPlane = 0.05f; c.farClipPlane = 500f;
+                        c.clearFlags = CameraClearFlags.SolidColor; c.backgroundColor = new Color(0.16f, 0.19f, 0.24f);
+                        PlayScene.Shoot(c, posed.position + Vector3.up * 0.3f, 8f, 90f, 5f, "Logs/frog-moving.png");
+                        // And from the play camera's pitch and distance, for the question a still
+                        // from the flank cannot answer: is it big enough to see?
+                        PlayScene.Shoot(c, posed.position, 48f, 0f, 40f, "Logs/frog-play-camera.png");
+                    }
+                    finally { Object.DestroyImmediate(cam); }
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError("[AnimalProbe] moving frog failed: " + e);
+                exitCode = 1;
+            }
+            finally
+            {
+                director?.Dispose();
+                if (root != null) Object.DestroyImmediate(root);
+                if (Application.isBatchMode) EditorApplication.Exit(exitCode);
+            }
+        }
+
+        /// <summary>
         /// The snap detector (owner, 2026-09-22: <i>"I've seen pigs snap to different positions
         /// in various scenarios - could you check it never snaps or teleports"</i>). A wooded
         /// colony with trees and terraces, three hogs and three rats, a hundred seconds of the
@@ -521,6 +616,99 @@ namespace Odyssey.EditorTools
             }
             var takes = importer.importedTakeInfos;
             sb.AppendLine($"  takes {takes.Length}: {string.Join(", ", takes.Select(t => t.name + " " + t.startTime.ToString("F2") + ".." + t.stopTime.ToString("F2")))}");
+        }
+
+        /// <summary>
+        /// The frog's hop, measured and photographed (design 30 §8). The model has no walk: its
+        /// locomotion is the Jump clip, so what matters is what one Jump does — how high the body
+        /// rises and when, and whether the clip carries the body forward (a clip that travels and
+        /// then loops back is a frog that lurches backwards once a hop). Samples the clip at
+        /// twelve phases on a bare instance and prints the Body bone's height and forward offset
+        /// and the drawn box at each, then a side-on strip of six phases.
+        /// <c>scripts/unity.sh shot Odyssey.EditorTools.AnimalProbe.ShootFrog</c> →
+        /// <c>Logs/frog-probe.txt</c>, <c>Logs/frog-hop-strip.png</c>.
+        /// </summary>
+        public static void ShootFrog()
+        {
+            int exitCode = 0;
+            GameObject? root = null;
+            try
+            {
+                AnimalImport.Apply();
+                const string path = Folder + "/Frog.fbx";
+                var sb = new StringBuilder();
+                Report(path, sb);
+                var model = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                AnimationClip? jump = AssetDatabase.LoadAllAssetRepresentationsAtPath(path).OfType<AnimationClip>()
+                    .FirstOrDefault(c => c.name.Contains("Jump"));
+                AnimationClip? idle = AssetDatabase.LoadAllAssetRepresentationsAtPath(path).OfType<AnimationClip>()
+                    .FirstOrDefault(c => c.name.Contains("Idle"));
+                if (model == null || jump == null) throw new System.InvalidOperationException("no frog or no jump clip");
+
+                root = new GameObject("FrogSheet");
+                PlayScene.BuildSheetLighting(root.transform);
+                var probe = (GameObject)Object.Instantiate(model, root.transform);
+                Transform? body = probe.GetComponentsInChildren<Transform>().FirstOrDefault(t => t.name == "Body");
+                var smr = probe.GetComponentInChildren<SkinnedMeshRenderer>();
+                sb.AppendLine($"== jump {jump.name} {jump.length:F3}s; body bone {(body != null ? "found" : "MISSING")}");
+                for (int i = 0; i <= 12; i++)
+                {
+                    float t = jump.length * i / 12f;
+                    jump.SampleAnimation(probe, t);
+                    Bounds b = smr.bounds;
+                    Vector3 bp = body != null ? body.position : Vector3.zero;
+                    sb.AppendLine($"  phase {i / 12f:F2} t {t:F3}: body y {bp.y:F3} z {bp.z:F3} x {bp.x:F3}   box min.y {b.min.y:F3} max.y {b.max.y:F3} z[{b.min.z:F3}..{b.max.z:F3}]");
+                }
+                if (idle != null)
+                {
+                    idle.SampleAnimation(probe, 0f);
+                    Bounds b = smr.bounds;
+                    sb.AppendLine($"== idle at 0: box size {b.size} min.y {b.min.y:F3}");
+                }
+                Object.DestroyImmediate(probe);
+
+                var strip = new GameObject("HopStrip");
+                strip.transform.SetParent(root.transform, false);
+                for (int i = 0; i < 6; i++)
+                {
+                    var frog = (GameObject)Object.Instantiate(model, strip.transform);
+                    frog.transform.localPosition = new Vector3(i * 1.9f, 0f, 0f);
+                    frog.transform.localRotation = Quaternion.Euler(0f, 90f, 0f); // nose along +X
+                    jump.SampleAnimation(frog, jump.length * i / 6f);
+                }
+                var ruler = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Object.DestroyImmediate(ruler.GetComponent<Collider>());
+                ruler.transform.SetParent(root.transform, false);
+                ruler.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
+                ruler.transform.position = new Vector3(-1.9f, 0.125f, 0f);
+
+                var stripCamera = new GameObject("StripCamera");
+                try
+                {
+                    var cam = stripCamera.AddComponent<Camera>();
+                    cam.fieldOfView = 30f;
+                    cam.nearClipPlane = 0.05f;
+                    cam.farClipPlane = 200f;
+                    cam.clearFlags = CameraClearFlags.SolidColor;
+                    cam.backgroundColor = new Color(0.16f, 0.19f, 0.24f);
+                    PlayScene.Shoot(cam, new Vector3(3.8f, 0.4f, 0f), 8f, 0f, 15f, "Logs/frog-hop-strip.png");
+                }
+                finally { Object.DestroyImmediate(stripCamera); }
+
+                Directory.CreateDirectory("Logs");
+                File.WriteAllText("Logs/frog-probe.txt", sb.ToString());
+                Debug.Log("[AnimalProbe] frog: " + sb);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError("[AnimalProbe] frog failed: " + e);
+                exitCode = 1;
+            }
+            finally
+            {
+                if (root != null) Object.DestroyImmediate(root);
+                if (Application.isBatchMode) EditorApplication.Exit(exitCode);
+            }
         }
     }
 }
