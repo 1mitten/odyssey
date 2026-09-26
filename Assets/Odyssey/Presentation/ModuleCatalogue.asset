@@ -14999,7 +14999,7 @@ MonoBehaviour:
     - clipName: FrogArmature|Frog_Jump
       clip: {fileID: -1469770746859098023, guid: c5434b9bfdaa2864684fe683a19292ce, type: 3}
       speedFromClipName: 
-      metresPerSecond: 1.2
+      metresPerSecond: 1.5
     combat: []
     sitClip: {fileID: 0}
     sitClipName: 

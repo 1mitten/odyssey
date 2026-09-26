@@ -924,13 +924,13 @@ namespace Odyssey.Hud
                 new AlmanacEntry(
                     AlmanacKeys.Frog, "Fauna", "A big frog of the banks: streams, ponds and lakes, and never far from them", "Fauna", "Wild", false, "#5a8a3a",
                     new AlmanacIcon("fauna_culvert_frog", "#5a8a3a", "M5 15c0-4 3-7 7-7s7 3 7 7H5z M8 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M16 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M4 18l3-3 M20 18l-3-3"),
-                    "The culvert frog lives where the water does, on the banks of the meadow's streams, ponds and lakes, in twos to fours. It hops rather than walks, keeps within a few cells of the water whatever it is doing, and stays out in the rain when everything else goes for cover. It will not swim; it sits at the edge instead.",
+                    "The culvert frog lives where the water does, on the banks of the meadow's streams, ponds and lakes, in threes to fives. It hops rather than walks, keeps within a few cells of the water whatever it is doing, and stays out in the rain when everything else goes for cover. It will not swim; it sits at the edge instead.",
                     "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
-                        ("Pace", "80% of a colonist's walk, in hops"), ("Lives", "On the banks of water, in twos to fours"),
+                        ("Pace", "A colonist's walk, in hops of about 1.3 m"), ("Lives", "On the banks of water, in threes to fives"),
                         ("Day", "Out by day, rests three times longer at night"), ("Leg", "Within 4 cells, then a rest of 3 to 12 s"),
                         ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
-                        ("Body", "0.4 m long"), ("Tame", "Not yet")
+                        ("Body", "0.9 m long, a bright jade green"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
                         "A frog takes short legs along its bank and sits between them. Put one down away from water and it heads for the nearest bank it can reach; with none nearby it wanders like anything else. New frogs walk in only where the water meets the edge of the board.",

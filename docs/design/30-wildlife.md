@@ -217,7 +217,7 @@ the meadow as often as not and its bank stands above it. `WaterBank.Near` is the
 question, asked by the census and by the frog's mind. It is the first habitat whose members are
 **scattered on it as well as centred on it** (`PlaceGroup(bankOnly)`): a hog a cell or two off the
 woodland is still in the woodland, but a frog dealt four cells inland spends its first legs walking
-back. The meadow's table gained `PawnKind_CulvertFrog`, weight 2, groups of **2–4**, on the bank;
+back. The meadow's table gained `PawnKind_CulvertFrog`, weight 2, groups of **2–4** (4 and 3–5 since §8c-bis), on the bank;
 the city's did not (it has no water to speak of), and the bare board still has nothing.
 
 **The density went 15 → 21**, which is the frogs' share of the weights (7/5): adding a kind to a
@@ -284,6 +284,27 @@ from its 172 mm crouch to ~340 mm, then about 29 frames still on the ground. The
 **Scale ×0.11** stands it 0.40 m wide, 0.25 m tall and 0.39 m nose to toe — larger than life, as the
 rat is, because a true frog is a few pixels from the play camera; even so it is small from 40 m
 (`Logs/frog-play-camera.png` on the probe's run). The size is one number in `AnimalImport.Scales`.
+
+### 8c-bis. The owner's first ask: bigger, more, and a green that is not the grass
+
+2026-09-26, before any play: *"could you make the frogs just over double the size and more of
+them. Also make them a different green colour to the environment so they can be spotted."*
+
+- **Size ×0.11 → ×0.24**, 2.2 times: 0.87 × 0.54 × 0.85 m, measured by `ShootFrog` — about 70 % of a
+  hog's length. `bodyLengthMm` 870. A frog that size making the old one-metre hop read as a
+  shuffle, so its **pace went 800 → 1,000 per mille** and the jump's declared speed 1.2 → 1.5 m/s,
+  keeping the mixer on the jump alone: a hop is now about 1.3 m, a body and a half.
+  `ShootMovingFrog` reads the body rising from a ~375 mm crouch to ~750 mm and ~52 mm a frame in
+  the air.
+- **More**: weight 2 → 4 and groups 3–5, and the density 21 → 27 (the frogs' share again, 9/5), so
+  the hogs and rats stay where they were. The played board carries 22 pawns where `main` carries
+  15. **The ceiling of 24 is untouched** — it is the figure budget's (the 64 drawn figures are the
+  colonists' first) — so a board big enough to reach it shares 24 between all three kinds.
+- **Colour**: the model's embedded `Green` is remapped (`AnimalImport.Paints`, `AddRemap`) to
+  `Assets/Art/Custom/Animals/Materials/Frog_Skin.mat`, URP Lit, a saturated jade
+  `(0.08, 0.78, 0.55)` — bluer than the meadow's yellow-green and brighter than any of it. The
+  yellow belly, red eyes and black pupils are the author's. On the probe's grass tile it is the
+  first thing the eye finds.
 
 ### 8d. Measured
 

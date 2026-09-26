@@ -1829,9 +1829,9 @@ namespace Odyssey.EditorTools
             // It has no walk; it hops. Its locomotion is the idle and the Jump clip, and the row
             // asks for the hop pacing (hopGait) so the figure is still while it crouches and
             // lands and carried forward only while it is in the air. The jump's speed is the
-            // frog's own pace, 800 per mille of a colonist's 1.5 m/s: at 1.2 m/s the mixer plays
-            // the jump alone and at its authored rate, so one 0.875 s clip is one hop of about a
-            // metre -- two and a half body lengths. A frog slowed below it blends its idle in and
+            // frog's own pace, 1,000 per mille of a colonist's 1.5 m/s: at 1.5 m/s the mixer plays
+            // the jump alone and at its authored rate, so one 0.875 s clip is one hop of about
+            // 1.3 m -- a body and a half at 0.87 m. A frog slowed below it blends its idle in and
             // hops shorter; one that seems to skate between hops wants this number nearer its
             // measured speed.
             rows.Add(new ModuleEntry
@@ -1845,7 +1845,7 @@ namespace Odyssey.EditorTools
                 locomotion = new List<LocomotionEntry>
                 {
                     new LocomotionEntry { clipName = "FrogArmature|Frog_Idle", metresPerSecond = 0f },
-                    new LocomotionEntry { clipName = "FrogArmature|Frog_Jump", metresPerSecond = 1.2f },
+                    new LocomotionEntry { clipName = "FrogArmature|Frog_Jump", metresPerSecond = 1.5f },
                 },
             });
 

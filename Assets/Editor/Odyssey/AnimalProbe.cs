@@ -337,7 +337,7 @@ namespace Odyssey.EditorTools
                         var c = cam.AddComponent<Camera>();
                         c.fieldOfView = 30f; c.nearClipPlane = 0.05f; c.farClipPlane = 500f;
                         c.clearFlags = CameraClearFlags.SolidColor; c.backgroundColor = new Color(0.16f, 0.19f, 0.24f);
-                        PlayScene.Shoot(c, posed.position + Vector3.up * 0.15f, 8f, 90f, 2.5f, "Logs/frog-moving.png");
+                        PlayScene.Shoot(c, posed.position + Vector3.up * 0.3f, 8f, 90f, 5f, "Logs/frog-moving.png");
                         // And from the play camera's pitch and distance, for the question a still
                         // from the flank cannot answer: is it big enough to see?
                         PlayScene.Shoot(c, posed.position, 48f, 0f, 40f, "Logs/frog-play-camera.png");
@@ -672,7 +672,7 @@ namespace Odyssey.EditorTools
                 for (int i = 0; i < 6; i++)
                 {
                     var frog = (GameObject)Object.Instantiate(model, strip.transform);
-                    frog.transform.localPosition = new Vector3(i * 0.9f, 0f, 0f);
+                    frog.transform.localPosition = new Vector3(i * 1.9f, 0f, 0f);
                     frog.transform.localRotation = Quaternion.Euler(0f, 90f, 0f); // nose along +X
                     jump.SampleAnimation(frog, jump.length * i / 6f);
                 }
@@ -680,7 +680,7 @@ namespace Odyssey.EditorTools
                 Object.DestroyImmediate(ruler.GetComponent<Collider>());
                 ruler.transform.SetParent(root.transform, false);
                 ruler.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
-                ruler.transform.position = new Vector3(-0.9f, 0.125f, 0f);
+                ruler.transform.position = new Vector3(-1.9f, 0.125f, 0f);
 
                 var stripCamera = new GameObject("StripCamera");
                 try
@@ -691,7 +691,7 @@ namespace Odyssey.EditorTools
                     cam.farClipPlane = 200f;
                     cam.clearFlags = CameraClearFlags.SolidColor;
                     cam.backgroundColor = new Color(0.16f, 0.19f, 0.24f);
-                    PlayScene.Shoot(cam, new Vector3(1.8f, 0.2f, 0f), 8f, 0f, 7f, "Logs/frog-hop-strip.png");
+                    PlayScene.Shoot(cam, new Vector3(3.8f, 0.4f, 0f), 8f, 0f, 15f, "Logs/frog-hop-strip.png");
                 }
                 finally { Object.DestroyImmediate(stripCamera); }
 

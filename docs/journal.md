@@ -13605,3 +13605,14 @@ same probe then read a hop every 52 frames: 23 moving, 29 still.
 
 **The catalogue rebuild stripped the colonists' swatches again**, exactly as `docs/lessons.md`
 warns; the frog row was spliced into the committed asset instead, and the diff is the row alone.
+
+## 2026-09-26 — The frog, bigger, commoner and a colour of its own
+
+The owner's first ask before playing: just over double the size, more of them, and a green that
+is not the grass's. ×0.24 (2.2 times), weight 4 in groups of 3–5 with the density raised by the
+frogs' share, and the embedded green remapped to a jade material of our own. Two consequences
+worth writing down. **A bigger frog on the same hop is a shuffling frog**, so its pace went up
+with its size and the hop is a body and a half again. **And "more" stopped at the ceiling**: 24
+is the figure budget's, not the wildlife's, so it was left alone and the played board's 22 pawns
+sit under it. Design 30 §8c-bis.
+

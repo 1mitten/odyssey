@@ -314,7 +314,9 @@ namespace Odyssey.Tests.Sim
         // 2026-09-25, the culvert frog (design 30 §8): Species_CulvertFrog and PawnKind_CulvertFrog
         // appended (kind 4, species 3), and SpeciesDef gained bankRadius and ignoresRain, both
         // nought/false on every other species. Taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 13268721479991923745UL;
+        // 2026-09-26, the owner's first ask on the frog: bodyLengthMm 400 -> 870 and movePerMille
+        // 800 -> 1,000, so the bigger frog hops a body and a half. Taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 17132943754721641587UL;
 
 
         [Test]

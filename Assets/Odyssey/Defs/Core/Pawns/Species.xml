@@ -136,17 +136,19 @@
     at the water's edge instead. It does not mind the rain (ignoresRain): it is the one animal
     that stays out in it.
 
-    Drawn about 0.4 m nose to toe, larger than life beside a 2.49 m colonist for the same reason
-    the rat is: a true frog is a few pixels from the play camera. Lively over a short range: 800
-    per mille, a radius of four, short rests. INVENTED, playtest numbers. A frog never turns on
+    Drawn about 0.87 m nose to toe - well over life beside a 2.49 m colonist, and deliberately:
+    0.4 m could not be picked out from the play camera (owner, 2026-09-26: "just over double the
+    size"). Pace 1,000 per mille since the same day, so that the bigger frog's hop is about 1.3 m,
+    a body and a half, rather than the one metre it covered at 0.4 m. A radius of four, short
+    rests. INVENTED, playtest numbers. A frog never turns on
     whoever hurts it (revenge 0) and so carries no attack.
   -->
   <SpeciesDef>
     <defName>Species_CulvertFrog</defName>
     <labelKey>ui.pawn.frog</labelKey>
     <person>false</person>
-    <bodyLengthMm>400</bodyLengthMm>
-    <movePerMille>800</movePerMille>
+    <bodyLengthMm>870</bodyLengthMm>
+    <movePerMille>1000</movePerMille>
     <traverseMode>Animal</traverseMode>
     <wanderRadius>4</wanderRadius>
     <restTicksMin>180</restTicksMin>

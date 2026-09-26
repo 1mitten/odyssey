@@ -20,9 +20,10 @@ namespace Odyssey.EditorTools
     /// stride and freezes mid-air. Idle, walk and run loop; the one-shots (jump, attack, death)
     /// do not — except the frog's jump, which is its gait (<see cref="Hops"/>).</para>
     ///
-    /// <para><b>The frog</b> (design 30 §8) is the same author's export: ×0.11 stands it 0.40 m
-    /// wide, 0.25 m tall and 0.39 m nose to toe, measured by <c>AnimalProbe.ShootFrog</c> —
-    /// larger than life, as the rat is, so it reads from the play camera.</para>
+    /// <para><b>The frog</b> (design 30 §8) is the same author's export: ×0.11 stood it 0.40 m
+    /// wide, 0.25 m tall and 0.39 m nose to toe, measured by <c>AnimalProbe.ShootFrog</c>, and
+    /// that could not be picked out from the play camera; ×0.24 (owner, 2026-09-26: "just over
+    /// double the size") is about 0.87 m. Its skin is repainted (<see cref="Paints"/>).</para>
     /// </summary>
     public static class AnimalImport
     {
@@ -32,7 +33,7 @@ namespace Odyssey.EditorTools
         {
             ("Pig.fbx", 0.105f),
             ("Rat.fbx", 0.09f),
-            ("Frog.fbx", 0.11f),
+            ("Frog.fbx", 0.24f),
         };
 
         /// <summary>
@@ -43,6 +44,42 @@ namespace Odyssey.EditorTools
         /// on moving.
         /// </summary>
         public static readonly string[] Hops = { "Frog.fbx" };
+
+        /// <summary>
+        /// Embedded materials replaced by a project material of one colour (design 30 §8): the
+        /// file, the material's name in the file, the asset written for it, and the colour. The
+        /// frog's own green was the meadow's green and it vanished into the grass (owner,
+        /// 2026-09-26: "a different green colour to the environment so they can be spotted"), so
+        /// its skin is a saturated jade — blue of the grass's yellow-green, and brighter than any
+        /// of it. Its yellow belly, red eyes and black pupils are left as the author painted them.
+        /// </summary>
+        public static readonly (string file, string material, string asset, Color colour)[] Paints =
+        {
+            ("Frog.fbx", "Green", Folder + "/Materials/Frog_Skin.mat", new Color(0.08f, 0.78f, 0.55f)),
+        };
+
+        /// <summary>
+        /// The material a paint names, written once and kept in step with the table: URP Lit, the
+        /// colour, and a low smoothness so the flat-shaded model stays flat.
+        /// </summary>
+        static Material PaintMaterial(string asset, Color colour)
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(asset);
+            if (material == null)
+            {
+                string? directory = System.IO.Path.GetDirectoryName(asset);
+                if (!string.IsNullOrEmpty(directory) && !AssetDatabase.IsValidFolder(directory))
+                    AssetDatabase.CreateFolder(System.IO.Path.GetDirectoryName(directory)!.Replace('\\', '/'),
+                        System.IO.Path.GetFileName(directory));
+                material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                AssetDatabase.CreateAsset(material, asset);
+            }
+            bool dirty = false;
+            if (material.GetColor("_BaseColor") != colour) { material.SetColor("_BaseColor", colour); dirty = true; }
+            if (!Mathf.Approximately(material.GetFloat("_Smoothness"), 0.2f)) { material.SetFloat("_Smoothness", 0.2f); dirty = true; }
+            if (dirty) EditorUtility.SetDirty(material);
+            return material;
+        }
 
         static bool Loops(string file, string clipName) =>
             (Array.IndexOf(Hops, file) >= 0 && clipName.IndexOf("Jump", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -64,6 +101,17 @@ namespace Odyssey.EditorTools
                 if (importer.animationType != ModelImporterAnimationType.Generic)
                 {
                     importer.animationType = ModelImporterAnimationType.Generic;
+                    dirty = true;
+                }
+
+                foreach (var (paintFile, name, asset, colour) in Paints)
+                {
+                    if (paintFile != file) continue;
+                    Material paint = PaintMaterial(asset, colour);
+                    var id = new AssetImporter.SourceAssetIdentifier(typeof(Material), name);
+                    importer.GetExternalObjectMap().TryGetValue(id, out UnityEngine.Object? mapped);
+                    if (mapped == paint) continue;
+                    importer.AddRemap(id, paint);
                     dirty = true;
                 }
 

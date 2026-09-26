@@ -577,8 +577,12 @@ namespace Odyssey.Tests.Sim
             // needs (3 x 800 / 800 / 600), and the rest — pawn cells, progress, wanders and waits
             // started — is the animals' own. The colonists did the same things. The bare meadow
             // and the city did not move: neither table has a frog.
-            Generated = 8386321266992628941UL,
-            Simulated = 15593654947337272922UL,
+            // 2026-09-26, "more of them": the frog's weight 2 -> 4, groups 3-5, density 21 -> 27,
+            // and its pace 800 -> 1,000. Pawns 15 -> 22 against main (4c40e189); items,
+            // experience, passions and failed jobs identical, food/rest/mood differ by exactly
+            // seven animals' untouched needs (7 x 800 / 800 / 600). The colonists did the same things.
+            Generated = 5971917863521832692UL,
+            Simulated = 2807535922006973866UL,
         };
 
         /// <summary>
