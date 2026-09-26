@@ -68,6 +68,11 @@ namespace Odyssey.Presentation.Ui
         Label _setupSiteLine = null!;
         Texture2D? _mapTexture;
         byte[]? _mapBuffer;
+
+        // What the site panel was last built for, so a hover that moves nothing it shows costs nothing.
+        PlanetView? _panelPlanet;
+        int _panelTile = -1, _panelLayers;
+        bool _panelNextLive;
         readonly List<(Label Label, RegionLabel Place)> _placeLabels = new List<(Label, RegionLabel)>();
 
         // The pointer on the map: where a press began, and whether it has moved far enough to be a drag.
@@ -437,7 +442,12 @@ namespace Odyssey.Presentation.Ui
         void LayoutMap()
         {
             float scale = _mapView.Scale;
-            float width = WorldMap.Width * scale, height = WorldMap.Height * scale;
+            // The texture is whole pixels, ceil(Width × PaintScale), so a copy is sized from what was
+            // painted rather than from the geometry, or the picture stretches up to a third of a map
+            // pixel away from the outlines and the pick at the east and south edges.
+            float paintedWidth = _mapTexture != null ? _mapTexture.width / WorldLayout.PaintScale : WorldMap.Width;
+            float paintedHeight = _mapTexture != null ? _mapTexture.height / WorldLayout.PaintScale : WorldMap.Height;
+            float width = paintedWidth * scale, height = paintedHeight * scale;
             float turn = WorldMap.WrapWidth * scale;
             for (int i = 0; i < _mapCopies.Length; i++)
             {
@@ -476,6 +486,17 @@ namespace Odyssey.Presentation.Ui
             PlanetView planet = world.Planet;
             int tile = world.Selected;
 
+            // The hover raises the same event as a selection, and the panel below is some twenty
+            // labels built afresh: skip it while nothing it shows has moved.
+            int shownLayers = MapSizes.At(_menu.Size).Y;
+            bool nextLive = world.CanGoNext;
+            if (ReferenceEquals(planet, _panelPlanet) && tile == _panelTile && shownLayers == _panelLayers
+                && nextLive == _panelNextLive) return;
+            _panelPlanet = planet;
+            _panelTile = tile;
+            _panelLayers = shownLayers;
+            _panelNextLive = nextLive;
+
             WorldMapPainter.TileColour(planet, tile, out float r, out float g, out float b);
             _statsSwatch.style.backgroundColor = new Color(r / 255f, g / 255f, b / 255f);
             HudText.Set(_statsName, Registry.Label(planet.BiomeAt(tile).LabelKey), HudTextRole.Name);
@@ -495,8 +516,7 @@ namespace Odyssey.Presentation.Ui
             _statusReason.style.display = good ? DisplayStyle.None : DisplayStyle.Flex;
 
             _statsRows.Clear();
-            int layers = MapSizes.At(_menu.Size).Y;
-            foreach (WorldStat stat in WorldChoice.Stats(planet, tile, layers))
+            foreach (WorldStat stat in WorldChoice.Stats(planet, tile, shownLayers))
             {
                 var row = new VisualElement();
                 row.AddToClassList("world__statrow");
@@ -558,7 +578,9 @@ namespace Odyssey.Presentation.Ui
         void PaintMapOverlay(MeshGenerationContext context)
         {
             WorldChoice? world = _menu.World;
-            if (world?.Planet == null) return;
+            // Before the box's first GeometryChangedEvent the fit is 0, and a grow divided by the
+            // scale would hand Painter2D infinities.
+            if (world?.Planet == null || _mapView.Scale <= 0f) return;
             Painter2D painter = context.painter2D;
             painter.lineJoin = LineJoin.Round;
 
@@ -639,6 +661,7 @@ namespace Odyssey.Presentation.Ui
 
         void OnMapPointerMove(PointerMoveEvent evt)
         {
+            if (_mapView.Scale <= 0f) return;
             Vector2 at = _mapBox.WorldToLocal(evt.position);
             if (_mapPressed && _mapView.Zoomed)
             {
@@ -654,7 +677,7 @@ namespace Odyssey.Presentation.Ui
             if (!_mapPressed) return;
             _mapPressed = false;
             if (_mapBox.HasPointerCapture(evt.pointerId)) _mapBox.ReleasePointer(evt.pointerId);
-            if (_mapDragged) return;
+            if (_mapDragged || _mapView.Scale <= 0f) return;
             Vector2 at = _mapBox.WorldToLocal(evt.position);
             int tile = _mapView.TileAt(at.x, at.y);
             if (tile >= 0) _menu.World?.Select(tile);
@@ -667,7 +690,11 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void OnWorldKey(KeyDownEvent evt)
         {
-            if (evt.target is TextField) return;
+            // While the seed box has the keyboard its keys are digits, not map controls. The event's
+            // target is the field's inner text element rather than the TextField itself, so the
+            // type test alone let 0, − and Enter through; the hotkey director is the one owner of
+            // "a field is being typed in" (TakesTheKeyboard).
+            if (evt.target is TextField || Hotkeys().Typing) return;
             WorldChoice? world = _menu.World;
             if (world == null) return;
             const float step = 60f;

@@ -422,6 +422,17 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
+        /// The World map's fixed inks (design 59 §9a, Claude Design's specification): a land name's
+        /// dark ink, a sea name's pale one, and what shows behind the map where it does not reach.
+        /// Map colours rather than interface tokens, because they are drawn over the planet's own
+        /// colours and must read on every biome; the biome ramps themselves are content
+        /// (<c>Biomes.xml</c>).
+        /// </summary>
+        public static readonly HudColour MapLandInk = new HudColour(12, 16, 20, 0.78f);
+        public static readonly HudColour MapSeaInk = new HudColour(190, 225, 240, 0.85f);
+        public static readonly HudColour MapBackdrop = new HudColour(0x08, 0x15, 0x21);
+
+        /// <summary>
         /// The Zones category's olive, named because two things wear it: the category tier below,
         /// and the growing-zone order wherever the mode colour is asked for
         /// (<see cref="PinnedActionHue"/>). Mode and category agreeing is the point — the strip
@@ -435,17 +446,6 @@ namespace Odyssey.Hud
         /// alpha 0 — by the time the array is built. The fast tier's contrast test caught exactly
         /// that on the day this landed: "Zones, at rest" measuring 1.16:1.</para>
         /// </remarks>
-        /// <summary>
-        /// The World map's fixed inks (design 59 §9a, Claude Design's specification): a land name's
-        /// dark ink, a sea name's pale one, and what shows behind the map where it does not reach.
-        /// Map colours rather than interface tokens, because they are drawn over the planet's own
-        /// colours and must read on every biome; the biome ramps themselves are content
-        /// (<c>Biomes.xml</c>).
-        /// </summary>
-        public static readonly HudColour MapLandInk = new HudColour(12, 16, 20, 0.78f);
-        public static readonly HudColour MapSeaInk = new HudColour(190, 225, 240, 0.85f);
-        public static readonly HudColour MapBackdrop = new HudColour(0x08, 0x15, 0x21);
-
         // Earthy brown since 2026-09-18 (owner: the green was hard to see on the surface) —
         // worked soil, matching the tint the drawn field wears. Was olive 0xa8c06a.
         public static readonly HudColour ZonesHue = new HudColour(0xc3, 0x98, 0x5c);

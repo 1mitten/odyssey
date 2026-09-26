@@ -71,7 +71,7 @@ namespace Odyssey.Hud
 
         /// <summary>"1x", "1.5x", "2.3x": the readout under the plus.</summary>
         public string ZoomLabel =>
-            (Math.Round(_toZoom * 10f) / 10f).ToString("0.#", CultureInfo.InvariantCulture) + "x";
+            (Math.Round(_toZoom * 10f, MidpointRounding.AwayFromZero) / 10f).ToString("0.#", CultureInfo.InvariantCulture) + "x";
 
         /// <summary>Where the centre copy of the map's left edge sits on screen.</summary>
         public float OriginX => _boxWidth / 2f + (-_map.Width / 2f - PanX) * Scale;

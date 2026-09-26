@@ -45,7 +45,7 @@ World seed ──► PlanetGenerator ──► Planet (64 × 32 hex tiles, not s
                                         │
              ┌──────────────────────────┼───────────────────────────┐
              ▼                          ▼                           ▼
-   SiteSeed.For(world, tile)   SiteBoard: hills → relief,   SiteClimate: tile → ClimateDef,
+   BoardSeed(world, tile)      SiteBoard: hills → relief,   SiteClimate: tile → ClimateDef,
    = the board's seed          outcrops, depth              rainfall → wet-weather weight
              └──────────────────────────┴───────────────────────────┘
                                         ▼
@@ -205,6 +205,16 @@ writes through the shared one, the same rule as the one that forbids a test writ
 - **The reference latitude is 590 per mille (53°), with 900 centi-degrees mean and 1,000 mm of
   rain.** A tile with exactly those values yields `Climate_Temperate` field for field. Test:
   `TheReferenceSiteIsTodaysClimate`.
+- **`annualMeanC` is the curve's anchor, not the year's mean, and that is open** (review,
+  2026-09-26). The base offsets (+6, +10, +13, +18, −7, −17 °C) average **+3.8 °C**, so a colony
+  lives its year about `3.8 × Seasonality / 1000` warmer than its tile's `MeanTempC`: +0.6 °C at
+  ×0.15, +3 °C at the settleable band's ×0.78, +4.3 °C at ×1.13. The screen and the thermometer
+  agree with each other (`PlanetView.SeasonRange` uses the same arithmetic); what disagrees is the
+  **biome classification**, which bands Meadow at 3–17 °C on `MeanTempC`, so the warmest meadow
+  lives its year at about 21 °C. Subtracting the offsets' scaled mean would make "Temperature" the
+  year's mean, but it would break the reference site's field-for-field equality with
+  `Climate_Temperate`, which is what keeps no-site and Rolling-at-53° one board. **The owner's call**,
+  so it is recorded rather than changed.
 - **Across the planet, seasonality runs from ×0.15 at the equator to ×1.6 near the pole.**
 - **The settleable band narrows that, and the arithmetic says by how much.**
   - A meadow's mean temperature is 3–17 °C.
@@ -235,8 +245,9 @@ writes through the shared one, the same rule as the one that forbids a test writ
 ## 8. Seeds and the save
 
 - **The seed on the World screen is the world seed.** The board's seed is
-  **`SiteSeed.For(worldSeed, tileIndex)`**, a 32-bit integer mix. It is the one owner of that
-  derivation, and it is never 0 if `SeedEntry` refuses 0.
+  **`SiteRules.BoardSeed(worldSeed, tileIndex)`**, a 32-bit integer mix. It is the one owner of that
+  derivation, and it is never 0: a draw of 0 (one in 2³²) is taken as 1 (review, 2026-09-26; the
+  first build promised this and did not keep it).
   - `ColonyRequest.Seed` stays "the one number the board comes from". It is simply derived now.
   - The same world seed and the same tile always give the same colony.
 - **What changes for a player:** a seed typed into the old setup page named a board, and now it
@@ -314,6 +325,7 @@ constants live in `Odyssey.Hud.WorldLayout`. **Departures:**
 | land labels 12/600 tracked .22em, sea labels 14/500 tracked .06em | land at the **panel-label step (11/600, upper case, its own .14em)**, sea at the **row step (14/500)** | the type scale has six steps and no seventh, and the stylesheet may set no type at all (`HudStyleSheetTests.TheSheetSetsNoTypeAtAll`): a role is the only way a label gets a face, a size and a tracking |
 | Next "Accent ink at 600" | the **list-heading step (14/600)** | the one existing 600 step at 14 |
 | the cursor is `grab` when zoomed | the arrow, unchanged | keyword cursors are Editor-only in UI Toolkit and inert at runtime (design 28-pointer-cursor); the game draws its own cursor, and a grab hand is not one of its shapes yet |
+| the sheen on the diagonal (white top-left, black bottom-right) and a radial vignette | **both by row alone**: the sheen runs top to bottom, the vignette darkens the top and bottom edges only (review, 2026-09-26) | the page lays three copies of the one texture side by side for the wrap, so anything that darkened the texture's left and right edges drew a dark valley down the date line at every zoom past 1× (measured on a white planet: 115 and 105 at the two edges against 255 in the middle). A column now paints the same in whichever copy it is. `EveryPaintedRowIsOneColourOnAPlanetOfOneColour` holds it. The faithful alternative, a screen-space vignette over the map box, is one element in the page and is left for the first look to ask for. |
 | "drawn with `SvgPath`" (selection and hover) | drawn with `Painter2D` in the map overlay's `generateVisualContent`, from `WorldMapGeometry.Outline` | the outline is a hexagon computed per tile, not a fixed path string; the dashed ring uses `DashedOutline`'s hand-dashed loop, since `SvgPath` has no dashes |
 
 ## 9b. The map colours
@@ -358,7 +370,14 @@ saved and never in the hash.
 - `ScreenToTile` composes the fit, the zoom, the pan and the wrap, and is tested through all four
 
 The page draws three copies of the one texture side by side, so a pan across the seam shows the
-planet continuing.
+planet continuing — which holds only because the baked finish depends on the row alone (§9a).
+
+**The pole notches pick the pole row** (review, 2026-09-26). The painter gives every pixel its
+nearest centre with the row clamped to the first or last, so the zig-zag between the pole hexes'
+points and the map's edge is painted as those tiles, about 1 % of the map. `TileAt` returned −1
+there, so a painted tile was dead to the pointer along both edges. It clamps the same way now, and
+`ThePaintAndThePickAgreeOnEveryPixel` walks every pixel at 1× and 2× against the painter, because
+the painter keeps its own copy of the hex arithmetic for speed and that is two owners of one rule.
 
 ## 9d. Measurements
 
@@ -398,7 +417,7 @@ Every test comes **first**, and every test has a **negative control**.
   - `TheReferenceSiteIsTodaysClimate`.
   - Equator seasonality is less than the pole's.
   - No site gives the global climate and a wet factor of 1000.
-  - `SiteSeed` is stable, and different tiles give different seeds.
+  - `SiteRules.BoardSeed` is stable, and different tiles give different seeds.
   - Format-11 round trip, and a format-10 load.
 - **The goldens run and do not move.** If one moves, that is a fault to find, not a re-bake.
 - **The planet (WG2):**

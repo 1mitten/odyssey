@@ -187,8 +187,12 @@ namespace Odyssey.Sim.Contracts
         /// The board's seed for a tile of a world (design 59 §8): the same world and the same tile
         /// always give the same colony, and neighbouring tiles give unrelated boards.
         /// </summary>
-        public static uint BoardSeed(uint worldSeed, int tileIndex) =>
-            DeterministicRandom.ForTick(worldSeed, tileIndex, BoardSeedPurpose).NextUInt();
+        public static uint BoardSeed(uint worldSeed, int tileIndex)
+        {
+            // Never 0, as §8 promises: one draw in 2^32 would otherwise deal it.
+            uint seed = DeterministicRandom.ForTick(worldSeed, tileIndex, BoardSeedPurpose).NextUInt();
+            return seed == 0 ? 1u : seed;
+        }
 
         /// <summary>Latitude as whole degrees from the equator, for display.</summary>
         public static int LatitudeDegrees(int latitudePerMille) =>

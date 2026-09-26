@@ -59,6 +59,30 @@ namespace Odyssey.Tests.Hud
         }
 
         public static int Tile(int column, int row) => HexGrid.Index(column, row, 64);
+
+        /// <summary>64 × 32 of sea at one depth and nothing else: one colour (land carries a per-tile
+        /// jitter, the sea does not), so anything that varies in a painted row is the finish.</summary>
+        public static PlanetView Uniform()
+        {
+            const int w = 64, h = 32, n = w * h;
+            var biomes = new[]
+            {
+                new BiomeView("Biome_Ocean", "ui.biome.ocean", false, true, 0x0b1d2c, 0x2f6f8c, MapRamp.Ocean),
+            };
+            var elevation = new int[n];
+            var temp = new int[n];
+            var rain = new int[n];
+            var water = new bool[n];
+            for (int i = 0; i < n; i++)
+            {
+                elevation[i] = 200;
+                temp[i] = 900;
+                rain[i] = 1000;
+                water[i] = true;
+            }
+            return new PlanetView(1u, w, h, 400, biomes, new byte[n], elevation, new byte[n], temp, rain, new int[n],
+                new int[n], water, new bool[n], -1, new[] { 600, 1000, 1300, 1800, -700, -1700 });
+        }
     }
 
     public class WorldMapGeometryTests
@@ -110,6 +134,26 @@ namespace Odyssey.Tests.Hud
             Assert.That(Map.TileAt(100f, -30f), Is.EqualTo(-1));
             Assert.That(Map.TileAt(100f, Map.Height + 30f), Is.EqualTo(-1));
         }
+
+        /// <summary>
+        /// The notches between the pole rows' points and the map's edge are painted as the pole tile
+        /// nearest them, so they pick it: before, they were 1 % of the painted map and dead to the
+        /// pointer.
+        /// </summary>
+        [Test]
+        public void ThePoleNotchesPickThePoleRow()
+        {
+            for (float x = 0.25f; x < Map.WrapWidth; x += 0.5f)
+            {
+                int top = Map.TileAt(x, 0.25f), bottom = Map.TileAt(x, Map.Height - 0.25f);
+                Assert.That(top, Is.GreaterThanOrEqualTo(0).And.LessThan(64), $"top edge at x = {x}");
+                Assert.That(bottom, Is.GreaterThanOrEqualTo(31 * 64), $"bottom edge at x = {x}");
+            }
+            // Midway between two row-0 centres, right at the edge: the notch, which goes to the nearer.
+            float between = (Map.CentreX(4, 0) + Map.CentreX(5, 0)) / 2f;
+            Assert.That(Map.TileAt(between - 1f, 0.25f), Is.EqualTo(TestPlanet.Tile(4, 0)));
+            Assert.That(Map.TileAt(between + 1f, 0.25f), Is.EqualTo(TestPlanet.Tile(5, 0)));
+        }
     }
 
     public class WorldMapViewTests
@@ -142,6 +186,17 @@ namespace Odyssey.Tests.Hud
             for (int i = 0; i < 6; i++) view.ZoomOut();
             Assert.That(view.TargetZoom, Is.EqualTo(1f));
             Assert.That(view.ZoomLabel, Is.EqualTo("1x"));
+        }
+
+        /// <summary>2.25 reads 2.3x: a half rounds away from nought, not to even (which read 2.2x).</summary>
+        [Test]
+        public void TheReadoutRoundsAHalfUp()
+        {
+            WorldMapView view = View();
+            view.ZoomIn();
+            view.ZoomIn();
+            Assert.That(view.TargetZoom, Is.EqualTo(2.25f).Within(0.0001f));
+            Assert.That(view.ZoomLabel, Is.EqualTo("2.3x"));
         }
 
         /// <summary>The map point under the pointer stays under it when the wheel zooms there.</summary>
@@ -373,6 +428,61 @@ namespace Odyssey.Tests.Hud
             }
             // Column 3 is Mountainous (3 mod 5); column 5 is Flat. The peak's apex is 3 px above the centre.
             Assert.That(Luma(3, 10, -2.6f), Is.LessThan(Luma(5, 10, -2.6f) - 40), "the peak's ink darkens its apex");
+        }
+
+        /// <summary>
+        /// The page lays copies of the one texture side by side for the east–west wrap, so nothing
+        /// in the finish may depend on the column: a sheen or vignette that darkened the texture's
+        /// sides drew a dark valley down the date line (design 59 §9a). On a planet of one colour,
+        /// every painted row is one colour.
+        /// </summary>
+        [Test]
+        public void EveryPaintedRowIsOneColourOnAPlanetOfOneColour()
+        {
+            byte[] image = WorldMapPainter.Paint(TestPlanet.Uniform(), 1f, out int w, out int h);
+            for (int y = 0; y < h; y++)
+            {
+                int row = 4 * y * w;
+                for (int x = 1; x < w; x++)
+                    for (int c = 0; c < 3; c++)
+                        Assert.That(image[row + 4 * x + c], Is.EqualTo(image[row + c]),
+                            $"row {y}, column {x}: the finish varies across the map, so the wrap shows a seam");
+            }
+        }
+
+        /// <summary>
+        /// Every pixel is painted as the tile the pick says is under it: within a painted row, every
+        /// pixel the pick gives one unmarked tile is one colour. The painter keeps its own copy of the
+        /// hex arithmetic for speed, and this is what keeps the two copies one rule.
+        /// </summary>
+        [Test]
+        public void ThePaintAndThePickAgreeOnEveryPixel()
+        {
+            PlanetView planet = TestPlanet.Make();
+            var map = new WorldMapGeometry(64, 32);
+            foreach (float scale in new[] { 1f, 2f })
+            {
+                byte[] image = WorldMapPainter.Paint(planet, scale, out int w, out int h);
+                int disagreements = 0;
+                for (int y = 0; y < h; y++)
+                {
+                    // The texture is whole pixels, so its last row can start below the map's edge.
+                    if ((y + 0.5f) / scale >= map.Height) continue;
+                    var seen = new Dictionary<int, int>();
+                    for (int x = 0; x < w; x++)
+                    {
+                        int tile = map.TileAt((x + 0.5f) / scale, (y + 0.5f) / scale);
+                        Assert.That(tile, Is.GreaterThanOrEqualTo(0), $"a painted pixel at ({x}, {y}) picks nothing");
+                        // The hill marks are stamped over their tiles; compare only the unmarked ones.
+                        if (!planet.Water[tile] && planet.HillsAt(tile) >= HillBand.Hilly) continue;
+                        int p = 4 * (y * w + x);
+                        int rgb = image[p] << 16 | image[p + 1] << 8 | image[p + 2];
+                        if (!seen.TryGetValue(tile, out int first)) seen[tile] = rgb;
+                        else if (first != rgb) disagreements++;
+                    }
+                }
+                Assert.That(disagreements, Is.Zero, $"at {scale}x, pixels painted as one tile's neighbour");
+            }
         }
 
         [Test]

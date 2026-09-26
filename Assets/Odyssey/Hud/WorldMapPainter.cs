@@ -15,8 +15,8 @@ namespace Odyssey.Hud
     /// </summary>
     public static class WorldMapPainter
     {
-        /// <summary>The ink the hill marks are drawn in: rgb(12, 16, 20).</summary>
-        const float InkR = 12f, InkG = 16f, InkB = 20f;
+        /// <summary>The ink the hill marks are drawn in: the land names' ink, solid (one owner, <see cref="HudTheme.MapLandInk"/>).</summary>
+        static readonly float InkR = HudTheme.MapLandInk.R, InkG = HudTheme.MapLandInk.G, InkB = HudTheme.MapLandInk.B;
 
         /// <summary>
         /// The painted image, <paramref name="width"/> × <paramref name="height"/> RGBA bytes.
@@ -38,7 +38,7 @@ namespace Odyssey.Hud
             var tileB = new float[planet.TileCount];
             for (int t = 0; t < planet.TileCount; t++) TileColour(planet, t, out tileR[t], out tileG[t], out tileB[t]);
 
-            var finish = new Finish(width, height);
+            var finish = new Finish(height);
 
             // 1. The tiles and the finish in one pass. A pixel belongs to the nearest hex centre (the
             //    hexes are exactly the nearest-centre cells). A pixel row within half a radius of a row
@@ -113,54 +113,24 @@ namespace Odyssey.Hud
         /// <summary>
         /// The polar haze, the sheen and the vignette as one affine map per pixel, c × m + add
         /// (the specification's "Finish overlays"): flat ramps, baked once, the HUD's panels untouched.
-        /// Tabulated by row and column, since the haze is a function of the row alone and the sheen and
-        /// vignette of the row and column separately.
+        ///
+        /// <para><b>Every term is a function of the row alone.</b> The specification drew the sheen on
+        /// the diagonal and the vignette radially, but the page lays copies of this one texture side by
+        /// side for the east–west wrap, so anything that darkened the texture's left and right edges
+        /// drew a dark valley down the date line the moment a player panned across it — measured on a
+        /// white planet at 115 and 105 against 255 in the middle. So the sheen runs top to bottom and
+        /// the vignette darkens the top and bottom edges only; a column of the texture is the same
+        /// whichever copy it is in (design 59 §9a, the finish row of the departures).</para>
         /// </summary>
         sealed class Finish
         {
-            // Tabulated by the two things the sheen and the vignette depend on, so a pixel costs two
-            // lookups and no square root: the diagonal (0–1) for the sheen, the squared distance from
-            // the centre (0–2) for the vignette. 2,048 steps each, finer than a byte of colour can see.
-            const int Steps = 2048;
-            static readonly float[] SheenKeep = new float[Steps + 1], SheenWhite = new float[Steps + 1];
-            static readonly float[] VignetteKeep = new float[Steps + 1];
-
-            static Finish()
-            {
-                for (int i = 0; i <= Steps; i++)
-                {
-                    // Sheen: white at 10 % top-left, nothing through the middle, black at 18 % bottom-right.
-                    float diagonal = (float)i / Steps;
-                    float white = diagonal < 0.5f ? 0.10f * (1f - diagonal * 2f) : 0f;
-                    float black = diagonal > 0.5f ? 0.18f * (diagonal * 2f - 1f) : 0f;
-                    SheenKeep[i] = (1f - white) * (1f - black);
-                    SheenWhite[i] = 255f * white;
-
-                    // Vignette: radial, clear to 55 % of the way out, black at 55 % at the edge. The
-                    // distance is 1 at the middle of each edge, so the corners reach the full 55 %.
-                    float d = (float)Math.Sqrt(2.0 * i / Steps);
-                    float vignette = d <= 0.55f ? 0f : 0.55f * Math.Min(1f, (d - 0.55f) / 0.45f);
-                    VignetteKeep[i] = 1f - vignette;
-                }
-            }
-
-            readonly int[] _diagonalX, _distanceX;
+            // Tabulated by row, so a pixel costs nothing but the multiply and the add.
             readonly int _height;
-            int _diagonalY, _distanceY;
-            float _hazeKeep, _hazeR, _hazeG, _hazeB;
+            float _m, _addR, _addG, _addB;
 
-            public Finish(int width, int height)
+            public Finish(int height)
             {
                 _height = height;
-                _diagonalX = new int[width];
-                _distanceX = new int[width];
-                for (int x = 0; x < width; x++)
-                {
-                    float fx = (x + 0.5f) / width;
-                    _diagonalX[x] = (int)(fx / 2f * Steps);
-                    float dx = (fx - 0.5f) * 2f;
-                    _distanceX[x] = (int)(dx * dx / 2f * Steps);
-                }
             }
 
             public void Row(int y)
@@ -168,26 +138,26 @@ namespace Odyssey.Hud
                 float fy = (y + 0.5f) / _height;
                 // Polar haze: #e8f2f7 at 28 % at the top and bottom edges, gone by 14 % in.
                 float haze = fy < 0.14f ? 0.28f * (1f - fy / 0.14f) : fy > 0.86f ? 0.28f * ((fy - 0.86f) / 0.14f) : 0f;
-                _hazeKeep = 1f - haze;
-                _hazeR = haze * 232f;
-                _hazeG = haze * 242f;
-                _hazeB = haze * 247f;
-                _diagonalY = (int)(fy / 2f * Steps);
-                float dy = (fy - 0.5f) * 2f;
-                _distanceY = (int)(dy * dy / 2f * Steps);
+                // Sheen: white at 10 % along the top, nothing through the middle, black at 18 % along the bottom.
+                float white = fy < 0.5f ? 0.10f * (1f - fy * 2f) : 0f;
+                float black = fy > 0.5f ? 0.18f * (fy * 2f - 1f) : 0f;
+                float sheen = (1f - white) * (1f - black);
+                // Vignette: clear to 55 % of the way out from the middle row, black at 55 % at the edge.
+                float d = Math.Abs(fy - 0.5f) * 2f;
+                float keep = 1f - (d <= 0.55f ? 0f : 0.55f * Math.Min(1f, (d - 0.55f) / 0.45f));
+
+                _m = (1f - haze) * sheen * keep;
+                _addR = (haze * 232f * sheen + 255f * white) * keep;
+                _addG = (haze * 242f * sheen + 255f * white) * keep;
+                _addB = (haze * 247f * sheen + 255f * white) * keep;
             }
 
             public void At(int x, out float m, out float addR, out float addG, out float addB)
             {
-                int diagonal = _diagonalX[x] + _diagonalY;
-                int distance = _distanceX[x] + _distanceY;
-                if (diagonal > Steps) diagonal = Steps;
-                if (distance > Steps) distance = Steps;
-                float sheen = SheenKeep[diagonal], white = SheenWhite[diagonal], keep = VignetteKeep[distance];
-                m = _hazeKeep * sheen * keep;
-                addR = (_hazeR * sheen + white) * keep;
-                addG = (_hazeG * sheen + white) * keep;
-                addB = (_hazeB * sheen + white) * keep;
+                m = _m;
+                addR = _addR;
+                addG = _addG;
+                addB = _addB;
             }
         }
 

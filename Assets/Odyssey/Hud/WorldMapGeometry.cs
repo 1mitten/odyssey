@@ -55,8 +55,11 @@ namespace Odyssey.Hud
         public float CentreY(int row) => row * RowStep + HexHeight / 2f;
 
         /// <summary>
-        /// The tile under a point, or −1 above the top row or below the bottom one. East and west wrap,
-        /// so any x names a tile.
+        /// The tile under a point, or −1 above the map or below it. East and west wrap, so any x names a
+        /// tile. <b>The notches between the pole rows' points and the map's edge belong to the pole
+        /// row</b>, because that is what <see cref="WorldMapPainter"/> paints there: a nearest centre
+        /// clamped to the first or last row. A pick that said −1 there left 1 % of the painted map dead
+        /// to the pointer.
         /// </summary>
         public int TileAt(float x, float y)
         {
@@ -73,7 +76,14 @@ namespace Odyssey.Hud
             if (dq > dr && dq > ds) rq = -rr - rs;
             else if (dr > ds) rr = -rq - rs;
 
-            if (rr < 0 || rr >= Rows) return -1;
+            if (rr < 0 || rr >= Rows)
+            {
+                if (y < 0f || y >= Height) return -1;
+                int pole = rr < 0 ? 0 : Rows - 1;
+                float offset = (pole & 1) == 1 ? HexWidth : HexWidth / 2f;
+                int nearest = (int)Math.Floor((x - offset) / HexWidth + 0.5f);
+                return HexGrid.Index(HexGrid.Wrap(nearest, Columns), pole, Columns);
+            }
             int column = rq + (rr - (rr & 1)) / 2;
             return HexGrid.Index(HexGrid.Wrap(column, Columns), rr, Columns);
         }

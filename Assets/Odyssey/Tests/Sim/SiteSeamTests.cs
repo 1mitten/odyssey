@@ -69,6 +69,22 @@ namespace Odyssey.Tests.Sim
             }
         }
 
+        /// <summary>
+        /// Design 59 §5's table in its own numbers, against the played board. The order test above
+        /// passed a Hilly board with Rolling's three caverns, because ×1.333 of 3 truncated to 3.
+        /// </summary>
+        [TestCase(HillBand.Flat, 1, 8, 3)]
+        [TestCase(HillBand.Rolling, 2, 16, 3)]
+        [TestCase(HillBand.Hilly, 3, 24, 4)]
+        [TestCase(HillBand.Mountainous, 4, 40, 6)]
+        public void EachBandIsTheTablesNumbers(HillBand band, int relief, int outcrops, int caverns)
+        {
+            NaturalMapGenDef gen = DefFor(Standard, Site(band));
+            Assert.That(gen.surfaceRelief, Is.EqualTo(relief), "relief");
+            Assert.That(gen.outcropsPer10000Columns, Is.EqualTo(outcrops), "outcrops per 10,000 columns");
+            Assert.That(gen.cavernsPer10000Columns, Is.EqualTo(caverns), "caverns per 10,000 columns");
+        }
+
         /// <summary>A band scales the preset's densities rather than overwriting them, so a bare board stays bare.</summary>
         [Test]
         public void AHillBandScalesTheBareBoardsNothingToNothing()

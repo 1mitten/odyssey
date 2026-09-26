@@ -14239,3 +14239,61 @@ box" is the per-label figure, the only quantity `docs/lessons.md` (2026-09-23) f
 unchanged; 3 × 17.0 / 30.9 ≈ 1.65 here, a 2.12 ms budget), and an unknown machine keeps the strict
 3. The label goes on after the fix is merged, or every PR branched from the old `main` could fail
 on whichever runner picked it up.
+
+## 2026-09-26 — World generation reviewed and merged with `main`: a seam on the date line, dead poles, and a test that typed into the wrong page
+
+Reviewed on `claude/busy-meitner-zkrhtu` (branched from `claude/sharp-euler-a6xtci`), with `main`
+merged in first: 38 commits, the conflicts all append-only. **`main` had taken design 57 (First
+Person) and 58 (cracks) meanwhile, so world generation is design 59**. As with the ride when the wake
+took 56, only the lines this branch wrote were renumbered, 128 of them. The save format is still
+11, because `main` is at 10.
+
+Three reviews ran in parallel: the Sim seam, the engine-free models, and the Presentation code acting
+as the compiler, since no tier here compiles it. **The seam held.** A probe built Flat to
+Mountainous on three world seeds, saved, loaded and ran on 1,500 ticks: the ground layer was
+11/10/9/16 and the hash was identical on both copies. The Presentation reading found **no compile
+errors**. What it did find:
+
+- **The date line drew as a dark valley.** The vignette and the diagonal sheen were baked into the
+  one texture, and the page lays three copies side by side for the wrap. So every zoom past 1× showed
+  the texture's darkest edges meeting: 115 and 105 against 255 in the middle, on a white planet. The
+  finish is by row alone now (design 59 §9a); a column paints the same whichever copy it is in.
+- **The pole notches were painted and dead.** The painter clamps the nearest row to the first or
+  last, so the zig-zag above and below the pole hexes is painted as those tiles. `TileAt` said −1
+  there: 1 % of the map, along both edges. The pick clamps the same way now. A new test walks every
+  pixel at 1× and 2× and holds the painter's own copy of the hex arithmetic to the pick's.
+- **`StartScreenTests.TheWorldIsBuiltFromTheSeedInTheBox` would have failed every run.** It typed
+  4242 into the World page's seed box while the setup page was showing, then asserted the board was
+  built on 4242. With a site, the board is built on `BoardSeed(4242, tile)`. Its sibling typed
+  "twelve" into the same hidden box and checked Start on a page a bad seed can no longer reach. Both
+  now type on the World page, where a player types.
+- **A ten-megabyte texture per shell** was made `HideAndDontSave` and never destroyed. That is one
+  per PlayMode test that presses New game.
+- **The map keys fired while typing a seed.** The event's target is the field's inner text element,
+  not the `TextField`, so 0, − and Enter reached the map. The page now asks
+  `HotkeyDirector.Typing`, the one owner of "a field has the keyboard".
+- **Smaller fixes:**
+  - every hover rebuilt the site panel's twenty labels;
+  - the overlay could divide by a fit of 0 before the first layout;
+  - the texture is whole pixels but was stretched to the fractional map size;
+  - 2.25× read "2.2x", because `Math.Round` rounds a half to even;
+  - a `HudTheme` doc comment had come off `ZonesHue` onto the map inks;
+  - the hill ink had two owners;
+  - `WorldLayout`'s frame constants were read by nothing, though the class said a test held them.
+    `HudStyleSheetTests` holds twenty-four of them to the sheet now.
+- **The Sim side had one wrong number.** A Hilly board had Rolling's 3 caverns rather than §5's 4,
+  because ×1.333 of 3 truncates to 3. The order test asserted `>=`. The scale rounds now, and
+  `EachBandIsTheTablesNumbers` pins the table. `BoardSeed` could deal 0, which §8 promised it never
+  would.
+
+**Recorded, not changed, for the owner** (design 59 §7): `annualMeanC` is the season curve's
+anchor, not the year's mean. The base offsets average +3.8 °C, so a colony lives its year up to
++4.3 °C warmer than its tile's stated temperature, while the biome bands are cut on the stated one.
+Changing it breaks the reference site's equality with `Climate_Temperate`.
+
+**Still owed:**
+- both Unity tiers and a player build; nothing on this branch has been compiled by Unity;
+- the paint's Mono figure;
+- a seed box that repaints on every usable keystroke (31 ms Release);
+- whether the arrows step the selection or move focus into the seed box, which only a keyboard can
+  say.

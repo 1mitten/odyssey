@@ -1,3 +1,4 @@
+#nullable enable
 using System.Collections;
 using NUnit.Framework;
 using Odyssey.Hud;
@@ -46,6 +47,12 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(Shown(doc.rootVisualElement.Q("setup")), Is.False, "the setup page is up under the planet");
                 Assert.That(shell.Menu.World!.Planet, Is.Not.Null, "New game made no planet");
                 Assert.That(shell.Menu.World.CanGoNext, Is.True, "the suggested site cannot be settled");
+                // The page's geometry is WorldLayout's and the planet is the Def's: one grid, or the
+                // pick and the outlines disagree with the picture.
+                Assert.That(shell.Menu.World.Planet!.Width, Is.EqualTo(WorldLayout.MapColumns),
+                    "Planet.xml's width is not the World page's");
+                Assert.That(shell.Menu.World.Planet.Height, Is.EqualTo(WorldLayout.MapRows),
+                    "Planet.xml's height is not the World page's");
 
                 // The map is one texture, drawn as the three copies the wrap needs, and it has a size.
                 VisualElement? map = doc.rootVisualElement.Q("worldmap");
@@ -90,9 +97,9 @@ namespace Odyssey.Tests.PlayMode
                 SaveRecipe recipe = boot.Colony!.Recipe(1);
                 Assert.That(recipe.Site, Is.EqualTo(site));
                 Assert.That(recipe.WorldSeed, Is.EqualTo(worldSeed));
-                Assert.That(boot.World.Seed, Is.EqualTo(SiteRules.BoardSeed(worldSeed, site.TileIndex)),
+                Assert.That(boot.World!.Seed, Is.EqualTo(SiteRules.BoardSeed(worldSeed, site.TileIndex)),
                     "the board was not built on the seed the site derives");
-                Assert.That(boot.World.Size.SizeY, Is.EqualTo(SiteRules.BoardLayers(MapSizes.At(MapSizes.Default).Y, site.Hills)));
+                Assert.That(boot.World!.Size.SizeY, Is.EqualTo(SiteRules.BoardLayers(MapSizes.At(MapSizes.Default).Y, site.Hills)));
             }
             finally
             {

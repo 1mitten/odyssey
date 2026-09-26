@@ -51,9 +51,16 @@ namespace Odyssey.Sim.Worldgen.Planet
         {
             Shape shape = For(hills);
             gen.surfaceRelief = shape.Relief;
-            gen.outcropsPer10000Columns = gen.outcropsPer10000Columns * shape.OutcropsPerMille / 1000;
-            gen.cavernsPer10000Columns = gen.cavernsPer10000Columns * shape.CavernsPerMille / 1000;
+            gen.outcropsPer10000Columns = Scale(gen.outcropsPer10000Columns, shape.OutcropsPerMille);
+            gen.cavernsPer10000Columns = Scale(gen.cavernsPer10000Columns, shape.CavernsPerMille);
             gen.groundLayer = gen.GroundLayerFor(size);
         }
+
+        /// <summary>
+        /// A density times a per-mille factor, <b>rounded</b>. Truncating made ×1.333 of the played
+        /// board's 3 caverns 3, so a Hilly board had Rolling's caverns and §5's table was wrong for
+        /// that row; ×1000 is still exactly the value, so Rolling stays today's board.
+        /// </summary>
+        static int Scale(int value, int perMille) => (value * perMille + 500) / 1000;
     }
 }

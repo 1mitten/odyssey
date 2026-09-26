@@ -5,8 +5,9 @@ namespace Odyssey.Hud
     /// <summary>
     /// The World screen's measurements, from Claude Design's specification
     /// (<c>docs/reference/mockups/world-screen-spec.md</c>, "Constants"). One place, so the page, the
-    /// painter and the tests read the same numbers — and a test holds the ones that meet a stylesheet
-    /// to it, the rule the Work tab's border-box fault made.
+    /// painter and the tests read the same numbers — and <c>HudStyleSheetTests</c> holds every one that
+    /// meets a stylesheet to it (its <c>Lengths</c> table), the rule the Work tab's border-box fault
+    /// made. The frame's padding is the setup page's own <c>.setup</c> rule and is not restated here.
     /// </summary>
     public static class WorldLayout
     {
@@ -14,10 +15,6 @@ namespace Odyssey.Hud
 
         /// <summary>The page's inset from every screen edge.</summary>
         public const int Inset = 24;
-
-        /// <summary>Padding inside the frame: 32 top and bottom, 40 either side.</summary>
-        public const int PadVertical = 32;
-        public const int PadHorizontal = 40;
 
         /// <summary>The stats panel's width, and the gap between it and the map.</summary>
         public const int StatsWidth = 340;
