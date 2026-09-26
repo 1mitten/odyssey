@@ -725,6 +725,6 @@ rock) raises the path search's layer-change hint. Measured by the same arm (a re
 17:43Z, which also read Small 0.41 → 0.44 ms, Standard 0.64 → 0.60, Large 1.23 → 1.26 and Huge
 2.01 → 2.08 for the edit tick, confirming the table): **Small 3,000 → 4,600, Standard 2,500 →
 3,600, Large 3,000 → 3,500, Huge 2,500 → 3,600.** It moves search effort and possibly route choice,
-not correctness — and the played-board golden above did not notice it, because the colony's paths
-there never change layer through a portal the hint decides. Fixing it (count only the gaps that hold
+not correctness — and on the played board it changed nothing the probe can see: the colony at 32
+did everything the colony at 16 did (why is not established). Fixing it (count only the gaps that hold
 a portal) would move the goldens; it wants its own unit and a measurement.
