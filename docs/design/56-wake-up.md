@@ -1,7 +1,7 @@
 # 56: Waking into the world
 
-**Status (2026-09-26): built, not yet run in Unity or played — branch `claude/nice-einstein-cwicw1`,
-stacked on `claude/load-curtain` (merge that first).** The engine-free model and its setting are
+**Status (2026-09-26): built, not yet run in Unity or played — PR #241, branch `claude/nice-einstein-cwicw1`,
+stacked on PR #240, `claude/load-curtain` (merge that first).** The engine-free model and its setting are
 proven in the fast tier (24 tests); the engine half — the veil, the blur, the grade, the filters,
 the camera and the clock gate — was written in a container with no Unity and **has not been
 compiled**. §11 is what is owed before it can merge.
