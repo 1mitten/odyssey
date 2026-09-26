@@ -14159,3 +14159,41 @@ Three things were decided by the code rather than the mockup:
 Built in a container with the .NET SDK installed from Ubuntu's archive. The fast tier ran: 1,338
 Hud, 23 of them new. Presentation is uncompiled here, and the Unity tiers are owed.
 
+
+## 2026-09-26 — The storyteller, built (ST1–ST4)
+
+The owner said *start* and took ST1–ST4 together on the screens' branch. The storyteller is now
+colony state: a system in the world phase, Defs for the three shapes, a saved and hashed section
+(hashed only while set, so no golden moved at any of the four steps), two intents, and a view the
+screens read back (design 59 §13).
+
+What was decided in the building rather than in the design:
+
+- **The difficulty ladder stays written once, in the interface.** `SetDifficulty` carries the four
+  lever values and the rung they came from, so the simulation stores numbers. The alternative, a
+  rung table in the Defs, would have been a second copy of `StoryCatalogue.Rungs`, and the two
+  would have disagreed the first time somebody retuned Brutal.
+- **The oracle picks with its own random stream.** At first it drew from the pacer's, so what one
+  category happened to have available moved when the next category's fire fell. A stub
+  ThreatSmall changed the raid rate, which is the test that found it.
+- **A category with nothing fireable loses its roll** rather than rolling again next hour. A storyteller
+  that saved its fire for when a raid could land would bunch raids behind every drought of
+  fireable content.
+- **The incident gates are read for the first time.** `earliestDay` 1 on the drops caught a test
+  that had assumed a drop could fall on day 0.
+- **3300 is a calibration, not a design number.** It is what makes the three armed colonists of the
+  existing raid test still meet about three raiders. Strength, not headcount, is what moves the
+  answer now: the same three disarmed meet fewer.
+- **The harness was run before the soak, and the soak agreed with it.** The harness is 200 seeds
+  of the pacer alone with an always-yes oracle, a second a storyteller. It moved Jacob's off phase
+  to 8 days and Trent's bag to 60 hours before anything slow ran. The Long soak, one real season
+  after grace per storyteller on a 60 × 60 board, came in at 3 / 4 / 1 raids against the harness's
+  2.95 / 3.20 / 1.66.
+- **A press is shown at once and believed only when the view agrees.** Three syncs, a second
+  apart, then the row goes back. Paused-applicable intents settle on the frame they are sent
+  (and the wake's `ClockHeld` reads as paused), so the window is room, not latency.
+
+The fast tier ran green: Sim 1,976, Hud 1,353, and the Long soak in about four minutes. Presentation
+is uncompiled here; its diff was re-read by hand and found one misplaced doc comment. Owed: both
+Unity tiers, a busy-arm benchmark with a storyteller set, `BulletinView.Category`, ST7, and a
+season on each.

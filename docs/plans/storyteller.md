@@ -2,9 +2,10 @@
 
 The design is `docs/design/59-storyteller.md`, and the interview is
 `docs/research/storyteller-interview.md` (2026-09-26). ST0 is documents only, on
-`claude/sweet-cerf-wzfxgs`. **Phase gate: this plan waits for the owner's approval; no unit after
-ST0 is started.** From ST1 on, the work goes one commit per unit on its own `claude/storyteller-*`
-branch, with a PR per two or three units.
+`claude/sweet-cerf-wzfxgs`. **Approved 2026-09-26** (owner: *"start"*), and ST1–ST4 were built
+together on that same branch at the owner's choice, one commit per unit, rather than on
+`claude/storyteller-*` branches of their own. **ST1–ST4 are built** (design 59 §13), and so is the
+interface's read of them (the intents half of ST5 and the view half of ST6).
 
 | Unit | What | Save / hash | Gate |
 |---|---|---|---|
@@ -25,10 +26,13 @@ branch, with a PR per two or three units.
 - pause on a raid.
 
 The choice lives in `StoryDirector` on the interface side and the gauge's band is a debug preview.
-What ST5 and ST6 still owe:
-- **ST5**: the intents, and the saved choice replacing `StoryDirector`'s own;
-- **ST6**: `StorytellerView` driving the gauge in place of the preview, and `BulletinView.Category`
-  so the pause is on every big threat rather than only raids.
+What ST5 and ST6 still owed then, and where it stands:
+- **ST5**: the intents, and the saved choice replacing `StoryDirector`'s own. **Done with ST1**
+  (design 59 §13f).
+- **ST6**: `StorytellerView` driving the gauge in place of the preview (**done**, §13f; the preview
+  now overrides it while set), the old-save toast (**done**, `ui.toast.nostoryteller`), and
+  `BulletinView.Category` so the pause is on every big threat rather than only raids (**owed**;
+  raids are the only big threat so far).
 
 ## ST1 — the kit and the system
 
@@ -161,8 +165,10 @@ What ST5 and ST6 still owe:
 
 - **`StorytellerSoakTests`** (Long tier, with ST1–ST3): 72 days per storyteller at Normal. It
   prints the per-season table beside the harness's.
+  **Built** as one real season after grace per storyteller rather than 72 days, so the Long tier
+  stays about four minutes; the table is in design 59 §13e.
 - **Register the system in `TickBenchmarkTests`' busy arm.** It should cost nothing between hourly
-  checks, and the number says so.
+  checks, and the number says so. **Owed.**
 
 **Merge order.** ST1 → ST2 → ST3 → ST4, then ST5 and ST6 in parallel (one owner per file; ST6 owns
 `HudShell.Panels.cs`), then ST7.

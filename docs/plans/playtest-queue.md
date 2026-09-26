@@ -37,6 +37,19 @@ the next session learns to ignore.
   - Fire a raid at speed 3. Wrong: the clock keeps running (the switch is on by default), or
     Space after it resumes at normal rather than 3.
 
+- **The storyteller: does a season on each feel like its blurb?** (`claude/sweet-cerf-wzfxgs`,
+  design 59 §13.) New game on each storyteller at Normal, and play or skip a day at a time
+  (debug menu > *Skip one day*) through its grace and one season (24 days).
+  - Jacob. Wrong: raids arrive without a rhythm you could learn by the second season.
+  - Trent. Wrong: his season feels like Jacob's (his variance is three times as large).
+  - Kano. Wrong: more than one or two raids a season, or none at all after his 15-day grace.
+  - Let a colonist go down or die in a raid, then hover the gauge. Wrong: the band does not drop,
+    or the tooltip names no cause.
+  - Arm the colony well and watch the next Auto raid. Wrong: its size does not grow with the
+    guns, or a wall of sandbags makes it grow (it must not).
+  - Load a save from before today. Wrong: no *No storyteller* toast, or a raid falls anyway.
+  - In Settings, change the storyteller mid-colony. Wrong: the row jumps back, or the gauge resets.
+
 - **First Person: does the shoulder camera show a colonist's day and a fight clearly?**
   (`claude/planning-session-fok6wm`, design 57.) Select a colonist, press **First Person** on her
   card, and let her work, walk up a terrace and go through a door.

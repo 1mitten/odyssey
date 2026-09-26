@@ -281,7 +281,7 @@ the first thing to check.
 
 The owner pasted Claude Design's specification for the brief (`docs/reference/mockups/storyteller-brief.md`, mockups 25a–25h) and named the storytellers: **Jacob** (a llama, the rhythm), **Trent** (an augmented human, chaos) and **Kano** (a pig, calm), shown in that order. The defaults are Jacob and Normal. *"Just for the storyteller design part of the screen and fit it in how you can."* So the screens were built before the simulation units (ST1–ST4).
 
-- **The choice is carried and not read yet** (owner, 2026-09-26). The New game page puts a `StoryChoice` on `NewGameChoice`, and it is handed to the session's `StoryDirector` (`Odyssey.Hud`). Settings edits it there. It is not saved, not hashed, and nothing in the simulation reads it: the Research tab's precedent (design 34). When ST1 lands, it becomes colony state changed by intent (§7), and the presenters keep reading `StoryDirector.Choice`. A loaded colony therefore has no storyteller, which is §7's old-save rule anyway.
+- **The choice was carried and not read** (owner, 2026-09-26; superseded by §13, where it is colony state). The New game page puts a `StoryChoice` on `NewGameChoice`, and it is handed to the session's `StoryDirector` (`Odyssey.Hud`). Settings edits it there. It is not saved, not hashed, and nothing in the simulation reads it: the Research tab's precedent (design 34). When ST1 lands, it becomes colony state changed by intent (§7), and the presenters keep reading `StoryDirector.Choice`. A loaded colony therefore has no storyteller, which is §7's old-save rule anyway.
 - **`StoryChoice` is the one rule for a press**, shared by the page and Settings:
   - a rung other than Custom sets all four levers to its values;
   - Custom keeps whatever they read, so it starts from the rung the player was looking at;
@@ -305,7 +305,7 @@ The owner pasted Claude Design's specification for the brief (`docs/reference/mo
   - The five bands differ by **filled column count** first and hue second: Info, Info, text, Warn, Warn, **never Bad**.
   - The tooltip reads the band, then the cause.
   - The gauge is drawn only with a storyteller **and** a band.
-- **The band is a debug preview until ST3.** The debug menu's Events tab has *Tension preview* (Off / the five bands) and *Tension cause*.
+- **The band was a debug preview until ST3** (now the simulation's, §13f). The debug menu's Events tab has *Tension preview* (Off / the five bands) and *Tension cause*, which override the simulation's while set.
 - **A raid's arrival pauses a running world** when *Pause on big threats* is on. It asks only when the world is running, because a pause request on a paused world is `SpeedControl`'s resume toggle. The raid's horn and its camera jump were already there (design 55).
 
 **Departures from the specification**, each small:
@@ -319,3 +319,117 @@ The owner pasted Claude Design's specification for the brief (`docs/reference/mo
 - **the clock line at 271 px with the longest date and the gauge** (the mockup measured it at exactly the 247 available), which is an eye on a running game;
 - a first look.
 
+
+## 13. The simulation as built (ST1–ST4, 2026-09-26)
+
+The owner said *start* and chose ST1–ST4 together on this branch. The storyteller is now colony state: saved, hashed while set, changed by intent, and read back by the screens of §12.
+
+### 13a. Where it lives
+
+- **`Sim/Events/Storyteller/`**:
+  - `StorytellerDef` and `GeneratorDef` (the kit);
+  - `StorytellerContent`, whose `Order` is pinned to `StorytellerHandle`;
+  - `StorytellerPacer` (the plans);
+  - `Storyteller` (the system: world phase, order 90, doing work only on the hour and only with a storyteller set);
+  - `ColonyStrength`;
+  - `StorytellerCombatListener`.
+- **The Defs** are `Defs/Core/Events/Storytellers.xml`.
+- **Contracts**:
+  - `StorytellerHandle` (Jacob 0, Trent 1, Kano 2);
+  - `StorytellerView`;
+  - `TensionCauseKind`, the interface's `TensionCause` in the same order, held there by a Hud test;
+  - two appended intents.
+- **The intents**, both in `PausedIntents.AppliesWhilePaused`:
+  - `SetStoryteller`: A is the index.
+  - `SetDifficulty`: A is the rung; B is threat % | adaptation % << 16; C is grace | big threats << 16.
+- **The difficulty ladder is written once**, in the Hud's `StoryCatalogue`. The intent carries the lever values, so the simulation stores numbers and has no rung table (§6). It refuses a rung over 15, a threat over 500, an adaptation over 200 and a grace outside 50–200, and `StoryDirectorTests` holds every rung the ladder offers inside those bounds.
+- **Save**: section `odyssey.storyteller`, version 1, with no format bump. A save without the section never calls `Load`, so it comes back with none (§7's old-save rule).
+- **Hash**: an early return while unset, as `RaidSystem` does, so **no golden moved** at any step.
+- **Random streams**: SHA-256 round constants K28 `0xC6E0_0BF3` (pace), K29 `0xD5A7_9147` (arm), and K30 `0x06CA_6351` xor the category (the pick). The pick has **its own stream** so that one category's candidates never move another's plan. The first build shared one, and a stub ThreatSmall changed when raids fell.
+
+### 13b. The pacer
+
+- **Plans are drawn ahead and saved**: up to eight planned fires per generator, re-armed from the tick of a change. A storyteller changed mid-colony keeps tension, the peak and the colony's start. A grace that has passed is not given again.
+- **Grace holds back ThreatBig only**, for the storyteller's days × the stretch, counted from the tick the first storyteller was chosen. A new game submits its choice as its first intents while the clock is held, so that tick is the colony's first.
+- **A category with nothing fireable loses its roll.** Candidates must pass all of these, then are picked by `weight`:
+  - `Fireable`;
+  - the Def's gates (`earliestDay`, `minRefireDays`, `minColonists`, `maxFires`, read from the ledger for the first time);
+  - `excludeBad`;
+  - `CanFire`.
+- **Population intent**: `IncidentDef.populationGain` multiplies a candidate's weight by the population curve. No Def sets it yet, so ST7 turns it on with content alone.
+- **The storyteller fires with no size** (`IncidentParms.Points` 0, Auto), so a storyteller raid and a debug Auto raid are sized by the same function.
+
+**The harness** (`StorytellerPacerTests`, 200 seeds × 72 days, an always-yes oracle):
+
+| Storyteller | Big threats a season (24 days) | Variance | Days per good event |
+|---|---|---|---|
+| Jacob | 2.95 | 0.50 | 5.7 |
+| Trent | 3.20 | 1.56 | 6.0 |
+| Kano | 1.66 | 0.23 | 5.7 |
+
+The owner asked for about three a season and a good event every five or six days (§2). Two retunes got there:
+- Jacob's off phase went to 8 days.
+- Trent's bag went to 60 hours, with weights Misc 45, ThreatBig 30, ThreatSmall 12, Arrival 13.
+
+Trent's variance is three times Jacob's, which is his blurb. Big threats off gives no ThreatBig in 72 days, and a stretch of 2 moves the first one.
+
+### 13c. Strength and the raid's size
+
+- **Strength** is the sum over standing colonists of:
+  `health (hp fraction × consciousness) × weapon power × skill (600 + 40 × level)`.
+  - Weapon power is damage × 60 / cooldown × the quality's damage, × its accuracy when ranged.
+  - The skill is Shooting for a gun and Melee otherwise.
+  - A downed colonist counts nothing.
+  - Sandbags, walls, animals and a stockpiled weapon count nothing; `ColonyStrengthTests` has a control for each.
+- **The remembered peak** falls 4 ‰ an hour, about a tenth a day. Stowing the guns before a raid buys nothing for days.
+- **`RaidBudget.AutoSize`** gives:
+  `size = strength × ramp × scale × 3300 / (raider power × 10⁶)`
+  - It is rounded and clamped to 1..30.
+  - The raider's power is the mix's kinds at Normal quality and skill 0.
+  - The ramp runs from 700 ‰ on day 0 to 1000 ‰ by day 48, then +50 ‰ a season, up to a cap of 1500 ‰.
+  - The scale is threat % × tension with a storyteller, and 1000 without one. A fire from Trent's bag also carries the budget it was drawn at (500–1500 ‰), so his raids vary in size as well as in timing.
+  - 3300 is calibrated so that the three armed colonists of `ARaidWithNoSizeTakesTheAutoSize` still meet about three raiders.
+- **`Incident_Raid.minRefireDays` is 2** (was 4), per ruling 16: the pacer paces, and the refire only keeps two raids apart.
+
+### 13d. Tension
+
+A colonist's death costs 250 and a down 60, both scaled:
+- × min(1, 5 / colonists), so a small colony is not ruined by one loss;
+- × adaptation %.
+
+A death without a down counts once. A day with no loss restores +25 below 1000 and +10 at or above it, × adaptation %, and the cause becomes *Quiet*. The range is 400–1500 from a start of 1000. The bands are cut at 600 / 850 / 1100 / 1300. Raiders and animals never move it, and the listener touches no pawns.
+
+### 13e. The soak
+
+`StorytellerSoakTests` (Long tier) runs one real season after grace per storyteller: a 60 × 60 board, five colonists, Normal. Every hour it asserts:
+- tension is in range;
+- the view matches the system;
+- no raid has fallen inside grace.
+
+| Storyteller | Raids | Drops | Final tension | Run time |
+|---|---|---|---|---|
+| Jacob | 3 | 5 | 985, Quiet | ~65 s |
+| Trent | 4 | 3 | 740 | ~83 s |
+| Kano | 1 | 3 | 1155 | ~68 s |
+
+Kano's single raid is his blurb: one hard test. The soak asserts drops for all three and raids for the two that are not calm.
+
+### 13f. The interface now reads it
+
+- **`StoryDirector` is a read of `StorytellerView`, synced on the clock's refresh.** A press:
+  - builds the next `StoryChoice` by §12's rule;
+  - sends only the intent whose half moved;
+  - is shown at once.
+  
+  If the view has not taken it within `PendingSyncs` (3, a second apart), the row goes back. That is how a refused press looks.
+- **A new game** submits both intents after its build.
+- **A load** attaches without choosing anything, so it shows what its save holds. With none, it raises the toast *No storyteller: choose one in Settings* (`ui.toast.nostoryteller`, through `ToastModel.Say`), once.
+- **The gauge** draws the simulation's band and cause. The debug menu's preview overrides both while it is set.
+
+### 13g. Owed
+
+- The Unity tiers. The fast tier compiles no Presentation; its diff was re-read by hand.
+- `TickBenchmarkTests`' busy arm with a storyteller set.
+- `BulletinView.Category`, so *Pause on big threats* covers every big threat rather than raids alone (there are no others yet).
+- ST7, the joiner, which makes population intent live.
+- A season played on each storyteller.
