@@ -386,3 +386,80 @@ Almanac and the debug Spawn rows (FA1's roster half). Portraits on the Animals t
 is still empty). Hunting, corpses as meat and butchering (K3). The computed motions' own design
 (§6 lists them). A moving far pose. Whether a far animal can be clicked: whatever makes a far
 colonist pickable is to be checked in FA2 and applied the same way, not assumed here.
+
+## 14. As built (FA1, 2026-09-26)
+
+FA1 is on `claude/forest-animals` (commits `d4e28db9` and `3257593f`). Three departures from §2–§10,
+each forced by what the files turned out to be, and the numbers the design could only predict.
+
+### 14a. The import actually used
+
+No Unity: `tools/synty/unpack.py extract <pkg> . --remap Assets/SimpleForestAnimal=Assets/Synty/SimpleForestAnimal`
+writes each asset and its `.meta` straight from the package with the GUIDs kept, and without
+`--allow-outside` refuses to write anything outside `Assets/Synty/` — the §2 guard, placed where the
+art lands rather than after it. Then **one catalogue build**, which applies the import setting and the
+material upgrade below. The catalogue build also refuses while `Assets/SimpleForestAnimal/` exists
+(`LicensedArtGuard`), and `.gitignore` carries that path. In the worktree the pack is a real folder
+beside per-pack junctions to the main checkout's other packs; the owner's checkout still needs the
+one `unpack.py` line and a catalogue build.
+
+### 14b. The three departures
+
+1. **Rows draw from each rig's FBX plus a `meshName`, not from the pack's prefabs.** The prefabs were
+   saved from an optimised import and carry no bones at all, so nothing could measure a foot or lay a
+   computed motion over a leg. A row names its FBX by full path and the skinned mesh to show
+   (`SM_Stag_02`), which is also what puts a doe and a stag on one rig.
+2. **`AnimalImport.ApplyForest` turns `optimizeGameObjects` off on the five FBX.** Without the bone
+   objects there is no withers to measure (§5) and nothing for FA2's stamp, rear and lunge to drive.
+   It is idempotent and runs from the catalogue build and the probe.
+3. **The FBX carry no material, so each row names `SimpleForestAnimals.mat`** and the figure paints
+   it. `SyntyImport.UpgradeForestMaterials` moves it to URP Lit with instancing on, **scoped to the
+   pack's own folder** so it never writes through the other packs' junctions.
+
+Also found: **the pack's own Animator re-poses an edit-mode instance at render time**, so the probe
+strips it before a shot; the live figures drive their own playable graph and clear its controller,
+so the game is not affected.
+
+**The catalogue was spliced, not rebuilt.** A full `PlayScene.RebuildCatalogue` drops the colonists'
+appearance block (`docs/lessons.md`), so the 30 forest rows (eleven forms by colourway) went in after
+the frog: 2,220 insertions, 0 deletions in `ModuleCatalogue.asset`.
+
+### 14c. Measured
+
+Scale by form from `AnimalProbe.ShootForest`; every drawn shoulder is within 1% of life × the
+colonists' 1.42 draw factor, and `EachFormIsDrawnAtItsShoulder` holds the live figures to 5%. Walk and
+run are the clip's planted-foot speed at scale 1 (the clips have no root motion).
+
+| Form | Scale | Drawn shoulder | Walk / run at scale 1 (m/s) |
+|---|---|---|---|
+| Rabbit | 5.72 | 0.355 m | 0.126 / 0.216 |
+| Doe | 5.50 | 1.421 m | 0.183 / 0.756 |
+| Stag | 6.60 | 1.705 m | 0.183 / 0.756 |
+| Fox | 3.50 | 0.567 m | 0.126 / 0.425 |
+| Raccoon | 2.75 | 0.426 m | 0.126 / 0.425 |
+| Skunk | 2.13 | 0.354 m | 0.126 / 0.425 |
+| Boar | 6.04 | 1.277 m | 0.137 / 0.189 |
+| Moose cow | 7.40 | 2.559 m | 0.183 / 0.756 |
+| Moose bull | 7.80 | 2.697 m | 0.183 / 0.756 |
+| Wolf | 5.88 | 1.136 m | 0.126 / 0.425 |
+| Bear | 5.06 | 1.563 m | 0.135 / 0.301 |
+
+**The boar's clips are as authored and are thin**: its run is only 1.4× its walk, and its Eat loop
+barely moves the head (17 cm drawn, against the deer's 1.63 m → 0.39 m). A computed head dip is the
+fix if grazing boar read as standing still; nothing is done about it in FA1.
+
+The probe sheet is `docs/reference/screenshots/2026-09-26-forest-animals-sheet.png` (and `-near.png`),
+beside the butcher's sheets: every form textured, the right mesh, to scale beside a colonist and a
+1 m cube.
+
+**The frame** (`FrameTimeTests.TheAnimalsAgainstTheFrame`, 640 × 480, RTX 5070 Ti, one run, the
+seeded wildlife cleared first so 0 is a true control):
+
+| Animals | Frame | `Figures` | `Actors` | Figures drawn |
+|---|---|---|---|---|
+| 0 | 1.84 ms | 0.071 ms | 0.078 ms | 5 (colonists) |
+| 48 | 2.31 ms | 0.277 ms | 0.081 ms | 53 |
+| 80 | 2.37 ms | 0.339 ms | 0.080 ms | 64 |
+
+At 80, **21 animals are past the 64-figure ceiling and not drawn**; that is FA2's far form (§8), and
+these numbers are its baseline.

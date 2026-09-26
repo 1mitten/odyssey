@@ -2773,3 +2773,18 @@ that differs only in line endings is the same case.
 **Hub's headless install fails without saying so.** Twice on that machine: once at a UAC prompt
 nobody saw (the log ends at *"Install … started"*), once because the installer unpacks into
 `%TEMP%` on C: whatever the destination. `docs/setup/local-dev.md` §8a.
+
+## A Synty SIMPLE prefab can carry no bones; draw from the FBX (2026-09-26)
+
+**The SIMPLE Forest Animals prefabs were saved from an optimised import**: each is the FBX's meshes
+with one variant switched on and **no bone objects at all**, so nothing can measure a withers or a
+planted foot, and no computed motion can reach a leg. The rows draw from the rig's FBX plus a
+`meshName` instead, with `optimizeGameObjects` switched off on the FBX (`AnimalImport.ApplyForest`).
+And **the pack's own Animator re-poses an edit-mode instance at render time**: a probe shot of an
+instance still wearing it shows the pack's pose, not ours, so the probe strips the Animator first.
+Check both before trusting a measurement off any new animal pack. Design 66 §14b.
+
+A worktree that needs a pack the main checkout does not have can hold **its own `Assets/Synty`**: a
+real folder of per-pack junctions to the main checkout's packs plus the new pack as a real folder.
+The junction rule above still applies to every one of those links — `rmdir` each before removing the
+worktree — and the local pack is deleted with it.

@@ -14505,3 +14505,43 @@ vanished at 21:00 and reappeared at 05:00 in one frame each. The rings now sink 
 flatten, which puts them edge-on — nothing left to see — and a jump in the hour is eased over four
 real seconds instead of taken. A pixel diff against clouds-off at 2% presence found nothing looking
 away from the sun and 39 pixels in 1.44 million looking up. Design 63 §4e.
+
+## 2026-09-26 — Forest animals: the roster, the interview, and FA1
+
+The owner supplied Synty's **SIMPLE Forest Animals** and asked for a roster that spawns into the world,
+performant, with the hog's, rat's and frog's treatment, and a recommendation for how to stat them.
+
+- **The pack is licensed**, so it lives under the gitignored `Assets/Synty/` — and it **installs to
+  `Assets/SimpleForestAnimal/`, which git does not ignore**. `SyntyImport`'s guard only asked whether
+  `Assets/Synty` was empty, so a plain import would have left licensed art one `git add .` from a
+  commit. `tools/synty/unpack.py` gained `--remap` and refuses to write outside `Assets/Synty/`.
+- **Two interview rounds** (`docs/research/forest-animals-interview.md`, sixteen answers then ten):
+  every recommendation taken but one. **A predator may kill a downed colonist**, after an hour's
+  rescue window — the one deliberate exception to design 33's "an unordered fight ends in downs,
+  never deaths", written into design 65 §6.
+- **Life × 1.42**, not literal life: a colonist is drawn at about 1.42× life (2.49 m), so "life size
+  against a colonist" means the same factor, or a bull moose's shoulder sits at a colonist's chest.
+- **The hog went to the city** (answer 2): the boar is the woodland's, and the CC0 hog, rat and frog
+  stay the runner's proof that an animal draws where there is no `Assets/Synty`.
+- **The seeder places one group of every kind first**, at an even share of what is left, then
+  weighted draws: without it a 60 × 60 board filled before the frogs at the end of the table.
+  **Density 27 → 120**, measured through `PlayedMap` on seed 1 so every board reaches its ceiling
+  (Small needs 114, Standard 76, Large 45, Huge 31; the one number serves all four).
+- **Goldens measured, not assumed**: the barren board unchanged; the played board and the city
+  re-baked, and `GoldenColonyProbe` finds the colonists' items, experience, needs and failed jobs
+  identical — only the animals' own counts and cells moved.
+- **The Almanac shows every behaviour, live or not yet** (owner: *"document all this information in
+  the almanac as well"*). FA1 ships today's behaviour only, so a skunk described as spraying would be
+  reported as a bug on the first play. One engine-free table carries a live flag per fact, the live
+  lines are derived from the Defs and tested against them, and `TheLiveLinesAreExactlyTheseToday`
+  makes FA2 and FA3 flip each fact in the commit that builds it — the SK5 lesson, where nothing
+  checked that a row's liveness was true.
+- **Two test faults, neither the roster's**: a new Sim test's `Does.Contain` on a set read differently
+  under Unity's older NUnit (plain `Contains` asserts now), and `ButcherSpawnTests` had never taken
+  `main`'s World-screen step. `AnimalsPanelTests` assumed the board's wildlife fits one page; it
+  clears the seeded animals and tests the page with its own three.
+- **Design 65's fox gap**, found by the Almanac lane: read literally, a starving fox met every
+  man-eater rule. A fifth rule — a person must be within the predator's prey limit — is §3a's prey
+  rule applied to a person, so there is one owner; the wolf's 1,300 passes, the fox's 250 does not.
+- **The frame**, 640 × 480 on the 5070 Ti in one run: 0 / 48 / 80 animals at 1.84 / 2.31 / 2.37 ms;
+  at 80, 21 animals are past the figure ceiling and undrawn, which FA2's far form closes.

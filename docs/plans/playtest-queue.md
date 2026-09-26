@@ -23,6 +23,20 @@ the next session learns to ignore.
 
 ## Open
 
+- **Forest animals FA1: do nine new species look right, at the right size, on the meadow?**
+  (`claude/forest-animals`, stacked on #248; design 66 §14, plan §3.) **Its verdict unblocks FA2.**
+  New game on the meadow, or Debug → Spawn → the nine new rows beside a colonist. Look for:
+  - each animal against a colonist: a wrong answer is a rabbit as big as a dog or a moose no taller
+    than a person;
+  - the three smallest (rabbit, skunk, raccoon, and the fox) at the play camera: if they cannot be
+    told apart, they enlarge **together**, never one (design 66 §12);
+  - the meadow at 48 animals: populated, not crowded — a herd of deer should be an event, not wallpaper;
+  - click a deer or a moose: the pane says *Doe*/*Stag* or *Cow*/*Bull*, and the model agrees;
+  - colourways vary within a herd; nothing is pink; feet do not slide or float as they walk and run;
+  - the Almanac's Fauna entries: the behaviour section reads clearly, and the dimmed
+    *Not yet in the game* rows are plainly not claims;
+  - on Huge, some distant animals vanish when zoomed out: **known**, the far form is FA2.
+
 - **Does the World screen read as a planet, and does the site change the colony?** (`claude/busy-meitner-zkrhtu`,
   the reviewed `claude/sharp-euler-a6xtci`; design 59.) **Second look after the first (2026-09-26, §4e–§4f):** the planet is
   128 x 64 with warped coasts and a sea share that varies by seed, zoom goes to 8x, temperatures in the site panel are

@@ -1,6 +1,6 @@
 # Forest animals — the plan
 
-**Status (2026-09-26): written, every open question answered (§6), waiting for approval to start FA1. Nothing is built.** Branch
+**Status (2026-09-26): approved; FA1 built and in review (§3, design 66 §14). FA2 and FA3 wait for FA1's play.** Branch
 `claude/forest-animals`, worktree `D:\code\odyssey-forest`. The interview is
 `docs/research/forest-animals-interview.md` (sixteen answers); research `e-15`, `a-20`,
 `b-wild-animal-behaviour`; designs **64** temperament, **65** predators, **66** art and far form,
@@ -56,6 +56,8 @@ that runs ahead of the code (or behind it) fails the fast tier.
 | **Weights and groups** | From design 64's table and the interview's §4: rabbit 1–3, deer 3–6, fox 1, raccoon 1–2, skunk 1, boar 3–5, moose 1–3, wolf 2–4, bear 1. Wolves and bears are placed outside a larger clearing radius than the rest. The hog leaves the meadow table (answer 2) and stays in the city's. |
 
 ## 3. FA1 — art and roster (PR 1)
+
+**Built 2026-09-26, in review** — PR to follow, stacked on #248. What was built and measured, and where it departed from design 66, is design 66 §14.
 
 The animals exist, wander as today, are drawn at life size in their colourways and forms, and are
 named. **No new behaviour.**
