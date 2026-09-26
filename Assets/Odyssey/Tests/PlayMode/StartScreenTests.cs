@@ -181,6 +181,7 @@ namespace Odyssey.Tests.PlayMode
                 var doc = boot.GetComponent<UIDocument>();
                 Assert.That(Shown(doc.rootVisualElement.Q("curtain")), Is.False, "the curtain is up over the title screen");
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 59 §9)
                 yield return Settle();
 
                 Assert.That(shell.Menu.Start(), Is.True);
@@ -297,6 +298,7 @@ namespace Odyssey.Tests.PlayMode
 
                 // Start a colony: the interface comes back and the backdrop goes.
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 59 §9)
                 yield return Settle();
                 Assert.That(shell.Menu.Start(), Is.True);
                 yield return Settle();
@@ -379,6 +381,7 @@ namespace Odyssey.Tests.PlayMode
                 // is what commits. Driven through the director rather than by synthesising a
                 // click, as the note above says.
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 59 §9)
                 yield return Settle();
 
                 Assert.That(boot.HasSession, Is.False,
@@ -435,11 +438,14 @@ namespace Odyssey.Tests.PlayMode
                 yield return Settle();
                 var doc = boot.GetComponent<UIDocument>();
 
+                // The seed box is the World page's since design 59: it names the planet, and the
+                // board is built on the seed of the tile picked on it. Typed there, before Next,
+                // because that is the only place a player can type it.
                 shell.Menu.Choose(SessionCommands.NewGameKey);
                 yield return Settle();
 
                 var box = doc.rootVisualElement.Q<TextField>("seed");
-                Assert.That(box, Is.Not.Null, "the New game screen has no seed field");
+                Assert.That(box, Is.Not.Null, "the World screen has no seed field");
                 Assert.That(box!.value, Is.EqualTo(SeedEntry.Format(shell.Menu.Seed.Seed)),
                     "the box is not showing the seed the screen is holding");
 
@@ -449,13 +455,20 @@ namespace Odyssey.Tests.PlayMode
 
                 Assert.That(shell.Menu.Seed.Seed, Is.EqualTo(4242u),
                     "typing in the field did not reach the director");
+                Assert.That(shell.Menu.World!.WorldSeed, Is.EqualTo(4242u),
+                    "the planet on screen is not the one the box names");
+                int tile = shell.Menu.World.Selected;
 
+                Assert.That(shell.Menu.NextFromWorld(), Is.True, "the planet's suggested site cannot be taken");
+                yield return Settle();
                 Assert.That(shell.Menu.Start(), Is.True);
                 yield return Settle();
 
                 Assert.That(boot.World, Is.Not.Null, "Start built no world");
-                Assert.That(boot.World!.Seed, Is.EqualTo(4242u),
-                    "the colony was built from a seed the player never saw");
+                Assert.That(boot.Colony!.Recipe(1).WorldSeed, Is.EqualTo(4242u),
+                    "the colony was built on a planet the player never saw");
+                Assert.That(boot.World!.Seed, Is.EqualTo(SiteRules.BoardSeed(4242u, tile)),
+                    "the board was not built on the seed of the tile the player picked");
 
                 // And the colony is the three that were on the setup page — the same
                 // claim one level up, and the one no fast-tier test can make because it spans the
@@ -474,11 +487,12 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
-        /// A box that does not name a seed builds nothing, and says so by drawing Start inert.
+        /// A box that does not name a seed goes nowhere, and says so by drawing Next inert.
         ///
         /// <para>The director's half is a fast-tier test; this is the half a player can see, and
-        /// the two are asserted together on purpose — a Start that refused silently would look
-        /// exactly like a Start that was broken.</para>
+        /// the two are asserted together on purpose — a Next that refused silently would look
+        /// exactly like a Next that was broken. Since design 59 the seed box is on the World page,
+        /// so a bad seed is stopped there, before the setup page and its Start are ever reached.</para>
         /// </summary>
         [UnityTest]
         public IEnumerator ASeedThatIsNotANumberBuildsNothing()
@@ -498,22 +512,26 @@ namespace Odyssey.Tests.PlayMode
                 yield return Settle();
 
                 Assert.That(shell.Menu.Seed.Usable, Is.False);
+                Assert.That(shell.Menu.World!.CanGoNext, Is.False,
+                    "the planet of the last good seed can still be left from a box that names none");
+                Assert.That(shell.Menu.NextFromWorld(), Is.False,
+                    "Next left the planet from a box that does not name a seed");
                 Assert.That(shell.Menu.Start(), Is.False,
                     "a world was started from a box that does not name a seed");
                 Assert.That(boot.HasSession, Is.False,
                     "a world was built from a box that does not name a seed");
 
-                VisualElement? commit = doc.rootVisualElement.Q(className: "setup__commit");
-                Assert.That(commit, Is.Not.Null, "the setup page has no Start button");
-                Assert.That(commit!.ClassListContains("settings__row--off"), Is.True,
-                    "Start is still drawn pressable over a seed that cannot be used");
+                VisualElement? next = doc.rootVisualElement.Q(className: "world__next");
+                Assert.That(next, Is.Not.Null, "the World page has no Next button");
+                Assert.That(next!.ClassListContains("settings__row--off"), Is.True,
+                    "Next is still drawn pressable over a seed that cannot be used");
 
                 // And back, so the disabling is a state rather than a one-way door.
                 box.value = "77";
                 yield return Settle();
 
-                Assert.That(commit.ClassListContains("settings__row--off"), Is.False,
-                    "Start stayed inert over a seed that is perfectly good");
+                Assert.That(next.ClassListContains("settings__row--off"), Is.False,
+                    "Next stayed inert over a seed that is perfectly good");
             }
             finally
             {
@@ -749,6 +767,7 @@ namespace Odyssey.Tests.PlayMode
                 // there being nothing in it to change size for.
                 shell.Menu.Back();
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 59 §9)
                 yield return Settle();
                 Assert.That(shell.Menu.Screen, Is.EqualTo(MenuScreen.NewGame));
 
@@ -758,7 +777,9 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(Shown(page), Is.True, "the setup page is not on screen");
 
                 // Back, and the box is exactly where it was — which is the half that would strand
-                // a player if the page did not put the panel back.
+                // a player if the page did not put the panel back. Twice since design 59: the setup
+                // page backs out to the planet, and the planet to the root.
+                shell.Menu.Back();
                 shell.Menu.Back();
                 yield return Settle();
 
@@ -872,6 +893,7 @@ namespace Odyssey.Tests.PlayMode
                 var doc = boot.GetComponent<UIDocument>();
 
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 59 §9)
                 yield return Settle();
                 Assert.That(shell.Menu.Screen, Is.EqualTo(MenuScreen.NewGame));
 
@@ -937,6 +959,7 @@ namespace Odyssey.Tests.PlayMode
                 var doc = boot.GetComponent<UIDocument>();
 
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 59 §9)
                 yield return Settle();
 
                 var cards = doc.rootVisualElement.Query(className: "colonist").ToList();

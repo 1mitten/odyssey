@@ -2234,6 +2234,9 @@ namespace Odyssey.Presentation.Rendering
                 // colonist's face, and a hog past the figure cap wearing one would be worse than
                 // a hog not drawn. A baked animal pose is a recorded gap, not an oversight.
                 if (pawns[i].IsAnimal) continue;
+                // Nor a hostile drawn as itself (design 62 §8): a butcher with a colonist's face
+                // would be worse than a butcher not drawn. The same recorded gap.
+                if (ModuleIds.Hostile(pawns[i].Kind).Length > 0) continue;
 
                 // Glide between cells rather than snapping. The simulation is discrete and
                 // integer, which determinism requires; this is a presentation facade over it,
@@ -4354,6 +4357,31 @@ namespace Odyssey.Presentation.Rendering
         /// A small cube stood on its corner — a diamond — in the bracket's material: the drafted
         /// marker over a colonist's head (design 33 §2g). One submission.
         /// </summary>
+        /// <summary>
+        /// One module drawn whole at <paramref name="placement"/>, in its own materials, lit and
+        /// casting shadows: a thing in flight that is no cell's and no figure's — the butcher's
+        /// thrown rock (design 62 §7a), which is the stone item's own mesh. One submission per part.
+        /// </summary>
+        public void DrawModule(string moduleId, in Matrix4x4 placement)
+        {
+            int module = _model.Library.Resolve(moduleId, ModuleShape.Pillar);
+            if (module <= 0) return;
+            var parts = _model.Library[module].Parts;
+            for (int p = 0; p < parts.Length; p++)
+            {
+                ModulePart part = parts[p];
+                var rp = new RenderParams(part.Material)
+                {
+                    layer = GameObjectLayer,
+                    shadowCastingMode = ShadowCastingMode.On,
+                    receiveShadows = true,
+                };
+                if (SubmitToGpu) Graphics.RenderMesh(rp, part.Mesh, part.Submesh, placement * part.Local);
+                DrawCalls++;
+                InstancesDrawn++;
+            }
+        }
+
         public void DrawMarker(Vector3 centre, float size, Color colour)
         {
             var rp = new RenderParams(SeeThroughMaterial(colour))
@@ -4534,6 +4562,7 @@ namespace Odyssey.Presentation.Rendering
             Skirt.Dispose();
             _materials.Dispose();
             DisposeSeeThrough();
+            DisposeCracks();
             Clearance.Dispose();
             _indirect?.Dispose();
             _highlightBatch?.Dispose();

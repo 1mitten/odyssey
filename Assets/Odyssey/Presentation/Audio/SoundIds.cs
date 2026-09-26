@@ -101,6 +101,29 @@ namespace Odyssey.Presentation.Audio
         /// </summary>
         public const string CombatShotFar = SoundPrefix + "combat.shot-far";
 
+        /// <summary>
+        /// A heavy weapon of the swinger's own through the air — the butcher's cleaver (design 62
+        /// §8d): the sword whoosh baked eight semitones down with its top rolled off, two takes
+        /// (<c>combat-whoosh-heavy.wav</c> and <c>_01</c>, <c>tools/audio/bake_butcher.sh</c>), its
+        /// loudest moment at the whoosh's own 40 ms so it is scheduled exactly as the whoosh.
+        /// </summary>
+        public const string CombatSwingHeavy = SoundPrefix + "combat.swing-heavy";
+
+        /// <summary>The prefix of a creature's voice: <c>odyssey.sound.voice.{voice}.{moment}</c> (design 62 §8d).</summary>
+        public const string VoicePrefix = SoundPrefix + "voice.";
+
+        /// <summary>
+        /// The sound a voice makes at a moment, or null for none — <c>SpeciesDef.voice</c> and a
+        /// <see cref="Odyssey.Hud.VoiceCue"/>. The butcher's four: <c>butcher-strike</c>,
+        /// <c>-hurt</c>, <c>-fling</c> and <c>-down</c> with their takes, baked by
+        /// <c>tools/audio/bake_butcher.sh</c>.
+        /// </summary>
+        public static string? Voice(string? voice, Odyssey.Hud.VoiceCue cue)
+        {
+            string suffix = Odyssey.Hud.CreatureVoice.Suffix(cue);
+            return string.IsNullOrEmpty(voice) || suffix.Length == 0 ? null : VoicePrefix + voice + "." + suffix;
+        }
+
         /// <summary>A blow meeting nothing — a miss or a dodge. Named, and in no catalogue yet.</summary>
         public const string CombatMiss = SoundPrefix + "combat.miss";
 
@@ -130,6 +153,7 @@ namespace Odyssey.Presentation.Audio
         public static string? ForCue(Odyssey.Hud.CombatCue cue) => cue switch
         {
             Odyssey.Hud.CombatCue.Whoosh => CombatSwing,
+            Odyssey.Hud.CombatCue.HeavyWhoosh => CombatSwingHeavy,
             Odyssey.Hud.CombatCue.Slice => CombatCritSlice,
             Odyssey.Hud.CombatCue.Thud => CombatHit,
             _ => null,
@@ -156,6 +180,20 @@ namespace Odyssey.Presentation.Audio
         /// published frame, on the first frame a thing that was in the air is not.
         /// </summary>
         public const string DropLand = SoundPrefix + "drop.land";
+
+        /// <summary>
+        /// Something built of wood coming down (design 58 §9): broken in a fight or taken apart by
+        /// a colonist — a wall, a door, a bed, a shelf, a floor. From the cell, on the frame it
+        /// goes. Raised by <see cref="DemolitionSounds"/>.
+        /// </summary>
+        public const string BreakWood = SoundPrefix + "break.wood";
+
+        /// <summary>
+        /// A mined face collapsing (design 58 §9): the last stroke of the pick, from the cell, on
+        /// the frame the rock goes — the frame the break's pieces start to shudder. Raised by
+        /// <see cref="DemolitionSounds"/>.
+        /// </summary>
+        public const string BreakRock = SoundPrefix + "break.rock";
 
         /// <summary>
         /// A jump over a stream falling short: a body landing in the water (design 46 §7).

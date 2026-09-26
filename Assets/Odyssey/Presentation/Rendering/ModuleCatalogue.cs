@@ -782,6 +782,37 @@ namespace Odyssey.Presentation.Rendering
                 ? AnimalBase + "." + AnimalNames[kind] : string.Empty;
 
         /// <summary>
+        /// The hostile people drawn as themselves rather than as a rolled person in the gang's
+        /// outfit (design 62 §8): one row per such <b>kind</b>, parallel to <c>PawnKindIndex</c> as
+        /// <see cref="AnimalNames"/> is. Kind 6 is the butcher. Out of the colonist family, so no
+        /// lottery, no swatches and no look index of anybody else's moves.
+        /// </summary>
+        public const string HostileBase = Prefix + "pawn.hostile";
+
+        /// <remarks>Kinds 3 and 4, the bandit and the gunman, are dressed people and have no row.
+        /// Kinds 6 to 9 are the butcher's four levels (design 62 §4b), one colourway each.</remarks>
+        public static readonly string[] HostileNames =
+        {
+            string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty,
+            "butcher", "butcher.scarred", "butcher.blood", "butcher.king",
+        };
+
+        /// <summary>The row a hostile kind is drawn as, or empty for every kind that has none.</summary>
+        public static string Hostile(int kind) =>
+            kind > 0 && kind < HostileNames.Length && HostileNames[kind].Length > 0
+                ? HostileBase + "." + HostileNames[kind] : string.Empty;
+
+        /// <summary>
+        /// What a hostile kind's own row holds in its right hand when the simulation gives it no
+        /// item — its natural attack (the butcher's cleaver, design 62 §5) — or empty.
+        /// </summary>
+        public static string HostileWeapon(int kind)
+        {
+            string row = Hostile(kind);
+            return row.Length > 0 ? row + ".weapon" : string.Empty;
+        }
+
+        /// <summary>
         /// The fight's clip rows (design 33 §1, <c>docs/research/synty-sword-combat.md</c>), one
         /// row per <b>role</b>, never per clip name: a row's clips are the Sword Combat pack's
         /// Polygon, in-place, non-returning clips for that role — its directional or combo variants

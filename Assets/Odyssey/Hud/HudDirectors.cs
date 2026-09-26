@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
@@ -38,6 +39,15 @@ namespace Odyssey.Hud
 
         /// <summary>Whether the Almanac reference browser is open, and what entry it shows.</summary>
         public AlmanacDirector Almanac { get; } = new AlmanacDirector();
+
+        /// <summary>
+        /// Riding along with one colonist (design 57). Session state, likewise: a ride belongs to
+        /// the colony it was begun in and a new session starts with none.
+        /// </summary>
+        public RideDirector Ride { get; } = new RideDirector();
+
+        /// <summary>The layer the slice was on when the ride began, to go back to when it ends.</summary>
+        int _rideReturnLayer;
 
         /// <summary>
         /// The settings panel's levers — and <b>handed in rather than made here since U38</b>,
@@ -91,6 +101,99 @@ namespace Odyssey.Hud
             Hotkeys = hotkeys ?? throw new System.ArgumentNullException(nameof(hotkeys));
             Slice.Bind(layerCount, startLayer);
             Slice.LayerChanged += _ => Selection.OnLayerChanged();
+
+            // The keys are held while a ride runs (design 57 §5), and the preferences they live in
+            // outlive a session: a colony left mid-ride must not hand the next one a keyboard that
+            // answers nothing.
+            Hotkeys.HeldByRide = false;
+        }
+
+        /// <summary>
+        /// Ride along with a colonist (design 57): the First Person button on her card. The ride
+        /// takes the view, so what stood in it is put aside — the selection (her own outline and
+        /// brackets would be drawn over the shot, and a selected colonist's sight line fades walls
+        /// beside her), any armed tool, and the game's keys other than time and Escape — and the
+        /// slice goes to her layer. False, and nothing changed, when she cannot be ridden with.
+        /// </summary>
+        public bool BeginRide(PawnId id, WorldSnapshot snapshot)
+        {
+            if (Ride.Riding) return false;
+            int layer = Slice.ActiveLayer;
+            if (!Ride.Begin(id, snapshot)) return false;
+
+            _rideReturnLayer = layer;
+            Designate.Tool = DesignateTool.None;
+            Camera.Cancel();
+            Selection.Clear();
+            Hotkeys.HeldByRide = true;
+            if (snapshot.TryGetPawn(id, out PawnView view)) Slice.SetLayer(view.Cell.Y);
+            return true;
+        }
+
+        /// <summary>
+        /// Who First Person would ride with for this selection (design 61 §3): <b>the one colonist,
+        /// when exactly one is selected</b>, and nobody otherwise. With two there is no telling whose
+        /// shoulder the player meant; animals in the selection are passed over, as the draft passes
+        /// them over. The header greys the toggle whenever this is false, so the tile and the key
+        /// cannot disagree about when it works.
+        /// </summary>
+        public static bool TryFirstPersonSubject(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot, out PawnId who)
+        {
+            who = PawnId.None;
+            for (int i = 0; i < selection.Count; i++)
+            {
+                if (!OrderModel.IsColonist(snapshot, selection[i])) continue;
+                if (who != PawnId.None) { who = PawnId.None; return false; }
+                who = selection[i];
+            }
+            return who != PawnId.None;
+        }
+
+        /// <summary>
+        /// The First Person toggle and its key (design 61 §3): leave the ride if one is running,
+        /// otherwise ride with the selection's one colonist. True when a ride began or ended.
+        /// </summary>
+        public bool ToggleFirstPerson(WorldSnapshot snapshot)
+        {
+            if (Ride.Riding)
+            {
+                EndRide(snapshot);
+                return true;
+            }
+            return TryFirstPersonSubject(Selection.Pawns, snapshot, out PawnId who) && BeginRide(who, snapshot);
+        }
+
+        /// <summary>
+        /// Once a frame while riding, in real seconds: the slice follows her up a ladder and down a
+        /// shaft, and the ride ends by itself once she has been gone from the frame for
+        /// <see cref="RideDirector.LostHoldSeconds"/>.
+        /// </summary>
+        public void AdvanceRide(WorldSnapshot snapshot, float realSeconds)
+        {
+            if (!Ride.Riding) return;
+            Ride.Advance(snapshot, realSeconds);
+            if (Ride.Expired)
+            {
+                EndRide(snapshot);
+                return;
+            }
+            if (snapshot.TryGetPawn(Ride.Pawn, out PawnView view) && view.Cell.Y != Slice.ActiveLayer)
+                Slice.SetLayer(view.Cell.Y);
+        }
+
+        /// <summary>
+        /// Leave the ride (Escape, or her going): the keys come back, the slice returns to the
+        /// layer it was on, and she is the selection — so the pane the player pressed First Person
+        /// on is the pane they come back to. Nothing if no ride is running.
+        /// </summary>
+        public void EndRide(WorldSnapshot snapshot)
+        {
+            if (!Ride.Riding) return;
+            PawnId id = Ride.Pawn;
+            Ride.End();
+            Hotkeys.HeldByRide = false;
+            Slice.SetLayer(_rideReturnLayer);
+            if (snapshot.TryGetPawn(id, out _)) Selection.Choose(id);
         }
 
         /// <summary>

@@ -13959,6 +13959,609 @@ engine half is uncompiled and owes both Unity tiers, a player build and the hitc
 picture before it merges (design 56 §11).
 
 
+## 2026-09-26 — World generation: a planet the board is chosen from
+
+The owner asked for RimWorld-style world generation, *"simple for now with seams"*. Documents only
+today: interview, research `a-13`, design 59, the Claude Design brief and the plan. No code.
+
+**The exploration made the seam smaller than the request sounded.** There was no world layer at all,
+but nearly every knob a world tile would turn already existed as a field on `NaturalMapGenDef`:
+relief, trees, water, rock, wildlife. The two things hard-wired globally were the climate
+(`WorldContent.Climate`, whose own comment said "one Def per map type") and the weather's season
+weights. So the seam is a site record handed to `ColonyWorld.DefFor` and `ColonyComposition`, and
+**the rule that makes it safe is that a request with no site builds exactly today's board**. The
+goldens, every test world and every save before format 11 take that path, and design 59 §11 asserts
+it field for field rather than trusting it.
+
+**Three decisions worth keeping.**
+- **The save stores the tile's fields, not just the world seed and a tile index.** Rebuilding the
+  tile from the seed would let a retune of the planet generator change a saved colony's climate
+  without anyone touching its save. That is the same reason `SaveRecipe` carries barren and wooded.
+- **One reference latitude (53°, 9 °C mean, 1,000 mm) reproduces `Climate_Temperate` exactly.** So
+  the curve is scaled round what has already been played and tuned, not replaced.
+- **The seasons are the planet's, with no hemisphere flip.** Wash, Glare and Rime are named, keyed
+  in the weather table and promised by the almanac. A southern Glare that froze would contradict
+  all three.
+
+**Two things the arithmetic corrected in the first draft.**
+- The settleable meadow band (3–17 °C) sits between about 39° and 61°. Its seasonality runs from
+  ×0.78 to ×1.13, not up to ×1.5, so **between two meadows the mean moves more than the swing
+  does**.
+- The biome names were first drafted as the reference's own labels and were replaced with ours
+  (Pinewood, Frost barrens, Dust flats, Wildwood).
+
+**The research could not read a single page.** The proxy refused every fetch over two capped passes,
+so `a-13` is built from search extracts, with recalled items marked. Nothing in design 59 depends on
+an unconfirmed number: every constant is ours, to be tuned and measured.
+
+**Nor could the fast tier run.** The container's network policy refuses the .NET installer
+(`dot.net`), so the one generated C# change (the registry gaining its `ui.biome`, `ui.hills` and
+`ui.world` rows) waits on CI.
+
+## 2026-09-26 — World generation built: a planet, a site, and the board it makes
+
+The owner approved design 59 and pasted Claude Design's specification for the World screen. It
+disagreed with the design three times, and the owner ruled:
+- **the specification's six biomes**
+- **our hill names**, because its five were the reference's own labels
+- **region names and zoom built now**
+
+The whole line went in the same day, as six commits on `claude/sharp-euler-a6xtci`.
+
+**The seam held its one rule.** A request with no site builds exactly today's board, climate and
+weather:
+- asserted field for field against `PlayedMap`
+- a Rolling site equal to it too
+- the Long tier's goldens untouched
+
+A site shapes the board through `SiteBoard`. Relief is set; outcrops and caverns are *scaled from
+the preset*, so a bare board stays bare. The site's climate comes through `SiteClimate`, a new Def
+that never writes through the shared one. The reference site (53°, 9 °C, 1,000 mm) is
+`Climate_Temperate` to the centi-degree. The rules both the colony and the World screen need live
+once, in `Sim.Contracts.SiteRules`, because the interface cannot call the simulation:
+- seasonality by latitude
+- the board seed of a tile
+- a mountainous board's 24 layers
+
+**The planet is 2.1 ms.** It is integer passes on separate streams, with the sea and the hills cut
+by rank so every world has the same shares. A wrapped lattice gives the east–west seam in integers;
+a test holds plain noise's seam at the join against it. Every world has a settleable tile: held over
+1,000 seeds, and 300 in the default tier.
+
+**The painter was fifteen times too slow and is now inside its budget.**
+- The first version took 447 ms at 2× in Debug, picking each pixel by cube rounding into a float
+  buffer.
+- A scanline nearest-centre fill cut it to 215.
+- One pass with the finish written as an affine map per pixel, stamped hill marks and a reused
+  buffer cut it to 115 in Debug and 58 in Release.
+- Tabulating the sheen and vignette cut it to 87 in Debug and **31 in Release**.
+
+The player build compiles Release. The Unity figure is owed.
+
+**Three faults found on the way, none shipped:**
+- **The header change broke two ranged-combat tests.** They relabelled saves by poking the version
+  field. `SaveFixtures.AsFormat` now does it properly.
+- **The type-setting rule rejected the specification's label styling.** The spec wanted tracking and
+  a bold weight in the stylesheet, which `TheSheetSetsNoTypeAtAll` forbids. The labels take their
+  roles instead, recorded as departures in §9a.
+- **A name clash would have broken the Unity build.** A method named `DashedOutline` in `HudShell`
+  would have shadowed the type of that name and broken `HudShell.Settings.cs`'s `new DashedOutline()`.
+  Only a compile would have caught it, and there is no Unity in the container, so it was found by
+  grepping for every new member name across the partials.
+
+**The mountains cost memory, not frames.** Twenty-four layers is +48 %: 110 MiB for a Huge
+mountainous board against 74.5. The first reading said the deeper board was smaller, which was the
+first arm paying for the process (lessons).
+
+**Owed:**
+- Both Unity tiers and a player build. The World page has never been compiled.
+- The owner's first look (playtest queue).
+- A ruling on whether 110 MiB is too much for a Huge mountainous board.
+
+## 2026-09-26 — Riding along with a colonist
+
+The owner asked for a first-person mode opened from the colonist card, *"locked until esc"*, to see
+a colonist *"fighting with a melee, walking"* up close. The grounding changed the request's shape
+before any code: **there is no first-person arms rig in any pack we own**, and the face is part of
+the one skinned body whose ink hull goes solid black from inside. So from her eyes you see the far
+end of her own swing at most, and only a camera outside her shows her fighting. The owner took all
+four recommendations: behind the shoulder with the wheel in to the eyes, watch only, a minimal
+strip, time untouched. "Implement" came without a name, so it is **Ride along** until they say
+otherwise (design 57 §1).
+
+Three decisions are worth keeping:
+
+- **The camera is stood first in `LateUpdate`**, from her figure's last drawn feet. Placed in the
+  rig's `Update`, it would chase last frame's figure. Placed after the figures, it would be culled
+  against the frustum taken before them.
+- **The colony view is frozen, not moved.** A ride writes the transform alone, so a save mid-ride
+  records the colony view, and leaving is one instant re-apply.
+- **Doors are not solid to the spring arm**, although the picker counts them. Otherwise every
+  threshold would collapse the camera into her head.
+
+Her head is shrunk by its bone whenever the camera is within 0.6 m of her eyes. That happens at the
+eye stop, and wherever walls have squeezed the camera against her.
+
+**The card's dead Prioritise button went to make room.** It promised the work grid, which has
+shipped. A fourth labelled button would have run her unwrapping name under the buttons.
+
+**Built in a container with no .NET SDK and no Unity.** The Microsoft download host is refused by
+the network policy. So neither the fast tier nor the Presentation compile has run here, and the
+first compile of this branch is its CI run. The frame at a level view is unmeasured and owed
+(design 57 §7).
+
+### 2026-09-26 — the mode is called First Person
+
+The owner, before the first play: *"call this Mode 'First Person' Not go along with the ride"*. The
+label of `ui.command.ride` is **First Person**, in their casing, although the registry is otherwise
+sentence case. Design 57 had argued against the name because the default view is over her shoulder
+rather than from her eyes; the owner has decided, and the wheel's eye stop is still one scroll away.
+Only the label moved: the key, `RideDirector`, `RideCamera` and the design's file name keep *ride*,
+because a key is stable and renaming the internals is churn with no player-facing effect.
+
+### 2026-09-26 — merging the wake: one flag with two owners, and design 57
+
+`main` gained the wake into a world (#240, #241) while First Person waited, and both had reached for
+`HotkeyDirector.Suspended` to hold the game's keys. Git saw only two doc comments disagreeing. The
+fault under them was real: the wake sets the flag at the press of Start and holds it while the
+world is built, and building the world constructs a new `HudDirectors`, whose constructor cleared
+the flag so a colony left mid-ride would not hand the next one a dead keyboard. Merged as one flag,
+**every wake would have handed the player live keys under its curtain half way through**. The ride
+now holds its own, `HotkeyDirector.HeldByRide`, which `GameKeysLive` reads beside `Suspended`, and
+`RideTests.ANewSessionDoesNotReleaseTheWakesHold` is the assertion. It is the register's first
+pattern again: one rule with two owners, found only because the two owners met in a merge.
+
+The wake also reached `main` as design 56 first, so the ride is **design 57**
+(`docs/design/57-ride-along.md`), by the precedent cover set when the birds took 50. Only the
+lines this branch wrote were renumbered; the wake's references to 56 are its own.
+
+## 2026-09-26 — Cracks: a struck wall and a face being mined, drawn broken
+
+The owner asked for damage levels on walls, "a general effect for cracks … after there is so many
+hps left", then for rock being mined too. Everything the look needed was already published — a
+struck building's hit points since design 33 §13, a mining order's progress since the cut moved on
+to the cell — and both design 33 §13k and 53 §7d had listed "cracks, or a darker tint" as owed. Four
+answers settled it: three stages at 25/50/75 % gone, cracks only (no destroyed-wall mesh yet), walls
+and rock first, and the cracks replace the pale cut slab. Design 58.
+
+**The option chosen was the one that is general.** Decals were not switched on in the pipeline, want
+a scene object each (which the project avoids), and bleed on to whoever stands beside the wall; a
+destroyed-model swap is walls only and licensed art. Drawing the cell's own meshes again in a multiply
+shader cracks whatever `ChunkMesher.MeshCell` emits — core and panels, the walls-down stump, a rock's
+boulder — by the selection highlight's route, so it cannot drift from the chunk. It batches by mesh
+and stage, so a run of walls costs one wall's calls (P10 was named before a line was written).
+
+**The one simulation change came out of the second answer.** A cancelled mining order zeroed its
+cell's ledger, so a half-cut face healed, which nobody could see until it was drawn as cracks. The
+owner: "Keep its state." The work now moves to a sparse `PartMinedRock` on the cancel and comes back
+with the next order, keyed by the terrain it was cut from so a changed cell cannot inherit a head
+start. Hashed only while non-empty and saved as an appended section: no golden moved, and the fast
+tier passed unchanged on the first run. The control was run — with the keep disabled, three of the
+five tests fail.
+
+**Built without an editor.** The Presentation half — the pass, `Odyssey/Crack`, the wiring and
+`CrackPassTests` — is uncompiled until the next Unity run, which is the first thing owed.
+
+## 2026-09-26 — Cracks, the first look: burst from a point, six levels for rock, and the break
+
+The owner played design 58 the same day and moved three things (§1a). **The heavy stages read as
+shapes.** The pattern was the borders of a Voronoi tiling, and a tiling closes every line into a
+cell, so a face covered in it looks like paving however it is warped. What a blow leaves is a few
+long cracks running out from one place, so the pattern now bursts from an impact point hashed per
+cell: tapering rays with their own length and wander, branches forking off them that web the face
+only late, a crushed patch and grime at the end. One severity drives it all, so the ladder could grow
+without a tuning table. **Rock got six levels** from a tenth of the cut; a wall's three stages became
+every other rung of the same ladder, so a wall and a face at one level look equally broken.
+
+**The break.** A cracked cell that comes down now shudders, halves, quarters, falls and sinks — the
+felled tree's topple is the precedent. The crack pass already held each cracked cell's own meshes, so
+a cell that stops being listed hands its batch to a watch rather than dropping it. **The first rule
+for "it came down" was wrong on paper before it ran**: fewer drawn parts than before. A wall built
+beside a cracked one hides a panel, so the cracked wall would have broken for gaining a neighbour.
+The watch asks the mirror instead — rock no longer solid, the building gone — and that is the test
+that pins it. The pieces are the cell's meshes clipped to quarters in a shader of our own, because the
+art's shaders cannot clip and the pack's meshes are not all readable for a CPU cut; the cost is a
+shading of our own for 1.6 s, which the shudder is there to hide.
+
+**Found on the way:** the first build listed `Odyssey/Crack` in `ShaderInclusion.Required` without
+the instancing keep-alive material that `EveryKeptShaderAlsoHasAnInstancingKeepAliveMaterial`
+requires of every entry, so that test would have failed. Both crack shaders have one now. No tier
+was run on this round, at the owner's word; the Hud half builds clean with `dotnet build`.
+
+## 2026-09-26 — Cracks: the sound of it coming down
+
+The owner supplied two Pixabay recordings — a wood smash and a boulder impact — for wood broken or
+taken apart and for a mined face collapsing, "processed as necessary and blended into the
+environment". Design 58 §9. Both masters measured brick-walled over full scale (+2.5 and +3.3 dBFS
+in the float decode, the boulder at full-scale RMS for a third of a second), so the bake is the
+gunshot's: −12 dB in float first, band-limited, the synthesised outdoor space and slapback, three
+takes at three speeds with their own tails, levelled on loudness into a limiter. The level was set
+against what leads up to it, measured rather than guessed: the pick is −24 LUFS, the melee thud −18.5,
+so a collapse at −19 is the payoff of the strokes without shouting over a fight.
+
+**When to play it was the design question.** The simulation says nothing when a wall is taken apart
+or a face mined out. The break's watch (§7) only sees cracked cells, and a deconstruct never cracks,
+so the sounds have their own watch over every cell with work on it — mining orders, deconstruct
+orders, struck buildings — which writes down what stood there on first sight and listens for it to
+go. Written down on first sight, because the snapshot's views can run a publish ahead of the mirror:
+the same lesson the break taught an hour earlier. Unity-free behind a five-method interface the render
+mirror already satisfied word for word, so the fast tier tests it.
+
+**Later the same day: the one-blow gap, closed.** The owner confirmed both recordings are Pixabay and
+asked for the gap to be fixed: a wooden building broken from whole in a single blow was never struck,
+so never tracked, so silent. The combat log already reports `Demolished` with the anchor cell — but
+the material is the problem, not the moment: by the time the event is published the building has
+left the mirror. So the mirror now notes every non-tree building leaving it with its stuff, the way it
+already noted felled trees for the topple, and the watch pairs the event with the note in either
+order. A cell heard is held for a second so a struck-then-broken wall, which both paths see, is heard
+once. Nine watch tests, run on their own (17 ms); no tier.
+
+**And renumbered to design 58 on the merge.** PR #242 (the ride along) reached `main` while this was
+in review and took design 57, and its code cites "design 57 §…" throughout — so two designs sharing
+the number would have made every such reference ambiguous. The cracks are `58-cracks.md` now; the
+rewrite touched only lines this branch added (49, found from the diff against `main`, plus one
+split across a comment break), and no ride-along file. Commit messages keep the old number.
+
+## 2026-09-26 — A second Windows machine, from nothing (`D:\dev\odyssey`)
+
+A clone with no editor, no Python and no packs, on an RTX 2080 with C: 97% full. Python 3.13 went
+in per `local-dev.md` §10; the fast tier and all three content gates were green before Unity
+existed. **The editor took three attempts**: Hub's headless install stopped at a UAC prompt without
+a word in its log, a hand-run `/S` install exited 2 twice (the prompt declined), and the owner's own
+run failed extracting into `%TEMP%` on a full C:. With room made it installed to
+`D:\Unity\Hub\Editor` (`UNITY_HUB_EDITORS` points `unity.sh` there).
+
+**The packs were unpacked rather than imported** (`tools/synty/unpack.py`, new), because two of the
+ten ship PolygonGeneric under the same GUIDs and Unity's importer cannot leave a folder out. The five
+PolygonGeneric copies were compared file by file before choosing: 1,267 of 1,268 identical, the odd
+one newer in Sci-Fi City 1.3.4 (the old machine had 1.3.3), so that is the one installed. Before any
+editor opened, every GUID the committed assets reference into `Assets/Synty` resolved, the whole of
+`ModuleCatalogue.asset` included.
+
+**The first open changed a committed file.** `UpgradeBuiltInMaterials` ran URP's project-wide
+upgrader, which rewrote `Resources/OdysseyKeepAlive/Standard.mat` — the material that keeps the
+built-in Standard shader in a player build — to URP Lit. Restored, and the upgrade now walks
+`Assets/Synty` only (566 materials; a re-run leaves the tree clean). `docs/lessons.md`.
+
+**EditMode on `main`: 4,363 total, 4,324 passed, 1 failed** — `WeaponSheathGapTests`, the bat on
+`Character_MilitaryMale_01` at 3.2 cm against 0.8–3.0, which the 2026-09-25 entry above found on a
+clean `main` with the same number. Identical to the tenth of a centimetre on a different machine
+with separately unpacked packs, which is the best evidence available that the art matches. It
+still needs its own fix.
+
+**Then the machine became a second Unity runner** (`UPSTAIRS`, owner: *"fix it up with the unity
+label"*). Two things stood in the way. `unity.sh` found editors only under `C:\Program Files` or an
+environment variable a runner started before `setx` never sees, so it now also reads Hub's own
+install location. And `HudStressTests` asserted one budget, laptop ÷ 3, written for a Ryzen 7
+9800X3D: here the dense HUD read 1.285 ms against 1.167. The ruler for "how much slower is this
+box" is the per-label figure, the only quantity `docs/lessons.md` (2026-09-23) found stable —
+17.0 us quiet there, 30.9 here — so the headroom is now a table of known CPUs (3 for the 9800X3D,
+unchanged; 3 × 17.0 / 30.9 ≈ 1.65 here, a 2.12 ms budget), and an unknown machine keeps the strict
+3. The label goes on after the fix is merged, or every PR branched from the old `main` could fail
+on whichever runner picked it up.
+
+## 2026-09-26 — World generation reviewed and merged with `main`: a seam on the date line, dead poles, and a test that typed into the wrong page
+
+Reviewed on `claude/busy-meitner-zkrhtu` (branched from `claude/sharp-euler-a6xtci`), with `main`
+merged in first: 38 commits, the conflicts all append-only. **`main` had taken design 57 (First
+Person) and 58 (cracks) meanwhile, so world generation is design 59**. As with the ride when the wake
+took 56, only the lines this branch wrote were renumbered, 128 of them. The save format is still
+11, because `main` is at 10.
+
+Three reviews ran in parallel: the Sim seam, the engine-free models, and the Presentation code acting
+as the compiler, since no tier here compiles it. **The seam held.** A probe built Flat to
+Mountainous on three world seeds, saved, loaded and ran on 1,500 ticks: the ground layer was
+11/10/9/16 and the hash was identical on both copies. The Presentation reading found **no compile
+errors**. What it did find:
+
+- **The date line drew as a dark valley.** The vignette and the diagonal sheen were baked into the
+  one texture, and the page lays three copies side by side for the wrap. So every zoom past 1× showed
+  the texture's darkest edges meeting: 115 and 105 against 255 in the middle, on a white planet. The
+  finish is by row alone now (design 59 §9a); a column paints the same whichever copy it is in.
+- **The pole notches were painted and dead.** The painter clamps the nearest row to the first or
+  last, so the zig-zag above and below the pole hexes is painted as those tiles. `TileAt` said −1
+  there: 1 % of the map, along both edges. The pick clamps the same way now. A new test walks every
+  pixel at 1× and 2× and holds the painter's own copy of the hex arithmetic to the pick's.
+- **`StartScreenTests.TheWorldIsBuiltFromTheSeedInTheBox` would have failed every run.** It typed
+  4242 into the World page's seed box while the setup page was showing, then asserted the board was
+  built on 4242. With a site, the board is built on `BoardSeed(4242, tile)`. Its sibling typed
+  "twelve" into the same hidden box and checked Start on a page a bad seed can no longer reach. Both
+  now type on the World page, where a player types.
+- **A ten-megabyte texture per shell** was made `HideAndDontSave` and never destroyed. That is one
+  per PlayMode test that presses New game.
+- **The map keys fired while typing a seed.** The event's target is the field's inner text element,
+  not the `TextField`, so 0, − and Enter reached the map. The page now asks
+  `HotkeyDirector.Typing`, the one owner of "a field has the keyboard".
+- **Smaller fixes:**
+  - every hover rebuilt the site panel's twenty labels;
+  - the overlay could divide by a fit of 0 before the first layout;
+  - the texture is whole pixels but was stretched to the fractional map size;
+  - 2.25× read "2.2x", because `Math.Round` rounds a half to even;
+  - a `HudTheme` doc comment had come off `ZonesHue` onto the map inks;
+  - the hill ink had two owners;
+  - `WorldLayout`'s frame constants were read by nothing, though the class said a test held them.
+    `HudStyleSheetTests` holds twenty-four of them to the sheet now.
+- **The Sim side had one wrong number.** A Hilly board had Rolling's 3 caverns rather than §5's 4,
+  because ×1.333 of 3 truncates to 3. The order test asserted `>=`. The scale rounds now, and
+  `EachBandIsTheTablesNumbers` pins the table. `BoardSeed` could deal 0, which §8 promised it never
+  would.
+
+**Recorded, not changed, for the owner** (design 59 §7): `annualMeanC` is the season curve's
+anchor, not the year's mean. The base offsets average +3.8 °C, so a colony lives its year up to
++4.3 °C warmer than its tile's stated temperature, while the biome bands are cut on the stated one.
+Changing it breaks the reference site's equality with `Climate_Temperate`.
+
+**Still owed:**
+- both Unity tiers and a player build; nothing on this branch has been compiled by Unity;
+- the paint's Mono figure;
+- a seed box that repaints on every usable keystroke (31 ms Release);
+- whether the arrows step the selection or move focus into the seed box, which only a keyboard can
+  say.
+### 2026-09-26 — the inspect header: two toggles, and the response leaves it
+
+Claude Design's mockup 24c replaced the colonist header's four checkbox buttons with two large
+icon toggles, Draft and First Person, and a Close over an Info (design 61). Three things came out of
+fitting it to the pane that exists rather than the one drawn.
+
+**The tile is 40, not 44.** The mockup's header is 88 high round a 64 px portrait; ours is 60 round
+a 60 px one, and the brief says not to touch the rest of the pane. A 44 px tile, its gap and a label
+stand 65 high. The tile is derived from the header now, and a test holds the sum, so the next person
+to grow the portrait moves the tile with it rather than finding it overflowing.
+
+**R and V were both taken.** R is slice-up, which the owner kept on 2026-09-23, so Draft stays on T.
+V is the cutaway cycle, so First Person became a new action on **Z**, which also settles design
+57's owed key. `HotkeyDirectorTests` had been using Z as its spare unbound key, which is why five
+tests failed on the first run; they use J now.
+
+**The draft no longer rebuilds the header.** It was in the rebuild signature, because the old button
+changed face by being rebuilt. The face is the whole selection's now (on only when everyone is
+drafted, a red line when some are), and it is set in place. Taking `:drafted` out of the signature
+is what makes that safe: nothing else in the header depended on it.
+
+The response (Fight back, Defend, Flee) left the header. It is a setting rather than an action, and
+the Assign tab's column holds it for every colonist at once.
+
+The owner played it the same day: *"it's great - happy to get this resolved and get it ready for a
+merge"*. Nothing moved, so Z for First Person and the 40 px tile stand.
+
+## 2026-09-26 — the World screen's first look: four times the planet
+
+The owner's first look at the World screen asked for four things: the site name level with the foot of
+its swatch, temperatures in red, amber and green, a planet "at least 4x" and "more random", and a bigger
+"World". Then, mid-change: *"make sure it's disposed and garbage collected once off the screen"*.
+
+- **The planet is 128 x 64** (design 59 §4e). Same features at twice the resolution (`featureScale`),
+  finer coasts from five elevation octaves, a domain warp to break the value noise's lattice, and a sea
+  share that moves 35–55 % with the seed. Generation went 2 → 12 ms.
+- **The paint was the cost that mattered**: measured on the real size in one run, 332 ms at 2x against
+  203 at 1.5x (Debug), once per seed. 1.5x, mipmapped, because at the fit the texture is drawn at a third
+  of its size.
+- **The misalignment was the line box again**: a self-sized label is about twice its point size tall,
+  so caption plus name was 55 px centred on a 44 px swatch. Fixed boxes now (§4f).
+- **Nothing outlives the menu**: `ReleaseWorldMap` destroys the texture, drops the buffer, the names and
+  the planet and pauses the ease timer when a colony goes live. Before this the texture and its buffer
+  sat in memory for the whole game, and the ease timer fired every 16 ms under it.
+
+## 2026-09-26 — Clouds: the Meadow demo's rings, re-lit for a whole day
+
+The owner, looking at a clear sky: it *"at least looks bare"*; were there clouds in the packs,
+*"happy to use what synty has if effective … keep it performant."* A census of all eleven packs
+found flat cloud props in six, skydomes in four, and in the Meadow biome a proper answer: a toon
+`Clouds` shader graph and two cloud rings, the pair the Meadow demo scene hangs round itself. The
+owner chose the rings over the props, cover following the weather, a slow drift, and the birds'
+budget. `docs/design/63-clouds.md`.
+
+**Where the sky is seen decided the geometry.** The colony camera at its usual 48° sees none (its
+highest ray is 24° down), and at its lowest pitch the top edge only touches the horizon. The sky is
+First Person's (design 57): 60° of lens at eye height. So the rings are centred on the camera every
+frame at the world's height, and **nothing is submitted when the highest ray in the view is below
+the ring's lowest point** — normal play costs the clouds nothing at all, not even a depth pass.
+
+**Cover is height.** The shader is opaque and its "Cloud Strength" is a vertical wobble, not a
+density, so a clear sky squashes the rings to a low band and full cover stands them up to the demo's
+banks. Nothing in the shader changed; the licensed material is copied and never written.
+
+**Two of the pack's features were off by the second sheet, both measured from pixels.** Its
+scattering weights a lerp by the sun's direction *per channel*, so a high noon sun made the clouds
+lilac (202, 187, 202). Its fog lerps by 0.18 plus the distance fog, which in our haze is about 1 at
+a ring's range, so it overshot past the fog colour, inverted the shading and put the night clouds
+at pure blue (0, 0, 29). The haze is a constant blend in `CloudColours` now — exact for a ring at
+one range — and the night clouds sample at (113, 120, 140). The colours come from the graded
+`DaylightState`, so Overcast's grey reaches the clouds with no weather code of their own;
+`DaylightDirector` gained `State` and a `Version` so they are rewritten only when the light moved.
+
+**One thing unexplained**: the first frame the pack's shader drew in a fresh editor came out black
+on the shadowed faces and never again — not the colours, not the fog, not the scattering, each
+ruled out by a probe. The sheet throws a picture away first. Whether an editor session shows one
+black frame of cloud is unknown; a player compiles its shaders ahead.
+
+**The plan's keep-alive was not needed.** The material reaches a player as a reference from
+`MeadowLook.asset`, so its shader goes with it, and the rings are not instanced, so there is no
+`INSTANCING_ON` variant to keep.
+
+**Cost**: `FrameSection.Clouds` 0.002 ms with nothing seen, 0.010 ms drawing both rings at 4K. The
+frame difference is inside the noise at every arm, and at 4K the noise was ±4 ms — six editor
+windows and two batch runs from other worktrees were on the machine, and the colony view "gained"
+3 ms while submitting nothing. So the GPU was measured in a development player instead, where
+`PlayerBench` reads the GPU's own clock (a new `-odyssey-bench-clouds` arm): **5.92 ms with the
+clouds, 5.88 without, 5.91 again** at 3840 × 2160 with an eye at the horizon — about 0.03 ms.
+
+**The player build was refused first, for a reason that was `main`'s**: the cracks' two shaders
+(design 58) are found at runtime and had never been added to the always-included list, so no
+player could be built from `main` that day. `ShaderInclusion.Apply` added them; the EditMode tier
+had been green throughout, which is `lessons.md`'s point about two green tiers again.
+
+## 2026-09-26 — Clouds: gone by night, heavier in rain, slate in a storm
+
+The owner, after the first build: *"make the clouds faded or not there at night as we want to darken
+things up and also stormy/rainy need moodier clouds."* Asked for the balance, they chose: **gone at
+night**, fading **after** the golden hour (19:30–21:00) and back before dawn's (05:00–06:30); rain
+**heavier with its colour kept**, so the rule of 2026-09-25 stands; and a storm as **dark slate,
+darker than the sky**. `docs/design/63-clouds.md` §4c–§4d.
+
+An opaque shader cannot fade, so fading is two things at once: the rings sink to a quarter of their
+height and every colour converges on the sky behind them, taken where the gradient sky puts it at the
+band's middle. At nought nothing is submitted, so the night sky now costs nothing at all.
+
+**The storm needed a second go, found from logged colours rather than pictures.** The first darkened
+the undersides to slate, (95, 99, 109) against a sky of (143, 155, 171), and the deck still read
+light, because with the sun behind a player the faces in view are the lit tops, which were
+(186, 191, 197). The tops now go to 85% of the sky's own brightness too; the sheet logs every
+picture's colours beside the sky's so the next retune can be read instead of guessed.
+
+## 2026-09-26 — Clouds: the snap at the end of the night fade
+
+The owner: *"I see the clouds snap in from night to evening."* The fade kept a quarter of the rings'
+height to its last frame, and a band coloured like the sky is still a band against a gradient, so it
+vanished at 21:00 and reappeared at 05:00 in one frame each. The rings now sink to the eye line and
+flatten, which puts them edge-on — nothing left to see — and a jump in the hour is eased over four
+real seconds instead of taken. A pixel diff against clouds-off at 2% presence found nothing looking
+away from the sun and 39 pixels in 1.44 million looking up. Design 63 §4e.
+
+## 2026-09-26 — the Almanac rewritten against the code
+
+The owner asked for the in-game Almanac to be *"completely up-to-date with everything in game. The
+information is correct and links are good"*, and how far icons could go. It was worse than
+out of date: apart from Fauna it was the mock-up's text. Steel, concrete, pines, silver prices,
+smelting, three traits and a cold-snap event, none of them in the game; a wall at "240 ticks";
+live counts that were constants; related links to entries that did not exist; an info button
+that guessed from the title; a Find on map that closed the page on a skill and did nothing; and
+not one icon drawn.
+
+**Five fact passes, one per domain, every fact with a file and line**, came back before any page
+was written, and found as much outside the Almanac as in it: thirty false registry descriptions
+(bedrock "punitive to mine" cannot be mined; coal "burns hot" is burned by nothing; marsh is 71%
+pace, not three quarters; rain puts out no fires and storms throw no lightning), a meat meal no
+cook can make, a pace readout that leaves out the Moving capacity, and a quality-roll comment that
+contradicts its own code. Design 64 §5 lists them.
+
+**The catalogue is keyed by registry key now**, so a page's name and its index line are the
+registry's (`emit_labels.py` emits descriptions for the Almanac's namespaces), a link is a key,
+and the info button opens the page for the key the pane is drawing. 110 pages in 19 categories.
+
+**Three tests keep it that way.** One walks the HUD's own tables of what the game can show and
+fails on any key without a page; one resolves every link; one reads the Def XML and holds 93 quoted
+numbers to it. The registry guard caught about fifty of my own labels on the first run —
+"Structure", "Mine", "Power", "Harvest" — which were each a registry name typed a second time.
+
+**Icons**: 16 pages draw the owner's pixel art, and the rest a line icon of their own. Eight more
+are on sheet 06 and unexported; twenty-six more are on the six sheets never committed; fifty-seven
+have no source. Photographing the 3D ones in the game (a studio beside `PortraitStudio`, never
+committed, because a Synty render is still Synty) covers about forty-five of those (design 64 §4).
+
+**The same day, the owner on the icons**: *"these icons used need to match (and come from the same
+place if possible so we don't have to update several places) the panel info when you are clicking
+around"* — a bush had a picture on its page and a placeholder square when clicked. The Almanac's
+paths moved into one table, `IconGlyphs`, keyed by registry key, and `IconBadge` — every icon slot
+in the game — falls back to it where there is no pixel art. The Almanac now draws an `IconBadge`
+like everything else, so there is one place to change a picture (design 64 §2a).
+
+## 2026-09-26 — The Pig Butcher: a boss in one cell (design 62)
+
+The owner supplied POLYGON Fantasy Rivals and asked for its Pig Butcher as a raid enemy: large,
+possibly more than one tile, very hard to kill, a wide swing that usually knocks colonists back.
+
+**Why one cell.** RimWorld and Dwarf Fortress keep every creature to one cell. XCOM 2's true 2×2
+units have to smash walls, because doors cannot admit them. A footprint here would have been a
+clearance map, a second region graph and four-cell occupancy, for a bulk the traverse mode already
+gives. So the butcher is one cell, drawn 3.64 m tall, on `TraverseMode.Animal`: no ladder, and a
+closed door is a wall it breaks down by the bandit's own fallback. Reusing that mode costs no sixth
+district flood. The owner took this, a front arc of three, a two-cell fling with a slam, and debug
+spawn only (research `b-large-enemies-and-knockback`).
+
+**What was already there.** A one-tile critical knockback, stun and knock-down, the blow decided
+at the wind-up, and one owner of damage. The sweep and the fling are built on those, not beside
+them:
+- the facing rides in four spare bits of `PendingSwing`, which is already saved and hashed;
+- the flanks roll on their own streams;
+- `KnockBack`'s body became `Displace`, shared with the fling;
+- immunity is the only new saved field (`CombatSection` layout 6, hash bit 28).
+
+**Two departures from the plan, both smaller:**
+- **The cleaver is the species' natural attack, not an item.** An item would have been a new item
+  handle, a store filter row, an Inventory entry and an icon, for a weapon nobody else should swing.
+- **The critical knockback was not rewritten as the fling's distance-1 call.** The two rules differ
+  on purpose — a bystander is slept beside, or slammed; a two-layer drop is refused, or fallen — and
+  one method carrying both would be two rules with a flag. `KnockbackTests` pass unedited.
+
+**The package.** All 1,299 of its bundled PolygonGeneric entries were already here under identical
+GUIDs, so only `PolygonFantasyRivals/` was unpacked (research `e-16`). The character is Humanoid
+with Battle Royale's bones, so the person clips and the Sword Combat heavy swings drive it. It
+ships no clips of its own.
+
+**Measured, not guessed.** The giant is 1.822 m sole to crown against a colonist body's 1.791, but
+two and a half times as deep. Scale 2.0 stands it 3.64 m, 1.45 times a colonist.
+
+The catalogue rebuild reordered four item rows and wrote default fields, so the two new rows were
+spliced into the committed asset: 128 lines added, none removed (the 2026-09-18 lesson).
+
+**The balance, before any play:** one butcher beats four drafted colonists with bats on all three
+seeds, keeping 58–77 % of its pool, and nobody dies (design 62 §4a). That is "really difficult"
+taken literally, and it is the owner's to tune.
+
+**Found on the way.** A person holding no item always punched in presentation, whatever its species
+carried. `CombatPose.StyleFor` now takes the kind's natural style, which changes nothing for anybody
+before the butcher.
+
+## 2026-09-26 — The butcher's first play: the cleaver at the hip, a bandit's face, and four levels
+
+The owner played it: *"I expected him to be bigger and he wasn't using a weapon to strike people
+... it showed a bandit portrait when it's a pig butcher"*, then asked for levels *"based on their
+appearance ... a bit bigger each level"*.
+
+**Measured before fixed.** The owner's editor held the worktree, so a second checkout
+(`D:\code\odyssey-butcher-lab`, detached, junctioned, main's Library copied) ran the batch work.
+The photograph test logged the first swing frame by frame. The heavy clip was at full weight, and
+the cleaver pointed straight down and did not move. The mid-swing pictures showed the arm up and
+the cleaver hanging at the left hip. `FitWeaponBothWays` parks every new prop at the hip for the
+sheath to draw, and the natural weapon skips the sheath. That is a third fault of the same shape as
+the two the spawn test found before it: the weapon path assumes an item, and a natural weapon is
+not one.
+
+**The portrait** was the colonist lottery in the gang's outfit. `PortraitStudio.ForKind`
+photographs a kind's own row instead.
+
+**The levels** are the pack's four colourways of one atlas, kinds 6 to 9. They share an abstract
+species and an abstract body through the loader's inheritance. Each level needs its own body,
+because a vital region at nought downs whatever the pool, and shock is a count of points.
+
+The balance probe says the ladder is steep: the king ends a fight with 97 % of its pool.
+
+## 2026-09-26 — The butcher's voice, and its cleaver's whoosh
+
+Three pig recordings, each one call under a second, so the variations had to be made rather than
+cut. Resampling lower (pitch and pace together) gives a bigger animal, not a chipmunk slowed down.
+
+The first bake held the −3 dBFS ceiling by turning each take down, and it left the fling at −20
+LUFS, no louder than the hurt. The owner had asked for exactly the opposite. A pig's call peaks
+about 17 dB over its loudness, so the takes now go through a lookahead limiter, as the combat thud
+did, and the ladder is 7 dB from the grunt to the bellow.
+
+The cleaver was silent on the same grounds a bite is: a natural attack. Its whoosh is the sword's,
+eight semitones down and re-cut so its peak sits at the whoosh's own 40 ms, so the swing schedule
+needed no new number.
+
+Proved by listening through the code: the fight test now tallies `AudioDirector.Played` and hears
+all four moments.
+
+## 2026-09-26 — No safe perch: the butcher climbs, and throws
+
+The owner stood on a rock one layer up and shot two butchers dead while they wandered below. The
+cause was one line of content. The butcher moved as the hog does, and the hog may not hop on to
+stone, a rule the owner asked for when a pig climbed a mine face. The rule was right for a hog and
+wrong for a boss. The bandit never had the weakness, and a test now says so: a colonist on a stone
+outcrop, and the bandit, the butcher and the king each have to reach her.
+
+Asked how it should answer a perch, the owner chose climb and throw. The climb is TraverseMode.Bandit
+rather than a sixth mode, because a mode is a district flood on every nav rebuild of every colony
+and every district is in the state hash. That is a price every colony would pay to keep one boss
+off ladders, and the throw makes a ladder no refuge anyway.
+
+The throw is the pistol's machinery with a species field, a weapon id below every item, and a clock
+of its own. The item-only landing would have made a rock vanish on arrival. It is thrown only up at
+a perch, or at whoever it cannot reach, so on open ground it is still a thing that walks at you with
+a cleaver.
+
 ## 2026-09-26 — Trading, designed
 
 The owner asked for trading in the reference's mould, re-dressed for Odyssey: gold as the currency,

@@ -3046,7 +3046,7 @@ struck cell, the swing, the thud, and the order line to the cell. Owed:
 
 - a hit-point bar over a struck building (`BuildingHealthBar` is the answer);
 - the building's hit points on the tile pane;
-- a damaged look — cracks, or a darker tint — once it is struck;
+- a damaged look — cracks, or a darker tint — once it is struck (**built for walls, design 58**);
 - a crash and dust on `Demolished`, and a sound of its own for a blow on wood and on stone;
 - the lock-on ring (§7b) round a building target.
 
@@ -4114,6 +4114,10 @@ in progress (§2d), and the tree runs the same tick. **Not asked** of a colonist
 - stunned, knocked down, broken, drafted.
 
 ### 18e. The pane
+
+**Superseded 2026-09-26 by design 61:** the pane's header no longer carries the response. It is set
+on the Assign tab's Response column (design 43 §6), and `HudShell.CycleResponse` is gone.
+`ResponseModel.Cycle` stays as the selection-wide rule. What follows is the record.
 
 A second live button on a colonist's pane, after Draft. **It shows the response she has** — *Fight
 back*, *Defend*, *Flee*, each a registry name (`ui.command.fightback`, `ui.command.defend`,

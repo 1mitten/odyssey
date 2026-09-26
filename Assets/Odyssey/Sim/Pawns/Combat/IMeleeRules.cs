@@ -22,8 +22,9 @@ namespace Odyssey.Sim.Pawns
         public readonly bool Critical;
 
         /// <summary>
-        /// The critical rolled a knockback. Whether the target is in fact knocked back is decided at
-        /// the impact, against the ground behind it then. Only ever set on a critical.
+        /// The blow rolled a knockback. Whether the target is in fact knocked back is decided at
+        /// the impact, against the ground behind it then. Only ever set on a critical — except for a
+        /// sweeping species (design 62 §5), whose every landed blow rolls its own fling.
         /// </summary>
         public readonly bool Knockback;
 
@@ -92,5 +93,13 @@ namespace Odyssey.Sim.Pawns
         /// through one method and every hook fires from one place.
         /// </summary>
         SwingOutcome Resolve(Pawn attacker, Pawn defender, in Armament armament, PawnContext ctx, int tick);
+
+        /// <summary>
+        /// Decide a sweep's blow on one pawn in its flank (design 62 §5), <b>at the impact</b>: the
+        /// same rolls as <see cref="Resolve"/>, on the same curves, on streams of their own mixed
+        /// with <see cref="PawnPurpose.Sweep"/> and the victim's id. Not known at the wind-up,
+        /// because nobody stood there then.
+        /// </summary>
+        SwingOutcome ResolveFlank(Pawn attacker, Pawn defender, in Armament armament, PawnContext ctx, int tick);
     }
 }

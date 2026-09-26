@@ -312,6 +312,8 @@ ui.command.strip,-,,,taking everything a pawn carries,-,gap
 ui.command.fightback,-,,,raised fists,-,gap
 ui.command.defend,-,,,a shield over a figure,-,gap
 ui.command.flee,-,,,a figure running away,-,gap
+ui.command.ride,-,,,"an eye over a figure's shoulder",-,gap
+ui.command.leaveride,-,,,"Interface words, no icon wanted",-,gap
 ui.command.sethearth,-,,,a house over a campfire,-,gap
 ui.overlay.temperature,06,,,flame tile,med,shared
 ui.overlay.light,06,,,torch tile,med,mapped

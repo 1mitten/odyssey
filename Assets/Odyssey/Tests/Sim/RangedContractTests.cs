@@ -61,7 +61,8 @@ namespace Odyssey.Tests.Sim
         /// A colonist from a format-9 save — which carried six skills, so Shooting loads as nought — is
         /// dealt her Shooting once on load, and her other six are untouched; a format-10 save with a
         /// trained Shooting is not re-dealt. Formats 9 and 10 share every layout, so a save relabelled
-        /// 9 is exactly what a format-9 build wrote, less the seventh skill set to nought here.
+        /// 9 is exactly what a format-9 build wrote, less the seventh skill set to nought here — once
+        /// <see cref="SaveFixtures.AsFormat"/> has taken out format 11's site flag.
         /// </summary>
         [Test]
         public void AnOlderSaveIsDealtShootingOnceAndANewerOneIsLeftAlone()
@@ -73,8 +74,7 @@ namespace Odyssey.Tests.Sim
             int[] before = (int[])first.Skills.Clone();
 
             foreach (Pawn pawn in colony.Pawns.Pawns.All) pawn.Skills[SkillIndex.Shooting] = 0;
-            byte[] old = colony.Save();
-            BitConverter.GetBytes(9).CopyTo(old, 8);
+            byte[] old = SaveFixtures.AsFormat(colony.Save(), 9);
 
             var loaded = Board();
             loaded.Load(old);
@@ -98,8 +98,7 @@ namespace Odyssey.Tests.Sim
             var colony = Board();
             colony.World.Tick();
             Pawn hog = Spawn(colony, PawnKindIndex.MiddenHog, Near(colony, 5, 5));
-            byte[] old = colony.Save();
-            BitConverter.GetBytes(9).CopyTo(old, 8);
+            byte[] old = SaveFixtures.AsFormat(colony.Save(), 9);
             var loaded = Board();
             loaded.Load(old);
             Pawn back = loaded.Pawns.Pawns.Get(hog.Id)!;

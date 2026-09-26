@@ -246,6 +246,12 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>The butterflies, for the tests, the settings and the overlay. Null between sessions.</summary>
         public ButterflyDirector? Butterflies => _butterflies;
 
+        /// <summary>The Meadow cloud rings round the camera (design 63): drawn, never simulated.</summary>
+        CloudDirector? _clouds;
+
+        /// <summary>The clouds, for the tests and the player bench. Null between sessions.</summary>
+        public CloudDirector? Clouds => _clouds;
+
         /// <summary>The key light the day moves, kept so the renderer's shadow margin can sweep
         /// towards it (design 38 §18).</summary>
         Light? _keyLight;
@@ -417,6 +423,11 @@ namespace Odyssey.Presentation.Bootstrap
             /// overlay and the trace, which is what decides the presets' rungs (§9).
             /// </summary>
             Butterflies,
+            /// <summary>
+            /// The cloud rings (design 63): two calls when the camera can see the sky and none when
+            /// it cannot, which is the colony camera at every pitch but its lowest.
+            /// </summary>
+            Clouds,
             Count,
         }
 
@@ -836,8 +847,14 @@ namespace Odyssey.Presentation.Bootstrap
         /// <c>WorldSave.Load</c> refuses a world of a different size anyway.</para>
         /// </summary>
         public void BuildSession(uint? seedOverride, SaveHeader? from, uint[]? colonists,
-            string? name, GridSize? sizeOverride)
+            string? name, GridSize? sizeOverride, SiteTile? site = null, uint worldSeed = 0)
         {
+            // A planet site (design 59), from the World screen on a new game or from the header on
+            // a load. Null for every caller before world generation and every test, which then
+            // builds exactly the board it always did.
+            SiteTile? sessionSite = from != null ? from.Recipe.Site : site;
+            uint sessionWorldSeed = from != null ? from.Recipe.WorldSeed : worldSeed;
+
             if (HasSession)
                 throw new System.InvalidOperationException(
                     "a session is already built; call TeardownSession before building another");
@@ -873,6 +890,11 @@ namespace Odyssey.Presentation.Bootstrap
             GridSize size = from != null
                 ? from.Size
                 : sizeOverride ?? new GridSize(sizeX, sizeZ, layers);
+            // A mountainous site is 24 layers deep (design 59 §5) — decided here, with the rest of
+            // the size, so the chunk grid and the render model below are built at the same depth
+            // as the world. A load needs nothing: the header's size already carries it.
+            if (from == null && sessionSite is SiteTile hillSite)
+                size = new GridSize(size.SizeX, size.SizeZ, SiteRules.BoardLayers(size.SizeY, hillSite.Hills));
             var chunks = new ChunkGrid(size);
 
             // The render model is built before the world, because the mirror the world publishes
@@ -902,7 +924,11 @@ namespace Odyssey.Presentation.Bootstrap
             if (colonists != null && colonists.Length > 0 && from == null)
                 scenarioDef = scenarioDef.WithColonists(colonists.Length);
 
-            uint sessionSeed = from != null ? from.Seed : seedOverride ?? seed;
+            // With a site, the board's seed is the tile's of the world (design 59 §8): the same
+            // world and tile always give the same colony. A load's comes from its file either way.
+            uint sessionSeed = from != null ? from.Seed
+                : sessionSite is SiteTile seedSite ? SiteRules.BoardSeed(sessionWorldSeed, seedSite.TileIndex)
+                : seedOverride ?? seed;
             MapType sessionMap = from != null && from.Recipe.Map != MapType.Unknown
                 ? from.Recipe.Map
                 : mapType;
@@ -922,6 +948,8 @@ namespace Odyssey.Presentation.Bootstrap
                 Wooded = from != null ? from.Recipe.Wooded : woodedMap,
                 SurfaceRelief = from != null ? -1 : surfaceReliefOverride,
                 Map = sessionMap,
+                Site = sessionSite,
+                WorldSeed = sessionWorldSeed,
                 Chunks = chunks,
 
                 // A colony keeps the name it was saved under. Nothing names one yet — that is the
@@ -1051,6 +1079,8 @@ namespace Odyssey.Presentation.Bootstrap
                        "the fallback only; every colonist is dealt from their own roll seed"));
 
             Lap("colony ready");
+            // Per session, so no cell of the last world is watched against this one's mirror.
+            _demolitions = new DemolitionWatch(NaturalContent.StuffWood);
             _renderer = new ChunkRenderer(_model)
             {
                 CastShadows = castShadows,
@@ -1153,15 +1183,24 @@ namespace Odyssey.Presentation.Bootstrap
                 {
                     Capacity = Preferences.Value(GraphicsLadder.Butterflies),
                 };
+                // The clouds (design 63): the Meadow demo's two rings, where the packs are present.
+                _clouds = new CloudDirector(_model, MeadowLook.Loaded);
             }
 
             // Which family each weapon swings in (design 33 §5j), read once off the content, so a
             // figure can pick its clip row from the event's weapon without asking the simulation.
             if (_figures != null && _pawns != null)
+            {
                 _figures.WeaponStyles = CombatPose.StylesOf(_pawns.Content.Items);
+                // And what a pawn holding nothing swings in, by kind (design 62 §8): the butcher's
+                // cleaver is its species' own attack, not an item.
+                _figures.KindStyles = CombatPose.NaturalStylesOf(_pawns.Content);
+            }
 
             // Which blows cut (design 33 §7d), read once off the same content, for the blood seam.
             _combatFeedback.BloodSides = CombatFeedback.BloodSidesOf(_pawns?.Content);
+            // Whose voices a fight is heard in (design 62 §8d), off the same content.
+            (_combatFeedback.Voices, _combatFeedback.VoicePitch) = CombatFeedback.VoicesOf(_pawns?.Content);
 
             // Which weapons are guns (design 47 §4c), off the same content, so a bullet's miss throws
             // dust and its streak is told where it landed.
@@ -1548,13 +1587,21 @@ namespace Odyssey.Presentation.Bootstrap
             if (_renderer == null || _model == null || _world == null) return;
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;
             SliceSettings slice = cameraRig != null ? cameraRig.slice : new SliceSettings();
-            slice.wallsLowered = WallsLoweredNow();
-            slice.landscapeGround = WallsChosenDown();
+            // Riding along with a colonist (design 57 §4) draws the building as it is: walls up
+            // whatever the player chose for the colony view, which comes back when the ride ends.
+            bool riding = cameraRig != null && cameraRig.Riding;
+            slice.wallsLowered = !riding && WallsLoweredNow();
+            slice.landscapeGround = !riding && WallsChosenDown();
             slice.landscapeFloor = _model.LowestOutdoorLayer;
 
             _frameTimer.Restart();
             System.Array.Clear(_sectionMs, 0, _sectionMs.Length);
             _sectionTimer.Restart();
+
+            // A ride's camera is stood here, first, because everything below reads the camera: the
+            // viewer position, the frustum and the sight lines (design 57 §3).
+            PlaceRide(_world.Views.Current);
+
             // The rig sits on the camera, so its position is the viewer's.
             if (cameraRig != null)
             {
@@ -1563,7 +1610,7 @@ namespace Odyssey.Presentation.Bootstrap
                 // field of view decides as much as the distance does.
                 if (cameraRig.Camera != null) _renderer.ViewerFieldOfView = cameraRig.Camera.fieldOfView;
                 // The clearance window follows what the camera looks at, not where it stands.
-                _renderer.ClearanceFocus = cameraRig.Focus;
+                _renderer.ClearanceFocus = cameraRig.ViewFocus;
                 // And the figure director wants it for one decision of its own: which colonists
                 // keep a live figure when there are more of them than the cap allows.
                 if (_figures != null) _figures.ViewerPosition = cameraRig.transform.position;
@@ -1683,7 +1730,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (_audio != null)
                 _audio.Sync(Time.deltaTime, _world.Views.Current,
                     cameraRig != null ? cameraRig.transform.position : transform.position,
-                    cameraRig != null ? cameraRig.Focus : transform.position,
+                    cameraRig != null ? cameraRig.ViewFocus : transform.position,
                     activeLayer);
             MarkSection(FrameSection.Audio);
 
@@ -1708,6 +1755,9 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             DrawStandingOrders(_world.Views.Current);
+            DrawSweepTelegraphs(_world.Views.Current);
+            DrawCracks(_world.Views.Current);
+            HearDemolitions(_world.Views.Current);
             DrawZones(_world.Views.Current);
             DrawBuildingSites(_world.Views.Current);
             DrawToolPreview();
@@ -1751,8 +1801,8 @@ namespace Odyssey.Presentation.Bootstrap
             if (_weather != null && Directors != null)
                 _weather.Sync(_world.Views.Current.Weather, Directors.Debug.RainAsParticles, _daylight,
                     cameraRig != null ? cameraRig.GetComponent<Camera>() : null,
-                    cameraRig != null ? cameraRig.Focus : transform.position,
-                    cameraRig != null ? cameraRig.TargetDistance : 48f,
+                    cameraRig != null ? cameraRig.ViewFocus : transform.position,
+                    cameraRig != null ? cameraRig.ViewDistance : 48f,
                     slice.BelowSurface(activeLayer), _world.CurrentTick, ticksPerSecond,
                     _figures?.Running ?? true, Time.deltaTime, Directors.Debug.WetGlossOnly, _wind);
             _floaterView?.Draw(_combatFeedback.Floaters,
@@ -1765,7 +1815,7 @@ namespace Odyssey.Presentation.Bootstrap
             // the camera. Game seconds, so a paused world holds them in the air (design 50 §3).
             _birds?.Sync(Time.deltaTime * _world.GameSpeed, _world.CurrentTick, _world.Views.Current.Weather,
                 _world.Views.Current.Pawns,
-                cameraRig != null ? cameraRig.TargetDistance : 48f,
+                cameraRig != null ? cameraRig.ViewDistance : 48f,
                 slice.BelowSurface(activeLayer),
                 slice.HighestVisibleLayer(activeLayer, _world.Views.Current.Size.SizeY));
             MarkSection(FrameSection.Birds);
@@ -1779,12 +1829,23 @@ namespace Odyssey.Presentation.Bootstrap
                 _butterflies.Sync(_world.Views.Current.Running ? Time.deltaTime : 0f, _world.CurrentTick, hour,
                     _weather?.Cloud ?? 0f, _weather?.Rain ?? _world.Views.Current.Weather.RainPerMille / 1000f,
                     _crowd,
-                    cameraRig != null ? cameraRig.Focus : transform.position,
-                    cameraRig != null ? cameraRig.TargetDistance : 48f,
+                    cameraRig != null ? cameraRig.ViewFocus : transform.position,
+                    cameraRig != null ? cameraRig.ViewDistance : 48f,
                     cameraRig != null ? cameraRig.transform.position : transform.position,
                     bloodLowest, bloodHighest, slice.BelowSurface(activeLayer));
             }
             MarkSection(FrameSection.Butterflies);
+            // The clouds after the weather, which has eased the cover, the gloom and the wind they
+            // read, and after the daylight, whose graded light colours them. Game seconds, so a
+            // paused world holds the sky (design 63 §5).
+            _clouds?.Sync(cameraRig != null ? cameraRig.GetComponent<Camera>() : null,
+                Time.deltaTime * _world.GameSpeed, Time.unscaledDeltaTime,
+                _weather?.Cloud ?? _world.Views.Current.Weather.CloudPerMille / 1000f,
+                _weather?.Gloom ?? 0f,
+                _weather?.Rain ?? _world.Views.Current.Weather.RainPerMille / 1000f,
+                _weather?.Wind ?? 1f,
+                _daylight, slice.BelowSurface(activeLayer));
+            MarkSection(FrameSection.Clouds);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
 
@@ -2011,9 +2072,96 @@ namespace Odyssey.Presentation.Bootstrap
                 // in mining", and marking the wall's top face is what mining already does to rock.
                 _renderer.DrawCellMark(cell, tint);
 
-                if (orders[i].Progress > 0)
+                // A face being mined is drawn cracked instead (design 58, owner 2026-09-26: the
+                // cracks replace the pale slab). The slab stays for a build without the shader.
+                bool cracked = kind == DesignationKind.Mine && _renderer.CracksAvailable;
+                if (orders[i].Progress > 0 && !cracked)
                     _renderer.DrawCellCut(cell, orders[i].Progress / 255f, CutColour);
             }
+        }
+
+        DemolitionWatch? _demolitions;
+        readonly List<Demolished> _demolished = new List<Demolished>();
+        readonly List<WorldRenderModel.RemovedEdifice> _removedEdifices = new List<WorldRenderModel.RemovedEdifice>();
+
+        /// <summary>
+        /// Something coming down, heard (design 58 §9): wood broken or taken apart, a mined face
+        /// collapsing. <see cref="DemolitionWatch"/> says which cells went this frame — on the same
+        /// evidence the break (§7) is drawn on, so the sound and the shudder start together — and
+        /// each is played from the middle of its cell.
+        /// </summary>
+        void HearDemolitions(WorldSnapshot snapshot)
+        {
+            if (_demolitions == null || _model == null) return;
+            // What left the mirror this frame and what it was made of, for a building broken in
+            // one blow, which nothing else remembers.
+            _removedEdifices.Clear();
+            _model.DrainRemoved(_removedEdifices);
+            for (int i = 0; i < _removedEdifices.Count; i++)
+                _demolitions.NoteRemoved(_removedEdifices[i].Cell, _removedEdifices[i].Stuff);
+            if (_demolitions.Step(snapshot, _model, _demolished) == 0 || _audio == null) return;
+            for (int i = 0; i < _demolished.Count; i++)
+            {
+                CellRef cell = _model.Size.FromIndex(_demolished[i].CellIndex);
+                string id = _demolished[i].Kind == Demolition.Rock ? SoundIds.BreakRock : SoundIds.BreakWood;
+                _audio.PlayOneShot(id, CellMetrics.Centre(cell.X, cell.Z, cell.Y));
+            }
+        }
+
+        readonly System.Collections.Generic.List<CrackedCell> _crackedCells =
+            new System.Collections.Generic.List<CrackedCell>();
+
+        /// <summary>
+        /// Struck walls and rock being mined, drawn broken (design 58): <c>CrackModel</c> says which
+        /// cells and how badly, the renderer draws each cell's own meshes over themselves in the
+        /// crack shader. Called every frame, whether or not anything is cracked, so a cell that
+        /// came down or was ordered again gives its scratch batch back. Filtered to the band a
+        /// click can reach, as the orders are: anything drawn solid, never a ghost.
+        /// </summary>
+        /// <summary>
+        /// The butcher's telegraph (design 62 §8): while a sweep winds up, the front arc of three it
+        /// will land on — the target's cell and the two either side — as dim red plates, gathered
+        /// with the order marks into their one instanced call. Read off the published facing
+        /// (<c>odyssey.pawn.sweep.facing</c>), so it is there in a paused frame and after a load
+        /// with nothing of its own to keep. <b>Scales with the pawns in the frame</b>: one flag test
+        /// each, and an aspect lookup for a hostile only.
+        /// </summary>
+        void DrawSweepTelegraphs(WorldSnapshot snapshot)
+        {
+            if (_renderer == null) return;
+            System.ReadOnlySpan<PawnView> pawns = snapshot.Pawns;
+            GridSize size = snapshot.Size;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                if ((pawns[i].Flags & PawnFlags.Hostile) == 0) continue;
+                if (!snapshot.TryGetPawnAspect(pawns[i].Id, CombatAspectNames.SweepFacingKey, out int facing)) continue;
+                CellRef at = pawns[i].Cell;
+                TelegraphCell(size, at, facing);
+                TelegraphCell(size, at, SweepArc.Left(facing));
+                TelegraphCell(size, at, SweepArc.Right(facing));
+            }
+        }
+
+        /// <summary>
+        /// The telegraph's red. At 42 per cent over the meadow it read brown — red and green make
+        /// brown — in the first photograph (design 62 §8b), so it is stronger than an order's mark.
+        /// </summary>
+        public static readonly Color SweepTelegraphColour = new Color(0.92f, 0.06f, 0.05f, 0.68f);
+
+        void TelegraphCell(GridSize size, CellRef from, int facing)
+        {
+            var (dx, dz) = SweepArc.Step(facing);
+            if (!size.Contains(from.X + dx, from.Z + dz, from.Y)) return;
+            _renderer!.DrawCellMark(new CellRef(from.X + dx, from.Z + dz, from.Y), SweepTelegraphColour, 0.12f);
+        }
+
+        void DrawCracks(WorldSnapshot snapshot)
+        {
+            if (_renderer == null || cameraRig == null) return;
+            int lowest = System.Math.Max(0, cameraRig.LowestSelectableLayer);
+            int highest = cameraRig.HighestSelectableLayer;
+            CrackModel.Gather(snapshot, _crackedCells, lowest, highest);
+            _renderer.DrawCracks(_crackedCells);
         }
 
         /// <summary>The colour a growing zone's whole-tile cover is drawn in — a dark worked-soil
@@ -2962,6 +3110,56 @@ namespace Odyssey.Presentation.Bootstrap
         static readonly Color CutColour = new Color(0.86f, 0.87f, 0.90f, 0.30f);
 
         /// <summary>
+        /// Stand a ride's camera (design 57 §3) from where her figure was last drawn, and take her
+        /// head away while the camera is against it (§4). Nothing, and the head given back, when no
+        /// ride is running.
+        ///
+        /// <para>Her figure first, because that is where she is drawn: the jump's arc, the climb and
+        /// the swim are laid over <see cref="PawnPose.Of"/> by the figure director and a camera
+        /// that followed the bare pose would leave her behind on every one of them. The pose is the
+        /// fallback for the frames before her figure is leased.</para>
+        /// </summary>
+        void PlaceRide(WorldSnapshot snapshot)
+        {
+            if (cameraRig == null || !cameraRig.Riding || Directors == null)
+            {
+                if (_figures != null) _figures.HeadHidden = null;
+                return;
+            }
+
+            PawnId id = Directors.Ride.Pawn;
+            bool known = false;
+            Vector3 feet = Vector3.zero;
+            float facing = cameraRig.RideYaw;
+            float eyeLift = RideCamera.DefaultEyeLift;
+
+            if (_figures != null && _figures.TryGetFeet(id, out Vector3 drawn))
+            {
+                known = true;
+                feet = drawn;
+                if (_figures.TryGetFacing(id, out float yaw)) facing = yaw;
+                // The head bone is the base of the skull; the eyes are a hand above it on a figure
+                // drawn at 1.4 times. Smoothed by the rig, so the walk's bob does not reach the view.
+                if (_figures.TryGetHead(id, out Vector3 head))
+                    eyeLift = Mathf.Clamp(head.y - drawn.y + RideEyeAboveHeadBone, 0.3f, 3f);
+            }
+            else if (snapshot.TryGetPawn(id, out PawnView view))
+            {
+                known = true;
+                feet = PawnPose.Of(view, _tickAlpha, MovePerTick, out Vector3 heading, _model);
+                if (heading.sqrMagnitude > 1e-6f) facing = Mathf.Atan2(heading.x, heading.z) * Mathf.Rad2Deg;
+            }
+
+            cameraRig.PlaceRide(known, feet, facing, eyeLift, Time.unscaledDeltaTime);
+
+            if (_figures != null)
+                _figures.HeadHidden = cameraRig.RideFromEyes < SliceCameraRig.HeadClearMetres ? id : (PawnId?)null;
+        }
+
+        /// <summary>How far above the head bone a figure's eyes are, in metres, at the figures' 1.4 scale.</summary>
+        const float RideEyeAboveHeadBone = 0.12f;
+
+        /// <summary>
         /// The lines the renderer fades along: eye to chest, one per selected colonist.
         ///
         /// <para><b>The same point the bracket is drawn at and the same point the hit-test aims
@@ -2987,7 +3185,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (!seeThroughToSelection || cameraRig == null) return;
 
             Vector3 eye = cameraRig.transform.position;
-            Vector3 focus = cameraRig.Focus;
+            Vector3 focus = cameraRig.ViewFocus;
             float lift = colonistCursor.y * 0.5f;
 
             // Selected colonists first: they are who the player is watching, and they must never
@@ -3007,6 +3205,17 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Lines past this point fade only trees and bushes (SightLines.Primary).
             _sight.Primary = _sight.Count;
+
+            // The colonist a ride is watching (design 57 §4): trees and bushes between the camera
+            // and her fade, as they do for the selection. Past the primaries, because a wall beside
+            // her must not fade — the ride's camera is kept out of walls rather than seeing through
+            // them — and a ride clears the selection, so she is never both.
+            if (cameraRig.Riding && Directors != null
+                && snapshot.TryGetPawn(Directors.Ride.Pawn, out PawnView ridden) && lines < MaxSightLines)
+            {
+                _sight.Add(eye, FeetOf(ridden, snapshot.Pawns, movePerTick) + Vector3.up * lift);
+                lines++;
+            }
 
             // Then every other colonist on screen, nearest the focus first, up to a fixed count
             // (owner, 2026-09-24: trees fade for every colonist). Bounded so the cost does not
@@ -3367,7 +3576,7 @@ namespace Odyssey.Presentation.Bootstrap
                 // The top of the pawn as the cursor has it: the colonist's box, an animal's own,
                 // and a body on the ground much lower.
                 float top = colonistCursor.y;
-                if (pawn.IsAnimal)
+                if (PawnFigureDirector.HasOwnBox(pawn))
                     top = _figures != null && _figures.TryGetAnimalBox(pawn.Id, out _, out Vector3 box) ? box.y : 1.0f;
                 if (pawn.IsDowned) top = CombatMarks.DownedTop;
 
@@ -3544,7 +3753,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
                 feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model, everyone, _crowd);
 
-            if (pawn.IsAnimal && _figures != null
+            if (PawnFigureDirector.HasOwnBox(pawn) && _figures != null
                 && _figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 box, out Vector3 size))
             {
                 Vector3 middle = box.GetPosition();
@@ -3633,7 +3842,7 @@ namespace Odyssey.Presentation.Bootstrap
                     // An animal is bracketed as its own drawn box, turned the way it faces, with
                     // the item bracket's margin (owner, 2026-09-22: the cell-sized column round a
                     // hog highlighted the whole tile). A colonist keeps the one fixed box below.
-                    if (pawn.IsAnimal && _figures != null
+                    if (PawnFigureDirector.HasOwnBox(pawn) && _figures != null
                         && _figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 place, out Vector3 box))
                     {
                         _renderer.DrawSelectionBracket(place, box + Vector3.one * ItemCursorMargin, strength, seeThrough: true);
@@ -4427,6 +4636,7 @@ namespace Odyssey.Presentation.Bootstrap
             _weather?.Dispose();
             _birds?.Dispose();
             _butterflies?.Dispose();
+            _clouds?.Dispose();
             _floaterView?.Dispose();
             _hearthMark?.Dispose();
             _hearthMark = null;
@@ -4467,10 +4677,12 @@ namespace Odyssey.Presentation.Bootstrap
             _weather = null;
             _birds = null;
             _butterflies = null;
+            _clouds = null;
             _corpses = null;
             _floaterView = null;
             _colonistMaterials = null;
             _renderer = null;
+            _demolitions = null;
             _actorMaterial = null;
             _model = null;
             _colony = null;

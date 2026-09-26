@@ -231,11 +231,12 @@ namespace Odyssey.Presentation.Ui
             // can reach several cells of it.
             string signature =
                 _inspect.Subject + ":" +
-                // The draft is in it too (design 33 §2f): the Draft button changes face, and the
-                // header it sits in is structure. So are the model's shape answers (design 33
-                // §5f), which the combat lanes may change for a pawn while it is on the pane.
+                // The draft is not in it (design 61): the Draft toggle's face is set in place by
+                // SyncHeaderToggles, where the old two-faced button rebuilt the header. The model's
+                // shape answers are (design 33 §5f), which the combat lanes may change for a pawn
+                // while it is on the pane.
                 (_inspect.Subject == InspectSubject.Colonist
-                    ? _inspect.Pawn.ToString() + (_inspect.Drafted ? ":drafted" : string.Empty)
+                    ? _inspect.Pawn.ToString()
                         + (_inspect.ShowsColonistBody ? string.Empty : ":bare")
                         + (_inspect.ShowsTabBox ? ":tabs" : string.Empty)
                         + (_inspect.IsVisitor ? ":visitor" : string.Empty)
@@ -255,6 +256,7 @@ namespace Odyssey.Presentation.Ui
 
             if (_inspect.Subject == InspectSubject.None) return;
 
+            SyncHeaderToggles();
             SyncStoragePanel();
 
             _inspectPanel.EnableInClassList("inspect--tomb", _inspect.Tombstoned);
@@ -759,9 +761,6 @@ namespace Odyssey.Presentation.Ui
             titles.Add(_inspectPace);
             header.Add(titles);
 
-            var actions = new VisualElement();
-            actions.AddToClassList("inspect__actions");
-
             // A store used to add two buttons of its own here: a disabled Rename, drawn as a
             // placeholder square to hold a place for named stores, and a Close. Both are gone
             // (owner, 2026-09-21: "the x button appears twice in the control — keep the one in
@@ -772,31 +771,48 @@ namespace Odyssey.Presentation.Ui
             // said its story in a tooltip nobody hovers, and read as a broken button. Named
             // stores bring their own control when they bring the name (26-storage.md §9a, SZ4).
 
-            // The model fills Commands for the subjects that have any (a colonist's, today), so the
-            // shell draws whatever is there rather than deciding who may be commanded.
+            // The header's toggles (design 61, mockup 24c): the model says which a subject has (a
+            // colonist's two, today), and SyncHeaderToggles sets their faces every refresh.
+            _draftToggle = null;
+            _viewToggle = null;
             foreach (InspectCommand command in _inspect.Commands)
             {
-                // Two of the three: the pane's header carries the commands a player reaches
-                // for, and Inspect is not one of them when the pane is already open.
-                if (command.Label == "Inspect") continue;
-                actions.Add(ActionButton(command));
+                InspectToggle? toggle = null;
+                if (command.IconKey == InspectModel.DraftKey)
+                    toggle = _draftToggle = new InspectToggle(HudIcons.Shield, HudTheme.Bad,
+                        "inspect__toggle--draft", ToggleDraft);
+                else if (command.IconKey == InspectModel.RideKey)
+                    toggle = _viewToggle = new InspectToggle(HudIcons.Eye, HudTheme.Accent,
+                        "inspect__toggle--view", ToggleFirstPerson);
+                if (toggle == null) continue;
+                toggle.tooltip = command.Label + ": " + command.Reason;
+                header.Add(toggle);
             }
 
-            var info = new VisualElement();
-            info.AddToClassList("inspect__info");
-            info.Add(new HudGlyph(HudGlyphKind.Info, 14f, HudTokens.TextDim));
-            info.tooltip = "Almanac entry";
-            info.RegisterCallback<ClickEvent>(_ => OpenAlmanacForSelection());
-            actions.Add(info);
+            // Close over Info, stacked to the header's height (a row in the short tile header).
+            var stack = new VisualElement();
+            stack.AddToClassList("inspect__stack");
 
             var close = new VisualElement();
             close.AddToClassList("inspect__close");
-            close.Add(new HudGlyph(HudGlyphKind.Close, 14f, HudTokens.TextDim));
+            close.Add(new PathGlyph(HudIcons.Close, HudLayout.InspectCloseIcon, HudTokens.TextMeta,
+                box: HudIcons.CloseBox, stroke: HudIcons.CloseStroke));
             close.tooltip = "Clear the selection";
             close.RegisterCallback<ClickEvent>(_ => _directors?.Selection.Clear());
-            actions.Add(close);
-            header.Add(actions);
+            stack.Add(close);
+
+            // Filled in the info blue: help, not an action.
+            var info = new VisualElement();
+            info.AddToClassList("inspect__info");
+            info.Add(new PathGlyph(HudIcons.Info, HudLayout.InspectInfoIcon, HudTokens.OnAccent,
+                stroke: HudIcons.InfoStroke));
+            info.tooltip = "Almanac entry";
+            info.RegisterCallback<ClickEvent>(_ => OpenAlmanacForSelection());
+            stack.Add(info);
+
+            header.Add(stack);
             _inspectBody.Add(header);
+            SyncHeaderToggles();
 
             // Any other campfire offers to be the hearth: one button, nine under the header.
             if (_inspect.OffersHearth) _inspectBody.Add(MakeHearthButton());
@@ -2211,26 +2227,51 @@ namespace Odyssey.Presentation.Ui
             return row;
         }
 
-        VisualElement ActionButton(InspectCommand command)
-        {
-            var button = new VisualElement();
-            button.AddToClassList("action");
-            if (!command.Enabled) button.AddToClassList("action--off");
-            var icon = new IconBadge(command.IconKey, IconBadge.BarSize);
-            icon.Inherit(HudTokens.TextMeta);
-            button.Add(icon);
-            button.Add(HudText.Make(command.Label, HudTextRole.Meta, ussClass: "action__label"));
-            button.tooltip = command.Label + " — " + command.Reason;
+        /// <summary>The header's two toggles, when the subject has them (design 61); null otherwise.</summary>
+        InspectToggle? _draftToggle;
+        InspectToggle? _viewToggle;
 
-            // The one live command (design 33 §2f). The same rule the key follows, so the button
-            // and T can never disagree about what the selection is.
-            if (command.Enabled
-                && (command.IconKey == InspectModel.DraftKey || command.IconKey == InspectModel.UndraftKey))
-                button.RegisterCallback<ClickEvent>(_ => ToggleDraft());
-            // The response beside it (design 33 §18e): the model decides, this carries its intents.
-            if (command.Enabled && ResponseModel.IsResponseKey(command.IconKey))
-                button.RegisterCallback<ClickEvent>(_ => CycleResponse());
-            return button;
+        /// <summary>
+        /// First Person, from the header's toggle or its key (design 57, design 61 §3): watching, not
+        /// commanding, so no intent — the directors take the view, and the rig and this shell follow
+        /// them on the next frame. The directors decide who, so the tile and the key agree.
+        /// </summary>
+        void ToggleFirstPerson()
+        {
+            var world = _boot?.World;
+            if (world == null || _directors == null) return;
+            _directors.ToggleFirstPerson(world.Views.Current);
+        }
+
+        /// <summary>
+        /// The two toggles' faces, from the whole selection rather than the pane's one colonist
+        /// (design 61 §3): Draft on only when every selected colonist is drafted and marked when some
+        /// are; First Person live only for exactly one. Each <see cref="InspectToggle.Set"/> compares
+        /// before it writes, so an unchanged refresh costs the two questions and nothing else.
+        /// </summary>
+        void SyncHeaderToggles()
+        {
+            if (_draftToggle == null && _viewToggle == null) return;
+            var world = _boot?.World;
+            if (world == null || _directors == null) return;
+
+            WorldSnapshot frame = world.Views.Current;
+            IReadOnlyList<PawnId> selection = _directors.Selection.Pawns;
+            HotkeyDirector hotkeys = Hotkeys();
+
+            if (_draftToggle != null)
+            {
+                DraftFace face = OrderModel.DraftFaceOf(selection, frame);
+                _draftToggle.Set(face, !_inspect.Tombstoned,
+                    Registry.Label(face == DraftFace.On ? InspectModel.DraftedKey : InspectModel.DraftKey),
+                    hotkeys.Key(HotkeyAction.Draft, 0));
+            }
+            if (_viewToggle != null)
+            {
+                bool live = !_inspect.Tombstoned && HudDirectors.TryFirstPersonSubject(selection, frame, out _);
+                _viewToggle.Set(_directors.Ride.Riding ? DraftFace.On : DraftFace.Off, live,
+                    Registry.Label(InspectModel.RideKey), hotkeys.Key(HotkeyAction.FirstPerson, 0));
+            }
         }
 
         /// <summary>

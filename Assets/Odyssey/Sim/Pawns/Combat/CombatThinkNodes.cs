@@ -43,6 +43,20 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// Fill <paramref name="job"/> with one throw at <paramref name="target"/> (design 62 §7a): the
+        /// ranged driver with the species' own <see cref="SpeciesDef.hurl"/>, which ends itself once
+        /// the rock is away so the thrower goes back to closing in.
+        /// </summary>
+        public static bool FillHurl(PawnContext ctx, Pawn pawn, Pawn target, Job job, TraverseMode mode)
+        {
+            job.Reset(JobIndex.AttackRanged);
+            job.TargetCell = target.Cell;
+            job.Mode = mode;
+            pawn.CombatTarget = target.Id.Value;
+            return true;
+        }
+
+        /// <summary>
         /// Fill <paramref name="job"/> with a melee attack on a building — C6's building mode (design
         /// 33 §13e), as the order starts it but <b>unforced</b>, so it thinks again on
         /// <see cref="CombatDef.rechooseTicks"/> (§14b): the record handle in
@@ -149,6 +163,15 @@ namespace Odyssey.Sim.Pawns
             TraverseMode mode = pawn.OwnMode;
 
             Pawn? foe = ColonistToFight(pawn, ctx, mode);
+
+            // A thrower answers a perch (design 62 §7a): the colonist it is after standing above it,
+            // or — when it can reach nobody — whoever it can see, gets a rock, then it closes.
+            if (pawn.Species.hurl != null)
+            {
+                Pawn? mark = Hurl.TargetFor(pawn, ctx, foe);
+                if (mark != null) return AttackJob.FillHurl(ctx, pawn, mark, job, mode);
+            }
+
             if (foe != null) return AttackJob.Fill(ctx, pawn, foe, job, mode);
 
             // A gun reaches what a walk cannot (design 47 §2d): a colonist on a roof it cannot

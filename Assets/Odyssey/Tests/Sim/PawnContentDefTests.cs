@@ -329,14 +329,25 @@ namespace Odyssey.Tests.Sim
         // The frog merged with cover, 2026-09-26: re-taken from the merged pack.
         // The frog merged with raids, 2026-09-26: the gunman keeps kind 4 and the frog moves to 5;
         // re-taken from the merged pack.
+        // 2026-09-26, the butcher (design 62): Species_Butcher and PawnKind_Butcher appended
+        // (species 4, kind 6), Health_Brute beside Health_Person, and SpeciesDef gained unstoppable
+        // and sweep, false and null on every other species. Taken from a freshly loaded pack.
+        // The same day, the butcher's four levels (design 62 §4b): Species_ButcherScarred, _Blood
+        // and _King (species 5-7, kinds 7-9) on an abstract ButcherBase, and Health_Brute2-4 on an
+        // abstract BruteBody. Taken from a freshly loaded pack.
+        // And SpeciesDef gained voice and voicePitchPerMille, presentation's (design 62 §8d): the
+        // butcher calls in "butcher", its levels at 1,000 / 940 / 880 / 820.
+        // And ButcherBase's traverseMode Animal -> Bandit (design 62 §3a): the owner shot one dead
+        // from a rock it could not climb.
+        // And SpeciesDef gained hurl, the butcher's thrown rock (design 62 §7a), null elsewhere.
         // 2026-09-26, trading (design 65 §2-§3, T1): ItemDef gained marketValue, set on every item
         // (wood 1 ... pistol 150), and Item_Gold appended at handle 18 (stack 500, category Items,
         // value 1). Taken from a freshly loaded pack.
         // 2026-09-26, trading T2 (design 65 §5): Faction.Visitor, and PawnKind_Trader appended at
-        // kind 6 (a person of the Visitor faction with a pistol and the bandit's traverse mode).
+        // kind 10, after the butcher's four on the merge with main, (a person of the Visitor faction with a pistol and the bandit's traverse mode).
         // 2026-09-26, trading T5 (design 65 §6): Job_Trade appended at JobHandle 28 (driver 28, not
         // casually interruptible, no expiry).
-        const ulong ContentFingerprint = 3889624182061518727UL;
+        const ulong ContentFingerprint = 4579776042847681766UL;
 
 
         [Test]

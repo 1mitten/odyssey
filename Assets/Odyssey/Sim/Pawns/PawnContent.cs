@@ -217,10 +217,22 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The frog of the banks (design 30 §8): kind 5, species 3. Appended after the gunman.</summary>
         public const int CulvertFrog = 5;
 
-        /// <summary>The trader (design 65 §5): a person of the Visitor faction, appended after the frog.</summary>
-        public const int Trader = 6;
+        /// <summary>
+        /// The butcher (design 62): a hostile person of its own species (4), one cell drawn huge,
+        /// whose swing sweeps three cells and flings. Debug-spawned only. Appended after the frog.
+        /// </summary>
+        public const int Butcher = 6;
 
-        public const int Count = 7;
+        /// <summary>The butcher's harder levels (design 62 §4b), each a colourway of the same giant and bigger than the last.</summary>
+        public const int ButcherScarred = 7;
+        public const int ButcherBlood = 8;
+        public const int ButcherKing = 9;
+
+
+        /// <summary>The trader (design 65 §5): a person of the Visitor faction, appended after the butcher's four.</summary>
+        public const int Trader = 10;
+
+        public const int Count = 11;
     }
 
     /// <summary>
@@ -1010,6 +1022,77 @@ namespace Odyssey.Sim.Pawns
         /// clamped to 4–80 %.
         /// </summary>
         public int interceptPerMille = 400;
+
+        // ---- the brute (design 62) ---------------------------------------------------------
+
+        /// <summary>
+        /// Never stunned and never knocked back (design 62 §7): a stun rolled against it and a
+        /// knockback aimed at it are dropped where a blow is applied
+        /// (<see cref="CombatSystem.ApplySwing"/>). The butcher.
+        /// </summary>
+        public bool unstoppable;
+
+        /// <summary>
+        /// Its swing sweeps the front arc of three and flings (design 62 §5, §7), or null for a
+        /// swing at one target, which is everybody else. A property of what the pawn is, not of what
+        /// it holds, so nobody who picks a weapon up gets it.
+        /// </summary>
+        public SweepDef? sweep;
+
+        /// <summary>
+        /// A ranged attack of its own, thrown only at a colonist above it or out of its reach
+        /// (<see cref="Hurl"/>, design 62 §7a), or null. An <see cref="AttackDef"/> with a
+        /// <see cref="AttackDef.ranged"/> block — the pistol's shape — whose cooldown is the
+        /// throw's own clock (<see cref="Pawn.HurlReadyTick"/>), never the melee swing's.
+        /// </summary>
+        public AttackDef? hurl;
+
+        /// <summary>
+        /// Whose voice this species calls in, by name, or empty for a silent one (design 62 §8d):
+        /// presentation hears a moment of a fight by <c>odyssey.sound.voice.{voice}.{moment}</c>.
+        /// Not read by the simulation.
+        /// </summary>
+        public string voice = string.Empty;
+
+        /// <summary>
+        /// How high its voice is played, per mille of the recording: a bigger level of the same
+        /// creature calls lower (design 62 §8d). Not read by the simulation.
+        /// </summary>
+        public int voicePitchPerMille = 1_000;
+    }
+
+    /// <summary>
+    /// A sweeping swing (design 62 §5, §7): the numbers of the butcher's cleaver arc and of the fling
+    /// it lands. The arc itself is fixed — the target's cell and the two either side of it as seen
+    /// from the swinger, the front arc of three (owner, 2026-09-26) — so it is not a number here.
+    /// Every value INVENTED, the first tuning (§4).
+    /// </summary>
+    public class SweepDef
+    {
+        /// <summary>
+        /// The chance, per mille, that a landed blow flings its victim — every landed blow, the
+        /// primary's and each flank's, critical or not, rolled on its own stream in place of the
+        /// critical's knockback. 750: "in most cases" (owner).
+        /// </summary>
+        public int knockbackPerMille = 750;
+
+        /// <summary>How many cells a fling carries its victim, straight away from the swinger (owner: two).</summary>
+        public int distance = 2;
+
+        /// <summary>
+        /// The whole points a victim takes when the fling is stopped short by a wall, a door, a rise
+        /// or somebody standing there — and that somebody takes it too (design 62 §7). Blunt.
+        /// </summary>
+        public int slamDamage = 8;
+
+        /// <summary>How long a flung victim lies where it landed, in ticks: about two seconds (owner).</summary>
+        public int knockedDownTicks = 120;
+
+        /// <summary>
+        /// Ticks from the landing during which no knockback of any kind moves the victim again, so
+        /// nobody is chain-flung: the two seconds down and about three standing (owner).
+        /// </summary>
+        public int immunityTicks = 300;
     }
 
     /// <summary>What a pawn starts life with.</summary>
@@ -1173,8 +1256,9 @@ namespace Odyssey.Sim.Pawns
         /// Severity per needs interval, per centi-degree of distance beyond the safe bound:
         /// distance × this / 1000. 15 makes a Candle night at −13 °C (a thousand centi-degrees
         /// past the floor) build 15 an interval — a full bar in 67 intervals, four game-hours —
-        /// and a cold snap's −33 °C fill it in an hour and a half, which is the "lethal
-        /// hypothermia within hours" the almanac already promises. It shipped as 300 for a day,
+        /// and a cold snap's −33 °C fill it in an hour and a half — hours, as design 28 asked.
+        /// (The first Almanac called that lethal; severity only slows a colonist, and the Almanac
+        /// says so since 2026-09-26.) It shipped as 300 for a day,
         /// applied per centi-degree as the formula says, and filled the bar in fourteen
         /// game-minutes while three comments promised hours (design 28 §12, F1).
         /// </summary>
@@ -1654,10 +1738,14 @@ namespace Odyssey.Sim.Pawns
                 "PawnKind_Gunman",
                 // The frog of the banks (design 30 §8), appended after the gunman.
                 "PawnKind_CulvertFrog",
-                // The trader (design 65 §5), the first visitor, appended after the frog.
+                // The butcher (design 62), appended after the frog, and its three harder levels.
+                "PawnKind_Butcher", "PawnKind_ButcherScarred", "PawnKind_ButcherBlood", "PawnKind_ButcherKing",
+                // The trader (design 65 §5), the first visitor, appended after the butcher's four.
                 "PawnKind_Trader");
             content.Species = ByName<SpeciesDef>(defs,
-                "Species_Person", "Species_MiddenHog", "Species_DuctRat", "Species_CulvertFrog");
+                "Species_Person", "Species_MiddenHog", "Species_DuctRat", "Species_CulvertFrog",
+                // The butcher's own (design 62), appended, one per level.
+                "Species_Butcher", "Species_ButcherScarred", "Species_ButcherBlood", "Species_ButcherKing");
             content.KindSpecies = new int[content.Kinds.Length];
             for (int k = 0; k < content.Kinds.Length; k++)
             {
@@ -1937,6 +2025,22 @@ namespace Odyssey.Sim.Pawns
         /// SHA-256's tenth round constant.
         /// </summary>
         public const uint Knockback = 0x1283_5B01;
+
+        /// <summary>
+        /// A sweep's flank blow (design 62 §5): the whole of a flank victim's swing — hit, dodge,
+        /// damage, critical — rolled on the ordinary purposes mixed with this and the victim's id,
+        /// so no two victims of one swing, and no primary, share a roll. SHA-256's 33rd round
+        /// constant: the 25th to the 32nd are taken by the raids, the weather, the prisons and
+        /// trade.
+        /// </summary>
+        public const uint Sweep = 0x27B7_0A85;
+
+        /// <summary>
+        /// Whether a sweeping species' landed blow flings its victim
+        /// (<see cref="SweepDef.knockbackPerMille"/>, design 62 §5), in place of the critical's
+        /// knockback roll. SHA-256's 34th round constant.
+        /// </summary>
+        public const uint SweepKnock = 0x2E1B_2138;
 
         /// <summary>
         /// Whether a jump over a stream falls short (design 46 §6). SHA-256's eleventh round

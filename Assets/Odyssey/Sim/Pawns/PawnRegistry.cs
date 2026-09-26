@@ -650,6 +650,9 @@ namespace Odyssey.Sim.Pawns
                 // Crouched behind cover (design 53 §8a), derived here and never kept.
                 int crouch = CoverCrouchOf(pawn);
                 if (crouch > 0) writer.AddPawnAspect(pawn.Id, CombatAspects.CoverCrouch, crouch);
+                // A sweep in the air (design 62 §8): the arc the telegraph draws.
+                int sweep = pawn.HeldFacing;
+                if (sweep != 0) writer.AddPawnAspect(pawn.Id, CombatAspects.SweepFacing, sweep);
                 // Where she may work (design 43 §4a), at anything but the default.
                 if (pawn.Area != PawnArea.Anywhere)
                     writer.AddPawnAspect(pawn.Id, AreaAspects.Area, (int)pawn.Area);
@@ -664,8 +667,10 @@ namespace Odyssey.Sim.Pawns
                 {
                     var weapon = _ctx.Items.Get(new ThingId(pawn.EquippedItem));
                     if (weapon != null && !weapon.Despawned)
+                    {
                         writer.AddPawnAspect(pawn.Id, CombatAspects.Weapon, weapon.DefIndex);
                         if (weapon.Quality != 0) writer.AddPawnAspect(pawn.Id, CombatAspects.WeaponQuality, weapon.Quality);
+                    }
                 }
 
                 // An animal publishes its kind and its pace and nothing else of what follows

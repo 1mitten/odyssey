@@ -233,12 +233,29 @@ namespace Odyssey.Presentation.World
         /// bites. <paramref name="weaponStyles"/> is indexed by item def and holds null for an item
         /// that is not a weapon.
         /// </summary>
-        public static AttackStyle StyleFor(int weapon, IReadOnlyList<AttackStyle?>? weaponStyles, bool isPerson)
+        /// <param name="natural">The attacker's species' own attack, when it fights with one and
+        /// holds nothing (design 62 §5: the butcher's cleaver swings heavy); null falls back to fists
+        /// for a person and a bite for an animal, which is every species' answer before it.</param>
+        public static AttackStyle StyleFor(int weapon, IReadOnlyList<AttackStyle?>? weaponStyles, bool isPerson,
+            AttackStyle? natural = null)
         {
             if (weapon >= 0 && weaponStyles != null && weapon < weaponStyles.Count
                 && weaponStyles[weapon] is AttackStyle style)
                 return style;
+            if (natural is AttackStyle own) return own;
             return isPerson ? AttackStyle.Fists : AttackStyle.Bite;
+        }
+
+        /// <summary>
+        /// Every kind's natural attack style, or null for a kind whose species has none — indexed by
+        /// kind, as a pawn view carries it. Built once, off the content.
+        /// </summary>
+        public static AttackStyle?[] NaturalStylesOf(PawnContent? content)
+        {
+            if (content == null) return Array.Empty<AttackStyle?>();
+            var styles = new AttackStyle?[content.Kinds.Length];
+            for (int k = 0; k < styles.Length; k++) styles[k] = content.SpeciesOf(k).naturalAttack?.style;
+            return styles;
         }
 
         /// <summary>Every item def's attack style, or null for an item that is not a weapon. Built once.</summary>

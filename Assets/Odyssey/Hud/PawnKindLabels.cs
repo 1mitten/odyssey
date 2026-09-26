@@ -24,7 +24,9 @@ namespace Odyssey.Hud
         /// (<see cref="DebugDirector.SpawnRows"/>); the icon table's order is what a test holds.
         /// </summary>
         public const int ColonistKind = 0, MiddenHogKind = 1, DuctRatKind = 2, Bandit = 3, Gunman = 4,
-            CulvertFrogKind = 5, Trader = 6;
+            CulvertFrogKind = 5, Butcher = 6,
+            ButcherScarred = 7, ButcherBlood = 8, ButcherKing = 9,
+            Trader = 10;
         const string Animal = "ui.pawn.animal";
 
         public static readonly string[] IconKeys =
@@ -36,7 +38,9 @@ namespace Odyssey.Hud
             "ui.pawn.gunman",
             // The frog of the banks (design 30 §8).
             "ui.pawn.frog",
-            // The trader (design 65 §5), the first visitor.
+            // The butcher (design 62) and its three harder levels (§4b).
+            "ui.pawn.butcher", "ui.pawn.butcher.scarred", "ui.pawn.butcher.blood", "ui.pawn.butcher.king",
+            // The trader (design 65 §5), the first visitor, after the butcher's four.
             "ui.pawn.trader",
         };
 

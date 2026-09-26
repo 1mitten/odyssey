@@ -9,20 +9,19 @@ namespace Odyssey.Tests.Hud
     public class AlmanacDirectorTests
     {
         [Test]
-        public void AlmanacCatalogueContainsAllTwelveRequiredCategories()
+        public void TheRailIsTheCategoriesInTheirOrderAndNoneIsEmpty()
         {
-            var expectedCategories = new[]
+            var expected = new[]
             {
-                "Terrain", "Materials", "Structures", "Items", "Skills",
-                "Work types", "Needs", "Traits", "Health", "Fauna", "Flora", "Events"
+                "Terrain", "Flora", AlmanacCatalogue.Materials, AlmanacCatalogue.Food, AlmanacCatalogue.Medicine,
+                AlmanacCatalogue.Weapons, "Structures", AlmanacCatalogue.Furniture, AlmanacCatalogue.Production,
+                AlmanacCatalogue.Power, "Zones and orders", "People", "Fauna", "Skills", "Work types", "Needs",
+                "Health", "Weather and seasons", "Events",
             };
 
-            Assert.That(AlmanacCatalogue.Categories.Count, Is.EqualTo(12));
-            for (int i = 0; i < expectedCategories.Length; i++)
-            {
-                Assert.That(AlmanacCatalogue.Categories[i].Name, Is.EqualTo(expectedCategories[i]));
-                Assert.That(AlmanacCatalogue.Categories[i].Entries, Is.Not.Empty);
-            }
+            Assert.That(AlmanacCatalogue.Categories.Select(c => c.Name), Is.EqualTo(expected));
+            foreach (AlmanacCategory category in AlmanacCatalogue.Categories)
+                Assert.That(category.Entries, Is.Not.Empty, category.Name);
         }
 
         [Test]
@@ -34,18 +33,17 @@ namespace Odyssey.Tests.Hud
                 foreach (AlmanacEntry entry in category.Entries)
                 {
                     Assert.That(entry.Name, Is.Not.Empty);
-                    Assert.That(entry.Summary, Is.Not.Empty);
-                    Assert.That(entry.TypeChip, Is.Not.Empty);
-                    Assert.That(entry.NatureChip, Is.Not.Empty);
-                    Assert.That(entry.Definition, Is.Not.Empty);
-                    Assert.That(entry.LiveState, Is.Not.Empty);
-                    Assert.That(entry.PrimaryAction, Is.Not.Empty);
-                    Assert.That(entry.Properties.Count, Is.GreaterThanOrEqualTo(4));
-                    Assert.That(entry.Icon, Is.Not.Null);
-                    Assert.That(entry.Icon.Path, Is.Not.Empty);
-                    Assert.That(entry.Body, Is.Not.Null);
-                    Assert.That(entry.Body.Paragraph, Is.Not.Empty);
-                    Assert.That(entry.Related.Count, Is.GreaterThanOrEqualTo(2));
+                    Assert.That(entry.CategoryName, Is.EqualTo(category.Name), entry.Name);
+                    Assert.That(entry.Summary, Is.Not.Empty, entry.Name);
+                    Assert.That(entry.TypeChip, Is.Not.Empty, entry.Name);
+                    Assert.That(entry.NatureChip, Is.Not.Empty, entry.Name);
+                    Assert.That(entry.Definition, Is.Not.Empty, entry.Name);
+                    Assert.That(entry.Source, Is.Not.Empty, entry.Name);
+                    Assert.That(entry.Properties, Is.Not.Empty, entry.Name);
+                    Assert.That(IconGlyphs.For(entry.IconKey), Is.Not.Empty, entry.Name);
+                    Assert.That(entry.Body.Paragraph, Is.Not.Empty, entry.Name);
+                    Assert.That(entry.Related, Is.Not.Empty, entry.Name);
+                    Assert.That(entry.PrimaryAction.Length == 0, Is.EqualTo(entry.Action == AlmanacAction.None), entry.Name);
                 }
             }
         }
@@ -61,92 +59,68 @@ namespace Odyssey.Tests.Hud
             director.Toggle();
             Assert.That(director.Open, Is.True);
 
-            director.SelectCategory("Materials");
-            Assert.That(director.CurrentCategory, Is.EqualTo("Materials"));
-            Assert.That(director.CurrentEntry, Is.EqualTo("Wood"));
+            string wood = Registry.Label("ui.res.wood"), stone = Registry.Label("ui.res.stone");
+            director.SelectCategory(AlmanacCatalogue.Materials);
+            Assert.That(director.CurrentCategory, Is.EqualTo(AlmanacCatalogue.Materials));
+            Assert.That(director.CurrentEntry, Is.EqualTo(wood));
             Assert.That(director.CanGoBack, Is.True);
 
-            director.SelectEntry("Materials", "Stone");
-            Assert.That(director.CurrentEntry, Is.EqualTo("Stone"));
+            director.SelectEntry(AlmanacCatalogue.Materials, stone);
+            Assert.That(director.CurrentEntry, Is.EqualTo(stone));
 
             director.GoBack();
-            Assert.That(director.CurrentEntry, Is.EqualTo("Wood"));
+            Assert.That(director.CurrentEntry, Is.EqualTo(wood));
             Assert.That(director.CanGoForward, Is.True);
 
             director.GoForward();
-            Assert.That(director.CurrentEntry, Is.EqualTo("Stone"));
+            Assert.That(director.CurrentEntry, Is.EqualTo(stone));
         }
 
         [Test]
-        public void SelectionResolverMapsItemsToAlmanac()
+        public void AnItemOpensTheEntryForItsOwnKey()
         {
-            var inspect = new InspectModel();
+            var inspect = new InspectModel { Subject = InspectSubject.Item, Title = "Wood × 27", ItemIconKey = "ui.res.wood" };
+            Assert.That(AlmanacDirector.ResolveSelection(inspect), Is.EqualTo((AlmanacCatalogue.Materials, Registry.Label("ui.res.wood"))));
 
-            // Wood item
-            inspect.Subject = InspectSubject.Item;
-            inspect.Title = "Wood × 27";
-            inspect.ItemIconKey = "ui.res.wood";
-            var resolved = AlmanacDirector.ResolveSelection(inspect);
-            Assert.That(resolved, Is.Not.Null);
-            Assert.That(resolved!.Value.Category, Is.EqualTo("Materials"));
-            Assert.That(resolved.Value.Entry, Is.EqualTo("Wood"));
+            // The ration pack is ui.res.rations; ui.res.meal is the cooked meal, which it used to open.
+            inspect.ItemIconKey = "ui.res.rations";
+            Assert.That(AlmanacDirector.ResolveSelection(inspect), Is.EqualTo((AlmanacCatalogue.Food, Registry.Label("ui.res.rations"))));
 
-            // Ration Pack item
-            inspect.Title = "Ration pack";
-            inspect.ItemIconKey = "ui.res.meal";
-            resolved = AlmanacDirector.ResolveSelection(inspect);
-            Assert.That(resolved, Is.Not.Null);
-            Assert.That(resolved!.Value.Category, Is.EqualTo("Items"));
-            Assert.That(resolved.Value.Entry, Is.EqualTo("Ration Pack"));
-
-            // Carrots item
-            inspect.Title = "Carrots × 5";
-            inspect.ItemIconKey = "ui.res.carrots";
-            resolved = AlmanacDirector.ResolveSelection(inspect);
-            Assert.That(resolved, Is.Not.Null);
-            Assert.That(resolved!.Value.Category, Is.EqualTo("Items"));
-            Assert.That(resolved.Value.Entry, Is.EqualTo("Carrots"));
+            inspect.ItemIconKey = "ui.item.crowbar";
+            Assert.That(AlmanacDirector.ResolveSelection(inspect), Is.EqualTo((AlmanacCatalogue.Weapons, Registry.Label("ui.item.crowbar"))));
         }
 
         [Test]
-        public void SelectionResolverMapsCellsAndTerrainToAlmanac()
+        public void ATileOpensTheEntryForWhatStandsOnItOrItsGround()
         {
-            var inspect = new InspectModel();
-            inspect.Subject = InspectSubject.Cell;
+            var inspect = new InspectModel { Subject = InspectSubject.Cell };
 
-            // Grass terrain
-            inspect.Title = "Grass";
-            var resolved = AlmanacDirector.ResolveSelection(inspect);
-            Assert.That(resolved, Is.Not.Null);
-            Assert.That(resolved!.Value.Category, Is.EqualTo("Terrain"));
-            Assert.That(resolved.Value.Entry, Is.EqualTo("Grass"));
+            inspect.CellIconKey = "ui.terrain.grass";
+            Assert.That(AlmanacDirector.ResolveSelection(inspect), Is.EqualTo(("Terrain", Registry.Label("ui.terrain.grass"))));
 
-            // Wall structure
-            inspect.Title = "Wall";
-            resolved = AlmanacDirector.ResolveSelection(inspect);
-            Assert.That(resolved, Is.Not.Null);
-            Assert.That(resolved!.Value.Category, Is.EqualTo("Structures"));
-            Assert.That(resolved.Value.Entry, Is.EqualTo("Wall"));
+            inspect.CellIconKey = "ui.arch.tool.wall";
+            Assert.That(AlmanacDirector.ResolveSelection(inspect), Is.EqualTo(("Structures", Registry.Label("ui.arch.tool.wall"))));
 
-            // Pine tree flora
-            inspect.Title = "Conifer";
-            resolved = AlmanacDirector.ResolveSelection(inspect);
-            Assert.That(resolved, Is.Not.Null);
-            Assert.That(resolved!.Value.Category, Is.EqualTo("Flora"));
-            Assert.That(resolved.Value.Entry, Is.EqualTo("Pine"));
+            // A picked berry bush is the berry bush's page, and an ore seam is the ore's.
+            inspect.CellIconKey = "ui.terrain.bush.picked";
+            Assert.That(AlmanacDirector.ResolveSelection(inspect), Is.EqualTo(("Flora", Registry.Label("ui.terrain.bush.berry"))));
+            inspect.CellIconKey = "ui.res.coal";
+            Assert.That(AlmanacDirector.ResolveSelection(inspect), Is.EqualTo((AlmanacCatalogue.Materials, Registry.Label("ui.res.coal"))));
+
+            // A tile the pane has no name for opens nothing, rather than grass.
+            inspect.CellIconKey = "ui.overlay.zones";
+            Assert.That(AlmanacDirector.ResolveSelection(inspect), Is.Null);
         }
 
         [Test]
-        public void SelectionResolverMapsColonistsToAlmanac()
+        public void AColonistOpensHerOwnPageOrTheOneForTheTabSheIsOn()
         {
-            var inspect = new InspectModel();
-            inspect.Subject = InspectSubject.Colonist;
+            var inspect = new InspectModel { Subject = InspectSubject.Colonist };
+            Assert.That(AlmanacDirector.ResolveSelection(inspect), Is.EqualTo(("People", Registry.Label("ui.pawn.colonist"))));
+
             inspect.Tabs.Add(new InspectTab { Name = "Needs", Enabled = true });
-            inspect.ShowTab(0); // Needs
-
-            var resolved = AlmanacDirector.ResolveSelection(inspect);
-            Assert.That(resolved, Is.Not.Null);
-            Assert.That(resolved!.Value.Category, Is.EqualTo("Needs"));
+            inspect.ShowTab(0);
+            Assert.That(AlmanacDirector.ResolveSelection(inspect), Is.EqualTo(("Needs", Registry.Label("ui.need.food"))));
         }
 
         [Test]

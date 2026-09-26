@@ -361,13 +361,36 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Knocked down right now, at <paramref name="tick"/>.</summary>
         public bool KnockedDownAt(int tick) => KnockedDownUntilTick > tick;
 
+        /// <summary>
+        /// Flung by a sweep (design 62 §7): no knockback of any kind moves this pawn before this
+        /// tick, so nobody is flung twice in a row. Set only by a sweep's fling — a critical
+        /// knockback reads it and never sets it, so a fight without a butcher is what it was. Nought
+        /// when not; the combat pass puts it back to nought once past. Saved (layout 6) and hashed
+        /// only while set (bit 28).
+        /// </summary>
+        public int KnockbackImmuneUntilTick { get; internal set; }
+
+        /// <summary>Immune to being knocked back right now, at <paramref name="tick"/>.</summary>
+        public bool KnockbackImmuneAt(int tick) => KnockbackImmuneUntilTick > tick;
+
+        /// <summary>
+        /// A thrower's throw is ready again at this tick (design 62 §7a, <see cref="Hurl"/>): its own
+        /// clock, so a thrown rock never delays the cleaver. Nought when ready; put back to nought
+        /// once past. Saved (layout 7) and hashed only while set (bit 29).
+        /// </summary>
+        public int HurlReadyTick { get; internal set; }
+
         // The swing in the air, decided when its wind-up began (design 33 §9g) and applied at its
         // impact: what the rules rolled, kept here through the wind-up so a save taken mid-swing
         // lands the same blow. Set only while an attack driver is in its wind-up, cleared when
         // the swing lands or is lost and when the job ends, so saved (layout 3) and hashed only
         // while set. The word packs the result, the critical and the knockback, with a bit that
         // says it is set at all — a miss is a pending swing too.
+        // A sweeping species' facing (design 62 §5) rides in bits 10–13: the direction from the
+        // swinger to its target when the wind-up began, 1–8 (Melee.Direction), nought for every
+        // swing that does not sweep — so a bandit's word, its save and its hash are what they were.
         const int SwingSet = 1 << 16, SwingCrit = 1 << 8, SwingKnock = 1 << 9;
+        const int SwingFacingShift = 10, SwingFacingMask = 0xF;
 
         /// <summary>The pending swing's result word: nought when no swing is in the air.</summary>
         public int PendingSwing { get; internal set; }
@@ -382,10 +405,11 @@ namespace Odyssey.Sim.Pawns
         public bool HasPendingSwing => PendingSwing != 0;
 
         /// <summary>Keep a decided swing through its wind-up.</summary>
-        internal void HoldSwing(in SwingOutcome outcome)
+        internal void HoldSwing(in SwingOutcome outcome, int facing = 0)
         {
             PendingSwing = SwingSet | (byte)outcome.Result
-                | (outcome.Critical ? SwingCrit : 0) | (outcome.Knockback ? SwingKnock : 0);
+                | (outcome.Critical ? SwingCrit : 0) | (outcome.Knockback ? SwingKnock : 0)
+                | ((facing & SwingFacingMask) << SwingFacingShift);
             PendingDamageMilli = outcome.DamageMilli;
             PendingStunTicks = outcome.StunTicks;
         }
@@ -395,6 +419,12 @@ namespace Odyssey.Sim.Pawns
             ? new SwingOutcome(CombatEventKind.Miss)
             : new SwingOutcome((CombatEventKind)(PendingSwing & 0xFF), PendingDamageMilli, PendingStunTicks,
                 (PendingSwing & SwingCrit) != 0, (PendingSwing & SwingKnock) != 0);
+
+        /// <summary>
+        /// The facing a sweep in the air was wound up in (design 62 §5), 1–8, or nought for none —
+        /// no swing in the air, or one that does not sweep.
+        /// </summary>
+        public int HeldFacing => (PendingSwing >> SwingFacingShift) & SwingFacingMask;
 
         /// <summary>The swing landed, was lost, or its job ended.</summary>
         internal void ClearSwing()
@@ -411,7 +441,8 @@ namespace Odyssey.Sim.Pawns
         public bool HasCombatState =>
             HpMilli != HpMaxMilli || Downed || NextSwingTick != 0 || StunnedUntilTick != 0
             || RetaliateAgainst != 0 || EquippedItem != 0 || CombatTarget != 0 || CarriedBy != 0
-            || KnockedDownUntilTick != 0 || PendingSwing != 0 || TreatedUntilTick != 0;
+            || KnockedDownUntilTick != 0 || PendingSwing != 0 || TreatedUntilTick != 0
+            || KnockbackImmuneUntilTick != 0 || HurlReadyTick != 0;
 
         /// <summary>Cell index, layer included. Always layer-aware; there is no 2D form of this.</summary>
         public int Cell { get; set; }
@@ -1174,6 +1205,8 @@ namespace Odyssey.Sim.Pawns
             // is bit 23, the second of the two left free: walked only while it has anything on it,
             // so a colony nobody has hurt hashes as before health.
             // The area (design 43 §4a) is bit 27, nought at the default, for the same reason.
+            // A sweep's knockback immunity (design 62 §7) is bit 28, walked only while set, and a
+            // thrower's clock (design 62 §7a) bit 29.
             bool combat = HasCombatState;
             bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;
             bool health = HasHealthState;
@@ -1182,8 +1215,10 @@ namespace Odyssey.Sim.Pawns
                 | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0)
                 | (TreatedUntilTick != 0 ? 1 << 22 : 0) | (health ? 1 << 23 : 0)
                 | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0) | ((int)Area << 27)
-                // A guest turned hostile (design 65 §7) is bit 28, nought for everybody else.
-                | (TurnedHostile ? 1 << 28 : 0));
+                | (KnockbackImmuneUntilTick != 0 ? 1 << 28 : 0) | (HurlReadyTick != 0 ? 1 << 29 : 0)
+                // A guest turned hostile (design 65 §7) is bit 30, nought for everybody else: 28 and 29
+                // went to the butcher's knockback immunity and its throw on main the same day.
+                | (TurnedHostile ? 1 << 30 : 0));
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
             if (JumpLanding >= 0) hash.Add(JumpLanding);
@@ -1200,6 +1235,8 @@ namespace Odyssey.Sim.Pawns
                 hash.Add(CarriedBy);
                 if (knocked) hash.Add(KnockedDownUntilTick);
                 if (TreatedUntilTick != 0) hash.Add(TreatedUntilTick);
+                if (KnockbackImmuneUntilTick != 0) hash.Add(KnockbackImmuneUntilTick);
+                if (HurlReadyTick != 0) hash.Add(HurlReadyTick);
                 if (swinging)
                 {
                     hash.Add(PendingSwing);

@@ -16,12 +16,12 @@ The work types a colonist can be assigned, in priority order of urgency, the ski
 | **Handling** | `ui.work.handling` | Tame, train and feed animals | sheet 06 (action tiles), high | M7 |
 | **Cooking** | `ui.work.cooking` | Work the bills at an electric cooker or a campfire | sheet 06 (action tiles), high | M3 |
 | **Hunting** | `ui.work.hunting` | Kill wild animals for meat | sheet 06 (action tiles), high | M7 |
-| **Construction** | `ui.work.construction` | Build frames and blueprints | sheet 06 (action tiles), med | M7 |
-| **Growing** | `ui.work.growing` | Sow and harvest growing zones | sheet 06 (action tiles), high | M7 |
+| **Construction** | `ui.work.construction` | Deliver, build and deconstruct, and lay power lines | sheet 06 (action tiles), med | M7 |
+| **Growing** | `ui.work.growing` | Sow and harvest growing zones, and pick berries | sheet 06 (action tiles), high | M7 |
 | **Mining** | `ui.work.mining` | Dig, and clear rubble | sheet 05 (tools and weapons), high | M7 |
 | **Salvaging** | `ui.work.salvaging` | Strip shells and extract salvage | sheet 05 (tools and weapons), med | M7 |
 | **Chopping** | `ui.work.cutting` | Fell trees and clear growth | sheet 05 (tools and weapons), high | M7 |
-| **Hauling** | `ui.work.hauling` | Move things to storage | sheet 08 (salvage gear), low | M7 |
+| **Hauling** | `ui.work.hauling` | Move things to storage, and refuel generators | sheet 08 (salvage gear), low | M7 |
 | **Cleaning** | `ui.work.cleaning` | Clear filth from rooms | sheet 08 (salvage gear), low | M7 |
 | **Research** | `ui.work.research` | Work the research bench | sheet 06 (action tiles), high | M7 |
 | **Crafting** | `ui.work.crafting` | General bench work | sheet 03 (camp and crafting), high | M7 |
@@ -36,18 +36,18 @@ The work types a colonist can be assigned, in priority order of urgency, the ski
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
 | **Construction** | `ui.skill.construction` | Building, and the quality of what is built | sheet 06 (action tiles), high | M2 |
-| **Mining** | `ui.skill.mining` | Digging, rubble clearance and salvage extraction | sheet 06 (action tiles), high | M2 |
+| **Mining** | `ui.skill.mining` | Digging and rubble clearance: how fast | sheet 06 (action tiles), high | M2 |
 | **Salvage** | `ui.skill.salvage` | Stripping a shell without wrecking what is in it | sheet 06 (action tiles), high | M2 |
 | **Cooking** | `ui.skill.cooking` | How fast a colonist cooks, and how seldom the meal burns | sheet 06 (action tiles), high | M3 |
-| **Growing** | `ui.skill.growing` | Yield and harvest speed | sheet 06 (action tiles), high | M2 |
+| **Growing** | `ui.skill.growing` | Sowing, harvesting and picking: how fast | sheet 06 (action tiles), high | M2 |
 | **Chopping** | `ui.skill.cutting` | Felling trees. How fast the axe comes down, and how fast the trunk goes over | sheet 09 (?), high | M2 |
 | **Animals** | `ui.skill.animals` | Taming, training and husbandry | sheet 06 (action tiles), high | M2 |
 | **Crafting** | `ui.skill.crafting` | Bench work and item quality | sheet 06 (action tiles), high | M2 |
 | **Fabrication** | `ui.skill.fabrication` | Advanced production. Gates the best gear | sheet 06 (action tiles), high | M2 |
-| **Medicine** | `ui.skill.medicine` | How fast a colonist treats the hurt | sheet 06 (action tiles), high | M2 |
+| **Medicine** | `ui.skill.medicine` | How fast a colonist treats the hurt, and how well | sheet 06 (action tiles), high | M2 |
 | **Social** | `ui.skill.social` | Negotiation, recruitment and warden work | sheet 08 (salvage gear), low | M2 |
 | **Shooting** | `ui.skill.shooting` | Ranged accuracy | sheet 06 (action tiles), high | M2 |
-| **Melee** | `ui.skill.melee` | Close combat, hit and parry | sheet 06 (action tiles), high | M2 |
+| **Melee** | `ui.skill.melee` | Close combat: landing a blow, and dodging one | sheet 06 (action tiles), high | M2 |
 | **Intellect** | `ui.skill.intellect` | Research speed | sheet 06 (action tiles), high | M2 |
 
 ## Schedule blocks

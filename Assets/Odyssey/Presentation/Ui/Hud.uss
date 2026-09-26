@@ -1011,11 +1011,90 @@
     -unity-text-align: middle-left;
 }
 
-.inspect__actions {
-    flex-direction: row;
+/* The header's actions (design 61, mockup 24c): two large toggles, Draft and First Person, then
+   Close over Info. Flat: no radius, no shadow, no glow. Every number here is a HudLayout constant
+   that HudStyleSheetTests holds this file to. */
+.inspect__toggle {
+    width: 52px;
+    flex-direction: column;
     align-items: center;
     flex-shrink: 0;
+    margin-left: 12px;
 }
+
+/* 40, not the mockup's 44: fitted to this pane's 60 px header (HudLayout.InspectToggleTile). */
+.inspect__tile {
+    width: 40px;
+    height: 40px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.26);
+    background-color: rgba(0, 0, 0, 0);
+    justify-content: center;
+    align-items: center;
+}
+
+/* Hover lifts the border off, never fills it; the icon's lift is the element's (InspectToggle). */
+.inspect__toggle:hover .inspect__tile { border-color: rgba(238, 243, 246, 0.40); }
+
+/* On: the hue's border and a 12% wash of it. After the hover rule, so an on tile keeps its hue
+   under the pointer. Draft is red because drafting is the risky state. */
+.inspect__toggle--draft.inspect__toggle--on .inspect__tile {
+    border-color: #e06a5c;
+    background-color: rgba(224, 106, 92, 0.12);
+}
+
+.inspect__toggle--view.inspect__toggle--on .inspect__tile {
+    border-color: #6fd3e3;
+    background-color: rgba(111, 211, 227, 0.12);
+}
+
+/* First Person with no one colonist to ride with. */
+.inspect__toggle--off { opacity: 0.4; }
+.inspect__toggle--off:hover .inspect__tile { border-color: rgba(255, 255, 255, 0.26); }
+
+.inspect__cap {
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+/* Some of the selection drafted and some not: a 2 px line along the tile's foot, inside it. */
+.inspect__mixed {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background-color: #e06a5c;
+}
+
+.inspect__togglelabel {
+    margin-top: 4px;
+    height: 16px;
+    color: #eef3f6;
+    white-space: nowrap;
+    -unity-text-align: middle-center;
+}
+
+/* Close at the top of the header's height and Info at the bottom. */
+.inspect__stack {
+    margin-left: 15px;
+    align-self: stretch;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+/* The tile readout's 38 px header has no room for the stack, so there the two stand in a row,
+   Close rightmost as it always was. */
+.inspect--narrow .inspect__stack {
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+    align-self: flex-start;
+}
+
+.inspect--narrow .inspect__info { margin-right: 4px; }
 
 .action {
     flex-direction: row;
@@ -1036,26 +1115,22 @@
 .inspect__close {
     width: 26px;
     height: 26px;
-    margin-left: 4px;
     border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.13);
-    border-radius: 4px;
+    border-color: rgba(255, 255, 255, 0.26);
     justify-content: center;
     align-items: center;
 }
 
 .inspect__close:hover { border-color: #e06a5c; }
+
+/* Filled in the info blue, no border: help, not an action. The i is the on-accent ink. */
 .inspect__info {
     width: 26px;
     height: 26px;
-    margin-left: 4px;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.13);
-    border-radius: 4px;
+    background-color: #8fd0e3;
     justify-content: center;
     align-items: center;
 }
-.inspect__info:hover { border-color: #7fd0e0; }
 
 .inspect__tabs {
     flex-direction: row;
@@ -3497,8 +3572,8 @@
 }
 
 .almanac-idx-row__sq {
-    width: 26px;
-    height: 26px;
+    width: 32px;
+    height: 32px;
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.18);
     border-radius: 3px;
@@ -3826,3 +3901,189 @@
     padding: 4px 8px;
     background-color: rgba(12, 16, 20, 0.96);
 }
+
+/* ---------------------------------------------------------------- the World screen (design 59 §9)
+
+   Claude Design's specification (docs/reference/mockups/world-screen-spec.md), on the setup page's
+   own frame: the element wears .panel .window .setup, so the fill, the border, the radius, the inset
+   of 24 and the padding of 32 x 40 are the setup page's, and these rules add only the layout inside.
+   Colours that are not tokens — the map's backdrop, a biome's swatch, the accent Next, the status
+   box — are set from C# through HudTokens and HudTheme, so this sheet states no new colour but the
+   zoom buttons' hover, which is the rows' own rgba(255, 255, 255, 0.06) wash. The numbers are
+   WorldLayout's. */
+.world { flex-direction: column; }
+
+.world__titlerow { flex-direction: row; align-items: flex-end; flex-shrink: 0; }
+.world__titlerow .setup__title { margin-bottom: 0; }
+.world__subtitle { margin-left: 12px; height: 20px; }
+
+.world__top { flex-direction: row; align-items: flex-end; margin-top: 24px; flex-shrink: 0; }
+.world__top .setup__field { width: 200px; margin-right: 9px; }
+.world__seed { height: 36px; }
+
+.world__button {
+    height: 36px;
+    padding: 0 14px;
+    margin-right: 24px;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+.world__button .settings__label { margin-left: 8px; flex-grow: 0; }
+.world__hint { height: 20px; }
+
+.world__body { flex-direction: row; flex-grow: 1; margin-top: 24px; min-height: 0; }
+.world__mapcolumn { flex-direction: column; flex-grow: 1; min-width: 0; margin-right: 24px; }
+
+.world__map {
+    flex-grow: 1;
+    overflow: hidden;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+}
+.world__mapimage { position: absolute; }
+.world__overlay { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.world__land { position: absolute; white-space: nowrap; }
+.world__sea { position: absolute; white-space: nowrap; }
+
+.world__zoom {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 34px;
+    border-width: 1px;
+    border-radius: 3px;
+}
+.world__zoombutton { width: 32px; height: 32px; align-items: center; justify-content: center; }
+.world__zoombutton:hover { background-color: rgba(255, 255, 255, 0.06); }
+.world__zoomreadout { height: 22px; -unity-text-align: middle-center; }
+
+.world__zoomhint {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    padding: 6px 9px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 3px;
+}
+
+.world__legend { flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 12px; flex-shrink: 0; }
+.world__legendentry { flex-direction: row; align-items: center; margin-right: 18px; height: 26px; }
+.world__legendswatch { width: 16px; height: 16px; border-width: 1px; margin-right: 8px; }
+.world__legendstate { margin-left: 8px; }
+.world__legenddivider { width: 1px; height: 18px; margin-right: 18px; }
+
+.world__stats { width: 340px; flex-shrink: 0; border-width: 1px; border-radius: 3px; }
+.world__statsheader { flex-direction: row; align-items: center; padding: 16px; border-bottom-width: 1px; }
+.world__statsswatch { width: 44px; height: 44px; margin-right: 12px; border-radius: 3px; }
+/* The caption and the name span the swatch exactly: the caption's top on the swatch's top, the
+   name's foot on the swatch's foot (owner, 2026-09-26). A label left to size itself is about twice
+   its point size tall, so the two boxes are fixed and the text pinned to their outer edges; the
+   first build let them size themselves, and a 55 px column centred on a 44 px swatch sat the name
+   below it. */
+.world__statsheading { flex-direction: column; justify-content: space-between; height: 44px; }
+.world__statscaption { height: 14px; margin: 0; padding: 0; -unity-text-align: upper-left; }
+.world__statsname { height: 24px; margin: 0; padding: 0; -unity-text-align: lower-left; }
+.world__status { margin: 12px 16px 0 16px; padding: 8px 10px; border-width: 1px; border-radius: 3px; }
+.world__statusline { flex-direction: row; align-items: center; height: 20px; }
+.world__statusicon { width: 14px; height: 14px; margin-right: 8px; }
+.world__statusreason { white-space: normal; margin-top: 4px; }
+.world__statsrows { padding: 12px 16px; }
+.world__statrow {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    height: 30px;
+    border-bottom-width: 1px;
+}
+/* A value in coloured runs (a temperature's traffic light): one right-aligned row; the word gap
+   between runs is set in C#. */
+.world__statruns { flex-direction: row; align-items: center; }
+.world__statruns .world__statvalue { margin: 0; padding: 0; }
+.world__statsfoot { margin-top: auto; padding: 12px 16px; border-top-width: 1px; white-space: normal; }
+
+.world__footer { margin-top: 24px; justify-content: space-between; flex-shrink: 0; }
+.world__footerbutton { min-width: 160px; justify-content: center; margin-right: 0; }
+.world__next .settings__label { margin-left: 0; margin-right: 8px; }
+/* ---------------------------------------------------------------- riding along (design 57 §6)
+
+   The whole interface while the view rides with a colonist: one strip, bottom centre, over the
+   picture rather than framing it. Who, what she is doing, her health, the speed and the way out,
+   and the first alert under them when there is one. Nothing in it is pickable: the pointer is
+   locked to the view. */
+
+.ride {
+    position: absolute;
+    left: 50%;
+    translate: -50% 0;
+    bottom: 24px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    max-width: 900px;
+    padding: 8px 16px;
+    background-color: rgba(12, 16, 20, 0.78);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+}
+
+.ride__who {
+    flex-direction: column;
+    margin-right: 20px;
+}
+
+.ride__name { color: #f2f5f8; }
+.ride__job { color: #b8c2cc; }
+
+.ride__health {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 20px;
+}
+
+.ride__bar {
+    width: 96px;
+    height: 6px;
+    margin-right: 8px;
+    background-color: rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.ride__fill {
+    height: 100%;
+    border-radius: 3px;
+}
+
+.ride__value { color: #b8c2cc; }
+
+.ride__speed {
+    color: #f2f5f8;
+    margin-right: 20px;
+}
+
+.ride__leave {
+    flex-direction: row;
+    align-items: center;
+}
+
+.ride__cap {
+    padding: 1px 5px;
+    margin-right: 6px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.25);
+    border-radius: 3px;
+}
+
+.ride__alert {
+    width: 100%;
+    margin-top: 6px;
+    -unity-text-align: middle-center;
+    color: #f0b44c;
+}
+
+/* She has gone from the frame and the camera is holding on where she was. */
+.ride--lost .ride__name,
+.ride--lost .ride__job { color: #7d8792; }
