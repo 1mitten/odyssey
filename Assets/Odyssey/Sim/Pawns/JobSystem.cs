@@ -508,8 +508,13 @@ namespace Odyssey.Sim.Pawns
             // An animal consults the animal tree (design 29 §3), never the colonist's: a node
             // that returned false for a person would be a node every colonist evaluated on
             // every think, and the animal's whole mind is one node anyway.
-            // A hostile person consults the hostile tree (design 33 §5), for the same reason.
-            ThinkNode[] tree = !pawn.IsPerson ? AnimalTree : pawn.IsHostile ? HostileTree : _tree;
+            // A hostile person consults the hostile tree (design 33 §5), for the same reason, and a
+            // prisoner the prisoner's (design 58 §6) — custody first, because an escapee is hostile
+            // but is not a raider.
+            ThinkNode[] tree = !pawn.IsPerson ? AnimalTree
+                : pawn.Custody != PawnCustody.Free ? PrisonerTrees.For(pawn.Custody)
+                : pawn.IsHostile ? HostileTree
+                : _tree;
             var job = pawn.JobBuffer;
             for (int i = 0; i < tree.Length; i++)
             {

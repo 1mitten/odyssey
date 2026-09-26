@@ -598,6 +598,8 @@ ui.debug.armcolonists,Arm every colonist,ui.debug,CB,"Every colonist standing wi
 ui.debug.hurt,Hurt a colonist,ui.debug,HE,"The colonist nearest the camera takes a 20-point cut, which bleeds until somebody tends it"
 ui.debug.heal,Heal a colonist,ui.debug,HE,The colonist nearest the camera is made whole and gets up
 ui.debug.kill,Kill a colonist,ui.debug,HE,"The colonist nearest the camera dies where she stands, and is mourned"
+ui.debug.imprison,Imprison nearest,ui.debug,PS,"The person nearest the camera who is not held becomes a prisoner, where she stands"
+ui.debug.freeprisoner,Free nearest prisoner,ui.debug,PS,"The prisoner nearest the camera is set free again, as if she had never been taken"
 ui.debug.givemedkits,Give medical supplies,ui.debug,HE,Adds 10 medical supplies near the camera
 ui.debug.jumpsfail,Jumps always fail,ui.debug,JP,"Every jump over a stream falls short into the water, so a failed jump can be watched"
 ui.debug.group.colonists,Colonists,ui.debug,CB,"The Spawn tab heading over the colonist rows"

@@ -364,6 +364,14 @@ namespace Odyssey.Sim.Contracts
         /// <c>ShotReportView</c> on the next publish while it stands. What the hover readout reads.
         /// </summary>
         QueryShot,
+
+        /// <summary>
+        /// Debug-menu-only (design 58 §4): take a person into the colony's custody, or set one
+        /// free. <c>A</c> is the pawn's <c>PawnId</c> value, or nought for the person nearest
+        /// <see cref="Intent.Cell"/>; <c>B</c> is 0 to take, 1 to free. Handler:
+        /// <c>JobSystem.HandleDebugImprison</c>. Appended, so no recorded intent renumbers.
+        /// </summary>
+        DebugImprison,
     }
 
     /// <summary>What an <see cref="IntentKind.EditBill"/> does, as its <c>A</c> carries it.</summary>

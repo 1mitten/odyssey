@@ -618,7 +618,10 @@ namespace Odyssey.Sim.Pawns
                     flags,
                     seated,
                     // A jump falling short lands a layer below the bank it left (design 46 §6).
-                    pawn.JumpLanding >= 0 && pawn.JumpLanding / size.LayerStride != pawn.Cell / size.LayerStride));
+                    pawn.JumpLanding >= 0 && pawn.JumpLanding / size.LayerStride != pawn.Cell / size.LayerStride,
+                    // Held, and dressed for it (design 58 §4b, §11d): reports of saved state.
+                    pawn.Custody,
+                    pawn.Custody != PawnCustody.Free && pawn.Prison != null && pawn.Prison.Dressed));
 
                 // The fight (design 33 §5), sparse, and for animals as much as people: the health
                 // bar is drawn over the hurt, the downed and the drafted, and a hog can be all

@@ -281,6 +281,8 @@ namespace Odyssey.Sim.Pawns
                 .AddIntentHandler(IntentKind.SetPawnArea, pipeline.HandleSetPawnArea)
                 .AddIntentHandler(IntentKind.DebugHealth, pawns.Pawns.HandleDebugHealth)
                 .AddIntentHandler(IntentKind.OrderTend, pipeline.HandleOrderTend)
+                // Custody (design 58 §4), on the pipeline because taking a pawn ends her job.
+                .AddIntentHandler(IntentKind.DebugImprison, pipeline.HandleDebugImprison)
                 // The Work tab's one command (design 27). It belongs to the registry because a
                 // priority is a field on a pawn and the registry is the one owner of those; the
                 // job pipeline only ever reads it.

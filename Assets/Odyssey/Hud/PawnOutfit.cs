@@ -13,6 +13,12 @@ namespace Odyssey.Hud
     {
         Issued = 0,
         Bandit = 1,
+
+        /// <summary>
+        /// The prison jumpsuit (design 58 §11d): worn from the moment a prisoner is laid in a
+        /// prison bed until she is free again. Drawn as the issued suit until its look is made.
+        /// </summary>
+        Prisoner = 2,
     }
 
     /// <summary>
@@ -29,7 +35,13 @@ namespace Odyssey.Hud
                 ? PawnOutfit.Bandit
                 : PawnOutfit.Issued;
 
-        public static PawnOutfit For(in PawnView pawn) => For(pawn.Flags);
+        /// <summary>
+        /// A published pawn: custody first (design 58 §11d) — a prisoner dressed for her cell wears
+        /// the jumpsuit, escaping or not — then the flags' rule. A recruit is not hostile, so she
+        /// wears the colony's suit without a rule of her own.
+        /// </summary>
+        public static PawnOutfit For(in PawnView pawn) =>
+            pawn.Dressed && pawn.Custody != PawnCustody.Free ? PawnOutfit.Prisoner : For(pawn.Flags);
 
         public static PawnOutfit For(in CorpseView corpse) => For(corpse.Flags);
 

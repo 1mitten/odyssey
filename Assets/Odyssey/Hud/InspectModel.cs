@@ -169,7 +169,7 @@ namespace Odyssey.Hud
         /// its skills are not the player's to read and its health is the bar over its head), so
         /// its pane is the animal's shape — kind, activity, where.
         /// </summary>
-        public bool ShowsColonistBody => Subject == InspectSubject.Colonist && !IsAnimal && !IsHostile;
+        public bool ShowsColonistBody => Subject == InspectSubject.Colonist && !IsAnimal && !IsHostile && !IsPrisoner;
 
         /// <summary>
         /// The tab strip and the fixed-height tab box are built. A colonist's, and an animal's —
@@ -177,7 +177,7 @@ namespace Odyssey.Hud
         /// rather than changed without a decision. A bandit's is not: its pane has no tabs to
         /// hold, and an empty box would be the Health tab's place with nothing in it.
         /// </summary>
-        public bool ShowsTabBox => Subject == InspectSubject.Colonist && !IsHostile;
+        public bool ShowsTabBox => Subject == InspectSubject.Colonist && !IsHostile && !IsPrisoner;
 
         /// <summary>The badge the avatar slot shows when <see cref="ShowsFace"/> is false.</summary>
         public string AvatarKey =>
@@ -188,6 +188,9 @@ namespace Odyssey.Hud
 
         /// <summary>The corpse's registry key: its badge, and the first word of its title.</summary>
         public const string CorpseKey = "ui.pawn.corpse";
+
+        /// <summary>A held pawn's word under her name (design 58 §11b).</summary>
+        public const string PrisonerKey = "ui.pawn.prisoner";
 
         /// <summary>Last-known values of a colonist who has left the frame, shown greyed.</summary>
         public bool Tombstoned;
@@ -287,6 +290,13 @@ namespace Odyssey.Hud
         /// needs, skills, Health tab or Draft button. Set from the view's flags on every refresh.
         /// </summary>
         public bool IsHostile;
+
+        /// <summary>
+        /// The selected pawn is held by the colony (design 58 §4b): neither ours nor an enemy. Its
+        /// pane is a bandit's shape — face, name, activity, where — under the word "Prisoner".
+        /// Set from the view on every refresh.
+        /// </summary>
+        public bool IsPrisoner;
 
         // Which pawn IsAnimal and IsHostile were last read for. A pawn that leaves the frame keeps
         // the shape it had while it was in it, rather than falling to a colonist's tombstone.
@@ -659,6 +669,7 @@ namespace Odyssey.Hud
                 {
                     IsAnimal = PawnKindLabels.IsAnimal(pawn);
                     IsHostile = pawn.IsHostile;
+                    IsPrisoner = pawn.IsPrisoner;
                     _shapeFor = Pawn;
                 }
                 else if (_shapeFor != Pawn)
@@ -666,9 +677,10 @@ namespace Odyssey.Hud
                     // Never seen in a frame: the colonist's tombstone, as it always was.
                     IsAnimal = false;
                     IsHostile = false;
+                    IsPrisoner = false;
                 }
 
-                if (IsAnimal || IsHostile)
+                if (IsAnimal || IsHostile || IsPrisoner)
                 {
                     // An animal (design 29 §8) or a bandit (design 33 §1): kind, activity,
                     // where. The colonist's tabs, commands and skills are not added, so the pane
@@ -708,7 +720,7 @@ namespace Odyssey.Hud
                     {
                         // A bandit's job is a person's job — fighting, mostly — in a person's words,
                         // under the kind's word where the name would otherwise leave you guessing.
-                        Subtitle = HostileKindWord(pawn.Kind);
+                        Subtitle = IsPrisoner ? Registry.Label(PrisonerKey) : HostileKindWord(pawn.Kind);
                         SetJob(snapshot, pawn);
                         JobIconKey = JobLabels.IconKey(pawn.JobDef);
                     }
@@ -748,6 +760,7 @@ namespace Odyssey.Hud
             Tombstoned = false;
             IsAnimal = false;
             IsHostile = false;
+            IsPrisoner = false;
 
             // A corpse (design 33 §1, §5f): "Corpse of X", what it was, when it died and where it
             // lies, with the corpse badge and no tabs or commands.
