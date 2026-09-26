@@ -694,7 +694,7 @@ namespace Odyssey.Hud
                     // A bandit is a person with a name of their own, dealt from the colonist
                     // pool by the same seed and id (design 42 §2: "they need to be their own
                     // character"); an animal is called by its kind.
-                    Title = IsAnimal ? PawnKindLabels.Label(pawn.Kind) : ColonistNames.Of(snapshot, pawn.Id);
+                    Title = IsAnimal ? PawnKindLabels.Title(snapshot, pawn.Id, pawn.Kind) : ColonistNames.Of(snapshot, pawn.Id);
                     if (IsAnimal)
                     {
                         Subtitle = AnimalWord;

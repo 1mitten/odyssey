@@ -29,6 +29,15 @@ namespace Odyssey.Hud
         public static string Hog => Registry.Label("ui.pawn.hog");
         public static string Rat => Registry.Label("ui.pawn.rat");
         public static string Frog => Registry.Label("ui.pawn.frog");
+        public static string Rabbit => Registry.Label("ui.pawn.rabbit");
+        public static string Deer => Registry.Label("ui.pawn.deer");
+        public static string Fox => Registry.Label("ui.pawn.fox");
+        public static string Raccoon => Registry.Label("ui.pawn.raccoon");
+        public static string Skunk => Registry.Label("ui.pawn.skunk");
+        public static string Boar => Registry.Label("ui.pawn.boar");
+        public static string Moose => Registry.Label("ui.pawn.moose");
+        public static string Wolf => Registry.Label("ui.pawn.wolf");
+        public static string Bear => Registry.Label("ui.pawn.bear");
         public static string Wandering => Registry.Label("ui.status.wandering");
         public static string Resting => Registry.Label("ui.status.resting");
     }
@@ -882,24 +891,24 @@ namespace Odyssey.Hud
             list.Add(new AlmanacCategory("Fauna", "M4.5 9.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z M12.5 9.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z M8.5 15.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z", new List<AlmanacEntry>
             {
                 new AlmanacEntry(
-                    AlmanacKeys.Hog, "Fauna", "Pig-descended, thrives on refuse heaps; the one you meet first", "Fauna", "Wild", false, "#c49a7a",
+                    AlmanacKeys.Hog, "Fauna", "Pig-descended, thrives on the refuse heaps of the ruin", "Fauna", "Wild", false, "#c49a7a",
                     new AlmanacIcon("fauna_hog", "#c49a7a", "M4 13c0-3 3-6 8-6s8 3 8 6v3H4v-3z M6 16v3 M18 16v3 M20 12l2-1"),
-                    "The midden hog is pig stock gone feral among the refuse of the ruin. It ambles in family groups through the woodland and clearings, rests often, and takes the terrace ramps but never a ladder, a door or water. Wild for now; the reliable meat animal when there is a health model to take it.",
+                    "The midden hog is pig stock gone feral among the refuse of the ruin. It ambles in family groups through the city's rubble, rests often, and takes the terrace ramps but never a ladder, a door or water. The meadow's woods belong to its wild cousin, the thicket boar. Wild for now; the reliable meat animal when there is hunting to take it.",
                     "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
-                        ("Pace", "60% of a colonist's walk"), ("Lives", "Woodland and clearings, in sounders of 3 to 5"),
+                        ("Pace", "60% of a colonist's walk"), ("Lives", "The ruined city, in groups of 2 to 3"),
                         ("Day", "Out by day, rests three times longer at night"), ("Leg", "Within 8 cells, then a rest of 5 to 15 s"),
                         ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
                         ("Body", "1.2 m long"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
-                        "A sounder lands together and drifts apart across its glade. Each hog takes a short leg and then rests, and by night rests far longer. One that decides to go walks to the nearest board edge and is gone; another sounder walks in when the board is short.",
+                        "A sounder lands together and drifts apart across its patch of rubble. Each hog takes a short leg and then rests, and by night rests far longer. One that decides to go walks to the nearest board edge and is gone; another sounder walks in when the board is short.",
                         effects: new[] {
                             ("Sounder", "Three to five arrive together and wander independently; the Animals tab counts them."),
                             ("Ramps only", "A hog goes up and down a terrace step where a bank is drawn, and nowhere else."),
                             ("No swimming", "Streams and ponds are walls to it; the census keeps it off water when it lands.")
                         }),
-                    new[] { (AlmanacKeys.Rat, "another animal on the board"), ("Pine", "the woodland it is seeded beside"), (AlmanacKeys.Ladder, "the one climb it never takes") }
+                    new[] { (AlmanacKeys.Rat, "another animal of the ruin"), (AlmanacKeys.Boar, "its wild cousin of the meadow's woods"), (AlmanacKeys.Ladder, "the one climb it never takes") }
                 ),
                 new AlmanacEntry(
                     AlmanacKeys.Rat, "Fauna", "The rat of the ruin: ducts, caverns, and anything it can climb", "Fauna", "Vermin", false, "#8c7d75",
@@ -939,7 +948,191 @@ namespace Odyssey.Hud
                             ("Rain", "Stays out in it; the hogs and rats go for cover."),
                             ("No swimming", "It sits at the water's edge; streams and ponds are walls to it.")
                         }),
-                    new[] { (AlmanacKeys.Hog, "another animal on the board"), (AlmanacKeys.Rat, "another animal on the board"), ("Shallow Water", "the water it keeps beside") }
+                    new[] { (AlmanacKeys.Raccoon, "another animal of the banks"), (AlmanacKeys.Moose, "another animal of the banks"), ("Shallow Water", "the water it keeps beside") }
+                ),
+
+                // The forest roster (plan forest-animals.md, FA1): what they are, where they live
+                // and when they are out. How each one behaves towards a colonist is FA2's
+                // temperament, and none of it is claimed here until it is built.
+                new AlmanacEntry(
+                    AlmanacKeys.Rabbit, "Fauna", "A small rabbit of the open grass, and the quickest thing on the board", "Fauna", "Wild", false, "#b8a48c",
+                    new AlmanacIcon("fauna_verge_rabbit", "#b8a48c", "M6 17c0-3 3-5 6-5s6 2 6 5H6z M10 12V5 M13 12V4 M18 15l2 1"),
+                    "The verge rabbit lives on the open grass, away from the trees, alone or in twos and threes. It is the quickest animal in the game, faster than any colonist, and takes the terrace ramps but never a ladder, a door or water.",
+                    "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
+                    new[] {
+                        ("Pace", "130% of a colonist's walk"), ("Lives", "Open grass away from the trees, 1 to 3 together"),
+                        ("Day", "Out by day, rests three times longer at night"), ("Leg", "Within 5 cells, then a rest"),
+                        ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
+                        ("Body", "0.25 m at the shoulder"), ("Tame", "Not yet")
+                    },
+                    new AlmanacBody("simple", "BEHAVIOUR",
+                        "A rabbit takes short legs across the grass and sits between them. It lands where no tree stands within two cells, so the meadow's clearings and open slopes are where to look.",
+                        effects: new[] {
+                            ("Quick", "Nothing on the board is faster on the flat."),
+                            ("Open ground", "Seeded on grass at least two cells from a tree."),
+                            ("No swimming", "Streams and ponds are walls to it.")
+                        }),
+                    new[] { (AlmanacKeys.Fox, "the night animal of the same woods"), (AlmanacKeys.Deer, "the other grazer of the meadow") }
+                ),
+                new AlmanacEntry(
+                    AlmanacKeys.Deer, "Fauna", "A deer of the woodland edge, in small herds: a doe, or a stag with antlers", "Fauna", "Wild", false, "#a0703f",
+                    new AlmanacIcon("fauna_hedgerow_deer", "#a0703f", "M5 12h11l2-3 M7 12v7 M14 12v7 M18 9V4 M18 6l2-2 M18 6l-2-2"),
+                    "The hedgerow deer lives along the woodland edge in herds of three to six. Each is a doe or a stag, which you can tell by the antlers, and its own seed decides which. Fast on the flat, and it takes the terrace ramps but never a ladder, a door or water.",
+                    "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
+                    new[] {
+                        ("Pace", "120% of a colonist's walk"), ("Lives", "The woodland edge, in herds of 3 to 6"),
+                        ("Day", "Out by day, rests three times longer at night"), ("Leg", "Within 9 cells, then a rest"),
+                        ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
+                        ("Body", "1.0 m at the shoulder, a stag 1.2 m"), ("Tame", "Not yet")
+                    },
+                    new AlmanacBody("simple", "BEHAVIOUR",
+                        "A herd lands together and spreads along the trees, each deer taking its own legs and rests. The pane names the form: Doe, or Stag.",
+                        effects: new[] {
+                            ("Herd", "Three to six arrive together; the Animals tab counts them."),
+                            ("Doe and stag", "Two forms of one animal, dealt by its seed."),
+                            ("No swimming", "Streams and ponds are walls to it.")
+                        }),
+                    new[] { (AlmanacKeys.Moose, "the bigger animal of the same woods"), (AlmanacKeys.Wolf, "the pack of the deep woods"), (AlmanacKeys.Rabbit, "the other grazer of the meadow") }
+                ),
+                new AlmanacEntry(
+                    AlmanacKeys.Fox, "Fauna", "A lean fox of the woodland, out at night and alone", "Fauna", "Wild", false, "#c0602a",
+                    new AlmanacIcon("fauna_ash_fox", "#c0602a", "M4 15c2-3 6-4 10-3l3-4 1 5-2 2H4z M14 12l1-5 M4 15l-2 3"),
+                    "The ash fox lives in the woodland, alone. It is out at night and rests through the day, and takes the terrace ramps but never a ladder, a door or water.",
+                    "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
+                    new[] {
+                        ("Pace", "105% of a colonist's walk"), ("Lives", "The woodland, alone"),
+                        ("Day", "Out at night, rests three times longer by day"), ("Leg", "Within 7 cells, then a rest"),
+                        ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
+                        ("Body", "0.4 m at the shoulder"), ("Tame", "Not yet")
+                    },
+                    new AlmanacBody("simple", "BEHAVIOUR",
+                        "A fox is most of its time resting by day, and out on longer legs after dark. Look for it at night, alone among the trees.",
+                        effects: new[] {
+                            ("Nocturnal", "By day it rests three times as long and takes a third as many legs."),
+                            ("Alone", "Lands and arrives one at a time."),
+                            ("No swimming", "Streams and ponds are walls to it.")
+                        }),
+                    new[] { (AlmanacKeys.Rabbit, "the small animal of the open grass"), (AlmanacKeys.Wolf, "the other hunter's shape in the woods"), (AlmanacKeys.Raccoon, "another animal of the night") }
+                ),
+                new AlmanacEntry(
+                    AlmanacKeys.Raccoon, "Fauna", "A masked raccoon of the banks, out at night", "Fauna", "Wild", false, "#8a8580",
+                    new AlmanacIcon("fauna_gutter_raccoon", "#8a8580", "M4 15c0-3 3-5 7-5s7 2 8 5H4z M6 18v1 M16 18v1 M19 14l3-2 M7 12h4"),
+                    "The gutter raccoon lives by the water, on the banks of the meadow's streams and ponds, alone or in a pair. It is out at night. It cannot open a door, so a closed one keeps it out, and it takes the terrace ramps but never a ladder or water.",
+                    "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
+                    new[] {
+                        ("Pace", "90% of a colonist's walk"), ("Lives", "The banks of water, alone or in a pair"),
+                        ("Day", "Out at night, rests three times longer by day"), ("Leg", "Within 5 cells, then a rest"),
+                        ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
+                        ("Body", "0.3 m at the shoulder"), ("Tame", "Not yet")
+                    },
+                    new AlmanacBody("simple", "BEHAVIOUR",
+                        "A raccoon keeps near the water and keeps to the dark. It walks where an animal may walk and no further: a closed door is a wall to it.",
+                        effects: new[] {
+                            ("Nocturnal", "By day it rests three times as long and takes a third as many legs."),
+                            ("Doors", "Cannot open one, so a closed door keeps it out."),
+                            ("No swimming", "It lives by the water but will not go into it.")
+                        }),
+                    new[] { (AlmanacKeys.Frog, "another animal of the banks"), (AlmanacKeys.Skunk, "another animal of the night"), ("Shallow Water", "the water it keeps beside") }
+                ),
+                new AlmanacEntry(
+                    AlmanacKeys.Skunk, "Fauna", "A slow striped skunk of the woodland floor, out at night", "Fauna", "Wild", false, "#6a6a78",
+                    new AlmanacIcon("fauna_rubble_skunk", "#6a6a78", "M4 16c0-3 3-5 7-5s6 2 7 5H4z M17 12c2-2 3-5 1-7 M9 11l4 0"),
+                    "The rubble skunk lives on the woodland floor, alone, and is out at night. It is the slowest animal in the woods, and takes the terrace ramps but never a ladder, a door or water.",
+                    "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
+                    new[] {
+                        ("Pace", "70% of a colonist's walk"), ("Lives", "The woodland floor, alone"),
+                        ("Day", "Out at night, rests three times longer by day"), ("Leg", "Within 4 cells, then a rest"),
+                        ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
+                        ("Body", "0.25 m at the shoulder"), ("Tame", "Not yet")
+                    },
+                    new AlmanacBody("simple", "BEHAVIOUR",
+                        "A skunk takes the shortest legs of anything in the woods and does most of it after dark.",
+                        effects: new[] {
+                            ("Nocturnal", "By day it rests three times as long and takes a third as many legs."),
+                            ("Slow", "The slowest walker in the woods."),
+                            ("No swimming", "Streams and ponds are walls to it.")
+                        }),
+                    new[] { (AlmanacKeys.Raccoon, "another animal of the night"), (AlmanacKeys.Fox, "another animal of the night") }
+                ),
+                new AlmanacEntry(
+                    AlmanacKeys.Boar, "Fauna", "A wild boar of the thickets, in sounders; the midden hog's forest cousin", "Fauna", "Wild", false, "#6e5a48",
+                    new AlmanacIcon("fauna_thicket_boar", "#6e5a48", "M4 13c0-3 3-5 8-5s8 2 8 5v3H4v-3z M6 16v3 M18 16v3 M20 12l2 1 M19 13l1-2"),
+                    "The thicket boar lives in the meadow's woods in sounders of three to five, and is out at night. It takes the terrace ramps but never a ladder, a door or water.",
+                    "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
+                    new[] {
+                        ("Pace", "A colonist's walk"), ("Lives", "The woodland, in sounders of 3 to 5"),
+                        ("Day", "Out at night, rests three times longer by day"), ("Leg", "Within 8 cells, then a rest"),
+                        ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
+                        ("Body", "0.9 m at the shoulder"), ("Tame", "Not yet")
+                    },
+                    new AlmanacBody("simple", "BEHAVIOUR",
+                        "A sounder lands together in the trees and drifts apart, each boar taking its own legs and rests, most of them after dark.",
+                        effects: new[] {
+                            ("Sounder", "Three to five arrive together; the Animals tab counts them."),
+                            ("Nocturnal", "By day it rests three times as long and takes a third as many legs."),
+                            ("No swimming", "Streams and ponds are walls to it.")
+                        }),
+                    new[] { (AlmanacKeys.Hog, "its cousin of the ruin"), (AlmanacKeys.Wolf, "the pack of the deep woods"), (AlmanacKeys.Bear, "the biggest thing in the same woods") }
+                ),
+                new AlmanacEntry(
+                    AlmanacKeys.Moose, "Fauna", "The biggest animal of the meadow: a cow, or a bull with broad antlers", "Fauna", "Wild", false, "#5e4630",
+                    new AlmanacIcon("fauna_mire_moose", "#5e4630", "M4 11h12l2-3 M6 11v8 M14 11v8 M18 8h4 M18 8l-1-4 M21 8l1-4"),
+                    "The mire moose lives by the water and in the woods, alone or in twos and threes. It is the tallest animal in the game, a cow or a bull by its own seed, and the bull wears broad antlers. It takes the terrace ramps but never a ladder, a door or water.",
+                    "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
+                    new[] {
+                        ("Pace", "A colonist's walk"), ("Lives", "The banks of water and the woods, 1 to 3 together"),
+                        ("Day", "Out by day, rests three times longer at night"), ("Leg", "Within 10 cells, then a rest"),
+                        ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
+                        ("Body", "1.8 m at the shoulder, a bull 1.9 m"), ("Tame", "Not yet")
+                    },
+                    new AlmanacBody("simple", "BEHAVIOUR",
+                        "A moose takes long legs between long rests, near the water or under the trees. The pane names the form: Cow, or Bull.",
+                        effects: new[] {
+                            ("Cow and bull", "Two forms of one animal, dealt by its seed."),
+                            ("Tallest", "It stands above a colonist's head."),
+                            ("No swimming", "It keeps to the banks; the water is a wall to it.")
+                        }),
+                    new[] { (AlmanacKeys.Deer, "the smaller animal of the same woods"), (AlmanacKeys.Raccoon, "another animal of the banks"), (AlmanacKeys.Bear, "the other giant of the woods") }
+                ),
+                new AlmanacEntry(
+                    AlmanacKeys.Wolf, "Fauna", "A wolf of the deep woods, in packs of two to four, out at night", "Fauna", "Wild", false, "#8a8f96",
+                    new AlmanacIcon("fauna_ridge_wolf", "#8a8f96", "M3 15c2-3 6-4 11-3l3-4 1 4 2 1-3 2H3z M6 15v4 M13 15v4 M3 15l-1-3"),
+                    "The ridge wolf lives in the deep woods, away from where the colony begins, in packs of two to four. It is out at night, and takes the terrace ramps but never a ladder, a door or water.",
+                    "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
+                    new[] {
+                        ("Pace", "110% of a colonist's walk"), ("Lives", "The deep woods, away from the start, in packs of 2 to 4"),
+                        ("Day", "Out at night, rests three times longer by day"), ("Leg", "Within 12 cells, then a rest"),
+                        ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
+                        ("Body", "0.8 m at the shoulder"), ("Tame", "Not yet")
+                    },
+                    new AlmanacBody("simple", "BEHAVIOUR",
+                        "A pack lands together in the deep woods and ranges further on each leg than anything else on the board, most of it after dark.",
+                        effects: new[] {
+                            ("Pack", "Two to four arrive together; the Animals tab counts them."),
+                            ("Far from the start", "Seeded deeper in the woods than the other animals."),
+                            ("No swimming", "Streams and ponds are walls to it.")
+                        }),
+                    new[] { (AlmanacKeys.Deer, "the herd of the woodland edge"), (AlmanacKeys.Bear, "the other animal kept far from the start"), (AlmanacKeys.Fox, "the small hunter's shape of the same woods") }
+                ),
+                new AlmanacEntry(
+                    AlmanacKeys.Bear, "Fauna", "A big solitary bear of the woods and the rock", "Fauna", "Wild", false, "#6b4a2e",
+                    new AlmanacIcon("fauna_quarry_bear", "#6b4a2e", "M3 13c0-3 4-6 9-6s9 3 9 6v3H3v-3z M5 16v3 M19 16v3 M18 8a1.5 1.5 0 1 0 3 0 1.5 1.5 0 0 0-3 0z"),
+                    "The quarry bear lives alone in the woods and among the rock, away from where the colony begins. It is out by day, is the toughest animal in the game, and takes the terrace ramps but never a ladder, a door or water.",
+                    "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
+                    new[] {
+                        ("Pace", "A colonist's walk"), ("Lives", "The woods and the rock, away from the start, alone"),
+                        ("Day", "Out by day, rests three times longer at night"), ("Leg", "Within 10 cells, then a rest"),
+                        ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
+                        ("Body", "1.1 m at the shoulder"), ("Tame", "Not yet")
+                    },
+                    new AlmanacBody("simple", "BEHAVIOUR",
+                        "A bear lands alone, far from the clearing, and takes long legs between long rests.",
+                        effects: new[] {
+                            ("Alone", "Lands and arrives one at a time."),
+                            ("Toughest", "More hit points than anything else on the board."),
+                            ("No swimming", "Streams and ponds are walls to it.")
+                        }),
+                    new[] { (AlmanacKeys.Wolf, "the other animal kept far from the start"), (AlmanacKeys.Moose, "the other giant of the woods"), (AlmanacKeys.Stone, "the rock it is seeded beside") }
                 )
             }));
 

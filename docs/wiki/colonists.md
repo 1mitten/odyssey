@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-67 entries, 49 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+80 entries, 62 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -15,7 +15,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Animal** | `ui.pawn.animal` | Tame or wild creature | sheet 06 (action tiles), med | M2 |
 | **Synth** | `ui.pawn.synth` | Machine intelligence. Not alive, not harmless <br>**Needs:** a machine intelligence. Nothing in the sheets is recognisably robotic | no art | M2 |
 | **Corpse** | `ui.pawn.corpse` | Rots, upsets people, can be buried or worse | sheet 07 (anatomy), high | M2 |
-| **Midden hog** | `ui.pawn.hog` | Pig-descended, thrives on refuse heaps. Wild for now; the one you meet first | no art | AN |
+| **Midden hog** | `ui.pawn.hog` | Pig-descended, thrives on the refuse heaps of the ruin. Wild for now | no art | AN |
 | **Duct rat** | `ui.pawn.rat` | Vermin from the ducts and the caverns. Climbs anything | no art | AN |
 | **Culvert frog** | `ui.pawn.frog` | A big frog of the banks. Keeps to the water's edge and hops | no art | AN |
 | **Bandit** | `ui.pawn.bandit` | Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing | no art | CB |
@@ -24,6 +24,19 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Scarred butcher** | `ui.pawn.butcher.scarred` | The second level of butcher: bigger, half as tough again, and it hits harder | no art | BU |
 | **Blood butcher** | `ui.pawn.butcher.blood` | The third level of butcher: bigger again, twice as tough as the first and a little slower | no art | BU |
 | **Butcher king** | `ui.pawn.butcher.king` | The fourth and last level of butcher: the biggest, nearly three times as tough as the first, and it flings three cells | no art | BU |
+| **Verge rabbit** | `ui.pawn.rabbit` | A small rabbit of the open grass and the old road verges. The quickest thing on the board | no art | FA |
+| **Hedgerow deer** | `ui.pawn.deer` | A deer of the woodland edge, in small herds. A doe, or a stag with antlers | no art | FA |
+| **Ash fox** | `ui.pawn.fox` | A lean grey-red fox of the woodland. Out at night, alone | no art | FA |
+| **Gutter raccoon** | `ui.pawn.raccoon` | A masked raccoon of the banks and the gutters. Out at night, alone or in a pair | no art | FA |
+| **Rubble skunk** | `ui.pawn.skunk` | A slow striped skunk of the woodland floor. Out at night, alone | no art | FA |
+| **Thicket boar** | `ui.pawn.boar` | A wild boar of the thickets, in sounders of three to five. The midden hog's forest cousin | no art | FA |
+| **Mire moose** | `ui.pawn.moose` | The biggest animal of the meadow, by the water and in the woods. A cow, or a bull with broad antlers | no art | FA |
+| **Ridge wolf** | `ui.pawn.wolf` | A wolf of the deep woods, in packs of two to four. Out at night | no art | FA |
+| **Quarry bear** | `ui.pawn.bear` | A big solitary bear of the woods and the rock | no art | FA |
+| **Doe** | `ui.pawn.form.doe` | A female hedgerow deer, without antlers | no art | FA |
+| **Stag** | `ui.pawn.form.stag` | A male hedgerow deer, with antlers | no art | FA |
+| **Cow** | `ui.pawn.form.cow` | A female mire moose, without antlers | no art | FA |
+| **Bull** | `ui.pawn.form.bull` | A male mire moose, with broad antlers | no art | FA |
 
 ## Needs
 

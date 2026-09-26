@@ -56,6 +56,16 @@ namespace Odyssey.Hud
 
         public const string SpawnFrogKey = "ui.debug.spawnfrog";
 
+        /// <summary>
+        /// The forest roster (plan <c>forest-animals.md</c> §3), one row a species. A deer or a
+        /// moose comes as whichever form its own seed makes it; there is no row per form.
+        /// </summary>
+        public const string SpawnRabbitKey = "ui.debug.spawnrabbit", SpawnDeerKey = "ui.debug.spawndeer",
+            SpawnFoxKey = "ui.debug.spawnfox", SpawnRaccoonKey = "ui.debug.spawnraccoon",
+            SpawnSkunkKey = "ui.debug.spawnskunk", SpawnBoarKey = "ui.debug.spawnboar",
+            SpawnMooseKey = "ui.debug.spawnmoose", SpawnWolfKey = "ui.debug.spawnwolf",
+            SpawnBearKey = "ui.debug.spawnbear";
+
         public const string GiveWoodKey = "ui.debug.givewood";
         public const string GiveStoneKey = "ui.debug.givestone";
         public const string GiveFoodKey = "ui.debug.givefood";
@@ -129,6 +139,8 @@ namespace Odyssey.Hud
         public static readonly string[] IconKeys =
         {
             PanelKey, CheatsKey, EventsKey, SpawnTabKey, SpawnPawnKey, SpawnHogKey, SpawnRatKey, SpawnFrogKey,
+            SpawnRabbitKey, SpawnDeerKey, SpawnFoxKey, SpawnRaccoonKey, SpawnSkunkKey, SpawnBoarKey,
+            SpawnMooseKey, SpawnWolfKey, SpawnBearKey,
             SpawnBanditKey, SpawnBatKey, SpawnCrowbarKey, SpawnMacheteKey, SpawnArcBladeKey,
             SpawnBanditsKey, ArmColonistsKey, SpawnPistolKey, SpawnGunmanKey, SpawnButcherKey,
             SpawnButcherScarredKey, SpawnButcherBloodKey, SpawnButcherKingKey, HurtKey, HealKey, KillKey, GiveMedkitsKey,
@@ -354,6 +366,24 @@ namespace Odyssey.Hud
                 PawnKindLabels.DuctRatKind, GroupAnimalsKey),
             Pawn(SpawnFrogKey, "Adds a culvert frog near the camera. It heads for the nearest water and keeps to the bank",
                 PawnKindLabels.CulvertFrogKind, GroupAnimalsKey),
+            Pawn(SpawnRabbitKey, "Adds a verge rabbit near the camera. The quickest thing on the board",
+                PawnKindLabels.VergeRabbit, GroupAnimalsKey),
+            Pawn(SpawnDeerKey, "Adds a hedgerow deer near the camera: a doe or a stag, by its own seed",
+                PawnKindLabels.HedgerowDeer, GroupAnimalsKey),
+            Pawn(SpawnFoxKey, "Adds an ash fox near the camera. Out at night, alone",
+                PawnKindLabels.AshFox, GroupAnimalsKey),
+            Pawn(SpawnRaccoonKey, "Adds a gutter raccoon near the camera. Out at night; a closed door keeps it out",
+                PawnKindLabels.GutterRaccoon, GroupAnimalsKey),
+            Pawn(SpawnSkunkKey, "Adds a rubble skunk near the camera. Slow, and out at night",
+                PawnKindLabels.RubbleSkunk, GroupAnimalsKey),
+            Pawn(SpawnBoarKey, "Adds a thicket boar near the camera. It comes in sounders of three to five",
+                PawnKindLabels.ThicketBoar, GroupAnimalsKey),
+            Pawn(SpawnMooseKey, "Adds a mire moose near the camera: a cow or a bull, by its own seed",
+                PawnKindLabels.MireMoose, GroupAnimalsKey),
+            Pawn(SpawnWolfKey, "Adds a ridge wolf near the camera. Out at night, in packs",
+                PawnKindLabels.RidgeWolf, GroupAnimalsKey),
+            Pawn(SpawnBearKey, "Adds a quarry bear near the camera. The toughest animal on the board",
+                PawnKindLabels.QuarryBear, GroupAnimalsKey),
             Weapon(SpawnBatKey, "Adds a bat near the camera. Blunt, and now and then it stuns", ItemHandle.Bat),
             Weapon(SpawnCrowbarKey, "Adds a crowbar near the camera. Heavier and slower than a bat, and stuns more often",
                 ItemHandle.Crowbar),

@@ -21,6 +21,15 @@ Names that are not interface keys: people, places, factions, creatures, the cale
 | Pack animal | **dray hog** | proposed  | A larger bred cousin of the midden hog, for caravans. Not in the original list; caravans need something to carry the load and it should not be a vehicle at prototype scale |
 | Bank wildlife | **culvert frog** | proposed  | A big frog of the meadow's streams, ponds and lakes, and of the flooded culverts under the ruin. Keeps to the water's edge; the first animal placed by where the water is. Named in the register of the midden hog and the duct rat |
 | City vermin | **duct rat** | proposed  | The rat of the ruin: lives in the ducts and the caverns, climbs anything, eats what the colony stores. Named in the register of the midden hog and the girder cat; the first animal with a full set of movements, so the one the figure work is proven on |
+| Meadow wildlife | **verge rabbit** | approved  | The rabbit of the open grass. Named for the verges of the roads the meadow grew over. Approved by the owner 2026-09-26 with the forest roster (docs/research/forest-animals-interview.md §8) |
+| Meadow wildlife | **hedgerow deer** | approved  | The deer of the woodland edge, in small herds; doe and stag are its two forms. Approved 2026-09-26 |
+| Meadow wildlife | **ash fox** | approved  | The fox of the woodland, a night animal. Ash for its colour and for Ashgate. Approved 2026-09-26 |
+| Meadow wildlife | **gutter raccoon** | approved  | The raccoon of the banks and the city's gutters, a night animal and, in time, the store thief. Approved 2026-09-26 |
+| Meadow wildlife | **rubble skunk** | approved  | The skunk of the woodland floor and the rubble, a night animal. Approved 2026-09-26 |
+| Meadow wildlife | **thicket boar** | approved  | The wild boar of the thickets, in sounders. The forest cousin of the midden hog, which keeps to the ruin. Approved 2026-09-26 |
+| Meadow wildlife | **mire moose** | approved  | The biggest animal of the meadow, by the water and in the woods; cow and bull are its two forms. Approved 2026-09-26 |
+| Meadow wildlife | **ridge wolf** | approved  | The wolf of the deep woods, in packs; the meadow's predator. Approved 2026-09-26 |
+| Meadow wildlife | **quarry bear** | approved  | The bear of the woods and the rock, solitary. Approved 2026-09-26 |
 | The calendar | **6 months of 12 days, 72-day year** | proposed  | Three seasons of two months each. A short year means seasonal pressure arrives often, which a prototype wants: you see a full cycle in ten hours rather than thirty. Days stay 24 hours for legibility |
 | Month | **Larkspur** | proposed  | First month of Wash. Botanical month names are a civic nicety the city kept from before it was a city, which is the kind of detail that makes a dead place feel lived in. Invented earlier for the clock readout and kept |
 | Month | **Tansy** | proposed  | Second month of Wash |
@@ -37,7 +46,7 @@ Names that are not interface keys: people, places, factions, creatures, the cale
 | Starter name pool | **See docs/design/colonist-names.csv** | approved  | 244 given names in three registers — settled, frontier and yard — owner-supplied 2026-09-18. The eight invented for the mockups are in the frontier register. The pool has its own file because it would drown this table, and its own wiki page so every name can be read and struck; the order of that file is load-bearing, since a name is arithmetic on a saved seed |
 | Regions and seas on the planet | **Generated from the world seed** | proposed  | S1=Ver Cal Mor Ess Tal Ond Bra Hes Kel Iv Sar Dun Ul Quen Ash; S2=an ere oth ia ul ane ess ir orra en ys; S3=- - d n th ry ck. A name is S1+S2+S3 (a dash is no ending), shown bare, with -ia, or in a frame from ui.world.region.* (Reach, Downs, Hold, Greater; Sea of, Deep, Shelf, Sound, Gulf of). Drawn on the World map only, regenerated from the seed, never saved. From Claude Design's specification, 2026-09-26 (design 59 §9c); RegionNamesTests holds the code to these tables |
 
-**0 of 32 rows have no name at all.** Those are not oversights to tidy up later: a storyteller and a faction with no name cannot be written about, and the city the whole prototype is set in is currently called nothing.
+**0 of 41 rows have no name at all.** Those are not oversights to tidy up later: a storyteller and a faction with no name cannot be written about, and the city the whole prototype is set in is currently called nothing.
 
 ---
 

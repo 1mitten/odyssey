@@ -208,7 +208,76 @@ namespace Odyssey.Tests.Hud
             Assert.That(AlmanacDirector.ResolveSelection(inspect), Is.EqualTo(("Fauna", Registry.Label("ui.pawn.rat"))));
         }
 
-        /// <summary>The Almanac's Fauna is the three animals the game has, by their registry names, and nothing invented.</summary>
+        /// <summary>Every animal kind the game has, by its kind index (the forest roster is 10–18).</summary>
+        static readonly string[] AnimalKeys =
+        {
+            "ui.pawn.hog", "ui.pawn.rat", "ui.pawn.frog",
+            "ui.pawn.rabbit", "ui.pawn.deer", "ui.pawn.fox", "ui.pawn.raccoon", "ui.pawn.skunk",
+            "ui.pawn.boar", "ui.pawn.moose", "ui.pawn.wolf", "ui.pawn.bear",
+        };
+
+        /// <summary>
+        /// The kind table is parallel to the simulation's <c>PawnKindIndex</c>, which this
+        /// assembly cannot see, so it is held here to the forest plan's contract: the nine forest
+        /// kinds at 10–18, after the butcher's 6–9, each named in the registry.
+        /// </summary>
+        [Test]
+        public void TheKindTableCoversEveryKindTheSimulationHas()
+        {
+            Assert.That(PawnKindLabels.IconKeys.Length, Is.EqualTo(19), "kinds 0-18");
+            var byKind = new (int Kind, string Key)[]
+            {
+                (PawnKindLabels.ColonistKind, "ui.pawn.colonist"), (PawnKindLabels.MiddenHogKind, "ui.pawn.hog"),
+                (PawnKindLabels.DuctRatKind, "ui.pawn.rat"), (PawnKindLabels.Bandit, "ui.pawn.bandit"),
+                (PawnKindLabels.Gunman, "ui.pawn.gunman"), (PawnKindLabels.CulvertFrogKind, "ui.pawn.frog"),
+                (PawnKindLabels.Butcher, "ui.pawn.butcher"), (PawnKindLabels.ButcherKing, "ui.pawn.butcher.king"),
+                (10, "ui.pawn.rabbit"), (11, "ui.pawn.deer"), (12, "ui.pawn.fox"), (13, "ui.pawn.raccoon"),
+                (14, "ui.pawn.skunk"), (15, "ui.pawn.boar"), (16, "ui.pawn.moose"), (17, "ui.pawn.wolf"),
+                (18, "ui.pawn.bear"),
+            };
+            foreach ((int kind, string key) in byKind)
+                Assert.That(PawnKindLabels.IconKey(kind), Is.EqualTo(key), $"kind {kind}");
+            Assert.That(PawnKindLabels.VergeRabbit, Is.EqualTo(10));
+            Assert.That(PawnKindLabels.QuarryBear, Is.EqualTo(18));
+            foreach (string key in PawnKindLabels.IconKeys)
+                Assert.That(Registry.Label(key), Is.Not.EqualTo(key), $"{key} is not in the registry");
+        }
+
+        /// <summary>
+        /// The deer and the moose carry a form on the pane (<i>Hedgerow deer · Stag</i>); nothing
+        /// else does, and an absent aspect reads as the first form.
+        /// </summary>
+        [Test]
+        public void OnlyTheTwoFormSpeciesNameAForm()
+        {
+            Assert.That(PawnKindLabels.FormIconKey(PawnKindLabels.HedgerowDeer, 0), Is.EqualTo("ui.pawn.form.doe"));
+            Assert.That(PawnKindLabels.FormIconKey(PawnKindLabels.HedgerowDeer, 1), Is.EqualTo("ui.pawn.form.stag"));
+            Assert.That(PawnKindLabels.FormIconKey(PawnKindLabels.MireMoose, 0), Is.EqualTo("ui.pawn.form.cow"));
+            Assert.That(PawnKindLabels.FormIconKey(PawnKindLabels.MireMoose, 1), Is.EqualTo("ui.pawn.form.bull"));
+            for (int kind = 0; kind < PawnKindLabels.IconKeys.Length; kind++)
+            {
+                if (kind == PawnKindLabels.HedgerowDeer || kind == PawnKindLabels.MireMoose) continue;
+                Assert.That(PawnKindLabels.FormIconKey(kind, 1), Is.Null, $"kind {kind}");
+            }
+            foreach (string key in new[] { "ui.pawn.form.doe", "ui.pawn.form.stag", "ui.pawn.form.cow", "ui.pawn.form.bull" })
+                Assert.That(Registry.Label(key), Is.Not.EqualTo(key), key);
+
+            // The title reads the published form, and an absent aspect is the first form.
+            var snapshot = new WorldSnapshot();
+            snapshot.BeginWrite(0, new GridSize(8, 8, 1), 1);
+            snapshot.AddPawn(new PawnView(new PawnId(1), new CellRef(1, 1, 0), 800, 800, 800, JobHandle.Wait, kind: PawnKindLabels.HedgerowDeer));
+            snapshot.AddPawn(new PawnView(new PawnId(2), new CellRef(2, 1, 0), 800, 800, 800, JobHandle.Wait, kind: PawnKindLabels.MireMoose));
+            snapshot.AddPawn(new PawnView(new PawnId(3), new CellRef(3, 1, 0), 800, 800, 800, JobHandle.Wait, kind: PawnKindLabels.AshFox));
+            snapshot.AddPawnAspect(new PawnAspect(new PawnId(1), AspectKey.Of(PawnKindLabels.FormAspect), 1));
+            Assert.That(PawnKindLabels.Title(snapshot, new PawnId(1), PawnKindLabels.HedgerowDeer),
+                Is.EqualTo(Registry.Label("ui.pawn.deer") + " · " + Registry.Label("ui.pawn.form.stag")));
+            Assert.That(PawnKindLabels.Title(snapshot, new PawnId(2), PawnKindLabels.MireMoose),
+                Is.EqualTo(Registry.Label("ui.pawn.moose") + " · " + Registry.Label("ui.pawn.form.cow")));
+            Assert.That(PawnKindLabels.Title(snapshot, new PawnId(3), PawnKindLabels.AshFox),
+                Is.EqualTo(Registry.Label("ui.pawn.fox")));
+        }
+
+        /// <summary>The Almanac's Fauna is the twelve animals the game has, by their registry names, and nothing invented.</summary>
         [Test]
         public void TheAlmanacsFaunaAreTheAnimalsInTheGame()
         {
@@ -216,7 +285,9 @@ namespace Odyssey.Tests.Hud
             Assert.That(fauna, Is.Not.Null);
             var names = new List<string>();
             foreach (AlmanacEntry entry in fauna!.Entries) names.Add(entry.Name);
-            Assert.That(names, Is.EquivalentTo(new[] { Registry.Label("ui.pawn.hog"), Registry.Label("ui.pawn.rat"), Registry.Label("ui.pawn.frog") }));
+            var expected = new List<string>();
+            foreach (string key in AnimalKeys) expected.Add(Registry.Label(key));
+            Assert.That(names, Is.EquivalentTo(expected));
             foreach (AlmanacEntry entry in fauna.Entries)
             {
                 Assert.That(entry.Definition, Does.Not.Contain("Tame chance"), "taming is not in the game");

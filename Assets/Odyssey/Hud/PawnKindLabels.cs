@@ -7,8 +7,9 @@ namespace Odyssey.Hud
     /// What a pawn's kind is called, and what an animal is doing, by registry key (design 29
     /// §2, §8). Parallel to the simulation's <c>PawnKindIndex</c> exactly as
     /// <see cref="JobLabels"/> is parallel to its <c>JobIndex</c>: the colonist is 0, the midden
-    /// hog 1, the duct rat 2, the bandit 3, the gunman 4, the culvert frog 5, appended and never inserted. A kind past the table
-    /// reads with the generic animal label.
+    /// hog 1, the duct rat 2, the bandit 3, the gunman 4, the culvert frog 5, the four butchers 6–9,
+    /// the nine forest animals 10–18 (plan <c>forest-animals.md</c> §3), appended and never inserted.
+    /// A kind past the table reads with the generic animal label.
     ///
     /// <para><b>Whether a pawn is an animal is not this table's question any more</b> (design 33
     /// §5): a bandit is kind 3 and a person. <see cref="IsAnimal"/> reads the view's flags, and
@@ -25,7 +26,9 @@ namespace Odyssey.Hud
         /// </summary>
         public const int ColonistKind = 0, MiddenHogKind = 1, DuctRatKind = 2, Bandit = 3, Gunman = 4,
             CulvertFrogKind = 5, Butcher = 6,
-            ButcherScarred = 7, ButcherBlood = 8, ButcherKing = 9;
+            ButcherScarred = 7, ButcherBlood = 8, ButcherKing = 9,
+            VergeRabbit = 10, HedgerowDeer = 11, AshFox = 12, GutterRaccoon = 13, RubbleSkunk = 14,
+            ThicketBoar = 15, MireMoose = 16, RidgeWolf = 17, QuarryBear = 18;
         const string Animal = "ui.pawn.animal";
 
         public static readonly string[] IconKeys =
@@ -39,7 +42,46 @@ namespace Odyssey.Hud
             "ui.pawn.frog",
             // The butcher (design 62) and its three harder levels (§4b).
             "ui.pawn.butcher", "ui.pawn.butcher.scarred", "ui.pawn.butcher.blood", "ui.pawn.butcher.king",
+            // The forest roster (design 66, the interview's §8 names).
+            "ui.pawn.rabbit", "ui.pawn.deer", "ui.pawn.fox", "ui.pawn.raccoon", "ui.pawn.skunk",
+            "ui.pawn.boar", "ui.pawn.moose", "ui.pawn.wolf", "ui.pawn.bear",
         };
+
+        /// <summary>
+        /// The name the simulation publishes an animal's form under (<c>AnimalAspects.FormName</c>),
+        /// a literal on <see cref="ShelteringAspect"/>'s bargain. Present only for a species with two
+        /// forms: the deer (0 doe, 1 stag) and the moose (0 cow, 1 bull). Absent reads as form 0.
+        /// </summary>
+        public const string FormAspect = "odyssey.pawn.form";
+
+        static readonly AspectKey FormKey = AspectKey.Of(FormAspect);
+
+        /// <summary>The two-form species' form names, by kind then form; every other kind has none.</summary>
+        public static string? FormIconKey(int kind, int form) =>
+            kind == HedgerowDeer ? (form == 0 ? "ui.pawn.form.doe" : "ui.pawn.form.stag")
+            : kind == MireMoose ? (form == 0 ? "ui.pawn.form.cow" : "ui.pawn.form.bull")
+            : null;
+
+        /// <summary>An animal's form on this frame: the published aspect, or 0 when it is absent.</summary>
+        public static int FormOf(WorldSnapshot snapshot, PawnId id) =>
+            snapshot.TryGetPawnAspect(id, FormKey, out int form) ? form : 0;
+
+        /// <summary>
+        /// What the inspect pane calls an animal: its kind, and its form where it has one —
+        /// <i>Hedgerow deer · Stag</i>. The separator is the pane's own subtitle dot. The four
+        /// joined titles are built once and kept, because the pane asks every refresh.
+        /// </summary>
+        public static string Title(WorldSnapshot snapshot, PawnId id, int kind)
+        {
+            int form = FormOf(snapshot, id);
+            string? formKey = FormIconKey(kind, form);
+            if (formKey == null)
+                return Label(kind);
+            int slot = (kind == HedgerowDeer ? 0 : 2) + (form == 0 ? 0 : 1);
+            return FormTitles[slot] ??= Label(kind) + " · " + Registry.Label(formKey);
+        }
+
+        static readonly string?[] FormTitles = new string?[4];
 
         /// <summary>The two states an animal's mind has (design 29 §3), by the job it is running.</summary>
         public const string Wandering = "ui.status.wandering";

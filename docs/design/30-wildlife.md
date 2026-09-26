@@ -4,6 +4,13 @@
 PR #167). Interview: `docs/research/animal-generation-interview.md`; plan:
 `docs/plans/wildlife.md`. The Wildlife panel (§6) is the same PR's second commit.
 
+> **2026-09-26, forest animals FA1:** the tables in §1 are as first built. The meadow now carries
+> the nine forest species and no midden hog (the hog keeps to the city), and the **ceiling is per
+> board — Small 32, Standard 48, Large 64, Huge 80, the city 24** — with the density raised to
+> reach it (plan `forest-animals.md` §2, where the measured numbers are). And §7's "Nothing flees"
+> was overtaken by combat: a struck animal rolls its revenge chance and either fights or runs
+> (`CombatSystem.Apply`); proactive reactions are design 64.
+
 Design 29 put a hog and a rat in the game and a debug button to spawn them. Nothing generated
 them. This document is what does: a **table** per world (§1), a **seeding** at tick zero (§2), a
 **level** the board holds through arrivals and departures (§3), the **night** (§4), what was
@@ -193,8 +200,9 @@ board's origin, a number rather than a lie.
 
 - **Roam.** A wandering animal drifts within eight cells of wherever it is and never sees the
   rest of the board; a leaver walks the length of it. A long leg now and then is one number.
-- **Reactions.** Nothing flees. `a-09` records flee as an override branch, not a leaf; it is
-  the health unit's, where there is something to flee from.
+- **Reactions.** ~~Nothing flees.~~ Since combat (design 33) a struck animal rolls its revenge
+  chance and either fights back or flees (`Job_Flee`). Reacting *before* it is struck — startle,
+  warning, herd — is design 64.
 - **The census is retaken per arrival check.** 14,000 columns with a reachability test each,
   six times a minute at most; not measured at the scale target.
 

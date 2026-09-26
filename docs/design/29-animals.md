@@ -5,6 +5,10 @@ Ground: `docs/research/e-08-animal-fbx-inspection.md`; interview: `animals-inter
 research: `a-09-animals.md`, `c-procedural-quadruped-gait.md`. This document holds the
 decisions, the measurements that made them, and what not to undo by tidying.
 
+> **2026-09-26, forest animals FA1:** §5 said the hog's pace is 700; it has been **600** since the
+> first look (§11's "way too fast", and `Species.xml`), and §5 now says so. Nine forest species
+> joined the hog, rat and frog as kinds 10–18 (plan `forest-animals.md`, designs 64–67).
+
 ## 1. What an animal is
 
 **An animal is a `Pawn` with a `Kind`.** The kind is an index into the content's kind table;
@@ -129,8 +133,8 @@ cell is already a recorded gap for them.
 
 `Pawn.MoveRatePerMille` gains one factor, the species' `movePerMille`, in the design-17
 product after pace and condition. The person's is 1,000, which is exact in integer
-arithmetic, so no colonist's speed moved. The hog's is 700 and the rat's 900: a hog
-ambles, a rat is lively. Both are a playtest question and both are one number in the XML.
+arithmetic, so no colonist's speed moved. The hog's is 600 (700 as first built, slowed on the
+first look — see below) and the rat's 900: a hog ambles, a rat is lively. Both are a playtest question and both are one number in the XML.
 
 ## 6. The save
 
