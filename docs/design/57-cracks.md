@@ -230,12 +230,21 @@ and blend it into the environment."* Two recordings, `floraphonic-wood-smash-3` 
   or floor written down, gone, is a demolition. Cancelled, repaired or left part-done, the cell is as it
   was and the watch lets go in silence. The same evidence as the break's watch (§7), so the sound and
   the shudder start together. In the Hud assembly behind `IDemolitionCells`, which the render mirror
-  implements as it stands, so the fast tier tests it (`DemolitionWatchTests`, 6).
+  implements as it stands, so the fast tier tests it (`DemolitionWatchTests`, 9).
 - **What sounds:** rock under a mining order, whatever the rock — `break-rock`; anything built of
   **wood** (`NaturalContent.StuffWood`), a building or a floor, broken or taken apart — `break-wood`.
   **Stone, concrete and steel come down silent** until they are given sounds: one line in
-  `DemolitionWatch.SoundFor`. A wooden building destroyed from whole in one blow was never struck, so
-  it is never tracked and is silent; the combat log's `Demolished` event is the seam if that matters.
+  `DemolitionWatch.SoundFor`.
+- **Broken in one blow** (closed the same day, at the owner's word). A wooden building destroyed from
+  whole by a single blow was never struck before, so it was never tracked and came down silent. The
+  combat log's `Demolished` event names its anchor cell, but by the time it is published the building
+  has left the mirror and nothing says what it was made of — so the mirror now notes **every
+  non-tree building that leaves it, with its stuff** (`WorldRenderModel.DrainRemoved`, beside the
+  felled trees and capped the same way), and the watch matches the event to the note, whichever comes
+  first. A cell heard is not heard again for 60 frames, so a wall struck before and then broken —
+  tracked *and* reported — is one sound. Old events in a loaded world are skipped on the first frame.
+- **Licence:** both recordings are Pixabay, under the Pixabay Content License, **confirmed by the
+  owner** 2026-09-26.
 - **The processing**, `tools/audio/bake_demolition.sh` (the reasoning is in its header): both masters
   are brick-walled over full scale, so −12 dB in float first; head cut to the onset; high-passed (60 /
   35 Hz) and low-passed (9 / 5.5 kHz) — air, and rounding the clipped tops; **blended into the

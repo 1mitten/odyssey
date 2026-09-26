@@ -13945,3 +13945,12 @@ orders, struck buildings — which writes down what stood there on first sight a
 go. Written down on first sight, because the snapshot's views can run a publish ahead of the mirror:
 the same lesson the break taught an hour earlier. Unity-free behind a five-method interface the render
 mirror already satisfied word for word, so the fast tier tests it.
+
+**Later the same day: the one-blow gap, closed.** The owner confirmed both recordings are Pixabay and
+asked for the gap to be fixed: a wooden building broken from whole in a single blow was never struck,
+so never tracked, so silent. The combat log already reports `Demolished` with the anchor cell — but
+the material is the problem, not the moment: by the time the event is published the building has
+left the mirror. So the mirror now notes every non-tree building leaving it with its stuff, the way it
+already noted felled trees for the topple, and the watch pairs the event with the note in either
+order. A cell heard is held for a second so a struck-then-broken wall, which both paths see, is heard
+once. Nine watch tests, run on their own (17 ms); no tier.

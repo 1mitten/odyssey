@@ -23,7 +23,7 @@
 #
 # Both are Pixabay, under the Pixabay Content License: free for use in a product without
 # attribution, modification allowed, not to be redistributed on its own. Committed as part of the
-# game, which that licence allows — the owner to confirm, per docs/reference/audio-sourcing.md.
+# game, which that licence allows. **Confirmed from Pixabay by the owner, 2026-09-26.**
 #
 # ## What is done to them, and why
 #
