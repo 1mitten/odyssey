@@ -246,8 +246,11 @@ of 200. Each arm is 1,500 ticks. All times are mean ms per tick.
 
 **The ceiling moved 200 → 400 on these numbers.** The frame side stands on two things. The
 colony-size sweep, which measured 384 colonists healthy on 2026-09-23 (3.90 ms). And
-`FrameTimeTests.TheFrameWithARaidOfTwoHundred`, a Measurement arm that runs only in Unity and is
-**owed on the owner's machine**.
+`FrameTimeTests.TheFrameWithARaidOfTwoHundred`, a Measurement arm that runs only in Unity. **Run
+2026-09-26** on the owner's machine (RTX 5070 Ti, 640 × 480, one run): peace 2.26 ms (720 draw
+calls), gathering 4.37 ms (944, 64 figures), assault 4.34 ms (963) with 220 pawns, 200 hostile. The
+raid's extra is `Figures` +0.66, `Actors` +0.53 and `Overlays` +0.42; `World` is flat. Inside the
+5 ms budget, at a test resolution rather than a play one.
 
 **The Long-tier soak** is `BanditSoakTests.ThreeDaysWithRaidIncidents`, on seeds 1 and 2. Each
 seed fires two Mixed raids of eight through the incident, with a lockstep twin and a save taken
