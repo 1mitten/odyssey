@@ -528,7 +528,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// A bandit's mind (design 33 §1, §5): down, else hunt — a colonist, else a building, else
         /// what it came for, which it carries off the board (§14b, §17) — else idle. No needs, no
-        /// work, no draft: it is never one of ours. A raid member asks its band first (design 50 §3):
+        /// work, no draft: it is never one of ours. A raid member asks its band first (design 53 §3):
         /// the raid's node declines for a pawn in no raid, so a lone bandit thinks as it always did.
         /// </summary>
         static readonly ThinkNode[] HostileTree =

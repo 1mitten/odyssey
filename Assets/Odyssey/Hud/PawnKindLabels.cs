@@ -31,7 +31,7 @@ namespace Odyssey.Hud
             Colonist, "ui.pawn.hog", "ui.pawn.rat",
             // The debug-spawned hostile person (design 33 §1).
             "ui.pawn.bandit",
-            // The bandit with a pistol, a raid's second kind (design 50 §8).
+            // The bandit with a pistol, a raid's second kind (design 53 §8).
             "ui.pawn.gunman",
         };
 

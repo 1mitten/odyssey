@@ -157,7 +157,7 @@ namespace Odyssey.Tests.Hud
 
         /// <summary>
         /// The ranged line's two rows (design 47 §4d). The gunman is a kind of its own since the raid
-        /// (design 50 §8), armed from its own table, so the row sends nothing in <c>B</c>, as every
+        /// (design 53 §8), armed from its own table, so the row sends nothing in <c>B</c>, as every
         /// other pawn row does. The pistol is one item, granted as the other weapons are.
         /// </summary>
         [Test]

@@ -56,7 +56,7 @@ namespace Odyssey.Sim.Events
 
         /// <summary>
         /// <c>InvokeIncident(A = incident def, B = size, C = mix + 1)</c>. B and C are the raid's
-        /// (design 50 §9): 0 in either leaves it to the incident, so every other caller, which sends
+        /// (design 53 §9): 0 in either leaves it to the incident, so every other caller, which sends
         /// neither, is unchanged. A bad index, a size past the pawn ceiling or a mix the content does
         /// not have is <see cref="IntentRejection.OutOfBounds"/>; a world that cannot take the event
         /// right now is <see cref="IntentRejection.NotPermitted"/>, which for the supply drop means no

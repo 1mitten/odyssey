@@ -18,7 +18,7 @@ namespace Odyssey.Sim.Events
     }
 
     /// <summary>
-    /// Who a raid is made of (design 50 §8): the debug menu's dropdown, and what a storyteller will
+    /// Who a raid is made of (design 53 §8): the debug menu's dropdown, and what a storyteller will
     /// draw from. Data, so a new mix is a Def and never a code change — the owner's "a mix of melee
     /// and projectiles" is a row of these.
     ///

@@ -209,7 +209,7 @@ namespace Odyssey.Sim.Pawns
                 // The bullets in the air (design 47 §2c): appended, no format bump. A save from
                 // before guns has no section and loads with nothing in flight.
                 pawns.Projectiles,
-                // The raids on the board (design 50 §10): appended, no format bump. A save from
+                // The raids on the board (design 53 §10): appended, no format bump. A save from
                 // before raids has no section and loads with no band.
                 pawns.Raids!,
             };
@@ -453,7 +453,7 @@ namespace Odyssey.Sim.Pawns
             var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns())
             {
                 Chunks = chunks,
-                // What a raid makes for with no hearth (design 50 §5). Derived, so a load has it too.
+                // What a raid makes for with no hearth (design 53 §5). Derived, so a load has it too.
                 ColonyStart = outcome.StartCell,
             };
             var solver = new SupportSolver(grid);

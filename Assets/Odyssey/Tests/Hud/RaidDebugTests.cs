@@ -6,7 +6,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// The raid's two debug controls and its Events row (design 50 §7, §9): what the row sends, what
+    /// The raid's two debug controls and its Events row (design 53 §7, §9): what the row sends, what
     /// the size reads, and what the bulletin says.
     /// </summary>
     public class RaidDebugTests

@@ -16,7 +16,7 @@ using Odyssey.Sim.Pawns.Wildlife;
 namespace Odyssey.Tests.Sim.Events
 {
     /// <summary>
-    /// What two hundred raiders cost the tick (design 50 §11), measured before the pawn ceiling is
+    /// What two hundred raiders cost the tick (design 53 §11), measured before the pawn ceiling is
     /// raised to make room for them. One colony of twenty on the played map at the scale target,
     /// walked through every phase of one raid in turn: peace, the band loitering at the edge, the
     /// band loitering while every colonist is on <see cref="HostilityResponse.Defend"/> — the known

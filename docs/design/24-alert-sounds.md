@@ -75,8 +75,8 @@ refuses to do a fourth.
 | `alert-negative` | 1.86 s | 1 | a `Warning` or `Danger` row appears — **starving**, **close to breaking** |
 | `alert-happy` | 4.96 s | 1 | **nothing yet** — see §5 |
 | `alert-joined` | 5.77 s | 2 | **nothing yet** — see §5 |
-| `alert-raid` | 9.54 s | 2 | `ui.alert.raid`, raised while a raid assaults (design 50 §7, 2026-09-25). The source is Pixabay's `low-horn-185556`, trading_nation |
-| `alert-raid-arrive` | 18.0 s | 2 | a raid's Events row, when it arrives at the edge (design 50 §7). Pixabay's `war-horn-horror-73771`, baked by `bake_raid.sh` |
+| `alert-raid` | 9.54 s | 2 | `ui.alert.raid`, raised while a raid assaults (design 53 §7, 2026-09-25). The source is Pixabay's `low-horn-185556`, trading_nation |
+| `alert-raid-arrive` | 18.0 s | 2 | a raid's Events row, when it arrives at the edge (design 53 §7). Pixabay's `war-horn-horror-73771`, baked by `bake_raid.sh` |
 
 **Loudness was the real problem with the files.** As supplied they spanned −14.5 to −24.5 LUFS: ten
 decibels, which is the difference between a chime that startles and one that is missed. They are

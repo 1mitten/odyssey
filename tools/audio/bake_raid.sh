@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Bake the raid's arrival horn from the recording the owner supplied (2026-09-25,
-# docs/design/50-raids.md §7): played when a raid ARRIVES at the edge of the board. An alert, 2D,
+# docs/design/53-raids.md §7): played when a raid ARRIVES at the edge of the board. An alert, 2D,
 # on the same bus and at the same loudness as the chimes `bake_alerts.sh` makes, so the mix says
 # how important a sound is rather than how it was recorded.
 #
@@ -31,7 +31,7 @@
 #   3. 44.1 kHz 16-bit PCM WAV with 6 ms / 8 ms guard fades over the cuts.
 #
 # Nothing musical is shortened. The war horn is 18 s, nearly twice the old siren's 9.5 s; whether
-# that is too long for an alert is a question for a person at the keyboard (design 50 §7), not
+# that is too long for an alert is a question for a person at the keyboard (design 53 §7), not
 # for this script. Stereo stays stereo — see bake_alerts.sh on forceToMono.
 #
 # Usage:  tools/audio/bake_raid.sh [source-directory]

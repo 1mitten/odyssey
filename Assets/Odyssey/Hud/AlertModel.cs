@@ -190,7 +190,7 @@ namespace Odyssey.Hud
         public const string NoMedicineKey = "ui.alert.nomedicine";
 
         /// <summary>
-        /// A raid is assaulting (design 50 §7): Danger, the standing raiders counted, a click going to
+        /// A raid is assaulting (design 53 §7): Danger, the standing raiders counted, a click going to
         /// the middle of them. Raised from the assault, not the arrival — a band gathering at the edge
         /// is the Events row's news, and the alert is the condition to act on. Its chime is the assault
         /// horn, through the override the sound library has carried since 2026-09-19.
@@ -435,7 +435,7 @@ namespace Odyssey.Hud
                     if (orders[i].CellIndex == hearth && orders[i].Kind == DeconstructOrderKind) { hearthDown = true; break; }
             }
 
-            // A raid assaulting (design 50 §7): the standing raiders of every assaulting band, and the
+            // A raid assaulting (design 53 §7): the standing raiders of every assaulting band, and the
             // first band's middle and mix for the row. The middle is coarsened to eight cells in the
             // signature, so the row's jump follows the band without a rebuild on every step.
             int raidStanding = 0, raidMix = -1;

@@ -209,7 +209,7 @@ namespace Odyssey.Sim.Pawns
         public const int Bandit = 3;
 
         /// <summary>
-        /// The bandit with a pistol (design 50 §8): its own kind so a raid mix can name it. Appended.
+        /// The bandit with a pistol (design 53 §8): its own kind so a raid mix can name it. Appended.
         /// </summary>
         public const int Gunman = 4;
         public const int Count = 5;
@@ -1604,7 +1604,7 @@ namespace Odyssey.Sim.Pawns
                 "PawnKind_Colonist", "PawnKind_MiddenHog", "PawnKind_DuctRat",
                 // The debug-spawned hostile person (design 33 §1), appended.
                 "PawnKind_Bandit",
-                // The bandit with a pistol, a raid's second kind (design 50 §8), appended.
+                // The bandit with a pistol, a raid's second kind (design 53 §8), appended.
                 "PawnKind_Gunman");
             content.Species = ByName<SpeciesDef>(defs,
                 "Species_Person", "Species_MiddenHog", "Species_DuctRat");

@@ -87,7 +87,7 @@ namespace Odyssey.Sim.Events
         public int fallTicks;
 
         /// <summary>
-        /// A raid's own parameters (design 50 §8), or null for any incident that is not one: the first
+        /// A raid's own parameters (design 53 §8), or null for any incident that is not one: the first
         /// per-worker block, the shape design 23 §8 asked for rather than widening the flat set.
         /// </summary>
         public RaidParams? raid;
@@ -113,12 +113,12 @@ namespace Odyssey.Sim.Events
             "Incident_Theft",
             "Incident_BanditLeft",
             "Incident_MedicalDrop",
-            // A band of hostiles from one edge (design 50), appended.
+            // A band of hostiles from one edge (design 53), appended.
             "Incident_Raid",
         };
 
         /// <summary>
-        /// Every raid mix in index order (design 50 §8), the same contract as <see cref="Order"/>:
+        /// Every raid mix in index order (design 53 §8), the same contract as <see cref="Order"/>:
         /// position <i>is</i> the mix index the intent carries and the ledger records, so append,
         /// never insert. The debug dropdown lists them in this order.
         /// </summary>
@@ -180,7 +180,7 @@ namespace Odyssey.Sim.Events
             }
 
             // The mixes after the workers resolve and before any is asked to validate: a raid's
-            // Def names a mix, and its worker checks the name (design 50 §8).
+            // Def names a mix, and its worker checks the name (design 53 §8).
             content.Mixes = new RaidMix[MixOrder.Length];
             for (int m = 0; m < MixOrder.Length; m++)
                 content.Mixes[m] = RaidMix.Bind(OneMix(defs, MixOrder[m]), pawns);

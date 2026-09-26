@@ -207,7 +207,7 @@ namespace Odyssey.Presentation.Audio
         /// <summary>
         /// A raid turning to assault the colony: the low horn (Pixabay, trading_nation,
         /// <c>low-horn-185556</c> — the owner's <c>notification-raid</c> is the same recording,
-        /// measured sample for sample, design 50 §7). Played through <see cref="AlertChime.RaidKey"/>:
+        /// measured sample for sample, design 53 §7). Played through <see cref="AlertChime.RaidKey"/>:
         /// the alert row under that key is raised while a raid is assaulting.
         /// </summary>
         public const string AlertRaid = SoundPrefix + "alert.raid";
@@ -215,7 +215,7 @@ namespace Odyssey.Presentation.Audio
         /// <summary>
         /// A raid arriving at the edge of the board: the war horn (Pixabay, freesound_community,
         /// <c>war-horn-horror-73771</c>, baked by <c>tools/audio/bake_raid.sh</c>). Played by the
-        /// raid's Events row (design 50 §7), not by an alert, because a raid gathering at the edge
+        /// raid's Events row (design 53 §7), not by an alert, because a raid gathering at the edge
         /// is news rather than a standing problem.
         /// </summary>
         public const string AlertRaidArrive = SoundPrefix + "alert.raid.arrive";
@@ -340,7 +340,7 @@ namespace Odyssey.Presentation.Audio
     public static class BulletinChime
     {
         /// <summary>
-        /// The sound an Events row makes when it arrives (design 50 §7): the war horn for a raid,
+        /// The sound an Events row makes when it arrives (design 53 §7): the war horn for a raid,
         /// else by favourability — a gift sounds glad, a blow sounds like one, and anything else is
         /// worth a glance. A raid arriving in the same refresh as anything else wins: it is the news.
         /// </summary>

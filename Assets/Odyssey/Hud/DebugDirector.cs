@@ -132,7 +132,7 @@ namespace Odyssey.Hud
         };
 
         /// <summary>
-        /// The raid's two controls on the Events tab (design 50 §9): how many, and who. Their row
+        /// The raid's two controls on the Events tab (design 53 §9): how many, and who. Their row
         /// labels, and the word the size reads at 0.
         /// </summary>
         public const string RaidSizeKey = "ui.debug.raid.size",
@@ -403,7 +403,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// How many the next raid brings, 0 to <see cref="RaidSizeMax"/>. 0 is <i>Auto</i>: the
-        /// incident's own headcount-and-days size (design 50 §9). Kept for the session, so a second
+        /// incident's own headcount-and-days size (design 53 §9). Kept for the session, so a second
         /// raid is one click.
         /// </summary>
         public int RaidSize { get; private set; }
@@ -422,7 +422,7 @@ namespace Odyssey.Hud
         public static string RaidSizeText(int size) => size <= 0 ? Registry.Label(RaidAutoKey) : size.ToString();
 
         /// <summary>
-        /// The raid, as the debug row sends it (design 50 §9): the incident in A, the size in B (0 for
+        /// The raid, as the debug row sends it (design 53 §9): the incident in A, the size in B (0 for
         /// the incident's own) and the mix plus one in C.
         /// </summary>
         public Intent RaidIntent(int incidentDef) =>

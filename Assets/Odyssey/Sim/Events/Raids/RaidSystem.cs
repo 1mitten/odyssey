@@ -8,12 +8,12 @@ using Odyssey.Sim.Saving;
 namespace Odyssey.Sim.Events
 {
     /// <summary>
-    /// One raid: a band of hostiles that behaves as one (design 50 §1). The group owns the phase,
+    /// One raid: a band of hostiles that behaves as one (design 53 §1). The group owns the phase,
     /// the places, the clocks and who is in it; each member's job is still its own.
     ///
     /// <para><b>Everything a raid will do is decided when it fires</b> — where each member walks on,
     /// when, as what, and how long the band loiters — and saved here, so the system's tick draws
-    /// nothing and a save taken mid-trickle resumes the same trickle (design 50 §12).</para>
+    /// nothing and a save taken mid-trickle resumes the same trickle (design 53 §12).</para>
     /// </summary>
     public sealed class RaidGroup
     {
@@ -93,7 +93,7 @@ namespace Odyssey.Sim.Events
     }
 
     /// <summary>
-    /// Every raid on the board, and the clock that moves each through its phases (design 50 §3):
+    /// Every raid on the board, and the clock that moves each through its phases (design 53 §3):
     /// arriving, gathering, probing, assaulting, withdrawing. Members ask it what the band is doing
     /// (<see cref="RaidThinkNode"/>); it asks nothing of them but whether they stand.
     ///
@@ -108,7 +108,7 @@ namespace Odyssey.Sim.Events
     ///
     /// <para><b>Hashed only while a group exists</b>, the pattern <see cref="Projectiles"/> set, so a
     /// colony that has never been raided hashes as it did before raids and no golden moved
-    /// (design 50 §10).</para>
+    /// (design 53 §10).</para>
     /// </summary>
     public sealed class RaidSystem : IWorldSystem, IStateHashable, ISaveable, ISnapshotContributor
     {
@@ -116,7 +116,7 @@ namespace Odyssey.Sim.Events
         public const int CheckTicks = 30;
 
         /// <summary>
-        /// Over how many ticks a phase change reaches the band (design 50 §3). A member idling in
+        /// Over how many ticks a phase change reaches the band (design 53 §3). A member idling in
         /// the raid's own wander or wait is interrupted on one tick of the window by its place in
         /// the band, so two hundred path searches do not land together.
         /// </summary>
@@ -296,7 +296,7 @@ namespace Odyssey.Sim.Events
         }
 
         /// <summary>
-        /// The phase change reaching the band (design 50 §3): in the <see cref="StaggerTicks"/> after
+        /// The phase change reaching the band (design 53 §3): in the <see cref="StaggerTicks"/> after
         /// it, member <c>i</c> is interrupted on tick <c>i mod StaggerTicks</c> of the window — a
         /// function of saved state alone — if it is idling in the raid's own wander or wait. A member
         /// in a fight or a theft is left to its own job, which looks up on its own cadence.

@@ -171,7 +171,7 @@
   </PawnKindDef>
 
   <!--
-    The gunman (design 50 section 8): the bandit with a pistol. Its own kind rather than a bandit
+    The gunman (design 53 section 8): the bandit with a pistol. Its own kind rather than a bandit
     handed a weapon, so a raid mix can name it and a storyteller can draw it; everything else is
     the bandit's - a person, Hostile, the same traverse mode and motive, and the same outfit,
     because PawnOutfits keys on a hostile person rather than on the kind. The pistol is the only

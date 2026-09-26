@@ -161,7 +161,7 @@ namespace Odyssey.Sim.Pawns
             construction.Hearth = hearth;
             pawns.Home = new World.HomeArea(pawns);
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
-            // The raids (design 50): a clock in the pawn phase at order 15, hashed only while a band
+            // The raids (design 53): a clock in the pawn phase at order 15, hashed only while a band
             // is on the board, so its registration moved no golden. Every colony gets it, as every
             // colony gets the events that fire one.
             var raids = new Events.RaidSystem(pawns) { Jobs = pipeline };

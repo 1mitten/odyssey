@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Who a raid is made of (docs/design/50-raids.md section 8): the debug menu's dropdown, and what a
+  Who a raid is made of (docs/design/53-raids.md section 8): the debug menu's dropdown, and what a
   storyteller will draw from. Each row is a hostile kind and its share of the band per mille; the
   shares sum to 1000, and a band is split by largest remainder, so the counts are exact. The order
   of these three is IncidentContent.MixOrder's, which is the contract: append a new mix there.

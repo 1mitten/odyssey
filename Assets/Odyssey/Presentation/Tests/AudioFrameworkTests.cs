@@ -153,7 +153,7 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
-        /// A raid's Events row sounds the war horn (design 50 §7), and the Raid alert is the assault
+        /// A raid's Events row sounds the war horn (design 53 §7), and the Raid alert is the assault
         /// horn, AlertKey matching the model's; every other row still sounds its favourability.
         /// </summary>
         [Test]

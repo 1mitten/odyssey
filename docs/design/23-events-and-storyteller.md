@@ -244,7 +244,7 @@ a ledger entry is `(id, tick, def, cell)`, so a raid that wants to record its po
 outcome, or a condition its end, adds fields and bumps the save format. Both are one-line
 widenings when a caller exists.
 
-**The raid was the caller (2026-09-25, design 50 §9).** It followed the recipe as written, with
+**The raid was the caller (2026-09-25, design 53 §9).** It followed the recipe as written, with
 two widenings. `InvokeIncident` now carries a size in B and a raid mix in C (0 in either is the
 incident's own choice, so every existing row is unchanged). And `IncidentDef` gained its first
 per-worker block, `<raid>…</raid>`, the shape this section recommended. `IncidentParms.Points`

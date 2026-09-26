@@ -63,7 +63,7 @@ SECTIONS = [
      "that happened and are gone in six seconds, which is the right home for anything that recurs "
      "often enough that clearing it by hand would become a chore. Alerts and bulletins carry the "
      "layer they occurred on and jump the camera there, which a flat colony sim never has to think "
-     "about. A raid's mix names who a band of hostiles is made of (design 50)."),
+     "about. A raid's mix names who a band of hostiles is made of (design 53)."),
     ("research", "Research", ["ui.research.category", "ui.research.project", "ui.research.status",
                               "ui.research.hud"],
      "What the colony can learn, grouped by field, and the words the Research tab uses about it. "

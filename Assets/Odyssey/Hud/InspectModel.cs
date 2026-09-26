@@ -554,7 +554,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// The word under a hostile person's name: "bandit" for the bandit (design 42 §2), "gunman"
-        /// for the gunman (design 50 §8), the generic "hostile" for any hostile kind that comes after
+        /// for the gunman (design 53 §8), the generic "hostile" for any hostile kind that comes after
         /// them and has no word of its own.
         /// </summary>
         static string HostileKindWord(int kind) =>

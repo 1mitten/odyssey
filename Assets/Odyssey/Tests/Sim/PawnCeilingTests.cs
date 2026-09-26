@@ -31,7 +31,7 @@ namespace Odyssey.Tests.Sim
         public void TheCeilingIsWhereItWasMeasuredToBe()
         {
             // 200 until 2026-09-25, then 400 for a raid of two hundred beside a full colony (owner,
-            // design 50 §11): the tick measured with RaidBenchmarkTests at 243 pawns, the frame with
+            // design 53 §11): the tick measured with RaidBenchmarkTests at 243 pawns, the frame with
             // FrameTimeTests.TheFrameWithARaidOfTwoHundred, and 384 colonists already measured healthy.
             Assert.That(PawnRegistry.PawnCeiling, Is.EqualTo(400),
                 "the pawn ceiling moved. It is a rail against the debug menu, not a tuning knob: " +

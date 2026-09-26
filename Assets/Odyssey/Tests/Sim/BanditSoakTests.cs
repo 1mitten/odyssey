@@ -419,7 +419,7 @@ namespace Odyssey.Tests.Sim
 
         /// <summary>One colony of the gate, with what the gate reads off it.</summary>
         /// <summary>
-        /// Raids through the incident itself (design 50): the gate's armed colony and its hut, and
+        /// Raids through the incident itself (design 53): the gate's armed colony and its hut, and
         /// two Mixed raids of eight fired by the debug menu's own intent on day nought and day two.
         /// Each band walks on at an edge, gathers, probes and assaults on its own clock with nobody
         /// drafted, and ends. The invariants are asked every in-game hour; a lockstep twin fed the same

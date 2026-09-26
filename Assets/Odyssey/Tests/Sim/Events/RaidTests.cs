@@ -12,7 +12,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Tests.Sim.Events
 {
     /// <summary>
-    /// The raid (design 50): a band that walks on along one edge over seconds, gathers, probes and
+    /// The raid (design 53): a band that walks on along one edge over seconds, gathers, probes and
     /// assaults on its clock, attacks early when poked, withdraws at half, and survives a save at
     /// every point on the way. Each rule is paired with the control that fails it when the rule is
     /// withheld.
@@ -130,7 +130,7 @@ namespace Odyssey.Tests.Sim.Events
         // ---- the phases -------------------------------------------------------------------------
 
         /// <summary>
-        /// The clock (design 50 §3), with the loiter and the probe cut short and the early trigger
+        /// The clock (design 53 §3), with the loiter and the probe cut short and the early trigger
         /// taken away so only the clock can move the band: arriving until the last member is on,
         /// gathering for the loiter, probing for the probe, then the assault. Nobody in the band holds
         /// a fight while it stages, and the gathered band stands round its point.
@@ -325,7 +325,7 @@ namespace Odyssey.Tests.Sim.Events
             Assert.That(Members(colony, group).All(p => p.Kind == PawnKindIndex.Gunman), Is.True);
         }
 
-        /// <summary>The Events row carries the mix and the size (design 50 §7), in the entry's detail.</summary>
+        /// <summary>The Events row carries the mix and the size (design 53 §7), in the entry's detail.</summary>
         [Test]
         public void TheLedgerRecordsTheMixAndTheSize()
         {

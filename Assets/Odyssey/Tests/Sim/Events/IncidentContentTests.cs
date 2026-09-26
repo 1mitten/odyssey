@@ -39,7 +39,7 @@ namespace Odyssey.Tests.Sim.Events
         // appended at index 4, after the bandit's two — the supply drop's worker again, four to
         // eight medical supplies, weight 40 (invented).
         //
-        // 2026-09-25, raids (design 50): Incident_Raid appended at index 5 — Bad, ThreatBig, worker
+        // 2026-09-25, raids (design 53): Incident_Raid appended at index 5 — Bad, ThreatBig, worker
         // Raid, the first Def with a per-worker block (<raid>), gates earliestDay 3 and
         // minRefireDays 4 (invented). No golden moved: no golden fires an incident.
         const ulong ContentFingerprint = 7539131593735443081UL;

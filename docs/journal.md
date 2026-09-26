@@ -13650,7 +13650,7 @@ The owner asked for a raid: 1 to 200 hostiles from a random edge, a few hours of
 edge, then a push inward and an attack. It is fired from a debug slider and dropdown, with its own
 sound. A two-round interview settled the rest: the ceiling to 400 measured first; mixes as data;
 gather → probe → assault; the hearth as the target; withdrawal at half; one edge; no auto-draft;
-and headcount-and-days sizing at 0. Design 50.
+and headcount-and-days sizing at 0. Design 53.
 
 **The shape is the reference's** — a group controller the members defer to — **and the names are
 ours.** The single decision that mattered was *where the fight lives*. The raid's node only

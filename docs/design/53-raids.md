@@ -1,4 +1,4 @@
-# 50 — Raids
+# 53 — Raids
 
 **Written 2026-09-25**, from the owner's request and a two-round interview the same day. Branch
 `claude/sharp-lamport-8q5u4h`. Plan: `docs/plans/raids.md`.

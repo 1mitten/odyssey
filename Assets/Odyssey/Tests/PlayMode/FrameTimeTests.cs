@@ -801,7 +801,7 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
-        /// The frame with a raid of two hundred on the board (design 50 §11): the measurement the
+        /// The frame with a raid of two hundred on the board (design 53 §11): the measurement the
         /// pawn ceiling's rule asks for before it moved from 200 to 400. Twenty colonists, then the
         /// raid fired through the debug menu's own intent — the Mixed band, two hundred — timed while
         /// it gathers at the edge and again once the assault has brought it into the colony. One run,

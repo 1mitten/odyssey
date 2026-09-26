@@ -311,7 +311,7 @@ namespace Odyssey.Tests.Sim
         // moved: the ledger is hashed only while a pawn has anything on it. Re-taken from the
         // merged pack.
         //
-        // 2026-09-25, raids (design 50 §8): PawnKind_Gunman appended at kind 4 — a hostile person
+        // 2026-09-25, raids (design 53 §8): PawnKind_Gunman appended at kind 4 — a hostile person
         // armed from a table of one, Item_Pistol, with the bandit's traverse mode and motive. No
         // golden moved: no golden spawns a hostile.
         const ulong ContentFingerprint = 7938473187916690577UL;

@@ -294,7 +294,7 @@ namespace Odyssey.Presentation.Ui
                 if (!content.Workers[i].Fireable) continue;
                 int def = i;
 
-                // A raid carries its two controls under its row (design 50 §9): how many and who.
+                // A raid carries its two controls under its row (design 53 §9): how many and who.
                 // The row sends what they hold; they hold it for the session.
                 if (content.Workers[i] is RaidWorker)
                 {
@@ -311,7 +311,7 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// The raid's size (design 50 §9): the Settings window's own fader, whole numbers from 0 to
+        /// The raid's size (design 53 §9): the Settings window's own fader, whole numbers from 0 to
         /// <see cref="DebugDirector.RaidSizeMax"/>, the figure after it reading <i>Auto</i> at 0.
         /// </summary>
         VisualElement DebugRaidSizeRow()
@@ -354,7 +354,7 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// The raid's mix (design 50 §8): the Settings window's own select, one choice per mix in
+        /// The raid's mix (design 53 §8): the Settings window's own select, one choice per mix in
         /// the content's order, named by <see cref="RaidMixLabels"/>.
         /// </summary>
         VisualElement DebugRaidMixRow()
@@ -483,7 +483,7 @@ namespace Odyssey.Presentation.Ui
             world.Intents.Submit(new Intent(IntentKind.InvokeIncident, default, def));
         }
 
-        /// <summary>Fire a raid of the size and mix the two controls hold (design 50 §9).</summary>
+        /// <summary>Fire a raid of the size and mix the two controls hold (design 53 §9).</summary>
         void InvokeRaid(int def)
         {
             var world = _boot!.World;

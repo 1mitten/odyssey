@@ -24,7 +24,7 @@ the next session learns to ignore.
 ## Open
 
 - **Does a raid read as a band that stalks and then strikes?** (`claude/sharp-lamport-8q5u4h`,
-  design 50.) Debug → Events → Raid: size 20, Mixed, then 150. Wrong answers are any of these:
+  design 53.) Debug → Events → Raid: size 20, Mixed, then 150. Wrong answers are any of these:
   - the war horn does not sound on arrival;
   - the band does not gather at one edge;
   - 2–4 in-game hours of loitering feel like a wait rather than suspense;

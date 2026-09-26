@@ -102,7 +102,7 @@ namespace Odyssey.Sim.Pawns
         {
             int every = ctx.Content.Combat.rechooseTicks;
             if (every <= 0) return false;
-            // A band withdrawing does not look back (design 50 §6).
+            // A band withdrawing does not look back (design 53 §6).
             if (ctx.Raids?.IsWithdrawing(Pawn) == true) return false;
             if (Pawn.MoveProgress >= Pawn.MoveRatePerMille()) return false;
 

@@ -384,7 +384,7 @@ namespace Odyssey.Sim.Contracts
         /// After <see cref="BanditLeft"/> at the merge with main (2026-09-25); bandits shipped first.</summary>
         public const int MedicalDrop = 4;
 
-        /// <summary>A band of hostiles walks in from one edge, gathers, probes, and assaults (design 50).</summary>
+        /// <summary>A band of hostiles walks in from one edge, gathers, probes, and assaults (design 53).</summary>
         public const int Raid = 5;
 
         public const int Count = 6;

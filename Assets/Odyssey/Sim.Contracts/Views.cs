@@ -766,7 +766,7 @@ namespace Odyssey.Sim.Contracts
     /// whoever is on the line then, and published as a <see cref="CombatEventView"/>.</para>
     /// </summary>
     /// <summary>
-    /// What a raid is doing (design 50 §3), in order. The phase is the simulation's; the words and
+    /// What a raid is doing (design 53 §3), in order. The phase is the simulation's; the words and
     /// the horn are presentation's.
     /// </summary>
     public enum RaidPhase : byte
@@ -788,7 +788,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// One raid on the board (design 50 §3): its phase, where its standing members are, and where
+    /// One raid on the board (design 53 §3): its phase, where its standing members are, and where
     /// it is going. Published every frame a raid exists; neither saved nor hashed — the group is.
     /// What the alert and the Events row jump the camera to, and what the alert is raised for.
     /// </summary>

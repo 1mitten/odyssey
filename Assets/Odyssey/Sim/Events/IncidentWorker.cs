@@ -18,7 +18,7 @@ namespace Odyssey.Sim.Events
         public readonly int Def;
 
         /// <summary>
-        /// The severity budget, or 0 to let the incident choose. Read first by the raid (design 50
+        /// The severity budget, or 0 to let the incident choose. Read first by the raid (design 53
         /// §9), as the band's size; the points curve a storyteller will draw it from is still to come.
         /// </summary>
         public readonly int Points;
