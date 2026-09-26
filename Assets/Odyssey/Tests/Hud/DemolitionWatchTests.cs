@@ -135,6 +135,69 @@ namespace Odyssey.Tests.Hud
             Assert.That(heard[0].Kind, Is.EqualTo(Demolition.Wood));
         }
 
+        static int eventId;
+
+        static WorldSnapshot Broken(int cell)
+        {
+            WorldSnapshot frame = Frame.Write();
+            frame.AddCombatEvent(new CombatEventView(++eventId, 10, CombatEventKind.Demolished, new PawnId(1),
+                PawnId.None, frame.Size.FromIndex(cell), EdificeHandle.Wall));
+            return frame;
+        }
+
+        [Test]
+        public void AWoodWallBrokenInOneBlowIsHeardFromTheFightAndTheMirrorsNote()
+        {
+            var cells = new Cells();
+            var watch = new DemolitionWatch(Wood);
+            var heard = new List<Demolished>();
+            watch.Step(Orders(), cells, heard);    // armed
+
+            // Never struck before, so never tracked: only the event and the note know.
+            watch.NoteRemoved(40, Wood);
+            Assert.That(watch.Step(Broken(40), cells, heard), Is.EqualTo(1));
+            Assert.That(heard[0].CellIndex, Is.EqualTo(40));
+            Assert.That(heard[0].Kind, Is.EqualTo(Demolition.Wood));
+
+            // The other way round: the event a frame ahead of the mirror.
+            Assert.That(watch.Step(Broken(41), cells, heard), Is.Zero);
+            watch.NoteRemoved(41, Wood);
+            Assert.That(watch.Step(Orders(), cells, heard), Is.EqualTo(1), "the note arrived a frame late and was not matched");
+
+            // And stone, broken in one blow, is silent and let go.
+            watch.NoteRemoved(42, Stone);
+            Assert.That(watch.Step(Broken(42), cells, heard), Is.Zero);
+            Assert.That(watch.Tracking, Is.Zero);
+        }
+
+        [Test]
+        public void AWallStruckAndThenBrokenIsHeardOnce()
+        {
+            var cells = new Cells();
+            cells.Edifices[21] = (WallDef, Wood);
+            var watch = new DemolitionWatch(Wood);
+            var heard = new List<Demolished>();
+
+            watch.Step(Struck(21), cells, heard);
+            cells.Edifices.Remove(21);
+            watch.NoteRemoved(21, Wood);
+            int total = watch.Step(Broken(21), cells, heard);
+            for (int i = 0; i < 5; i++) total += watch.Step(Orders(), cells, heard);
+
+            Assert.That(total, Is.EqualTo(1), "tracked and reported, and heard twice");
+        }
+
+        [Test]
+        public void ALoadedWorldsOldFightsAreNotHeard()
+        {
+            var cells = new Cells();
+            var watch = new DemolitionWatch(Wood);
+            var heard = new List<Demolished>();
+
+            watch.NoteRemoved(40, Wood);
+            Assert.That(watch.Step(Broken(40), cells, heard), Is.Zero, "the first frame's events are history");
+        }
+
         [Test]
         public void ARepairedWallIsSilentAndWhatStoodIsWhatWasFirstSeen()
         {

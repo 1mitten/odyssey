@@ -2001,6 +2001,7 @@ namespace Odyssey.Presentation.Bootstrap
 
         DemolitionWatch? _demolitions;
         readonly List<Demolished> _demolished = new List<Demolished>();
+        readonly List<WorldRenderModel.RemovedEdifice> _removedEdifices = new List<WorldRenderModel.RemovedEdifice>();
 
         /// <summary>
         /// Something coming down, heard (design 57 §9): wood broken or taken apart, a mined face
@@ -2011,6 +2012,12 @@ namespace Odyssey.Presentation.Bootstrap
         void HearDemolitions(WorldSnapshot snapshot)
         {
             if (_demolitions == null || _model == null) return;
+            // What left the mirror this frame and what it was made of, for a building broken in
+            // one blow, which nothing else remembers.
+            _removedEdifices.Clear();
+            _model.DrainRemoved(_removedEdifices);
+            for (int i = 0; i < _removedEdifices.Count; i++)
+                _demolitions.NoteRemoved(_removedEdifices[i].Cell, _removedEdifices[i].Stuff);
             if (_demolitions.Step(snapshot, _model, _demolished) == 0 || _audio == null) return;
             for (int i = 0; i < _demolished.Count; i++)
             {

@@ -55,6 +55,13 @@ namespace Odyssey.Hud
     /// is there because the order can leave the snapshot a publish before the cell's new state
     /// reaches the mirror — the same reason the break's watch has one (§7).</para>
     ///
+    /// <para><b>Broken in one blow.</b> A building that goes from whole to nothing in a single blow
+    /// was never struck before, so it is never tracked. For that the combat log's
+    /// <see cref="CombatEventKind.Demolished"/> names its anchor cell, and the mirror's note of
+    /// what left it (<see cref="NoteRemoved"/>) says what it was made of; whichever arrives first
+    /// waits for the other. A cell heard is not heard again for <see cref="HeardFrames"/>, so a
+    /// wall struck before and then broken — tracked <i>and</i> reported — is one sound.</para>
+    ///
     /// <para><b>What makes a sound.</b> Rock under a mining order, whatever the rock. A building or
     /// a floor made of <see cref="WoodStuff"/>, however it went. Anything else built — stone,
     /// concrete, steel — comes down silent until it is given a sound of its own; that is one line
@@ -92,16 +99,46 @@ namespace Odyssey.Hud
         readonly Dictionary<int, Tracked> _cells = new Dictionary<int, Tracked>();
         readonly List<int> _done = new List<int>();
 
+        // Broken in a fight (the combat log's Demolished, by its anchor cell) waiting for the
+        // mirror's note of what it was made of, and those notes waiting for their event: frames left.
+        readonly Dictionary<int, int> _fought = new Dictionary<int, int>();
+        readonly Dictionary<int, (ushort stuff, int framesLeft)> _removed = new Dictionary<int, (ushort, int)>();
+
+        // Cells already heard, for a second: a wall struck before and then broken is both a
+        // tracked cell and a Demolished event, and must be heard once.
+        readonly Dictionary<int, int> _heard = new Dictionary<int, int>();
+
+        int _lastCombatEvent;
+        bool _armed;
+
+        /// <summary>How many frames a cell just heard is not heard again (about a second).</summary>
+        public const int HeardFrames = 60;
+
         public DemolitionWatch(ushort woodStuff) => WoodStuff = woodStuff;
 
         /// <summary>The stuff value wood is built of (<c>NaturalContent.StuffWood</c>).</summary>
         public ushort WoodStuff { get; }
 
-        /// <summary>Cells tracked now, listed or watched. Exposed for tests.</summary>
-        public int Tracking => _cells.Count;
+        /// <summary>Cells tracked now, listed or watched, and fights waiting on a note. Exposed for tests.</summary>
+        public int Tracking => _cells.Count + _fought.Count;
 
         /// <summary>Forget everything: a new world, or a load.</summary>
-        public void Clear() => _cells.Clear();
+        public void Clear()
+        {
+            _cells.Clear();
+            _fought.Clear();
+            _removed.Clear();
+            _heard.Clear();
+            _armed = false;
+        }
+
+        /// <summary>
+        /// The mirror's note that a building left it, and what it was made of
+        /// (<c>WorldRenderModel.DrainRemoved</c>). Given before <see cref="Step"/> each frame. It is
+        /// the only record of the stuff of a building broken from whole in one blow, which was
+        /// never struck before and so never tracked.
+        /// </summary>
+        public void NoteRemoved(int cellIndex, ushort stuff) => _removed[cellIndex] = (stuff, WatchFrames);
 
         /// <summary>
         /// One frame: take note of every cell with work on it, and add to <paramref name="into"/>
@@ -110,7 +147,38 @@ namespace Odyssey.Hud
         public int Step(WorldSnapshot snapshot, IDemolitionCells cells, List<Demolished> into)
         {
             into.Clear();
+            Age(_heard);
             foreach (Tracked tracked in _cells.Values) tracked.Seen = false;
+
+            // Broken in a fight: the combat log names the anchor cell, and the mirror's note says
+            // what it was. Armed on the first frame, so a loaded world's old events are not heard.
+            System.ReadOnlySpan<CombatEventView> events = snapshot.CombatEvents;
+            for (int i = 0; i < events.Length; i++)
+            {
+                if (events[i].Id <= _lastCombatEvent) continue;
+                _lastCombatEvent = events[i].Id;
+                if (_armed && events[i].Kind == CombatEventKind.Demolished)
+                    _fought[snapshot.Size.Index(events[i].Cell)] = WatchFrames;
+            }
+            _armed = true;
+
+            _done.Clear();
+            foreach (KeyValuePair<int, int> pair in _fought)
+            {
+                if (_removed.TryGetValue(pair.Key, out (ushort stuff, int framesLeft) note))
+                {
+                    Hear(pair.Key, SoundFor(note.stuff), into);
+                    _removed.Remove(pair.Key);
+                    _cells.Remove(pair.Key);
+                    _done.Add(pair.Key);
+                }
+                else if (pair.Value <= 1) _done.Add(pair.Key);
+            }
+            for (int i = 0; i < _done.Count; i++) _fought.Remove(_done[i]);
+            _done.Clear();
+            foreach (KeyValuePair<int, int> pair in _fought) _done.Add(pair.Key);
+            for (int i = 0; i < _done.Count; i++) _fought[_done[i]]--;
+            AgeRemoved();
 
             System.ReadOnlySpan<OrderView> orders = snapshot.Orders;
             for (int i = 0; i < orders.Length; i++)
@@ -130,7 +198,7 @@ namespace Odyssey.Hud
 
                 if (CameDown(pair.Key, t, cells, out Demolition? kind))
                 {
-                    if (kind.HasValue) into.Add(new Demolished(pair.Key, kind.Value));
+                    Hear(pair.Key, kind, into);
                     _done.Add(pair.Key);
                 }
                 else if (--t.FramesLeft <= 0)
@@ -140,6 +208,37 @@ namespace Odyssey.Hud
             }
             for (int i = 0; i < _done.Count; i++) _cells.Remove(_done[i]);
             return into.Count;
+        }
+
+        void Hear(int cell, Demolition? kind, List<Demolished> into)
+        {
+            if (!kind.HasValue || _heard.ContainsKey(cell)) return;
+            into.Add(new Demolished(cell, kind.Value));
+            _heard[cell] = HeardFrames;
+        }
+
+        void Age(Dictionary<int, int> frames)
+        {
+            _done.Clear();
+            foreach (KeyValuePair<int, int> pair in frames) _done.Add(pair.Key);
+            for (int i = 0; i < _done.Count; i++)
+            {
+                int left = frames[_done[i]] - 1;
+                if (left <= 0) frames.Remove(_done[i]);
+                else frames[_done[i]] = left;
+            }
+        }
+
+        void AgeRemoved()
+        {
+            _done.Clear();
+            foreach (KeyValuePair<int, (ushort stuff, int framesLeft)> pair in _removed) _done.Add(pair.Key);
+            for (int i = 0; i < _done.Count; i++)
+            {
+                (ushort stuff, int framesLeft) note = _removed[_done[i]];
+                if (note.framesLeft <= 1) _removed.Remove(_done[i]);
+                else _removed[_done[i]] = (note.stuff, note.framesLeft - 1);
+            }
         }
 
         void Note(int cell, Why why, IDemolitionCells cells)
