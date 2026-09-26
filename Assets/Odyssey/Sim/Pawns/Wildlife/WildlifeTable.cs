@@ -23,6 +23,12 @@ namespace Odyssey.Sim.Pawns.Wildlife
         /// centred on it, and which arrives only where the water reaches the board's edge.
         /// </summary>
         Bank = 3,
+
+        /// <summary>
+        /// Open ground (plan forest-animals §2): no standing tree within two cells and no rock
+        /// beside it on its own layer — the grass between the woods, where the rabbits are.
+        /// </summary>
+        Open = 4,
     }
 
     /// <summary>
@@ -78,21 +84,32 @@ namespace Odyssey.Sim.Pawns.Wildlife
 
         public Habitat habitat = Habitat.Any;
 
+        /// <summary>
+        /// The nearest a group's centre may be put to the colony's start at seeding, Chebyshev,
+        /// in cells — the wolves' and the bear's, so the dangerous animals begin in the far woods
+        /// (plan forest-animals §2). Tried for: a board with no habitat that far out seeds them
+        /// where it can rather than not at all. Zero is the clearing's own margin and no more.
+        /// Seeding only; an arrival walks in at the edge, which is further still.
+        /// </summary>
+        public int minStartDistance;
+
         public WildlifeEntry() { }
 
-        public WildlifeEntry(string kind, int weight, int groupMin, int groupMax, Habitat habitat)
+        public WildlifeEntry(string kind, int weight, int groupMin, int groupMax, Habitat habitat, int minStartDistance = 0)
         {
             this.kind = kind;
             this.weight = weight;
             this.groupMin = groupMin;
             this.groupMax = groupMax;
             this.habitat = habitat;
+            this.minStartDistance = minStartDistance;
         }
 
         public void Validate()
         {
             if (string.IsNullOrEmpty(kind)) throw new ArgumentException("A wildlife entry names no kind.");
             if (weight < 0) throw new ArgumentOutOfRangeException(nameof(weight));
+            if (minStartDistance < 0) throw new ArgumentOutOfRangeException(nameof(minStartDistance));
             if (groupMin < 1 || groupMax < groupMin) throw new ArgumentOutOfRangeException(nameof(groupMin), $"{kind}: group {groupMin}–{groupMax}");
         }
     }

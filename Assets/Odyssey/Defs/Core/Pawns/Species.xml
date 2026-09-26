@@ -307,6 +307,286 @@
   </SpeciesDef>
 
   <!--
+    The forest animals (docs/plans/forest-animals.md, FA1; docs/research/forest-animals-interview.md):
+    nine species from the SIMPLE Forest Animals pack, named by the owner on 2026-09-26. FA1 is art
+    and roster only, so each carries the fields that exist today - pace, pool, wander, rest,
+    revenge, attack - and the four FA1 adds: formCount (the deer's doe and stag, the moose's cow and
+    bull, derived from the pawn's seed and never saved), bodySizePerMille (against a colonist's
+    1,000; design 65's prey limit and design 64's herd read it), and meatYield and hideYield, which
+    nothing reads until hunting (cooking's K3) and which are here because the owner asked for the
+    stats now (answer 15).
+
+    Every one is TraverseMode.Animal: no ladder, no door, no water - the raccoon too, so that a
+    closed door keeps a store raid out (plan section 1). The revenge numbers are FA1's, the hog's
+    rule for the animals that stand and fight and nought for the ones that run; design 64's
+    temperament numbers, with their x3 in melee, replace them in FA2. Attacks are sized from design
+    64's table against the hog's 6 every 150 ticks. bodyLengthMm is life length x the colonists'
+    draw factor of about 1.42 (design 66 section 5), for presentation only. Every number is
+    INVENTED unless it says otherwise, and a playtest number.
+  -->
+
+  <!-- The verge rabbit: small, quick and harmless; it outruns anything on the board. -->
+  <SpeciesDef>
+    <defName>Species_VergeRabbit</defName>
+    <labelKey>ui.pawn.rabbit</labelKey>
+    <person>false</person>
+    <bodyLengthMm>640</bodyLengthMm>
+    <bodySizePerMille>200</bodySizePerMille>
+    <movePerMille>1300</movePerMille>
+    <traverseMode>Animal</traverseMode>
+    <wanderRadius>5</wanderRadius>
+    <restTicksMin>120</restTicksMin>
+    <restTicksMax>600</restTicksMax>
+    <figureKey>animal.rabbit</figureKey>
+    <healthPoints>12</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>0</revengePerMille>
+    <meleeSkill>1</meleeSkill>
+    <interceptPerMille>40</interceptPerMille>
+    <meatYield>8</meatYield>
+    <hideYield>4</hideYield>
+  </SpeciesDef>
+
+  <!-- The hedgerow deer: a doe or a stag (formCount 2, 0 doe, 1 stag), in herds at the wood's edge. -->
+  <SpeciesDef>
+    <defName>Species_HedgerowDeer</defName>
+    <labelKey>ui.pawn.deer</labelKey>
+    <person>false</person>
+    <formCount>2</formCount>
+    <bodyLengthMm>2560</bodyLengthMm>
+    <bodySizePerMille>1200</bodySizePerMille>
+    <movePerMille>1200</movePerMille>
+    <traverseMode>Animal</traverseMode>
+    <wanderRadius>9</wanderRadius>
+    <restTicksMin>300</restTicksMin>
+    <restTicksMax>900</restTicksMax>
+    <figureKey>animal.deer</figureKey>
+    <healthPoints>90</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>0</revengePerMille>
+    <meleeSkill>3</meleeSkill>
+    <interceptPerMille>500</interceptPerMille>
+    <meatYield>90</meatYield>
+    <hideYield>30</hideYield>
+    <naturalAttack>
+      <damage>4</damage>
+      <cooldownTicks>150</cooldownTicks>
+      <windupTicks>30</windupTicks>
+      <damageKind>Blunt</damageKind>
+      <style>Bite</style>
+    </naturalAttack>
+  </SpeciesDef>
+
+  <!-- The ash fox: a night animal that keeps its distance. -->
+  <SpeciesDef>
+    <defName>Species_AshFox</defName>
+    <nocturnal>true</nocturnal>
+    <labelKey>ui.pawn.fox</labelKey>
+    <person>false</person>
+    <bodyLengthMm>1280</bodyLengthMm>
+    <bodySizePerMille>550</bodySizePerMille>
+    <movePerMille>1050</movePerMille>
+    <traverseMode>Animal</traverseMode>
+    <wanderRadius>7</wanderRadius>
+    <restTicksMin>200</restTicksMin>
+    <restTicksMax>700</restTicksMax>
+    <figureKey>animal.fox</figureKey>
+    <healthPoints>30</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>0</revengePerMille>
+    <meleeSkill>4</meleeSkill>
+    <interceptPerMille>200</interceptPerMille>
+    <meatYield>25</meatYield>
+    <hideYield>12</hideYield>
+    <naturalAttack>
+      <damage>3</damage>
+      <cooldownTicks>100</cooldownTicks>
+      <windupTicks>20</windupTicks>
+      <damageKind>Sharp</damageKind>
+      <style>Bite</style>
+    </naturalAttack>
+  </SpeciesDef>
+
+  <!-- The gutter raccoon: out at night by the water; the store thief of FA3. -->
+  <SpeciesDef>
+    <defName>Species_GutterRaccoon</defName>
+    <nocturnal>true</nocturnal>
+    <labelKey>ui.pawn.raccoon</labelKey>
+    <person>false</person>
+    <bodyLengthMm>990</bodyLengthMm>
+    <bodySizePerMille>400</bodySizePerMille>
+    <movePerMille>900</movePerMille>
+    <traverseMode>Animal</traverseMode>
+    <wanderRadius>5</wanderRadius>
+    <restTicksMin>200</restTicksMin>
+    <restTicksMax>700</restTicksMax>
+    <figureKey>animal.raccoon</figureKey>
+    <healthPoints>25</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>0</revengePerMille>
+    <meleeSkill>3</meleeSkill>
+    <interceptPerMille>150</interceptPerMille>
+    <meatYield>20</meatYield>
+    <hideYield>10</hideYield>
+    <naturalAttack>
+      <damage>2</damage>
+      <cooldownTicks>100</cooldownTicks>
+      <windupTicks>20</windupTicks>
+      <damageKind>Sharp</damageKind>
+      <style>Bite</style>
+    </naturalAttack>
+  </SpeciesDef>
+
+  <!-- The rubble skunk: slow, and does not run far; its spray is FA3's. -->
+  <SpeciesDef>
+    <defName>Species_RubbleSkunk</defName>
+    <nocturnal>true</nocturnal>
+    <labelKey>ui.pawn.skunk</labelKey>
+    <person>false</person>
+    <bodyLengthMm>850</bodyLengthMm>
+    <bodySizePerMille>300</bodySizePerMille>
+    <movePerMille>700</movePerMille>
+    <traverseMode>Animal</traverseMode>
+    <wanderRadius>4</wanderRadius>
+    <restTicksMin>300</restTicksMin>
+    <restTicksMax>900</restTicksMax>
+    <figureKey>animal.skunk</figureKey>
+    <healthPoints>20</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>0</revengePerMille>
+    <meleeSkill>2</meleeSkill>
+    <interceptPerMille>100</interceptPerMille>
+    <meatYield>12</meatYield>
+    <hideYield>6</hideYield>
+    <naturalAttack>
+      <damage>2</damage>
+      <cooldownTicks>120</cooldownTicks>
+      <windupTicks>20</windupTicks>
+      <damageKind>Sharp</damageKind>
+      <style>Bite</style>
+    </naturalAttack>
+  </SpeciesDef>
+
+  <!-- The thicket boar: the woodland's sounder, the hog's rule - it usually turns on whoever hurt it. -->
+  <SpeciesDef>
+    <defName>Species_ThicketBoar</defName>
+    <nocturnal>true</nocturnal>
+    <labelKey>ui.pawn.boar</labelKey>
+    <person>false</person>
+    <bodyLengthMm>1990</bodyLengthMm>
+    <bodySizePerMille>850</bodySizePerMille>
+    <movePerMille>1000</movePerMille>
+    <traverseMode>Animal</traverseMode>
+    <wanderRadius>8</wanderRadius>
+    <restTicksMin>300</restTicksMin>
+    <restTicksMax>900</restTicksMax>
+    <figureKey>animal.boar</figureKey>
+    <healthPoints>70</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>700</revengePerMille>
+    <meleeSkill>6</meleeSkill>
+    <interceptPerMille>450</interceptPerMille>
+    <meatYield>70</meatYield>
+    <hideYield>25</hideYield>
+    <naturalAttack>
+      <damage>6</damage>
+      <cooldownTicks>150</cooldownTicks>
+      <windupTicks>30</windupTicks>
+      <damageKind>Blunt</damageKind>
+      <style>Bite</style>
+    </naturalAttack>
+  </SpeciesDef>
+
+  <!-- The mire moose: a cow or a bull (formCount 2, 0 cow, 1 bull); it never runs from a fight. -->
+  <SpeciesDef>
+    <defName>Species_MireMoose</defName>
+    <labelKey>ui.pawn.moose</labelKey>
+    <person>false</person>
+    <formCount>2</formCount>
+    <bodyLengthMm>3980</bodyLengthMm>
+    <bodySizePerMille>2300</bodySizePerMille>
+    <movePerMille>1000</movePerMille>
+    <traverseMode>Animal</traverseMode>
+    <wanderRadius>10</wanderRadius>
+    <restTicksMin>400</restTicksMin>
+    <restTicksMax>1200</restTicksMax>
+    <figureKey>animal.moose</figureKey>
+    <healthPoints>190</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>1000</revengePerMille>
+    <meleeSkill>6</meleeSkill>
+    <interceptPerMille>800</interceptPerMille>
+    <meatYield>200</meatYield>
+    <hideYield>60</hideYield>
+    <naturalAttack>
+      <damage>8</damage>
+      <cooldownTicks>180</cooldownTicks>
+      <windupTicks>40</windupTicks>
+      <damageKind>Blunt</damageKind>
+      <style>Bite</style>
+    </naturalAttack>
+  </SpeciesDef>
+
+  <!-- The ridge wolf: in packs, out at night, placed far from the start; hunting is FA2's. -->
+  <SpeciesDef>
+    <defName>Species_RidgeWolf</defName>
+    <nocturnal>true</nocturnal>
+    <labelKey>ui.pawn.wolf</labelKey>
+    <person>false</person>
+    <bodyLengthMm>1990</bodyLengthMm>
+    <bodySizePerMille>850</bodySizePerMille>
+    <movePerMille>1100</movePerMille>
+    <traverseMode>Animal</traverseMode>
+    <wanderRadius>12</wanderRadius>
+    <restTicksMin>200</restTicksMin>
+    <restTicksMax>800</restTicksMax>
+    <figureKey>animal.wolf</figureKey>
+    <healthPoints>90</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>1000</revengePerMille>
+    <meleeSkill>8</meleeSkill>
+    <interceptPerMille>350</interceptPerMille>
+    <meatYield>50</meatYield>
+    <hideYield>20</hideYield>
+    <naturalAttack>
+      <damage>6</damage>
+      <cooldownTicks>120</cooldownTicks>
+      <windupTicks>25</windupTicks>
+      <damageKind>Sharp</damageKind>
+      <style>Bite</style>
+    </naturalAttack>
+  </SpeciesDef>
+
+  <!-- The quarry bear: solitary, the heaviest blow in the forest, placed far from the start. -->
+  <SpeciesDef>
+    <defName>Species_QuarryBear</defName>
+    <labelKey>ui.pawn.bear</labelKey>
+    <person>false</person>
+    <bodyLengthMm>2840</bodyLengthMm>
+    <bodySizePerMille>2150</bodySizePerMille>
+    <movePerMille>1000</movePerMille>
+    <traverseMode>Animal</traverseMode>
+    <wanderRadius>10</wanderRadius>
+    <restTicksMin>500</restTicksMin>
+    <restTicksMax>1500</restTicksMax>
+    <figureKey>animal.bear</figureKey>
+    <healthPoints>250</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>1000</revengePerMille>
+    <meleeSkill>10</meleeSkill>
+    <interceptPerMille>800</interceptPerMille>
+    <meatYield>150</meatYield>
+    <hideYield>50</hideYield>
+    <naturalAttack>
+      <damage>12</damage>
+      <cooldownTicks>160</cooldownTicks>
+      <windupTicks>40</windupTicks>
+      <damageKind>Sharp</damageKind>
+      <style>Bite</style>
+    </naturalAttack>
+  </SpeciesDef>
+
+  <!--
     The animal kinds. Every needs and rest field on PawnKindDef is unread for an animal — nothing
     ticks its needs — so only the species is stated and the rest take the type's defaults.
   -->
@@ -322,7 +602,7 @@
     <faction>Wild</faction>
   </PawnKindDef>
 
-  <!-- Kind 4, after the bandit: kind order is a save contract and is appended. -->
+  <!-- Kind 5, after the bandit and the gunman: kind order is a save contract and is appended. -->
   <PawnKindDef>
     <defName>PawnKind_CulvertFrog</defName>
     <species>Species_CulvertFrog</species>
@@ -405,6 +685,61 @@
     <defName>PawnKind_ButcherKing</defName>
     <species>Species_ButcherKing</species>
     <faction>Hostile</faction>
+  </PawnKindDef>
+
+  <!-- Kinds 10 to 18, the forest animals (plan FA1), appended after the butcher's levels in order. -->
+  <PawnKindDef>
+    <defName>PawnKind_VergeRabbit</defName>
+    <species>Species_VergeRabbit</species>
+    <faction>Wild</faction>
+  </PawnKindDef>
+
+  <PawnKindDef>
+    <defName>PawnKind_HedgerowDeer</defName>
+    <species>Species_HedgerowDeer</species>
+    <faction>Wild</faction>
+  </PawnKindDef>
+
+  <PawnKindDef>
+    <defName>PawnKind_AshFox</defName>
+    <species>Species_AshFox</species>
+    <faction>Wild</faction>
+  </PawnKindDef>
+
+  <PawnKindDef>
+    <defName>PawnKind_GutterRaccoon</defName>
+    <species>Species_GutterRaccoon</species>
+    <faction>Wild</faction>
+  </PawnKindDef>
+
+  <PawnKindDef>
+    <defName>PawnKind_RubbleSkunk</defName>
+    <species>Species_RubbleSkunk</species>
+    <faction>Wild</faction>
+  </PawnKindDef>
+
+  <PawnKindDef>
+    <defName>PawnKind_ThicketBoar</defName>
+    <species>Species_ThicketBoar</species>
+    <faction>Wild</faction>
+  </PawnKindDef>
+
+  <PawnKindDef>
+    <defName>PawnKind_MireMoose</defName>
+    <species>Species_MireMoose</species>
+    <faction>Wild</faction>
+  </PawnKindDef>
+
+  <PawnKindDef>
+    <defName>PawnKind_RidgeWolf</defName>
+    <species>Species_RidgeWolf</species>
+    <faction>Wild</faction>
+  </PawnKindDef>
+
+  <PawnKindDef>
+    <defName>PawnKind_QuarryBear</defName>
+    <species>Species_QuarryBear</species>
+    <faction>Wild</faction>
   </PawnKindDef>
 
 </Defs>

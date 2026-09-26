@@ -592,8 +592,18 @@ namespace Odyssey.Tests.Sim
             // Merged with raids (design 55), 2026-09-26: the gunman keeps kind 4 and the frog moves
             // to 5, and a pawn's kind is hashed. GoldenColonyProbe on the frog branch (fca2ef08) and
             // on the merge is identical on all three boards, so only the number moved.
-            Generated = 5385105565351640744UL,
-            Simulated = 1457182368184692081UL,
+            // 2026-09-26, the forest animals (plan forest-animals FA1, §2): the meadow's table is the
+            // nine forest species with the rat and the frog (the hog is the city's), the ceiling is
+            // 48 on this board and the density 120, and the seeder places every kind once before
+            // its weighted draws. Pawns 22 -> 53 (17 animals -> 48). GoldenColonyProbe against the
+            // branch's own base (f57ac0c7, the butcher and main): items, stacks, item cells,
+            // experience, passions and failed jobs identical, and the colonists' food, rest and
+            // mood fall by exactly what they fell by before (-1,320 / -990 / -250) — the sums differ
+            // only by 31 more animals' untouched needs. Progress, pawn cells and the wanders and
+            // waits started (99 -> 212, 96 -> 338) are the animals' own. The colonists did the
+            // same things.
+            Generated = 16613488490350899867UL,
+            Simulated = 3354719283251261030UL,
         };
 
         /// <summary>
@@ -638,8 +648,14 @@ namespace Odyssey.Tests.Sim
             // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
             // 2026-09-25, nobody over anybody (design 31 §20): Simulated only, the wander legs
             // (74 -> 75) and where everybody stands; every other census number identical.
-            Generated = 14180088319569370523UL,
-            Simulated = 6894148259867231222UL,
+            // 2026-09-26, the forest animals (FA1): the city's table did not change, but the seeder
+            // now places every kind once, sharing the target evenly, before its weighted draws, so
+            // the same rats and hogs are dealt from the stream in a different order and stand
+            // elsewhere. Probe against the base (f57ac0c7): pawns 9 both, items, food, rest, mood,
+            // experience and passions identical; pawn cells, progress and the animals' wanders and
+            // waits (75 -> 76, 217 -> 297) moved. The colonists did the same things.
+            Generated = 11578694961578370791UL,
+            Simulated = 3495294178587247918UL,
         };
     }
 }

@@ -19,10 +19,11 @@ namespace Odyssey.Sim.Pawns.Wildlife
     /// So a save mid-departure resumes the departure, and two runs of one seed leave and arrive
     /// on the same ticks.</para>
     ///
-    /// <para><b>Leaving is removal, and removal is new.</b> Nothing ever left the pawn registry
-    /// before this — no health model, no death — so <see cref="PawnRegistry.Despawn"/> is this
-    /// unit's, and its one caller is here: an animal that has decided to go, is standing on an
-    /// edge cell, and has nothing in hand. The interface already copes with a pawn that is not in
+    /// <para><b>Leaving is removal.</b> Nothing ever left the pawn registry before this unit —
+    /// it predates the health model — so <see cref="PawnRegistry.Despawn"/> was written here, and
+    /// its caller in this class is an animal that has decided to go, is standing on an edge cell,
+    /// and has nothing in hand. (A death now removes a pawn too, and leaves a corpse; that is
+    /// combat's, not this.) The interface already copes with a pawn that is not in
     /// the snapshot, because it copes with one on another layer.</para>
     /// </summary>
     public sealed class WildlifeSystem : ITickable

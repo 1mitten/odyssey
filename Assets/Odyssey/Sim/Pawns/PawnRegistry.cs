@@ -676,6 +676,8 @@ namespace Odyssey.Sim.Pawns
                     // running and the sky, so the activity line can say so without a job def.
                     if (AnimalShelterThinkNode.IsSheltering(pawn, _ctx))
                         writer.AddPawnAspect(pawn.Id, AnimalShelterThinkNode.Sheltering, 1);
+                    // Its form and whether it is eating, for the art (plan forest-animals §1).
+                    AnimalAspects.Publish(writer, pawn);
                     continue;
                 }
 

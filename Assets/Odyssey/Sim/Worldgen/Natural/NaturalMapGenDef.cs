@@ -45,26 +45,70 @@ namespace Odyssey.Sim.Worldgen.Natural
         public MapType mapType = MapType.Natural;
 
         /// <summary>
-        /// The meadow's animals (design 30 §1): hog sounders in the woodland, rats by the rock,
-        /// frogs in threes to fives on the banks of its water (§8). The natural board's default whether or not <see cref="MakeWooded"/> is called, because
-        /// the untouched def has trees and rock too; <see cref="MakeBarren"/> is what clears it.
+        /// The meadow's animals (design 30 §1; plan forest-animals §2): the nine forest species,
+        /// rats by the rock and frogs on the banks of its water (§8). The midden hog is the ruined
+        /// city's now (forest animals interview, answer 2): the thicket boar is the woodland's
+        /// sounder. The natural board's default whether or not <see cref="MakeWooded"/> is called,
+        /// because the untouched def has trees and rock too; <see cref="MakeBarren"/> is what
+        /// clears it.
+        ///
+        /// <para>A kind that lives in two places is two lines (the moose on the bank and in the
+        /// wood, the bear in the wood and by the rock); the seeder guarantees each kind once, from
+        /// its first line. The wolves and the bear begin <see cref="FarWoods"/> from the start.
+        /// Weights are draws, not animals: a deer draw is four or five deer and a bear draw one
+        /// bear, so at Standard's 48 the board carries about a dozen deer, half a dozen each of
+        /// rabbits, boar and frogs, and one bear. INVENTED, playtest numbers.</para>
         /// </summary>
         public static Pawns.Wildlife.WildlifeEntry[] MeadowWildlife() => new[]
         {
-            new Pawns.Wildlife.WildlifeEntry("PawnKind_MiddenHog", 3, 3, 5, Pawns.Wildlife.Habitat.Woodland),
-            new Pawns.Wildlife.WildlifeEntry("PawnKind_DuctRat", 2, 1, 1, Pawns.Wildlife.Habitat.Rock),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_VergeRabbit", 8, 1, 3, Pawns.Wildlife.Habitat.Open),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_HedgerowDeer", 6, 3, 6, Pawns.Wildlife.Habitat.Woodland),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_AshFox", 4, 1, 1, Pawns.Wildlife.Habitat.Woodland),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_GutterRaccoon", 4, 1, 2, Pawns.Wildlife.Habitat.Bank),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_RubbleSkunk", 4, 1, 1, Pawns.Wildlife.Habitat.Woodland),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_ThicketBoar", 4, 3, 5, Pawns.Wildlife.Habitat.Woodland),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_MireMoose", 2, 1, 3, Pawns.Wildlife.Habitat.Bank),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_MireMoose", 1, 1, 3, Pawns.Wildlife.Habitat.Woodland),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_RidgeWolf", 2, 2, 4, Pawns.Wildlife.Habitat.Woodland, FarWoods),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_QuarryBear", 1, 1, 1, Pawns.Wildlife.Habitat.Woodland, FarWoods),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_QuarryBear", 1, 1, 1, Pawns.Wildlife.Habitat.Rock, FarWoods),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_DuctRat", 4, 1, 1, Pawns.Wildlife.Habitat.Rock),
             new Pawns.Wildlife.WildlifeEntry("PawnKind_CulvertFrog", 4, 3, 5, Pawns.Wildlife.Habitat.Bank),
         };
 
         /// <summary>
-        /// Animals per ten thousand reachable surface columns (design 30 §2). Fifteen until the
-        /// frogs; raised by the frogs' share of the weights so that adding a kind left the hogs
-        /// and the rats as common as they were rather than dividing the same number three ways.
-        /// 21 (7/5) at a frog weight of 2; 27 (9/5) since the weight went to 4 and the groups to
-        /// three to five (owner, 2026-09-26: "more of them"). The ceiling is untouched — it is
-        /// the figure budget's — so a board big enough to reach it shares 24 between all three.
+        /// How far from the colony's start the wolves and the bear begin, in cells (plan
+        /// forest-animals §2): 75 m, well past the clearing and its margin, and a quarter of the
+        /// way across Standard. On Small it reaches the edge in places and is tried for.
         /// </summary>
-        public const int MeadowDensity = 27;
+        public const int FarWoods = 30;
+
+        /// <summary>
+        /// The most animals a natural board carries, by its size (forest animals interview,
+        /// answer 13): Small 32, Standard 48, Large 64, Huge 80, banded by the columns a board
+        /// has so a size between two takes the smaller. The ruined city keeps
+        /// <see cref="MapGenDef.wildlifeCeiling"/>'s 24.
+        /// </summary>
+        public static int WildlifeCeilingFor(GridSize size)
+        {
+            long columns = (long)size.SizeX * size.SizeZ;
+            if (columns >= 240L * 240) return 80;
+            if (columns >= 180L * 180) return 64;
+            if (columns >= 120L * 120) return 48;
+            return 32;
+        }
+
+        /// <summary>
+        /// Animals per ten thousand reachable surface columns (design 30 §2). Fifteen until the
+        /// frogs, then 21 and 27 as the frogs' share grew. <b>120 since the forest</b> (plan
+        /// forest-animals §2), set so that every board reaches <see cref="WildlifeCeilingFor"/>,
+        /// which is the owner's number (answer 13): the smallest board binds. Measured on seed 1
+        /// through the game's own chooser (<c>ForestWildlifeTests.EveryBoardIsSeededToItsCeiling</c>):
+        /// Small offers 2,821 reachable columns and needs 114; Standard 6,354 and 76; Large 14,485
+        /// and 45; Huge 25,981 and 31. So the ceiling is what a meadow carries, and the census still
+        /// decides for a board that is mostly lake or sealed rock, which carries fewer.
+        /// </summary>
+        public const int MeadowDensity = 120;
 
         public NaturalMapGenDef()
         {
@@ -424,6 +468,7 @@ namespace Odyssey.Sim.Worldgen.Natural
         {
             var gen = new NaturalMapGenDef { defName = "MapGenNatural_" + size };
             gen.groundLayer = gen.GroundLayerFor(size);
+            gen.wildlifeCeiling = WildlifeCeilingFor(size);
             return gen;
         }
 

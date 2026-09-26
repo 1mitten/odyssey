@@ -207,6 +207,24 @@ namespace Odyssey.Sim.Pawns
         public SpeciesDef Species => Content.SpeciesOf(Kind);
 
         /// <summary>
+        /// Which of its species' <see cref="SpeciesDef.formCount"/> drawn forms this pawn is — for
+        /// the deer 0 a doe and 1 a stag, for the moose 0 a cow and 1 a bull; 0 for every species
+        /// with one form (plan forest-animals §1). <b>Derived, never saved</b>: a pure function of
+        /// <see cref="RollSeed"/> and the id, both of which are, so a load gives every deer the
+        /// form it had. The simulation's is the one derivation — the art reads it off the
+        /// published <see cref="AnimalAspects.Form"/> and design 67's rut reads it here.
+        /// </summary>
+        public int Form => Species.formCount > 1 ? FormOf(RollSeed, Id.Value, Species.formCount) : 0;
+
+        /// <summary><see cref="Form"/>'s arithmetic, for a test to hold to its inputs.</summary>
+        public static int FormOf(uint rollSeed, int pawnId, int formCount)
+        {
+            if (formCount <= 1) return 0;
+            var rng = DeterministicRandom.ForTick(rollSeed, pawnId, PawnPurpose.AnimalForm);
+            return rng.NextInt(formCount);
+        }
+
+        /// <summary>
         /// A person, as against an animal — a colonist <b>or a hostile one</b>. Every pawn-wide
         /// system asks this once at the top of its loop (design 29 §2): an animal has no needs
         /// tick, no mood, no skills, no work and no schedule, and the same movement, doors and

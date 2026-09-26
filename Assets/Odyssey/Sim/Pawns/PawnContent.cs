@@ -227,7 +227,21 @@ namespace Odyssey.Sim.Pawns
         public const int ButcherBlood = 8;
         public const int ButcherKing = 9;
 
-        public const int Count = 10;
+        /// <summary>
+        /// The forest animals (plan forest-animals, FA1): kinds 10 to 18 and species 8 to 16, in
+        /// this order, appended after the butcher's levels. All wild, all on foot.
+        /// </summary>
+        public const int VergeRabbit = 10;
+        public const int HedgerowDeer = 11;
+        public const int AshFox = 12;
+        public const int GutterRaccoon = 13;
+        public const int RubbleSkunk = 14;
+        public const int ThicketBoar = 15;
+        public const int MireMoose = 16;
+        public const int RidgeWolf = 17;
+        public const int QuarryBear = 18;
+
+        public const int Count = 19;
     }
 
     /// <summary>
@@ -886,7 +900,10 @@ namespace Odyssey.Sim.Pawns
     /// it rests between legs.
     ///
     /// <para>Wildness, ecosystem weight and commonality are not here until something reads
-    /// them (design 29 §1).</para>
+    /// them (design 29 §1). <b>The one exception is the carcass:</b> <see cref="meatYield"/> and
+    /// <see cref="hideYield"/> are read by nothing until hunting and butchering (cooking's K3),
+    /// and are here because the owner asked for every forest species to carry its stats now
+    /// (forest animals interview, answer 15).</para>
     /// </summary>
     public class SpeciesDef : Def
     {
@@ -898,6 +915,25 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Nose to tail, for presentation to size a figure against. Not read by the simulation.</summary>
         public int bodyLengthMm = 1_200;
+
+        /// <summary>
+        /// How many drawn forms the species comes in (plan forest-animals §1): the deer's doe and
+        /// stag, the moose's cow and bull. Which one a pawn is, is <see cref="Pawn.Form"/>, derived
+        /// from its seed and never saved. 1 is a species with one form, which is every other.
+        /// </summary>
+        public int formCount = 1;
+
+        /// <summary>
+        /// Bulk against a colonist's 1,000 (design 65 §3a, design 64 §6): what a predator's prey
+        /// limit is measured in. Not read by the simulation in FA1.
+        /// </summary>
+        public int bodySizePerMille = 1_000;
+
+        /// <summary>Raw meat a whole carcass gives, before the butcher's skill. Read by nothing until K3.</summary>
+        public int meatYield;
+
+        /// <summary>Hide a whole carcass gives. Read by nothing until K3.</summary>
+        public int hideYield;
 
         /// <summary>
         /// Pace relative to the colonist's standard walk, per mille: the last factor in
@@ -1711,11 +1747,19 @@ namespace Odyssey.Sim.Pawns
                 // The frog of the banks (design 30 §8), appended after the gunman.
                 "PawnKind_CulvertFrog",
                 // The butcher (design 62), appended after the frog, and its three harder levels.
-                "PawnKind_Butcher", "PawnKind_ButcherScarred", "PawnKind_ButcherBlood", "PawnKind_ButcherKing");
+                "PawnKind_Butcher", "PawnKind_ButcherScarred", "PawnKind_ButcherBlood", "PawnKind_ButcherKing",
+                // The forest animals (plan forest-animals, FA1), appended after the butcher.
+                "PawnKind_VergeRabbit", "PawnKind_HedgerowDeer", "PawnKind_AshFox", "PawnKind_GutterRaccoon",
+                "PawnKind_RubbleSkunk", "PawnKind_ThicketBoar", "PawnKind_MireMoose", "PawnKind_RidgeWolf",
+                "PawnKind_QuarryBear");
             content.Species = ByName<SpeciesDef>(defs,
                 "Species_Person", "Species_MiddenHog", "Species_DuctRat", "Species_CulvertFrog",
                 // The butcher's own (design 62), appended, one per level.
-                "Species_Butcher", "Species_ButcherScarred", "Species_ButcherBlood", "Species_ButcherKing");
+                "Species_Butcher", "Species_ButcherScarred", "Species_ButcherBlood", "Species_ButcherKing",
+                // The forest animals' (FA1), appended, one per kind and in the kinds' order.
+                "Species_VergeRabbit", "Species_HedgerowDeer", "Species_AshFox", "Species_GutterRaccoon",
+                "Species_RubbleSkunk", "Species_ThicketBoar", "Species_MireMoose", "Species_RidgeWolf",
+                "Species_QuarryBear");
             content.KindSpecies = new int[content.Kinds.Length];
             for (int k = 0; k < content.Kinds.Length; k++)
             {
@@ -2072,5 +2116,15 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Whether a stray crossing a cover cell is caught by it, salted by the cell as well as the shooter.</summary>
         public const uint RangedCoverIntercept = 0x76F9_88DA;
+
+        /// <summary>
+        /// Which form an animal of a many-formed species is — a doe or a stag, a cow or a bull
+        /// (<see cref="Pawn.Form"/>, plan forest-animals §1). Drawn from (roll seed, <b>pawn id</b>):
+        /// every spawned animal carries the world's seed, so the id is what tells two deer apart.
+        /// SHA-256's thirty-seventh round constant, found unused on every open branch on
+        /// 2026-09-26 (<c>0xC6E0_0BF3</c> and <c>0xD5A7_9147</c> were the first choices and are
+        /// taken on the prisoner, storyteller and trade branches).
+        /// </summary>
+        public const uint AnimalForm = 0x650A_7354;
     }
 }

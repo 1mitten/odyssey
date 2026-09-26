@@ -88,42 +88,47 @@ namespace Odyssey.Tests.Sim
             Assert.That(population, Is.LessThanOrEqualTo(colony.Gen.wildlifeCeiling));
         }
 
+        /// <summary>
+        /// Every animal lands on (or within a group's reach of) a habitat one of its kind's lines
+        /// names — the boar and the deer in the woodland, the rabbit on open ground, the rat by
+        /// the rock, the frog on the bank itself (plan forest-animals §2, design 30 §8). Table-
+        /// driven since the forest: twelve kinds, some on two lines.
+        /// </summary>
         [Test]
-        public void HogsLandInWoodlandAndRatsByRock()
+        public void EveryAnimalLandsOnAHabitatItsTableNames()
         {
             ColonyWorld colony = Wooded();
             SurfaceCensus census = Census(colony);
-            Assume.That(census.Woodland, Is.Not.Empty, "the meadow has trees to land beside");
-            Assume.That(census.Rock, Is.Not.Empty, "and rock");
-            var woodland = new HashSet<int>(census.Woodland);
-            var rock = new HashSet<int>(census.Rock);
-            int hogs = 0, rats = 0, frogs = 0;
+            var byKind = new Dictionary<int, List<Habitat>>();
+            foreach (WildlifeEntry entry in colony.Gen.wildlife)
+            {
+                int kind = WildlifeSeeder.KindIndex(colony.Pawns.Content, entry.kind);
+                if (!byKind.TryGetValue(kind, out List<Habitat>? list)) byKind[kind] = list = new List<Habitat>();
+                list.Add(entry.habitat);
+            }
+            int checkedAnimals = 0;
             foreach (Pawn animal in Animals(colony))
             {
-                if (animal.Kind == PawnKindIndex.MiddenHog)
+                Assert.That(byKind.TryGetValue(animal.Kind, out List<Habitat>? habitats), Is.True,
+                    $"animal {animal.Id.Value} is a kind the table does not name");
+                bool home = false;
+                foreach (Habitat habitat in habitats!)
                 {
-                    hogs++;
-                    // A sounder fills the cells round its centre, so a member may stand a cell or
-                    // two off the woodland list; its centre was on it, and that is within reach.
-                    Assert.That(NearAny(colony, animal.Cell, woodland, WildlifeSeeder.GroupRadius), Is.True,
-                        $"hog {animal.Id.Value} landed at {Size.FromIndex(animal.Cell)}, nowhere near woodland");
+                    List<int> cells = WildlifeSeeder.HabitatCells(census, habitat, colony.Outcome.StartCell, KeepClear(colony), Size);
+                    // A board with none of a habitat seeds that line anywhere (design 30 §2).
+                    if (habitat == Habitat.Any || cells == census.Cells || cells.Count == 0) { home = true; break; }
+                    // The frog is scattered on the bank itself; a group's other members fill the
+                    // cells round a centre that was on its list.
+                    home = habitat == Habitat.Bank
+                        ? census.IsBank(animal.Cell)
+                        : NearAny(colony, animal.Cell, new HashSet<int>(cells), WildlifeSeeder.GroupRadius);
+                    if (home) break;
                 }
-                else if (animal.Kind == PawnKindIndex.DuctRat)
-                {
-                    rats++;
-                    Assert.That(NearAny(colony, animal.Cell, rock, WildlifeSeeder.GroupRadius), Is.True,
-                        $"rat {animal.Id.Value} landed at {Size.FromIndex(animal.Cell)}, nowhere near rock");
-                }
-                else if (animal.Kind == PawnKindIndex.CulvertFrog)
-                {
-                    frogs++;
-                    // Scattered on the bank as well as centred on it (design 30 §8): every frog,
-                    // not only the centre, lands within the seed radius of water.
-                    Assert.That(census.IsBank(animal.Cell), Is.True,
-                        $"frog {animal.Id.Value} landed at {Size.FromIndex(animal.Cell)}, off the bank");
-                }
+                Assert.That(home, Is.True, $"{colony.Pawns.Content.Kinds[animal.Kind].defName} {animal.Id.Value} " +
+                    $"landed at {Size.FromIndex(animal.Cell)}, off every habitat its lines name");
+                checkedAnimals++;
             }
-            Assert.That(hogs + rats + frogs, Is.EqualTo(Animals(colony).Count), "every animal is one of the three kinds");
+            Assert.That(checkedAnimals, Is.GreaterThan(0));
         }
 
         static bool NearAny(ColonyWorld colony, int cell, HashSet<int> set, int radius)
@@ -155,7 +160,8 @@ namespace Odyssey.Tests.Sim
             ColonyWorld colony = ColonyWorld.Build(new GridSize(120, 120, 16), 1u, scenario, barren: true, wooded: true);
             GridSize size = colony.Grid.Size;
             var hogs = new List<CellRef>();
-            foreach (Pawn animal in Animals(colony)) if (animal.Kind == PawnKindIndex.MiddenHog) hogs.Add(size.FromIndex(animal.Cell));
+            // The thicket boar is the meadow's sounder since the forest (answer 2: the hog is the city's).
+            foreach (Pawn animal in Animals(colony)) if (animal.Kind == PawnKindIndex.ThicketBoar) hogs.Add(size.FromIndex(animal.Cell));
             Assume.That(hogs.Count, Is.GreaterThanOrEqualTo(6), "two sounders on the meadow");
 
             int widest = 0, adjacentPairs = 0, pairs = 0;

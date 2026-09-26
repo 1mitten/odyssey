@@ -119,7 +119,10 @@ namespace Odyssey.Tests.Sim
             Assert.That(PawnKindIndex.ButcherScarred, Is.EqualTo(7));
             Assert.That(PawnKindIndex.ButcherBlood, Is.EqualTo(8));
             Assert.That(PawnKindIndex.ButcherKing, Is.EqualTo(9));
-            Assert.That(PawnKindIndex.Count, Is.EqualTo(10));
+            // And the nine forest animals at 10 to 18 (plan forest-animals, FA1): nineteen.
+            Assert.That(PawnKindIndex.VergeRabbit, Is.EqualTo(10));
+            Assert.That(PawnKindIndex.QuarryBear, Is.EqualTo(18));
+            Assert.That(PawnKindIndex.Count, Is.EqualTo(19));
 
             // IntentKind is an enum whose numbers an intent log carries: the three orders are
             // together and after everything main shipped first (power's four, since the merge of

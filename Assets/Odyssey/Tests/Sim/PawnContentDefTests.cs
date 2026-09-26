@@ -337,7 +337,11 @@ namespace Odyssey.Tests.Sim
         // abstract BruteBody. Taken from a freshly loaded pack.
         // And SpeciesDef gained voice and voicePitchPerMille, presentation's (design 62 §8d): the
         // butcher calls in "butcher", its levels at 1,000 / 940 / 880 / 820.
-        const ulong ContentFingerprint = 9489355952634959984UL;
+        // 2026-09-26, the forest animals (plan forest-animals, FA1): nine species and kinds
+        // appended (species 8-16, kinds 10-18), and SpeciesDef gained formCount, bodySizePerMille,
+        // meatYield and hideYield (1, 1,000, 0, 0 on every species before them). Taken from a
+        // freshly loaded pack.
+        const ulong ContentFingerprint = 1850080757884310738UL;
 
 
         [Test]
