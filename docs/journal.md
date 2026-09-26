@@ -14598,3 +14598,55 @@ the loop ends. The relief's cell went from 0.006 to 0.004 of height, because at 
 **The general lesson** is the bisect's, not the fix's. Reading the kitchen's diff for anything
 touching a weapon found nothing, because the fault was in no line the kitchen changed. It was in an
 ordering the kitchen extended.
+
+## 2026-09-26 — The art came back, then faces
+
+**The packs went missing for the second time.** `D:\code\odyssey\Assets\Synty` was an empty folder
+(last written 14:17) and every junction pointed at it; two worktrees had no junction at all. The
+cause is the one `docs/lessons.md` already records from 2026-09-16 — a recursive delete following a
+junction — though which removal did it is not known. The Recycle Bin held only an old worktree with
+nothing under its `Assets/Synty`, so it was no way back. `SyntyImport.ImportAll` from the owner's
+Downloads restored all ten packages (15,143 assets, 2.0 GB); the two junctions were made.
+
+**Then the owner asked whether the Adult Face Plates pack could give colonists emotion and talking.**
+The first answer, written from a byte search, was wrong twice and is recorded as wrong in
+`docs/research/e-15` rather than quietly replaced: it recommended a jaw flap on a `Jaw` bone that
+turns out to move no colonist's face, and it said only a person in the editor could check the bones.
+A binary-FBX parser (`tools/fbx/`) and a contact sheet (`FaceSheet`) settled it: the faceplates are
+two static meshes; every colonist has one `Eyes` and one `Eyebrows` bone moving real geometry; the
+women have lips and the men a mouth gap, but every mouth corner is shared with the face, so nothing
+owned can open a mouth. **Photographed at the game's own framings, an expression reads in the 128 px
+portrait and at the closest zoom, and nothing on a face reads at 20 m at 1080p.**
+
+**Owner, on the three questions that raised:** conversation triggers *"later — we are just looking at
+animation/mechanism now"*; the mouth *"whatever you recommend"* (so none); portraits by mood *"not for
+now"*. So design 65 builds the mechanism and a debug tab to drive it, and nothing that decides when.
+
+**What was decided and why** (the design has the numbers):
+
+- **The face is written absolutely from rest**, never relative. Nothing else rewrites the eye and brow
+  bones each frame, so a relative write winds up — the same trap as the sleep pose's spiral.
+- **The nod is relative, and that is safe**, because the gaze has just set the head absolutely and
+  nobody talks asleep, the one state where the gaze stands down.
+- **Real seconds, stopped while paused.** Game time would make speed 3 chatter.
+- **The logic is engine-free in `Odyssey.Hud`**, as the birds' and the butterflies' is, so the fast tier
+  drives a minute of blinking or thirty seconds of turns in milliseconds. A deliberate break of the
+  speaker and of the easing turned four of the tests red, which is what they are for.
+- **A gaze tier, `Conversation`, between the passing glance and work**, renumbering the enum. Nothing
+  saves those values and the only ordered comparison was the greeting's, which now also skips a talker.
+- **The Faces tab acts on the selected colonist, or with nobody selected on the whole colony** for
+  expressions, because the useful comparison is the colony at a distance; Talk takes the nearest
+  colonist within 8 m.
+
+**Then the owner looked at the sheets** — *"these are good - stern should happen when fighting/in
+draft, obviously when you tired, a variety of motions when talking etc - give it context where we
+can for now"* — and the face was given its context the same day (design 65 §3a): stern drafted or
+fighting, pained, tired from the game's own sleep line, glum, eyes shut asleep, all read off the
+frame. Talking got five manners, listener replies, an eyebrow flash on a greeting, and **hands**,
+which the board-angle photograph showed are the one part of talking visible at play zoom. The
+hands' angles were tuned by photograph (out 10° folded a woman's forearm across her belly; 16°
+opens it). **The struck-up conversation was measured with a control and changed by it**: a
+wandering bare colony struck up none in 90 s, the diagnostic line showed why (the one pair that met
+had walked six metres apart within seconds), and standing still became a condition — two colonists
+held together then fell to talking in 0.4 s. It is the trigger the first answer deferred, read as
+covered by "give it context where we can"; the chance and the reach are guesses for play to tune.

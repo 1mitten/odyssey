@@ -14,9 +14,11 @@ namespace Odyssey.Presentation.World
         PathForward = 1,
         AmbientWander = 2,
         SocialPassing = 3,
-        WorkFocus = 4,
-        LadderTraversal = 5,
-        SleepLock = 6,
+        /// <summary>Talking: each looks at the other's head (design 65 §5). Work, a ladder and sleep all pre-empt it.</summary>
+        Conversation = 4,
+        WorkFocus = 5,
+        LadderTraversal = 6,
+        SleepLock = 7,
     }
 
     /// <summary>

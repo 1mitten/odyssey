@@ -56,7 +56,7 @@ namespace Odyssey.Presentation.Ui
             // The tab strip, in Settings' idiom: nothing new is invented for a third use of it.
             var tabs = new VisualElement();
             tabs.AddToClassList("settings__tabs");
-            foreach (DebugTab tab in new[] { DebugTab.Cheats, DebugTab.Spawn, DebugTab.Events, DebugTab.Weather })
+            foreach (DebugTab tab in new[] { DebugTab.Cheats, DebugTab.Spawn, DebugTab.Events, DebugTab.Weather, DebugTab.Faces })
             {
                 Label chip = HudText.Make(Registry.Label(DebugDirector.TabKey(tab)), HudTextRole.Body, ussClass: "tab");
                 DebugTab captured = tab;
@@ -181,6 +181,26 @@ namespace Odyssey.Presentation.Ui
                 () => _directors?.Debug.SetWetGlossOnly(!_directors.Debug.WetGlossOnly));
             _debugWeather.Add(_debugGlossRow);
             _debugPanel.Add(_debugWeather);
+
+            // Faces and talking (design 65 §7): drawing only, straight to the figure director. The
+            // rows and what each holds are DebugDirector.FaceRows, held by the fast tier.
+            _debugFaces = new VisualElement();
+            _debugFaces.AddToClassList("settings__body");
+            _debugTalkRow = DebugToggleRow(DebugDirector.TalkKey, DebugDirector.TalkTooltip, ToggleTalk);
+            _debugFaces.Add(_debugTalkRow);
+            _debugAutoFaceRow = DebugToggleRow(DebugDirector.AutoFaceKey, DebugDirector.AutoFaceTooltip, () => SetFace(null));
+            _debugFaces.Add(_debugAutoFaceRow);
+            foreach (DebugDirector.FaceRow face in DebugDirector.FaceRows)
+            {
+                FaceExpression expression = face.Expression;
+                VisualElement row = DebugToggleRow(face.Key, face.Tooltip, () => SetFace(expression));
+                _debugFaceRows.Add(row);
+                _debugFaces.Add(row);
+            }
+            // A conversation ends by itself, so the Talk pip is asked again twice a second rather
+            // than only when clicked. Cheap, and it does nothing while the panel is shut.
+            _debugFaces.schedule.Execute(RefreshDebugFaces).Every(500);
+            _debugPanel.Add(_debugFaces);
 
             OnDebugTabChanged(DebugTab.Cheats);
             _hud.Add(_debugPanel);
@@ -414,7 +434,93 @@ namespace Odyssey.Presentation.Ui
             _debugEvents.style.display = tab == DebugTab.Events ? DisplayStyle.Flex : DisplayStyle.None;
             _debugSpawn.style.display = tab == DebugTab.Spawn ? DisplayStyle.Flex : DisplayStyle.None;
             _debugWeather.style.display = tab == DebugTab.Weather ? DisplayStyle.Flex : DisplayStyle.None;
+            _debugFaces.style.display = tab == DebugTab.Faces ? DisplayStyle.Flex : DisplayStyle.None;
             RefreshDebugWeather();
+            RefreshDebugFaces();
+        }
+
+        VisualElement _debugFaces = null!;
+        VisualElement? _debugTalkRow;
+        VisualElement? _debugAutoFaceRow;
+        readonly List<VisualElement> _debugFaceRows = new();
+
+        /// <summary>
+        /// Talk (design 65 §7): the chosen colonist talks with the nearest colonist within reach, or
+        /// to nobody; pressed while anybody is talking, every conversation stops.
+        /// </summary>
+        void ToggleTalk()
+        {
+            var figures = _boot?.Figures;
+            var world = _boot?.World;
+            if (figures == null || world == null) return;
+            // Only what this row started: the colony's own chatter (design 65 §5c) is not its to stop.
+            if (figures.AskedConversationCount > 0)
+            {
+                figures.EndAskedConversations();
+                RefreshDebugFaces();
+                return;
+            }
+            PawnId speaker = DebugFacePawn(world);
+            if (!speaker.IsValid) return;
+            PawnId listener = Odyssey.Presentation.World.PawnFigureDirector.NearestListener(
+                world.Views.Current.Pawns, speaker);
+            figures.StartConversation(speaker, listener, DebugDirector.TalkSeconds);
+            RefreshDebugFaces();
+        }
+
+        /// <summary>
+        /// An expression row: the selected colonist holds it, or, with nobody selected, the whole
+        /// colony does — so the colony can be compared at a distance. Null is the From context row,
+        /// which hands the face back to what the colonist is doing and feeling.
+        /// </summary>
+        void SetFace(FaceExpression? expression)
+        {
+            var figures = _boot?.Figures;
+            if (figures == null) return;
+            if (_directors != null && _directors.Selection.HasPawn) figures.SetExpression(_directors.Selection.Pawn, expression);
+            else figures.SetEveryoneExpression(expression);
+            RefreshDebugFaces();
+        }
+
+        /// <summary>Light Talk while anybody talks, and the expression the chosen face holds.</summary>
+        void RefreshDebugFaces()
+        {
+            if (_debugPanel == null || _debugPanel.style.display == DisplayStyle.None) return;
+            var figures = _boot?.Figures;
+            _debugTalkRow?.EnableInClassList("settings__row--on", figures != null && figures.AskedConversationCount > 0);
+            FaceExpression? forced = figures == null ? null
+                : _directors != null && _directors.Selection.HasPawn ? figures.ForcedExpressionOf(_directors.Selection.Pawn)
+                : figures.EveryoneExpression;
+            _debugAutoFaceRow?.EnableInClassList("settings__row--on", forced == null);
+            for (int i = 0; i < _debugFaceRows.Count; i++)
+                _debugFaceRows[i].EnableInClassList("settings__row--on", DebugDirector.FaceRows[i].Expression == forced);
+        }
+
+        /// <summary>
+        /// Who a Faces row acts on: the selected colonist if she can talk, else the colonist nearest
+        /// where the camera is looking — <see cref="DebugAnchorCell"/>'s order, so every debug row
+        /// means the same thing by "this colonist".
+        /// </summary>
+        PawnId DebugFacePawn(Odyssey.Sim.SimWorld world)
+        {
+            var snapshot = world.Views.Current;
+            if (_directors != null && _directors.Selection.HasPawn &&
+                snapshot.TryGetPawn(_directors.Selection.Pawn, out PawnView selected) &&
+                Odyssey.Presentation.World.PawnFigureDirector.CanTalk(in selected))
+                return selected.Id;
+
+            CellRef at = DebugAnchorCell(world);
+            PawnId best = PawnId.None;
+            int bestSq = int.MaxValue;
+            var pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                if (!Odyssey.Presentation.World.PawnFigureDirector.CanTalk(in pawns[i])) continue;
+                int dx = pawns[i].Cell.X - at.X, dz = pawns[i].Cell.Z - at.Z, dy = pawns[i].Cell.Y - at.Y;
+                int sq = dx * dx + dz * dz + 4 * dy * dy;
+                if (sq < bestSq) { bestSq = sq; best = pawns[i].Id; }
+            }
+            return best;
         }
 
         /// <summary>Light the preset that is set, and the particle row if it is on.</summary>

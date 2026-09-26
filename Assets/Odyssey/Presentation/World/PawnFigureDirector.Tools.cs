@@ -266,6 +266,8 @@ namespace Odyssey.Presentation.World
             figure.Chest = animator.GetBoneTransform(HumanBodyBones.Chest) ?? figure.Spine;
             figure.Neck = animator.GetBoneTransform(HumanBodyBones.Neck);
             figure.Head = animator.GetBoneTransform(HumanBodyBones.Head);
+            // At rest, with the rest of the bones: every face pose is written from what is read here.
+            figure.FaceRig = figure.Head != null ? FaceRig.Bind(animator.transform, figure.Head) : null;
             figure.RightUpperArm = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
             figure.RightLowerArm = animator.GetBoneTransform(HumanBodyBones.RightLowerArm);
             figure.LeftUpperArm = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);

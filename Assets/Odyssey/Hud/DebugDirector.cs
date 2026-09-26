@@ -21,6 +21,12 @@ namespace Odyssey.Hud
         /// the weather system (design 43 §8), and two switches change only how the rain is drawn.
         /// </summary>
         Weather,
+
+        /// <summary>
+        /// A colonist's face and talking (design 65 §7; owner, 2026-09-26: "we are just looking at
+        /// animation/mechanism now"). Drawing only: nothing reaches the simulation.
+        /// </summary>
+        Faces,
     }
 
     /// <summary>
@@ -376,7 +382,64 @@ namespace Odyssey.Hud
             tab == DebugTab.Events ? EventsKey
             : tab == DebugTab.Spawn ? SpawnTabKey
             : tab == DebugTab.Weather ? WeatherTabKey
+            : tab == DebugTab.Faces ? FacesTabKey
             : CheatsKey;
+
+        public const string FacesTabKey = "ui.debug.tab.faces", TalkKey = "ui.debug.face.talk";
+
+        /// <summary>How long a conversation the Talk row starts runs, in seconds (design 65 §7).</summary>
+        public const float TalkSeconds = 30f;
+
+        public const string TalkTooltip =
+            "The selected colonist, or the one nearest the camera, talks with the nearest colonist within "
+            + "eight metres for thirty seconds - or to nobody if there is none. Pressed again, it stops; "
+            + "the conversations colonists strike up by themselves carry on";
+
+        /// <summary>One expression the Faces tab sets (design 65 §3).</summary>
+        public readonly struct FaceRow
+        {
+            public readonly string Key;
+            public readonly string Tooltip;
+            public readonly FaceExpression Expression;
+
+            public FaceRow(string key, string tooltip, FaceExpression expression)
+            {
+                Key = key;
+                Tooltip = tooltip;
+                Expression = expression;
+            }
+        }
+
+        const string FaceWho = " Held by the selected colonist, or by every colonist when nobody is selected";
+
+        /// <summary>The row that hands a face back to its context (design 65 §3a): the one lit by default.</summary>
+        public const string AutoFaceKey = "ui.debug.face.auto";
+
+        public const string AutoFaceTooltip =
+            "Faces follow what the colonist is doing and feeling: stern drafted or fighting, alarmed fleeing, "
+            + "pained when hurt, tired, glum when unhappy, eyes shut asleep. For the selected colonist, or for "
+            + "every colonist when nobody is selected";
+
+        /// <summary>The Faces tab's expression rows, one per <see cref="FaceExpression"/>, in its order.</summary>
+        public static readonly FaceRow[] FaceRows =
+        {
+            new FaceRow("ui.debug.face.neutral", "The face as painted." + FaceWho, FaceExpression.Neutral),
+            new FaceRow("ui.debug.face.raised", "Brows up: interest, a greeting, surprise." + FaceWho,
+                FaceExpression.Raised),
+            new FaceRow("ui.debug.face.alarmed", "Brows high and eyes wide: fear or shock." + FaceWho,
+                FaceExpression.Alarmed),
+            new FaceRow("ui.debug.face.stern", "Brows down and eyes narrowed: anger or concentration." + FaceWho,
+                FaceExpression.Stern),
+            new FaceRow("ui.debug.face.sceptical", "The brows tilted, one up and one down: doubt." + FaceWho,
+                FaceExpression.Sceptical),
+            new FaceRow("ui.debug.face.tired", "Brows a little down and eyes half shut." + FaceWho,
+                FaceExpression.Tired),
+            new FaceRow("ui.debug.face.pained", "Brows down and eyes screwed up: hurt." + FaceWho,
+                FaceExpression.Pained),
+            new FaceRow("ui.debug.face.glum", "Brows a touch down and eyes a little heavy: unhappy." + FaceWho,
+                FaceExpression.Glum),
+            new FaceRow("ui.debug.face.asleep", "Eyes shut." + FaceWho, FaceExpression.Asleep),
+        };
 
         public bool Open { get; private set; }
 
