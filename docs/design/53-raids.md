@@ -264,6 +264,8 @@ died.
   makes a save's resume depend on when it was taken.
 - **Refuse, don't trim** at the ceiling (§9).
 - **Hashed only while a group exists** (§10).
+- **An engaged member is left to its own mind until the withdrawal** (§15 #2). Asking the group
+  again on every think is what made raiders walk out and back between the hearth and a colonist.
 
 ## 13. For a person at the keyboard
 
@@ -281,3 +283,32 @@ died.
 - **Sappers**, **sieges** and arrival by **drop pod**.
 - **Kidnap** on withdrawal (design 33 §17f).
 - Merging a band's theft rows into one.
+
+## 15. Reviewed, 2026-09-26
+
+Reviewed against `main` after the birds merged, before its first play (two review passes, sim and
+interface, then every finding tested). The Presentation code compiled in Unity at the first attempt.
+**Eleven things moved**, each with a test that fails without it:
+
+| # | Finding | Now |
+|---|---|---|
+| 1 | `RaidView.Centre` was built `(x, y, z)` into `CellRef(x, z, y)`: the *Raid* alert asked the slice for the band's depth as a layer and sent the camera to its layer as a depth | built in the constructor's order; `TheRaidViewIsPublishedWhereTheBandStands` |
+| 2 | **The yo-yo.** A member that handed over at the hearth chased the nearest colonist; when the chase re-chose (every 300 ticks, unforced) the raid node sent it back to the hearth, where it handed over again — out and back for ever, and a melee raider never broke a building | `RaidMember.Engaged`, saved and hashed (layout 2, layout 1 still read): once a member hands over in the assault its own mind has it until the withdrawal |
+| 3 | The engage check counted a colonist behind a wall | it asks whether the member can reach them |
+| 4 | A member killed by one blow strikes no grudge, so a staging band shot from beyond 15 cells never noticed | gone without leaving starts the assault |
+| 5 | A band that broke while still walking on kept walking on, and could not close until it had | the withdrawal calls the rest off |
+| 6 | Members who left with loot stayed in the base of the half, so a band that lost six of ten to theft could never break | the half is of those still in the band |
+| 7 | A withdrawing member with no edge it could reach held its band open, saved and hashed, for ever | released to think as a lone bandit |
+| 8 | An arrival slot built over since the fire spawned the member inside the wall, and the free-tile search asked in the colonist's traverse mode | stood beside, in the bandit's mode |
+| 9 | The debug spawn could take the board past the ceiling while a band was still arriving | the room promised to arrivals is held |
+| 10 | A refused raid was a console line: the owner pressing 200 twice would see nothing happen | the row asks the incident's door first and says why (`RaidWorker.Room`, the one owner of that sum) |
+| 11 | The alert's dismiss was the key's, so a raid whose assault began as a dismissed one's ended inherited the dismiss and its silence | the dismiss is the band's |
+
+**And one fault that is not the raid's.** The save test for #2 parted five ticks after its load, and
+the cause was the weather: `WeatherOffsetC` is written on the weather's cadence and saved nowhere,
+so a loaded world stood in its own build's sky until the next boundary. Fixed on `main`'s behalf in
+the same PR (`docs/bug-patterns.md`, 2026-09-26).
+
+**Also:** the mix dropdown's order is now held to `MixOrder` and the Defs by a test that reads both
+off the disk (`RaidMixLabels` claimed a test that did not exist); the design renumbered 50 → 53,
+because the birds reached `main` as 50 first and two open PRs hold 51 and 52.

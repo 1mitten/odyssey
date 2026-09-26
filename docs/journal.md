@@ -13678,3 +13678,26 @@ Recorded, not fixed.
 **The soak found a balance question, not a fault.** Eight raiders downed all five armed,
 undrafted colonists in both seeds. That is design 33 §21d's finding again, now with a band.
 The playtest queue has it.
+
+## 2026-09-26 — The raids reviewed: a band that came back for ever, and the weather a load forgot
+
+PR #233 was reviewed against `main` after the birds merged. It had never been compiled in Unity
+(the container it was built in had no editor), and its Presentation half compiled at the first
+attempt. The merge itself was one journal conflict — and one collision no marker showed: the birds
+had taken design 50 on `main`, and two open PRs hold 51 and 52, so the raids became 53.
+
+**The finding worth keeping is the yo-yo.** The raid node hands every fight to the bandit's own
+mind, which is the design's best decision, but it asked again on every think: a raider that reached
+the hearth and chased a colonist forty cells away was marched back to the hearth the moment its
+chase re-chose, and handed over again on arrival. The rule "the group decides where, the member's
+mind decides the fight" was true of each think and false of the sequence. A member now remembers
+that it has turned to fight (`RaidMember.Engaged`), and the group stops steering it until the
+withdrawal. Ten other faults, each small, are tabled in design 53 §15; the only one a player would
+have met first was the *Raid* alert sending the camera to the band's layer as a depth.
+
+**The save test for that fix found something older.** It parted five ticks after its load, and a
+probe that hashed each system and then each pawn apart put it on a *colonist's* ambient
+temperature: the weather's share of the outdoor curve is written by the weather on its own cadence
+and saved nowhere, so a loaded world stood in its build's sky until the next boundary. That is on
+`main` for every save, and was fixed here because the raid test cannot pass without it. The lesson
+is in `docs/bug-patterns.md`: a value one system writes into another is derived state no section owns.

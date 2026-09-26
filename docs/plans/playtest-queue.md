@@ -23,18 +23,19 @@ the next session learns to ignore.
 
 ## Open
 
-- **Does a raid read as a band that stalks and then strikes?** (`claude/sharp-lamport-8q5u4h`,
-  design 53.) Debug → Events → Raid: size 20, Mixed, then 150. Wrong answers are any of these:
-  - the war horn does not sound on arrival;
-  - the band does not gather at one edge;
-  - 2–4 in-game hours of loitering feel like a wait rather than suspense;
-  - the low horn and the red *Raid* alert are missing when they come in;
-  - they mill instead of making for the hearth;
-  - the survivors do not leave once half are down.
+- **Does a raid read as a band that stalks and then strikes?** (PR #233,
+  `claude/sharp-lamport-8q5u4h`, design 53, reviewed 2026-09-26 §15.) Debug → Events → Raid:
+  size 20, Mixed, and run at top speed through the gathering (2–4 in-game hours). Wrong answers:
+  - you do not hear the war horn, or it plays over itself and feels like a cutscene (18 s);
+  - 2–4 in-game hours at the edge feel like a wait rather than suspense;
+  - clicking the red *Raid* alert does not put the camera on the band;
+  - once they reach the colony, raiders walk back and forth between the fire and a colonist rather
+    than fighting (the fault fixed in §15 #2 — say so if it is still there);
+  - a band of 150 in the far form reads as a crowd rather than a band.
 
-  Also judge whether 18 s of war horn is too long for an alert, and whether a band of 150 in the
-  far form reads as a crowd of raiders. **Five armed colonists who are not drafted lost to eight
-  raiders in both soak seeds**: say whether that is the game you want.
+  Then fire 200, and 200 again while the first stands: the second press should say under the
+  row that it will not fit, with the room left. **Five armed colonists who are not drafted lost to eight raiders in both
+  soak seeds**: say whether that is the game you want.
 
 - **Does changing a graphics setting still hitch, and is the board seen catching up?**
   (`claude/mesh-cost`, design 38 §26.) Open Settings → Graphics and flick the Grass ladder, then Ground
