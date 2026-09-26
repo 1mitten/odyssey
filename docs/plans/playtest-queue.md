@@ -23,6 +23,20 @@ the next session learns to ignore.
 
 ## Open
 
+- **The storyteller screens: can you pick a storyteller and a difficulty at a glance, and read the
+  gauge?** (`claude/sweet-cerf-wzfxgs`, design 59 §12.) New game, then Settings > Gameplay in the
+  colony, then the debug menu's Events tab > *Tension preview*.
+  - Pick between the three cards. Wrong: you read every blurb to tell them apart, so the strips
+    and emblems are not doing their job.
+  - Pick Custom on the ladder. Wrong: anything on the page jumps rather than lighting in place.
+  - Set Interface scale to 150 % and open New game. Wrong: the Story block runs off the page or
+    under the footer.
+  - Preview each band. Wrong: two bands look the same at play distance, or one reads as an alert.
+  - Look at the clock in the longest month (Larkspur, day 12) with the gauge on. Wrong: the line
+    clips or the temperature is pushed off the panel.
+  - Fire a raid at speed 3. Wrong: the clock keeps running (the switch is on by default), or
+    Space after it resumes at normal rather than 3.
+
 - **First Person: does the shoulder camera show a colonist's day and a fight clearly?**
   (`claude/planning-session-fok6wm`, design 57.) Select a colonist, press **First Person** on her
   card, and let her work, walk up a terrace and go through a door.

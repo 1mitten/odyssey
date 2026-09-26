@@ -14134,3 +14134,28 @@ The research subagent could not reach the wiki: every page was refused by the pr
 from extracts and recall, and it marks each one. Nothing in design 59 depends on a reference number
 the soak cannot re-derive. Every number there is marked invented, and the tuning harness plus the
 72-day soak are the instrument.
+
+### 2026-09-26 — the storyteller's screens, from Claude Design's mockups
+
+The owner pasted Claude Design's answer to the brief, specification 25a–25h, and named the three:
+Jacob the llama keeps the calendar, Trent is half salvage, and Kano is a vast, sleepy pig. *"Just
+for the storyteller design part of the screen and fit it in how you can."* So the screens went in
+ahead of the simulation. The choice is carried into a session-side `StoryDirector` and read by
+nothing, on the Research tab's precedent. The gauge's band is a debug preview.
+
+Three things were decided by the code rather than the mockup:
+
+- **"1280 × 720" is not a screen size here.** The HUD's canvas is 1920 × 1080 at 100 % scale
+  whatever the window. So the compact page is chosen by the page measuring its own width, which
+  is what the 150 % scale and a narrow aspect both produce.
+- **Jacob and Trent were colonist names.** A rolled name is an index modulo the pool's length, so
+  deleting either row would have renamed every colonist in every save. Each was replaced in place
+  (Jonah, Wade). `RegistryTests` caught Jacob, which is why `ui.storyteller` is now an enforced
+  namespace.
+- **A pause on a paused world is a resume.** `SpeedControl.Resolve` treats a second pause as
+  Space's toggle, so the raid only pauses a running world.
+
+`main` had taken design 58 for cracks while the storyteller was being written, so it is design 59.
+Built in a container with the .NET SDK installed from Ubuntu's archive. The fast tier ran: 1,338
+Hud, 23 of them new. Presentation is uncompiled here, and the Unity tiers are owed.
+

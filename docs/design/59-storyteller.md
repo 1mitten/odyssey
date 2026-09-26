@@ -276,3 +276,46 @@ the first thing to check.
 - **The History screen (F9)**, with tension graphed beside population and mood.
 - **Verticality in threats**: arrivals from a lower stratum, drops through open sky (design 03 §11).
 - A days-since-last-recruit curve beside population intent.
+
+## 12. The interface as built (2026-09-26)
+
+The owner pasted Claude Design's specification for the brief (`docs/reference/mockups/storyteller-brief.md`, mockups 25a–25h) and named the storytellers: **Jacob** (a llama, the rhythm), **Trent** (an augmented human, chaos) and **Kano** (a pig, calm), shown in that order. The defaults are Jacob and Normal. *"Just for the storyteller design part of the screen and fit it in how you can."* So the screens were built before the simulation units (ST1–ST4).
+
+- **The choice is carried and not read yet** (owner, 2026-09-26). The New game page puts a `StoryChoice` on `NewGameChoice`, and it is handed to the session's `StoryDirector` (`Odyssey.Hud`). Settings edits it there. It is not saved, not hashed, and nothing in the simulation reads it: the Research tab's precedent (design 34). When ST1 lands, it becomes colony state changed by intent (§7), and the presenters keep reading `StoryDirector.Choice`. A loaded colony therefore has no storyteller, which is §7's old-save rule anyway.
+- **`StoryChoice` is the one rule for a press**, shared by the page and Settings:
+  - a rung other than Custom sets all four levers to its values;
+  - Custom keeps whatever they read, so it starts from the rung the player was looking at;
+  - a lever moves only on Custom.
+- **The New game page** is three columns: 400 / 636 / the rest, with 48 between.
+  - The candidates' column went 340 → 400, per the mockup. `ColonistColumnWidth` is its one owner.
+  - The Story block holds:
+    - three cards, always all shown (a 64 portrait tile with the placeholder emblem at 40, the name at 19/600, the blurb from `Registry.Describe` because `ui.storyteller` is now a described namespace, and the rhythm strip);
+    - the seven-rung ladder;
+    - the Custom block. It is **always drawn**, dimmed to 0.4 and unpressable off Custom, so picking Custom moves nothing.
+- **Compact is decided by the page's own laid-out width**, below `HudLayout.SetupCompactBelow` (1,692). It is never decided by the screen, because the HUD's canvas is 1920 × 1080 at 100 % scale whatever the window; the mockup's 1280 × 720 is what the page sees at 150 % or on a narrow aspect. In compact mode:
+  - 260 / 420 columns, with 24 gaps;
+  - the card blurbs go, and the chosen one shows once under the cards;
+  - 28-high strips;
+  - a 4 + 3 ladder;
+  - levers without tracks.
+- **Settings > Gameplay**:
+  - *Pausing* (Pause on big threats, a machine preference, live with no colony);
+  - *Story*: the storyteller as a segmented control of three; the difficulty as a select, because seven segments measure about 410 px against about 300; and Custom's four levers indented under it, shown only on Custom. With no colony the rows are greyed and the section says *Chosen when a colony starts*.
+- **The clock**: the date drops its season, "Day 12 · Larkspur", and the season moves into the weather glyph's tooltip and the date's own. A 16 px `TensionGauge` joins the line after the weather.
+  - The five bands differ by **filled column count** first and hue second: Info, Info, text, Warn, Warn, **never Bad**.
+  - The tooltip reads the band, then the cause.
+  - The gauge is drawn only with a storyteller **and** a band.
+- **The band is a debug preview until ST3.** The debug menu's Events tab has *Tension preview* (Off / the five bands) and *Tension cause*.
+- **A raid's arrival pauses a running world** when *Pause on big threats* is on. It asks only when the world is running, because a pause request on a paused world is `SpeedControl`'s resume toggle. The raid's horn and its camera jump were already there (design 55).
+
+**Departures from the specification**, each small:
+- **Jacob and Trent were colonist given names too.** The owner ruled that Trent leaves the pool. Jacob met the same rule. Both were **replaced in place** (Jonah, Wade), because a rolled name is `Pool[(id + offset) % Pool.Length]`: deleting a row would have renamed every colonist in every save.
+- **The compact page drops the Custom note** as well as the tracks. It has 608 px of height for everything, and the dim already says it.
+- **The four earlier proposed storyteller names** in `proper-nouns.csv` (Vell, Ida, the Static, Crane) are marked superseded.
+
+**Owed**:
+- the Unity tiers: the fast tier compiles no Presentation;
+- `StartScreenTests.TheStoryBlockFitsThePageAndCustomMovesNothing`, which checks that the block stays inside the page at 100 % and 150 % and that Custom moves no element;
+- **the clock line at 271 px with the longest date and the gauge** (the mockup measured it at exactly the 247 available), which is an eye on a running game;
+- a first look.
+

@@ -17,6 +17,19 @@ branch, with a PR per two or three units.
 | **ST6** | The tension gauge, pause and jump, the old-save toast, a debug readout | none | Hud tier; `HudLayoutTests`; Unity owed |
 | **ST7** | *Someone joins*: an Arrival incident; population intent goes live | per design 23's recipe | fast tier; content checks |
 
+**2026-09-26: the interface halves of ST5 and ST6 are built** ahead of the simulation (design 59
+§12), from Claude Design's mockups 25a–25h:
+- the New game Story block;
+- the Settings Story and Pausing sections;
+- the clock's gauge;
+- pause on a raid.
+
+The choice lives in `StoryDirector` on the interface side and the gauge's band is a debug preview.
+What ST5 and ST6 still owe:
+- **ST5**: the intents, and the saved choice replacing `StoryDirector`'s own;
+- **ST6**: `StorytellerView` driving the gauge in place of the preview, and `BulletinView.Category`
+  so the pause is on every big threat rather than only raids.
+
 ## ST1 — the kit and the system
 
 - **New, in `Sim/Events/Storyteller/`:**
