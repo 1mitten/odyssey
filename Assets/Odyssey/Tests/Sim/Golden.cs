@@ -607,8 +607,14 @@ namespace Odyssey.Tests.Sim
             // the digit: the colony stands on grass, digs nothing in ten thousand ticks and never
             // meets the rock, so only the hash of what is under it moved. The bare meadow and the
             // city did not move: neither has ore, caverns or a column deep enough for deep stone.
-            Generated = 9420666644581579923UL,
-            Simulated = 5494399407163632571UL,
+            // 2026-09-26, underground fog (design 62 §6, DM5): the board's sealed chambers are
+            // unseen, a bitset hashed while it holds a cell, so both values moved. GoldenColonyProbe
+            // on the DM6 merge (3ae273c6) and on DM5 is identical on all three boards, generated
+            // and simulated, to the digit: nobody digs into a chamber in ten thousand ticks, and the
+            // fog changes nothing the simulation does. The bare meadow and the city have no chamber
+            // and did not move.
+            Generated = 8819455761918610567UL,
+            Simulated = 13175204757064635247UL,
         };
 
         /// <summary>
