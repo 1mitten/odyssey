@@ -13,7 +13,7 @@ using Odyssey.Sim.Worldgen.Natural;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// Rock somebody started to mine keeps its cut when the order is taken off (design 57 §3,
+    /// Rock somebody started to mine keeps its cut when the order is taken off (design 58 §3,
     /// owner 2026-09-26: "Keep its state"). Before, a cancel zeroed the ledger and the rock healed —
     /// which nobody could see until the cut was drawn as cracks.
     /// </summary>

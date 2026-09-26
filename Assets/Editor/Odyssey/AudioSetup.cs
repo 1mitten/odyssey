@@ -206,7 +206,7 @@ namespace Odyssey.EditorTools
                 mono: true, loadInBackground: false, placeholder: null, normalize: false),
             new("combat-shot-far", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: true, loadInBackground: false, placeholder: null, normalize: false),
-            // Something coming down (design 57 §9), baked by tools/audio/bake_demolition.sh: wood
+            // Something coming down (design 58 §9), baked by tools/audio/bake_demolition.sh: wood
             // broken or taken apart, and a mined face collapsing. The gunshot's class and its
             // reason for **not normalising** — the bake levels every take at -19 LUFS.
             new("break-wood", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
@@ -764,7 +764,7 @@ namespace Odyssey.EditorTools
                     SpatialBlend = 1f, MinDistance = 50f, MaxDistance = 400f,
                     Priority = 120, Cooldown = 0.06f,
                 },
-                // Something coming down (design 57 §9): wood broken or taken apart, and a mined
+                // Something coming down (design 58 §9): wood broken or taken apart, and a mined
                 // face collapsing. Placed at the cell and heard across the view like the pick that
                 // leads up to it (20 / 200 m against the pick's 20 / 210). The cooldown makes a
                 // gallery of faces finishing on one tick one collapse rather than a pile-up; the

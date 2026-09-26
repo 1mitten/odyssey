@@ -2016,7 +2016,7 @@ namespace Odyssey.Presentation.Bootstrap
                 // in mining", and marking the wall's top face is what mining already does to rock.
                 _renderer.DrawCellMark(cell, tint);
 
-                // A face being mined is drawn cracked instead (design 57, owner 2026-09-26: the
+                // A face being mined is drawn cracked instead (design 58, owner 2026-09-26: the
                 // cracks replace the pale slab). The slab stays for a build without the shader.
                 bool cracked = kind == DesignationKind.Mine && _renderer.CracksAvailable;
                 if (orders[i].Progress > 0 && !cracked)
@@ -2029,7 +2029,7 @@ namespace Odyssey.Presentation.Bootstrap
         readonly List<WorldRenderModel.RemovedEdifice> _removedEdifices = new List<WorldRenderModel.RemovedEdifice>();
 
         /// <summary>
-        /// Something coming down, heard (design 57 §9): wood broken or taken apart, a mined face
+        /// Something coming down, heard (design 58 §9): wood broken or taken apart, a mined face
         /// collapsing. <see cref="DemolitionWatch"/> says which cells went this frame — on the same
         /// evidence the break (§7) is drawn on, so the sound and the shudder start together — and
         /// each is played from the middle of its cell.
@@ -2056,7 +2056,7 @@ namespace Odyssey.Presentation.Bootstrap
             new System.Collections.Generic.List<CrackedCell>();
 
         /// <summary>
-        /// Struck walls and rock being mined, drawn broken (design 57): <c>CrackModel</c> says which
+        /// Struck walls and rock being mined, drawn broken (design 58): <c>CrackModel</c> says which
         /// cells and how badly, the renderer draws each cell's own meshes over themselves in the
         /// crack shader. Called every frame, whether or not anything is cracked, so a cell that
         /// came down or was ordered again gives its scratch batch back. Filtered to the band a

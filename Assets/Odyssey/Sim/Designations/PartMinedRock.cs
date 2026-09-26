@@ -6,7 +6,7 @@ using Odyssey.Sim.Saving;
 namespace Odyssey.Sim.Designations
 {
     /// <summary>
-    /// The work already cut into rock whose mining order was taken off (design 57 §3): a sparse
+    /// The work already cut into rock whose mining order was taken off (design 58 §3): a sparse
     /// store holding a row <b>only for a cell somebody started on and then cancelled</b>, so the
     /// face keeps its cracks and a new order carries on from where the last one stopped.
     ///

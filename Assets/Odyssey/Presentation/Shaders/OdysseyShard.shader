@@ -1,4 +1,4 @@
-// A piece of a broken wall or rock face (design 57 §7): the cell's own meshes, clipped to one
+// A piece of a broken wall or rock face (design 58 §7): the cell's own meshes, clipped to one
 // quarter of it and moved by a matrix of the renderer's, for the second and a half it takes to
 // split and fall.
 //

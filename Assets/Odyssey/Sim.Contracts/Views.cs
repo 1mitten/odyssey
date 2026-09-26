@@ -1092,7 +1092,7 @@ namespace Odyssey.Sim.Contracts
 
 
     /// <summary>
-    /// Rock somebody started to mine and then took the order off (design 57 §3): no order stands
+    /// Rock somebody started to mine and then took the order off (design 58 §3): no order stands
     /// on it, but the cut is kept, so the face stays cracked. One row per such cell, and none while
     /// every started cut is either ordered or finished — the published face of the simulation's
     /// <c>PartMinedRock</c>.

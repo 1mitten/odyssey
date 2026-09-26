@@ -7,7 +7,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// When a thing coming down makes a sound (design 57 §9): rock under a mining order that is no
+    /// When a thing coming down makes a sound (design 58 §9): rock under a mining order that is no
     /// longer solid, wood taken apart or broken — and silence for everything that was only
     /// cancelled, repaired, left part-done, or built of something with no sound yet.
     /// </summary>

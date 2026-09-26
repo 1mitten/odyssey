@@ -158,14 +158,14 @@ namespace Odyssey.Presentation.Audio
         public const string DropLand = SoundPrefix + "drop.land";
 
         /// <summary>
-        /// Something built of wood coming down (design 57 §9): broken in a fight or taken apart by
+        /// Something built of wood coming down (design 58 §9): broken in a fight or taken apart by
         /// a colonist — a wall, a door, a bed, a shelf, a floor. From the cell, on the frame it
         /// goes. Raised by <see cref="DemolitionSounds"/>.
         /// </summary>
         public const string BreakWood = SoundPrefix + "break.wood";
 
         /// <summary>
-        /// A mined face collapsing (design 57 §9): the last stroke of the pick, from the cell, on
+        /// A mined face collapsing (design 58 §9): the last stroke of the pick, from the cell, on
         /// the frame the rock goes — the frame the break's pieces start to shudder. Raised by
         /// <see cref="DemolitionSounds"/>.
         /// </summary>

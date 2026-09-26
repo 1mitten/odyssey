@@ -7,7 +7,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// How broken a thing looks (design 57): three stages at a quarter, a half and three quarters
+    /// How broken a thing looks (design 58): three stages at a quarter, a half and three quarters
     /// gone, one rule for a struck wall and for rock being mined.
     /// </summary>
     public class CrackModelTests

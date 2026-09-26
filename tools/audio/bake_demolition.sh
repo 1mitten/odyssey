@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Bake the two demolition sounds from the recordings the owner supplied (2026-09-26,
-# docs/design/57-cracks.md §9): "on the sound of the wood wall (or other wood based items) — on
+# docs/design/58-cracks.md §9): "on the sound of the wood wall (or other wood based items) — on
 # breaking (or deconstruct) — play this audio, and for mining when the rock has collapsed … process
 # them as necessary and blend it into the environment".
 #

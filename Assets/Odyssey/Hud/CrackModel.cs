@@ -5,7 +5,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// One cell drawn cracked this frame, and how badly (design 57 §2): the answer
+    /// One cell drawn cracked this frame, and how badly (design 58 §2): the answer
     /// <see cref="CrackModel.Gather"/> hands the renderer.
     /// </summary>
     public readonly struct CrackedCell
@@ -35,7 +35,7 @@ namespace Odyssey.Hud
     }
 
     /// <summary>
-    /// How broken a thing looks (design 57): <b>one rule for a struck wall and for rock being
+    /// How broken a thing looks (design 58): <b>one rule for a struck wall and for rock being
     /// mined</b>, fed by one number — how much of it is gone, in thousandths — and answered in
     /// three stages at a quarter, a half and three quarters for a wall (owner, 2026-09-26) and six
     /// for rock being mined, which the owner wanted in more steps. Unity-free, so the
@@ -120,7 +120,7 @@ namespace Odyssey.Hud
         /// <summary>
         /// Which buildings crack. <b>Walls only</b> in the first unit (owner, 2026-09-26: walls
         /// first, the rest once the look is right). Doors, sandbags and furniture join here — and
-        /// furniture may want scratches rather than cracks, which is design 57 §8's question.
+        /// furniture may want scratches rather than cracks, which is design 58 §8's question.
         /// </summary>
         public static bool Cracks(int edifice) => edifice == EdificeHandle.Wall;
 

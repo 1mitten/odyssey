@@ -1,4 +1,4 @@
-// The crack pattern (design 57 §4), shared by the crack overlay (Odyssey/Crack) and the pieces a
+// The crack pattern (design 58 §4), shared by the crack overlay (Odyssey/Crack) and the pieces a
 // broken wall or rock face falls apart into (Odyssey/Shard), so a piece carries the cracks the
 // wall had the instant before it came apart.
 //

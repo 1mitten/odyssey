@@ -64,7 +64,7 @@ namespace Odyssey.Sim.Designations
         public GridSize Size => _grid.Size;
 
         /// <summary>
-        /// The work kept in rock whose mining order was taken off (design 57 §3). Hashed and saved
+        /// The work kept in rock whose mining order was taken off (design 58 §3). Hashed and saved
         /// on its own terms; registered by <see cref="Attach"/> and listed in the colony's save.
         /// </summary>
         public PartMinedRock PartMined => _partMined;
@@ -84,7 +84,7 @@ namespace Odyssey.Sim.Designations
         ///
         /// <para>Authored state: hashed, saved, and cleared when the order is placed, cancelled or
         /// carried out — except that a cancelled mining order's work moves to
-        /// <see cref="PartMined"/> and comes back with the next one (design 57 §3).</para>
+        /// <see cref="PartMined"/> and comes back with the next one (design 58 §3).</para>
         /// </summary>
         public int WorkDone(int index) => _work[index];
 
@@ -147,7 +147,7 @@ namespace Odyssey.Sim.Designations
             if (_kinds[index] == (byte)kind) return IntentRejection.AlreadyInThatState;
 
             // A face somebody started on and left carries on from where the cut stopped (design
-            // 57 §3, owner: "Keep its state"). Taken before Set, which starts every order at nought.
+            // 58 §3, owner: "Keep its state"). Taken before Set, which starts every order at nought.
             int kept = 0;
             bool resume = kind == DesignationKind.Mine
                           && _partMined.TryTake(index, _grid.Terrain[index], out kept);
@@ -179,7 +179,7 @@ namespace Odyssey.Sim.Designations
 
         /// <summary>
         /// A mining order taken off a cell it had started on keeps its work in
-        /// <see cref="PartMined"/> (design 57 §3). Before this the cancel zeroed the ledger and the
+        /// <see cref="PartMined"/> (design 58 §3). Before this the cancel zeroed the ledger and the
         /// rock healed. Only a cancel or a replacing order comes through here: an order carried out
         /// goes through <see cref="Clear"/>, and the rock it was cut from is gone.
         /// </summary>
@@ -494,7 +494,7 @@ namespace Odyssey.Sim.Designations
             return builder
                 .AddTickable(_ => this)
                 .AddSnapshotContributor(this)
-                // The kept work (design 57 §3) hashes nothing while empty, so registering it moved
+                // The kept work (design 58 §3) hashes nothing while empty, so registering it moved
                 // no golden. Its save section is listed with the colony's (ColonyWorld).
                 .AddHashable(_partMined)
                 .AddIntentHandler(IntentKind.Designate, HandleDesignate)
@@ -586,7 +586,7 @@ namespace Odyssey.Sim.Designations
                 writer.AddOrder(new OrderView(index, kind, (byte)(Fraction(index) * 255f)));
             }
 
-            // And the rock somebody started on and then left (design 57 §3), which has no order to
+            // And the rock somebody started on and then left (design 58 §3), which has no order to
             // carry its progress but is still cracked. A stale row — its cell holds other terrain
             // now — is not published; DropStale forgets it the next time a row is kept.
             for (int i = 0; i < _partMined.Count; i++)

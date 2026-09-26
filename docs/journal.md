@@ -14022,7 +14022,7 @@ hps left", then for rock being mined too. Everything the look needed was already
 struck building's hit points since design 33 §13, a mining order's progress since the cut moved on
 to the cell — and both design 33 §13k and 53 §7d had listed "cracks, or a darker tint" as owed. Four
 answers settled it: three stages at 25/50/75 % gone, cracks only (no destroyed-wall mesh yet), walls
-and rock first, and the cracks replace the pale cut slab. Design 57.
+and rock first, and the cracks replace the pale cut slab. Design 58.
 
 **The option chosen was the one that is general.** Decals were not switched on in the pipeline, want
 a scene object each (which the project avoids), and bleed on to whoever stands beside the wall; a
@@ -14044,7 +14044,7 @@ five tests fail.
 
 ## 2026-09-26 — Cracks, the first look: burst from a point, six levels for rock, and the break
 
-The owner played design 57 the same day and moved three things (§1a). **The heavy stages read as
+The owner played design 58 the same day and moved three things (§1a). **The heavy stages read as
 shapes.** The pattern was the borders of a Voronoi tiling, and a tiling closes every line into a
 cell, so a face covered in it looks like paving however it is warped. What a blow leaves is a few
 long cracks running out from one place, so the pattern now bursts from an impact point hashed per
@@ -14072,7 +14072,7 @@ was run on this round, at the owner's word; the Hud half builds clean with `dotn
 
 The owner supplied two Pixabay recordings — a wood smash and a boulder impact — for wood broken or
 taken apart and for a mined face collapsing, "processed as necessary and blended into the
-environment". Design 57 §9. Both masters measured brick-walled over full scale (+2.5 and +3.3 dBFS
+environment". Design 58 §9. Both masters measured brick-walled over full scale (+2.5 and +3.3 dBFS
 in the float decode, the boulder at full-scale RMS for a third of a second), so the bake is the
 gunshot's: −12 dB in float first, band-limited, the synthesised outdoor space and slapback, three
 takes at three speeds with their own tails, levelled on loudness into a limiter. The level was set
@@ -14095,3 +14095,9 @@ left the mirror. So the mirror now notes every non-tree building leaving it with
 already noted felled trees for the topple, and the watch pairs the event with the note in either
 order. A cell heard is held for a second so a struck-then-broken wall, which both paths see, is heard
 once. Nine watch tests, run on their own (17 ms); no tier.
+
+**And renumbered to design 58 on the merge.** PR #242 (the ride along) reached `main` while this was
+in review and took design 57, and its code cites "design 57 §…" throughout — so two designs sharing
+the number would have made every such reference ambiguous. The cracks are `58-cracks.md` now; the
+rewrite touched only lines this branch added (49, found from the diff against `main`, plus one
+split across a comment break), and no ride-along file. Commit messages keep the old number.

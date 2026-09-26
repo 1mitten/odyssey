@@ -1,4 +1,4 @@
-// Cracks (design 57): a damaged wall or a face being mined, drawn by drawing the thing's own mesh a
+// Cracks (design 58): a damaged wall or a face being mined, drawn by drawing the thing's own mesh a
 // second time over itself with this shader.
 //
 // A multiply, not a colour. `Blend DstColor Zero` scales what is already on screen, so the wall

@@ -8,7 +8,7 @@ using UnityEngine.Rendering;
 namespace Odyssey.Presentation.Rendering
 {
     /// <summary>
-    /// Cracks (design 57): a struck wall and a face being mined drawn broken, on a ladder of levels
+    /// Cracks (design 58): a struck wall and a face being mined drawn broken, on a ladder of levels
     /// (three stages for a wall, six for rock), by drawing the cell's own meshes a second time in
     /// <c>Odyssey/Crack</c> — a multiply over what is
     /// already on screen, so the wall keeps its material, its light and its colour and only gains
@@ -94,7 +94,7 @@ namespace Odyssey.Presentation.Rendering
         /// How broken a level looks to the shader, 0 to 1: the level over the ladder's length. The
         /// whole look — how far the cracks reach, how many rays, how wide, when the branches web
         /// the face, the grime — is one curve in <c>OdysseyCrack.hlsl</c> driven by this number, so
-        /// a level added to the ladder needs no row of tuning here (design 57 §4).
+        /// a level added to the ladder needs no row of tuning here (design 58 §4).
         /// </summary>
         public static float SeverityOf(int level) => Mathf.Clamp01(level / (float)CrackModel.Levels);
 

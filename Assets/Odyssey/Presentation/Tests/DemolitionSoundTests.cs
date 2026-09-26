@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Odyssey.Tests.Presentation
 {
     /// <summary>
-    /// The demolition sounds (design 57 §9): wood coming down and a mined face collapsing, three
+    /// The demolition sounds (design 58 §9): wood coming down and a mined face collapsing, three
     /// takes each, placed at the cell. The clips are the project's own
     /// (<c>tools/audio/bake_demolition.sh</c>), so this runs on the runner too. When they play is
     /// <c>DemolitionWatchTests</c>' question, in the fast tier.

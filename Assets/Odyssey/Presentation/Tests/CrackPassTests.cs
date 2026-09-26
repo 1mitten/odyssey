@@ -8,7 +8,7 @@ using Odyssey.Sim.Worldgen;
 namespace Odyssey.Tests.Presentation
 {
     /// <summary>
-    /// What the crack pass draws (<c>docs/design/57-cracks.md</c>). How the cracks look is the
+    /// What the crack pass draws (<c>docs/design/58-cracks.md</c>). How the cracks look is the
     /// owner's to judge; that the pass cracks exactly the cell's own meshes, batches a run of walls
     /// into the same calls as one wall, meshes a cell once rather than once a frame, and lets go of
     /// a cell that stopped being cracked is a test's. None of these needs the licensed art.
@@ -119,7 +119,7 @@ namespace Odyssey.Tests.Presentation
             Assert.That(renderer.CracksAvailable, Is.False, "the mining slab would vanish with nothing in its place");
         }
 
-        // ---- the break (design 57 §7) ------------------------------------------------------
+        // ---- the break (design 58 §7) ------------------------------------------------------
 
         static RenderTestWorld RemoveEdifice(RenderTestWorld world, int x, int z, int y)
         {

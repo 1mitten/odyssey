@@ -7,7 +7,7 @@ using UnityEngine.Rendering;
 namespace Odyssey.Presentation.Rendering
 {
     /// <summary>
-    /// The break (design 57 §7): a cracked wall that comes down, or a face mined out, does not
+    /// The break (design 58 §7): a cracked wall that comes down, or a face mined out, does not
     /// vanish between one frame and the next. It shudders, splits in half, each half splits again,
     /// and the four pieces fall apart and sink away (owner, 2026-09-26: <i>"it breaks in half into
     /// quarters … some kind of motion to indicate the breaking of the piece and also would be

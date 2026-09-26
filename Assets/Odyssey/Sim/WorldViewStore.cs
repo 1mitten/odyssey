@@ -30,7 +30,7 @@ namespace Odyssey.Sim
         /// <summary>Publish one standing order, wherever in the world it is.</summary>
         public void AddOrder(in OrderView view) => _target.AddOrder(view);
 
-        /// <summary>Publish one part-mined cell with no order on it (design 57 §3).</summary>
+        /// <summary>Publish one part-mined cell with no order on it (design 58 §3).</summary>
         public void AddPartMined(in PartMinedView view) => _target.AddPartMined(view);
 
         /// <summary>Publish one built store — a shelf — and how full it is.</summary>

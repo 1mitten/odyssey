@@ -99,11 +99,11 @@ namespace Odyssey.EditorTools
             // is no fallback that draws it: without this row a player fires invisible bullets.
             "Odyssey/Tracer",
 
-            // Cracks on a struck wall and a face being mined (design 57), found by name by the
+            // Cracks on a struck wall and a face being mined (design 58), found by name by the
             // chunk renderer. Without it a player keeps the mining cut slab and walls never crack.
             "Odyssey/Crack",
 
-            // The pieces a cracked wall or mined face breaks into (design 57 §7), found by name by
+            // The pieces a cracked wall or mined face breaks into (design 58 §7), found by name by
             // the chunk renderer. Without it a player's walls and rock vanish whole, as before.
             "Odyssey/Shard",
 

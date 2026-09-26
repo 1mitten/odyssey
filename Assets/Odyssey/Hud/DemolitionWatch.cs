@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
 {
-    /// <summary>What came down, as far as a sound is concerned (design 57 §9).</summary>
+    /// <summary>What came down, as far as a sound is concerned (design 58 §9).</summary>
     public enum Demolition : byte
     {
         /// <summary>Something built of wood, broken in a fight or taken apart.</summary>
@@ -41,7 +41,7 @@ namespace Odyssey.Hud
     }
 
     /// <summary>
-    /// Hears things come down (design 57 §9; owner, 2026-09-26: wood <i>"on breaking (or
+    /// Hears things come down (design 58 §9; owner, 2026-09-26: wood <i>"on breaking (or
     /// deconstruct)"</i>, and rock <i>"when the rock has collapsed"</i>).
     ///
     /// <para><b>Nothing announces it, so it is watched for.</b> The simulation takes the thing away

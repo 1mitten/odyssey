@@ -38,7 +38,7 @@ namespace Odyssey.Presentation.World
     /// once, at construction, so the mesher deals only in integers.
     /// </summary>
     // IDemolitionCells: the five questions the demolition sounds ask are already this class's own
-    // (design 57 §9), so the mirror answers them as it stands.
+    // (design 58 §9), so the mirror answers them as it stands.
     public sealed class WorldRenderModel : Odyssey.Hud.IDemolitionCells
     {
         readonly ushort[] _terrain;
@@ -1526,7 +1526,7 @@ namespace Odyssey.Presentation.World
                 if (NaturalContent.IsTree(was) && _edifice[index] != was && _felled.Count < MaxFelledPending)
                     _felled.Add(new FelledTree(index, was));
                 // Any other building gone, with what it was made of — which nothing else can say
-                // once it has left the mirror. For the demolition sounds (design 57 §9): a wall
+                // once it has left the mirror. For the demolition sounds (design 58 §9): a wall
                 // broken from whole in one blow was never struck before, so this is the only
                 // record of its stuff.
                 else if (was != 0 && !NaturalContent.IsTree(was) && _edifice[index] != was
