@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-136 entries, 110 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+137 entries, 111 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -126,6 +126,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Camera speed** | `ui.settings.camspeed` | How fast the camera pans and zooms, as a share of its tuned speed | no art | M3 |
 | **Build palette layout** | `ui.settings.buildlayout` | Which of the three shapes the Build palette takes: rows, rail or bar | no art | M3 |
 | **Selection style** | `ui.settings.selectionstyle` | How the selected thing is marked: a line round the thing itself, or corner brackets | no art | M3 |
+| **Wake-up** | `ui.settings.wake` | Enter a colony by waking into it: blurred, warm and muffled, clearing over five seconds. Any key or click wakes you at once. Off fades straight in | no art | MS |
 | **Developer overlay** | `ui.settings.developer` | The frame-time and draw-call readout, kept on the machine between sessions | no art | M3 |
 | **Display** | `ui.settings.display` | How the frame is paced and how large it is drawn | no art | M3 |
 | **Detail** | `ui.settings.detail` | What the board is drawn with. None of it reaches the simulation | no art | M3 |

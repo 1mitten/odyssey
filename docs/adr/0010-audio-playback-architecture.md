@@ -77,6 +77,14 @@ is *for the player*, not from a position) and start the duck.
 > refresh that builds them, with the sound chosen by severity. The playback half of this
 > decision — 2D, own bus, starts the duck — is unchanged. See `docs/design/24-alert-sounds.md`.
 
+> **Amended 2026-09-26.** The wake into a world (`docs/design/56-wake-up.md` §5) muffles the whole
+> mix for five seconds — a low-pass filter, a little reverb and a lower level. That is DSP on the
+> master bus, done through Unity's supported non-mixer route: an `AudioLowPassFilter` and an
+> `AudioReverbFilter` on the listener's game object, which process everything the listener hears,
+> and `AudioListener.volume`, a global nothing else here touches. They exist only during the wake
+> and are removed after it. **The trigger for a mixer asset is unchanged**: a bus that needs DSP of
+> its own, or a snapshot mood that outlives a transition.
+
 **Trigger sources are what presentation already knows.** The frame a tool lands is
 `WorkSwing.Lands` — the same stroke clock that flies the chips — published by
 `PawnFigureDirector` as a `BlowLanded` event with the work style and the edge position; the

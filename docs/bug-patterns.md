@@ -3057,6 +3057,28 @@ state with a writer that does not run on load. Ask of each: is it written in `Lo
 `RebuildDerived`? The existing save tests missed it because none of them fights under a changed sky
 for longer than one weather pass before saving.
 
+## An event raised twice in one frame, re-deriving state from UI the first raise changed (2026-09-26)
+
+**Symptom.** A world arriving from the title screen is covered for three frames
+(`HudShell.CurtainFrames`, design 38 §25b) so that the build frame and the first-submit frame after
+it are never seen. A **load** from the title screen was not covered at all — found by reading the
+code while planning the wake-up (design 54), never by a report, because the frames it shows are
+the ones the player would call "a touch of loading".
+
+**Cause.** `LoadSession` raises `SessionChanged` twice in one frame: once from `BuildSession` and
+once from `RefreshAfterLoad`. `OnSessionChanged` decided whether to cover by asking whether the
+title screen's backdrop was showing — and the first raise's own `ApplySession` had just hidden it.
+So the second raise saw "not from the start screen" and lifted the cover on the build frame. The
+only curtain test pressed New game, which raises once.
+
+**Fix.** A world already behind the curtain keeps it: `stillCovering = Directors != null &&
+_curtain > 0`, asked *before* `ApplySession` and answered from the countdown rather than from the
+UI. PlayMode `StartScreenTests.ALoadedWorldIsCoveredLikeANewOne` is the regression.
+
+**The check for the next one.** A handler that reads UI state to decide what just happened is
+reading state its own previous call may have written. Ask of any event: can it fire twice in one
+frame, and does the second call ask a question the first one answered? Decide from a counter or the
+cause, not from the screen.
 ## A rule whose stated consequence is a deadlock (2026-09-21)
 
 **P19.** U44 moved construction delivery from `TraverseMode.Colonist` to `Hauler`, reasoning that
