@@ -167,6 +167,57 @@
   </SpeciesDef>
 
   <!--
+    The butcher (docs/design/62-pig-butcher.md): a hulking hostile person with a cleaver, the boss a
+    colony fights together. A person species of its own - not the colonist's - because what makes
+    it a boss is what it IS: its pool, its body, its fixed melee level, its cleaver and its sweep.
+    Every number is INVENTED and the first tuning (design 62 section 4).
+
+    It is one cell, drawn huge (section 3): its bulk is TraverseMode.Animal - no ladder, no door it
+    opens, no water - so a closed door is a wall it breaks and a ladder is a way to get away from it.
+    Slower than a person (800), a bigger body on a bullet's line than anything (800, the ceiling).
+  -->
+  <SpeciesDef>
+    <defName>Species_Butcher</defName>
+    <labelKey>ui.pawn.butcher</labelKey>
+    <person>true</person>
+    <bodyLengthMm>3600</bodyLengthMm>
+    <movePerMille>800</movePerMille>
+    <traverseMode>Animal</traverseMode>
+    <wanderRadius>6</wanderRadius>
+    <restTicksMin>0</restTicksMin>
+    <restTicksMax>0</restTicksMax>
+    <figureKey>hostile.butcher</figureKey>
+    <!-- Five colonists' worth: downed at nought, dead at -250. -->
+    <healthPoints>500</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <!-- A veteran's arm, fixed rather than rolled: a person's level is its skill unless its species
+         names one (MeleeRules.MeleeLevel). -->
+    <meleeSkill>14</meleeSkill>
+    <health>Health_Brute</health>
+    <interceptPerMille>800</interceptPerMille>
+    <!-- The cleaver is the butcher's own, not an item: it does not drop, and nobody else swings
+         it (design 62 section 5). Sharp, slow, heavy; the 54-tick wind-up is the telegraph. -->
+    <naturalAttack>
+      <damage>14</damage>
+      <cooldownTicks>170</cooldownTicks>
+      <windupTicks>54</windupTicks>
+      <damageKind>Sharp</damageKind>
+      <style>Heavy</style>
+    </naturalAttack>
+    <!-- Never stunned, never knocked back (design 62 section 7). -->
+    <unstoppable>true</unstoppable>
+    <!-- The sweep (design 62 sections 5 and 7): the front arc of three, and a landed blow usually
+         flings its victim two cells, slamming into what stops it and falling off a ledge. -->
+    <sweep>
+      <knockbackPerMille>750</knockbackPerMille>
+      <distance>2</distance>
+      <slamDamage>8</slamDamage>
+      <knockedDownTicks>120</knockedDownTicks>
+      <immunityTicks>300</immunityTicks>
+    </sweep>
+  </SpeciesDef>
+
+  <!--
     The animal kinds. Every needs and rest field on PawnKindDef is unread for an animal — nothing
     ticks its needs — so only the species is stated and the rest take the type's defaults.
   -->
@@ -235,6 +286,17 @@
     </weapons>
     <traverseMode>Bandit</traverseMode>
     <motive>Loot</motive>
+  </PawnKindDef>
+
+  <!--
+    Kind 6, the butcher (design 62): debug-spawned only until it has been played (owner,
+    2026-09-26), and in no raid mix. Its mode is its species' (Animal); its weapon is its species'
+    natural attack, so it names none here. It came for a fight, not for loot.
+  -->
+  <PawnKindDef>
+    <defName>PawnKind_Butcher</defName>
+    <species>Species_Butcher</species>
+    <faction>Hostile</faction>
   </PawnKindDef>
 
 </Defs>

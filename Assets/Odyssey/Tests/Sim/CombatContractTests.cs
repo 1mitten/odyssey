@@ -113,7 +113,9 @@ namespace Odyssey.Tests.Sim
             Assert.That(PawnKindIndex.Gunman, Is.EqualTo(4));
             // And the culvert frog at 5, after the gunman (design 30 §8): six.
             Assert.That(PawnKindIndex.CulvertFrog, Is.EqualTo(5));
-            Assert.That(PawnKindIndex.Count, Is.EqualTo(6));
+            // And the butcher at 6, after the frog (design 62): seven.
+            Assert.That(PawnKindIndex.Butcher, Is.EqualTo(6));
+            Assert.That(PawnKindIndex.Count, Is.EqualTo(7));
 
             // IntentKind is an enum whose numbers an intent log carries: the three orders are
             // together and after everything main shipped first (power's four, since the merge of
@@ -351,6 +353,7 @@ namespace Odyssey.Tests.Sim
             Moves("an order's target", () => pawn.CombatTarget = 2, () => pawn.CombatTarget = 0);
             Moves("a carrier", () => pawn.CarriedBy = 2, () => pawn.CarriedBy = 0);
             Moves("a treatment cooldown", () => pawn.TreatedUntilTick = 99, () => pawn.TreatedUntilTick = 0);
+            Moves("a knockback immunity", () => pawn.KnockbackImmuneUntilTick = 99, () => pawn.KnockbackImmuneUntilTick = 0);
             Moves("a struck building", () => colony.Pawns.EdificeDamage.Set(123, 4_000),
                 () => colony.Pawns.EdificeDamage.Clear(123));
 
@@ -376,6 +379,7 @@ namespace Odyssey.Tests.Sim
             a.CombatTarget = b.Id.Value;
             a.CarriedBy = b.Id.Value;
             a.TreatedUntilTick = 15_030; // layout 4, medical supplies (design 37)
+            a.KnockbackImmuneUntilTick = 2_345; // layout 6, the butcher's fling (design 62)
             colony.Pawns.Corpses.Add(b, 31, 5);
             colony.Pawns.EdificeDamage.Set(1_234, 55_000);
             colony.Pawns.EdificeDamage.Set(99, 1);
@@ -394,6 +398,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(back.CombatTarget, Is.EqualTo(b.Id.Value));
             Assert.That(back.CarriedBy, Is.EqualTo(b.Id.Value));
             Assert.That(back.TreatedUntilTick, Is.EqualTo(15_030));
+            Assert.That(back.KnockbackImmuneUntilTick, Is.EqualTo(2_345));
 
             Assert.That(restored.Pawns.Corpses.Count, Is.EqualTo(1));
             Assert.That(restored.Pawns.Corpses[0].Pawn, Is.EqualTo(b.Id.Value));

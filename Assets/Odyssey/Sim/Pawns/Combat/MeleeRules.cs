@@ -42,8 +42,13 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class MeleeRules : IMeleeRules
     {
+        /// <summary>
+        /// A person's Melee skill, an animal's species level — and a person whose species names a
+        /// level fights at that, fixed, however its skills rolled: the butcher (design 62 §4). The
+        /// colonist's species names none, so nobody else's level moved.
+        /// </summary>
         public virtual int MeleeLevel(Pawn pawn) =>
-            pawn.IsPerson ? pawn.SkillLevel(SkillIndex.Melee) : pawn.Species.meleeSkill;
+            pawn.IsPerson && pawn.Species.meleeSkill == 0 ? pawn.SkillLevel(SkillIndex.Melee) : pawn.Species.meleeSkill;
 
         public virtual int HitChancePerMille(Pawn attacker, PawnContext ctx) =>
             ctx.Content.Combat.HitChancePerMille(MeleeLevel(attacker));
@@ -55,9 +60,20 @@ namespace Odyssey.Sim.Pawns
         public virtual int DodgeChancePerMille(Pawn defender, PawnContext ctx) =>
             defender.Downed || Ranged.IsAiming(defender) ? 0 : ctx.Content.Combat.DodgeChancePerMille(MeleeLevel(defender));
 
-        public virtual SwingOutcome Resolve(Pawn attacker, Pawn defender, in Armament armament, PawnContext ctx, int tick)
+        public virtual SwingOutcome Resolve(Pawn attacker, Pawn defender, in Armament armament, PawnContext ctx, int tick) =>
+            Decide(attacker, defender, armament, ctx, tick, 0u);
+
+        public virtual SwingOutcome ResolveFlank(Pawn attacker, Pawn defender, in Armament armament, PawnContext ctx, int tick) =>
+            Decide(attacker, defender, armament, ctx, tick, PawnPurpose.Sweep ^ (uint)defender.Id.Value);
+
+        /// <summary>
+        /// The one swing, on streams mixed with <paramref name="salt"/>: nought for the swing at its
+        /// target, which leaves every stream exactly the one it always was, and
+        /// <see cref="PawnPurpose.Sweep"/> with the victim's id for a flank (design 62 §5).
+        /// </summary>
+        protected SwingOutcome Decide(Pawn attacker, Pawn defender, in Armament armament, PawnContext ctx, int tick, uint salt)
         {
-            uint who = (uint)attacker.Id.Value;
+            uint who = (uint)attacker.Id.Value ^ salt;
 
             // The weapon's quality moves the hit chance and the damage (design 47 §11).
             var hit = DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.MeleeHit ^ who);
@@ -83,10 +99,21 @@ namespace Odyssey.Sim.Pawns
             // The critical (design 33 §9b): half as much again, and a chance to knock the target
             // back — the chance rolled here, the ground behind the target judged at the impact.
             var critRoll = DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.MeleeCritical ^ who);
-            if (critRoll.NextInt(1_000) >= CriticalChancePerMille(attacker, ctx))
-                return new SwingOutcome(CombatEventKind.Hit, damage, stun);
+            bool critical = critRoll.NextInt(1_000) < CriticalChancePerMille(attacker, ctx);
+            if (critical) damage = (int)((long)damage * ctx.Content.Combat.critDamagePerMille / 1_000);
 
-            damage = (int)((long)damage * ctx.Content.Combat.critDamagePerMille / 1_000);
+            // A sweeping species flings on every landed blow, on its own stream and at its own
+            // chance, in place of the critical's roll (design 62 §5); the critical still does half
+            // as much again.
+            SweepDef? sweep = attacker.Species.sweep;
+            if (sweep != null)
+            {
+                var fling = DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.SweepKnock ^ who);
+                return new SwingOutcome(CombatEventKind.Hit, damage, stun, critical,
+                    knockback: fling.NextInt(1_000) < sweep.knockbackPerMille);
+            }
+
+            if (!critical) return new SwingOutcome(CombatEventKind.Hit, damage, stun);
             var knockRoll = DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.Knockback ^ who);
             bool knockback = knockRoll.NextInt(1_000) < KnockbackChancePerMille(armament, ctx);
             return new SwingOutcome(CombatEventKind.Hit, damage, stun, critical: true, knockback: knockback);

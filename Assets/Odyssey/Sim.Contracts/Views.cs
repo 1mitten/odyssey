@@ -588,6 +588,15 @@ namespace Odyssey.Sim.Contracts
         /// dust there. A building struck also reports its <see cref="Hit"/> as any blow does.
         /// </summary>
         Covered = 14,
+
+        /// <summary>
+        /// A fling was stopped short (design 62 §7): the pawn was flung into a wall, a door, a rise
+        /// or somebody standing there, and took <see cref="CombatEventView.Amount"/> thousandths of
+        /// a hit point for it. <see cref="CombatEventView.Target"/> is who was slammed — the flung
+        /// pawn, and on a body in the way that body too, each its own event — and
+        /// <see cref="CombatEventView.Cell"/> where it lies. Presentation raises the impact there.
+        /// </summary>
+        Slam = 15,
     }
 
     /// <summary>

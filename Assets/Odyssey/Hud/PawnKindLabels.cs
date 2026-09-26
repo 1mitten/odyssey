@@ -24,7 +24,7 @@ namespace Odyssey.Hud
         /// (<see cref="DebugDirector.SpawnRows"/>); the icon table's order is what a test holds.
         /// </summary>
         public const int ColonistKind = 0, MiddenHogKind = 1, DuctRatKind = 2, Bandit = 3, Gunman = 4,
-            CulvertFrogKind = 5;
+            CulvertFrogKind = 5, Butcher = 6;
         const string Animal = "ui.pawn.animal";
 
         public static readonly string[] IconKeys =
@@ -36,6 +36,8 @@ namespace Odyssey.Hud
             "ui.pawn.gunman",
             // The frog of the banks (design 30 §8).
             "ui.pawn.frog",
+            // The butcher (design 62).
+            "ui.pawn.butcher",
         };
 
         /// <summary>The two states an animal's mind has (design 29 §3), by the job it is running.</summary>

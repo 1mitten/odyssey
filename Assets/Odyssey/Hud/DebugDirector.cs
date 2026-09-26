@@ -130,7 +130,7 @@ namespace Odyssey.Hud
         {
             PanelKey, CheatsKey, EventsKey, SpawnTabKey, SpawnPawnKey, SpawnHogKey, SpawnRatKey, SpawnFrogKey,
             SpawnBanditKey, SpawnBatKey, SpawnCrowbarKey, SpawnMacheteKey, SpawnArcBladeKey,
-            SpawnBanditsKey, ArmColonistsKey, SpawnPistolKey, SpawnGunmanKey, HurtKey, HealKey, KillKey, GiveMedkitsKey,
+            SpawnBanditsKey, ArmColonistsKey, SpawnPistolKey, SpawnGunmanKey, SpawnButcherKey, HurtKey, HealKey, KillKey, GiveMedkitsKey,
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey, GiveCarrotsKey,
             SkipDayKey, SkipMonthKey, SkipMorningKey, SkipNightKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
@@ -239,6 +239,9 @@ namespace Odyssey.Hud
         /// </summary>
         public const string SpawnPistolKey = "ui.debug.spawnpistol", SpawnGunmanKey = "ui.debug.spawngunman";
 
+        /// <summary>The butcher (design 62): debug-spawned only until it has been played.</summary>
+        public const string SpawnButcherKey = "ui.debug.spawnbutcher";
+
         /// <summary>
         /// One row of the Spawn tab: its name, what its tooltip says, and the intent a click sends
         /// at the column the shell aims it at. <b>A table here rather than eight calls in the
@@ -332,6 +335,8 @@ namespace Odyssey.Hud
                 PawnKindLabels.Bandit, GroupHostilesKey, repeat: 3),
             Pawn(SpawnGunmanKey, "Adds a gunman near the camera: a bandit with a pistol. It shoots whoever it can see",
                 PawnKindLabels.Gunman, GroupHostilesKey),
+            Pawn(SpawnButcherKey, "Adds the butcher near the camera: huge, slow and hard to kill. Its cleaver sweeps three cells and flings whoever it lands on",
+                PawnKindLabels.Butcher, GroupHostilesKey),
             Pawn(SpawnHogKey, "Adds a wild midden hog near the camera. It wanders and rests, and never takes a ladder",
                 PawnKindLabels.MiddenHogKind, GroupAnimalsKey),
             Pawn(SpawnRatKey, "Adds a duct rat near the camera. It wanders and rests, and climbs anything",

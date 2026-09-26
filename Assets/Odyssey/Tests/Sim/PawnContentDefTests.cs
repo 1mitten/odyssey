@@ -329,7 +329,10 @@ namespace Odyssey.Tests.Sim
         // The frog merged with cover, 2026-09-26: re-taken from the merged pack.
         // The frog merged with raids, 2026-09-26: the gunman keeps kind 4 and the frog moves to 5;
         // re-taken from the merged pack.
-        const ulong ContentFingerprint = 11744128507824195914UL;
+        // 2026-09-26, the butcher (design 62): Species_Butcher and PawnKind_Butcher appended
+        // (species 4, kind 6), Health_Brute beside Health_Person, and SpeciesDef gained unstoppable
+        // and sweep, false and null on every other species. Taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 47732445630337988UL;
 
 
         [Test]

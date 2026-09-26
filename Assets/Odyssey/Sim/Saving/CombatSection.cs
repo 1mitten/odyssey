@@ -51,9 +51,10 @@ namespace Odyssey.Sim.Saving
         /// The record layout this build writes. 1 is C1's: flags, quiet tick, finishing step. 2 is
         /// the combat contracts step's: C1's four, then the eight combat fields. 3 appends the
         /// knock-down clock and the pending swing (design 33 §9b, §9g). 4 appends the jump's landing
-        /// (design 46 §6). 5 appends the treatment cooldown (design 37).
+        /// (design 46 §6). 5 appends the treatment cooldown (design 37). 6 appends a sweep's
+        /// knockback immunity (design 62 §7).
         /// </summary>
-        public const int Layout = 5;
+        public const int Layout = 6;
 
         const int FlagDrafted = 1;
         const int FlagDowned = 2;
@@ -113,6 +114,9 @@ namespace Odyssey.Sim.Saving
                 // Layout 5: medical supplies (design 37), after the jump — the jump reached main
                 // first and a shipped layout number is a save contract.
                 writer.Write(pawn.TreatedUntilTick);
+
+                // Layout 6: the butcher's fling (design 62 §7).
+                writer.Write(pawn.KnockbackImmuneUntilTick);
             }
             _scratch.Clear();
         }
@@ -156,6 +160,9 @@ namespace Odyssey.Sim.Saving
                 // Layout 5: nobody had been treated before medicine existed.
                 int treatedUntil = layout >= 5 ? reader.ReadInt() : 0;
 
+                // Layout 6: nobody had been flung before the butcher.
+                int immuneUntil = layout >= 6 ? reader.ReadInt() : 0;
+
                 Pawn? pawn = _pawns.Get(new Contracts.PawnId(id));
                 if (pawn == null) continue;
 
@@ -178,6 +185,7 @@ namespace Odyssey.Sim.Saving
                 pawn.PendingDamageMilli = pendingDamage;
                 pawn.PendingStunTicks = pendingStun;
                 pawn.TreatedUntilTick = treatedUntil;
+                pawn.KnockbackImmuneUntilTick = immuneUntil;
 
                 // A step an order interrupted, rebuilt as the one-step path it was (design 33
                 // §2d). The pawn section has already restored the progress into it, and
