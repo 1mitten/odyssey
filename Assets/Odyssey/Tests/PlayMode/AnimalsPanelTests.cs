@@ -43,6 +43,12 @@ namespace Odyssey.Tests.PlayMode
                 // make the count strip say more than one of a kind whatever the seed gave.
                 var colony = boot.Colony!;
                 var world = boot.World!;
+                // The meadow now seeds a board's worth (48 on Standard, plan §2), more than a page;
+                // this test is about one page, so the seeded wildlife goes first and the three
+                // below are the whole of it. Paging is the roster's own test.
+                var registry = colony.Pawns.Pawns;
+                for (int i = registry.All.Count - 1; i >= 0; i--)
+                    if (!registry.All[i].IsPerson) registry.Despawn(registry.All[i]);
                 var at = new CellRef(colony.Start.X, colony.Start.Z, colony.Start.Y);
                 world.Intents.Submit(new Intent(IntentKind.SpawnPawn, at, PawnKindIndex.MiddenHog));
                 world.Intents.Submit(new Intent(IntentKind.SpawnPawn, at, PawnKindIndex.MiddenHog));

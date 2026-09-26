@@ -3802,6 +3802,15 @@
     color: rgba(255, 255, 255, 0.6);
 }
 
+/* A behaviour not yet in the game (forest animals plan Â§1a): the whole row recedes. */
+.almanac-spec-row--notyet .almanac-spec-val {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.almanac-spec-row--notyet .almanac-spec-detail {
+    color: rgba(255, 255, 255, 0.35);
+}
+
 .almanac-eff-row {
     padding: 8px 0;
     border-bottom-width: 1px;

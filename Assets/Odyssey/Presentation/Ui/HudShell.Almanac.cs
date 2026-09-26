@@ -546,6 +546,10 @@ namespace Odyssey.Presentation.Ui
                 {
                     var sRow = new VisualElement();
                     sRow.AddToClassList("almanac-spec-row");
+                    // A behaviour the build does not do yet is dimmed whole (plan Â§1a), so the
+                    // Almanac never reads as claiming it; the marker is the registry's one label.
+                    if (sDetail == Registry.Label(AnimalBehaviour.NotYetKey))
+                        sRow.AddToClassList("almanac-spec-row--notyet");
 
                     Label sHdr = HudText.Make(sTitle, HudTextRole.Meta, ussClass: "almanac-spec-hdr");
                     Label sText = HudText.Make(sVal, HudTextRole.Body, ussClass: "almanac-spec-val");
