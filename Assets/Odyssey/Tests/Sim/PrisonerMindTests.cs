@@ -100,6 +100,32 @@ namespace Odyssey.Tests.Sim
             }
         }
 
+        /// <summary>
+        /// <b>Marking an unowned bed wakes the colonist asleep in it</b> (review 2026-09-26). The
+        /// wake sweep was raised only when an owner was stripped, and a bed two colonists share
+        /// has none — so she slept on in a prison bed.
+        /// </summary>
+        [Test]
+        public void MarkingAnUnownedBedWakesTheColonistInIt()
+        {
+            ColonyWorld colony = Board(colonists: 2, beds: 0);
+            Cell cell = BuildCell(colony);
+            Assume.That(Send(colony, new Intent(IntentKind.SetBedPurpose, Size.FromIndex(cell.Bed), (int)BedPurpose.Colony)),
+                Is.EqualTo(IntentRejection.None));
+            Pawn sleeper = colony.Pawns.Pawns.All[0];
+            Stand(colony, sleeper, cell.Centre);
+            sleeper.Needs[NeedIndex.Rest] = colony.Pawns.Content.Needs[NeedIndex.Rest].seekThreshold - 10;
+            for (int t = 0; t < 2_000 && !(sleeper.Asleep && sleeper.Cell == cell.Bed); t++) colony.World.Tick();
+            Assume.That(sleeper.Asleep && sleeper.Cell == cell.Bed, Is.True, "the control: asleep in the bed");
+            Assume.That(colony.Construction.BedOwnerAt(cell.Bed), Is.Zero, "two colonists, one bed: nobody claims it");
+
+            Assume.That(Send(colony, new Intent(IntentKind.SetBedPurpose, Size.FromIndex(cell.Bed), Prison)),
+                Is.EqualTo(IntentRejection.None));
+            colony.World.Tick();
+            Assert.That(sleeper.CurrentJob?.DefIndex == JobIndex.Sleep && sleeper.CurrentJob.TargetCell == cell.Bed, Is.False,
+                "woken out of a prison bed");
+        }
+
         // ---- body and mood ------------------------------------------------------------------
 
         [Test]

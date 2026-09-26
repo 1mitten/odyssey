@@ -300,6 +300,10 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         void ResumeSleep(Pawn pawn, int tick)
         {
+            // The chooser below is a colonist's (review 2026-09-26): it falls back to the fireside.
+            // Anybody else — a prisoner woken in a bed that stopped being hers — is between jobs,
+            // and her own tree picks her bed from her own room this same tick.
+            if (!pawn.IsColonist) return;
             var job = pawn.JobBuffer;
             job.Reset(JobIndex.Wait);
             if (CriticalNeedsThinkNode.TrySleep(pawn, _ctx, job)) StartJob(pawn, job, tick);

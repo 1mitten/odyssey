@@ -13,14 +13,15 @@ namespace Odyssey.Sim.Pawns
     public static class BedRules
     {
         /// <summary>
-        /// The pool this pawn sleeps from. A colonist sleeps in colony beds and a held prisoner in
-        /// prison beds; everybody else (an animal, a bandit at large, an escapee, a pawn walking
-        /// off the board) in none. The interface's answer is <see cref="BedRule.UserOf"/>, and the
+        /// The pool this pawn sleeps from. A colonist sleeps in colony beds and a prisoner in prison
+        /// beds — an escapee too, so the bed she owns survives a sweep while she is out and is the
+        /// one she is carried back to (review 2026-09-26); everybody else (an animal, a bandit at
+        /// large, a pawn walking off the board) in none. The interface's answer is <see cref="BedRule.UserOf"/>, and the
         /// two are held to agree.
         /// </summary>
         public static BedUser UserOf(Pawn pawn) =>
             pawn.IsColonist ? BedUser.Colonist
-            : pawn.Custody == PawnCustody.Prisoner ? BedUser.Prisoner
+            : pawn.Custody == PawnCustody.Prisoner || pawn.Custody == PawnCustody.Escaping ? BedUser.Prisoner
             : BedUser.None;
 
         /// <summary>What the bed at this cell is for; a colony bed where there is no construction grid.</summary>

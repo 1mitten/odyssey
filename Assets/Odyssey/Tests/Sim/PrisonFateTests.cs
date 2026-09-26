@@ -92,6 +92,29 @@ namespace Odyssey.Tests.Sim
             return (colony, cell);
         }
 
+        /// <summary>
+        /// <b>A surrender ends the fight with her</b> (review 2026-09-26). The attack drivers ended
+        /// only on a death or a down, so a colonist ordered to attack went on striking a raider who
+        /// had given up and was walking to her cell.
+        /// </summary>
+        [Test]
+        public void ASurrenderEndsTheAttackOnHer()
+        {
+            var (colony, _) = WithACell();
+            Pawn colonist = Colonist(colony);
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 2, 0));
+            Assume.That(Draft(colony, colonist), Is.EqualTo(IntentRejection.None));
+            Assume.That(Attack(colony, colonist, bandit), Is.EqualTo(IntentRejection.None));
+            Assume.That(colonist.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.AttackMelee), "the control: attacking");
+
+            Surrender.Yield(bandit, colony.Pawns, colony.World.CurrentTick);
+            int hp = bandit.HpMilli;
+            // A few ticks: a step the order interrupted is landed before the driver is asked.
+            for (int t = 0; t < 60 && colonist.CurrentJob?.DefIndex == JobIndex.AttackMelee; t++) colony.World.Tick();
+            Assert.That(colonist.CurrentJob?.DefIndex, Is.Not.EqualTo(JobIndex.AttackMelee));
+            Assert.That(bandit.HpMilli, Is.EqualTo(hp), "and nobody struck her once she had given up");
+        }
+
         [Test]
         public void TheBlowThatCrossesThreeTenthsIsTheOnlyOneThatAsks()
         {

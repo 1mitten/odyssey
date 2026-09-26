@@ -163,6 +163,21 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>A bed has come down: whatever it was marked, it is not any more.</summary>
+        /// <summary>
+        /// A bed has just been raised (review 2026-09-26). If it stands in a cell it is a prison bed
+        /// by derivation, and that is written down now: otherwise it would turn back into a colony
+        /// bed the moment its cell was opened — a door broken, a wall down, the first bed taken
+        /// away — while the bed that was marked became a shackle bed as it should.
+        /// </summary>
+        public void Raised(int cell)
+        {
+            int head = BedHeadAt(cell);
+            if (head < 0 || _marked.Count == 0 || _marked.BinarySearch(head) >= 0) return;
+            if (PurposeAt(head) != BedPurpose.Prison) return;
+            Add(head);
+            Version++;
+        }
+
         public void Forget(int head)
         {
             if (Remove(head)) Version++;

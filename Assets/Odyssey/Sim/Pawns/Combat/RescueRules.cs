@@ -53,17 +53,22 @@ namespace Odyssey.Sim.Pawns
         /// her; never somebody else's (owner, §1). <i>Free</i> is a bed whose head cell the claimant
         /// could reserve and nobody lies on — a patient already in one holds its reservation (§11c)
         /// — and that she could be carried to. A walk over the beds, asked once per order or scan.
+        ///
+        /// <para><paramref name="asUser"/> asks from a pool other than her own: the capture asks as a
+        /// prisoner for a raider who is not one until she is laid down (design 58 §7). One chooser
+        /// for both carries, so a fix to either is a fix to both (review 2026-09-26).</para>
         /// </summary>
-        public static int BedFor(Pawn patient, Pawn claimant, PawnContext ctx)
+        public static int BedFor(Pawn patient, Pawn claimant, PawnContext ctx, BedUser? asUser = null)
         {
             var beds = ctx.Items.Beds;
             int best = -1, bestDistance = int.MaxValue;
             int me = patient.Id.Value;
+            BedUser user = asUser ?? BedRules.UserOf(patient);
             for (int i = 0; i < beds.Count; i++)
             {
                 int cell = beds[i];
-                if (!BedRules.CanUse(patient, cell, ctx)) continue;
                 int owner = BedRules.OwnerAt(ctx, cell);
+                if (!BedRule.MayUse(user, me, BedRules.PurposeAt(ctx, cell), owner)) continue;
                 if (!ctx.Reservations.CanReserve(claimant.Id, BedKey(cell))) continue;
                 if (SomebodyLiesIn(ctx, cell, patient)) continue;
                 if (!ctx.CanTravel(patient, cell, Mode)) continue;

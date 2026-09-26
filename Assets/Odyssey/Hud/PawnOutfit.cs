@@ -39,9 +39,21 @@ namespace Odyssey.Hud
         /// A published pawn: custody first (design 58 §11d) — a prisoner dressed for her cell wears
         /// the jumpsuit, escaping or not — then the flags' rule. A recruit is not hostile, so she
         /// wears the colony's suit without a rule of her own.
+        ///
+        /// <para><b>Held but not yet dressed, she wears what she came in</b> (review 2026-09-26):
+        /// a raider's gang clothes, a colonist's issued suit. The flags cannot say which — custody
+        /// clears a raider's Hostile flag, and sets it on a colonist resisting arrest — so her kind
+        /// does. A surrendered raider walking to her cell never looks like one of ours.</para>
         /// </summary>
-        public static PawnOutfit For(in PawnView pawn) =>
-            pawn.Dressed && pawn.Custody != PawnCustody.Free ? PawnOutfit.Prisoner : For(pawn.Flags);
+        public static PawnOutfit For(in PawnView pawn)
+        {
+            if (pawn.Custody == PawnCustody.Free) return For(pawn.Flags);
+            if (pawn.Dressed) return PawnOutfit.Prisoner;
+            return IsRaiderKind(pawn.Kind) ? PawnOutfit.Bandit : PawnOutfit.Issued;
+        }
+
+        /// <summary>A kind that arrives dressed as the gang: the bandit and the gunman (design 42, 55).</summary>
+        static bool IsRaiderKind(int kind) => kind == PawnKindLabels.Bandit || kind == PawnKindLabels.Gunman;
 
         public static PawnOutfit For(in CorpseView corpse) => For(corpse.Flags);
 

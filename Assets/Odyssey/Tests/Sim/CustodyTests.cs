@@ -110,7 +110,8 @@ namespace Odyssey.Tests.Sim
             Assert.That(colonist.IsHostile, Is.True, "an arrested colonist breaking out is fought");
             Assert.That(colonist.IsPrisoner, Is.True);
             Assert.That(colonist.IsColonist, Is.False);
-            Assert.That(BedRules.UserOf(colonist), Is.EqualTo(BedUser.None), "and sleeps in no bed while she runs");
+            Assert.That(BedRules.UserOf(colonist), Is.EqualTo(BedUser.Prisoner),
+                "and keeps the prison bed she will be carried back to (review 2026-09-26)");
         }
 
         [Test]
@@ -276,6 +277,36 @@ namespace Odyssey.Tests.Sim
             Assert.That(back.Prison.LastChatTick, Is.EqualTo(77));
             Assert.That(back.Prison.Dressed, Is.True);
             Assert.That(fresh.Pawns.Pawns.Get(colonist.Id)!.Prison!.Arrested, Is.True);
+        }
+
+        /// <summary>
+        /// <b>A prisoner freshly taken survives a save to the same hash</b> (review 2026-09-26). Her
+        /// record is empty — Hold, undressed, nobody has talked to her — and the load drops an empty
+        /// record, so the hash must never have seen it; and the pane still says her mode after the
+        /// load, since it asks her custody and not whether a record exists.
+        /// </summary>
+        [Test]
+        public void AFreshlyTakenPrisonerSurvivesASaveToTheSameHash()
+        {
+            ColonyWorld colony = Colony();
+            Pawn bandit = Bandit(colony);
+            Assume.That(Imprison(colony, bandit), Is.EqualTo(IntentRejection.None));
+            Assume.That(bandit.Prison, Is.Not.Null, "the control: taking her left a record");
+            Assume.That(bandit.Prison!.IsEmpty, Is.True);
+
+            colony.RebuildDerived();
+            ulong before = colony.World.ComputeStateHash().Value;
+            using var stream = new MemoryStream();
+            WorldSave.Save(colony.World, stream, colony.SaveComponents);
+            stream.Position = 0;
+            ColonyWorld fresh = Colony();
+            WorldSave.Load(fresh.World, stream, fresh.SaveComponents);
+            fresh.RebuildDerived();
+
+            Assert.That(fresh.World.ComputeStateHash().Value, Is.EqualTo(before));
+            fresh.World.Tick();
+            Assert.That(fresh.World.Views.Current.TryGetPawnAspect(bandit.Id, PrisonAspects.Mode, out _), Is.True,
+                "and her pane still has a mode to show");
         }
 
         [Test]

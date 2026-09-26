@@ -69,6 +69,24 @@ namespace Odyssey.Tests.Sim
             Assert.That(bandit.IsHostile, Is.False);
         }
 
+        /// <summary>
+        /// <b>Taken is disarmed</b> (design 58 §7; review 2026-09-26). A downed raider keeps her
+        /// weapon by design, so a capture that did not take it would give a prisoner a machete to
+        /// break out with.
+        /// </summary>
+        [Test]
+        public void ACapturedRaiderIsDisarmed()
+        {
+            ColonyWorld colony = Colony();
+            PrisonBed(colony, -6);
+            Pawn bandit = DownedBandit(colony, 4);
+            Assume.That(bandit.EquippedItem, Is.Not.Zero, "the control: she went down armed");
+            Assume.That(Send(colony, new Intent(IntentKind.SetCaptureMark, default, bandit.Id.Value, 1)),
+                Is.EqualTo(IntentRejection.None));
+            TickUntil(colony, () => bandit.Custody == PawnCustody.Prisoner, 4_000);
+            Assert.That(bandit.EquippedItem, Is.Zero);
+        }
+
         [Test]
         public void AnUnmarkedDownedRaiderIsLeftWhereSheLies()
         {

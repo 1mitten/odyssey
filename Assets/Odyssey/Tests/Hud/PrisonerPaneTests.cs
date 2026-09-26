@@ -134,6 +134,24 @@ namespace Odyssey.Tests.Hud
             Assert.That(held.Commands.Any(c => c.IconKey == InspectModel.ArrestKey), Is.False);
         }
 
+        /// <summary>
+        /// A pawn let go is not ours (review 2026-09-26): the view calls her neither hostile nor a
+        /// prisoner, and she used to fall through to a colonist's pane with its commands, every one
+        /// of which the simulation refuses.
+        /// </summary>
+        [Test]
+        public void APawnLetGoGetsTheBarePaneAndSaysSo()
+        {
+            WorldSnapshot frame = Frame.Write(layers: 4);
+            frame.AddPawn(new PawnView(Held, new CellRef(9, 9, 1), 800, 800, 700, kind: 3,
+                flags: PawnFlags.Person, custody: PawnCustody.Released, dressed: true));
+            InspectModel pane = Pane(frame);
+            Assert.That(pane.ShowsColonistBody, Is.False);
+            Assert.That(pane.ShowsTabBox, Is.False);
+            Assert.That(pane.Commands, Is.Empty);
+            Assert.That(pane.CellRows.Select(r => r.Name), Is.EqualTo(new[] { InspectModel.LeavingRow }));
+        }
+
         [TestCase(0, "any moment")]
         [TestCase(1, "1 hour")]
         [TestCase(6, "6 hours")]

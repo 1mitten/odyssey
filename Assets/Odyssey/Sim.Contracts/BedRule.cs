@@ -55,12 +55,13 @@ namespace Odyssey.Sim.Contracts
         public static bool MayOwn(BedUser user, BedPurpose purpose) => Fits(user, purpose);
 
         /// <summary>
-        /// The pool a published pawn sleeps from, as the interface sees it: a colonist's, a held
-        /// prisoner's, or none — an animal, a bandit at large, an escapee, a pawn let go.
+        /// The pool a published pawn sleeps from, as the interface sees it: a colonist's, a
+        /// prisoner's — held or breaking out, so an escapee keeps the bed she will be carried back
+        /// to — or none: an animal, a bandit at large, a pawn let go.
         /// </summary>
         public static BedUser UserOf(in PawnView view) =>
             view.IsColonist ? BedUser.Colonist
-            : view.Custody == PawnCustody.Prisoner ? BedUser.Prisoner
+            : view.Custody == PawnCustody.Prisoner || view.Custody == PawnCustody.Escaping ? BedUser.Prisoner
             : BedUser.None;
     }
 }

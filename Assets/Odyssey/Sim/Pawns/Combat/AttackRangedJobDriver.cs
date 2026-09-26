@@ -92,6 +92,9 @@ namespace Odyssey.Sim.Pawns
             Pawn? target = ctx.Pawns.Get(new PawnId(Pawn.CombatTarget));
             if (target == null || Melee.IsDead(target)) return JobStatus.Succeeded;
             if (target.Downed && Job.DestCell != AttackMeleeJobDriver.ToTheDeath) return JobStatus.Succeeded;
+            // Taken — she surrendered under the last blow (design 58 §10): the fight with her is
+            // over, as it is when she goes down.
+            if (target.Custody == PawnCustody.Prisoner && Job.DestCell != AttackMeleeJobDriver.ToTheDeath) return JobStatus.Succeeded;
 
             // Her gun is what makes this job hers: without one (dropped, taken, never held) it is over.
             RangedDef? ranged = ctx.WeaponRules.ArmamentOf(Pawn, ctx).Attack.ranged;

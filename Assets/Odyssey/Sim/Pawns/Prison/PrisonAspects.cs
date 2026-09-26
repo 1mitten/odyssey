@@ -50,18 +50,20 @@ namespace Odyssey.Sim.Pawns
         public static void Publish(SnapshotWriter writer, Pawn pawn, PawnContext ctx)
         {
             if (pawn.Prison != null && pawn.Prison.CaptureMark) writer.AddPawnAspect(pawn.Id, CaptureMark, 1);
-            if (pawn.Custody == PawnCustody.Prisoner && pawn.Prison != null)
+            if (pawn.Custody == PawnCustody.Prisoner)
             {
                 // The prisoner's pane (design 58 §11b), every number from the owner that runs it.
-                PrisonRecord record = pawn.Prison;
-                writer.AddPawnAspect(pawn.Id, Mode, (int)record.Mode);
-                writer.AddPawnAspect(pawn.Id, Willing, record.Willingness / 1_000);
+                // Asked of custody, never of the record: a freshly taken prisoner's record is empty,
+                // and a load drops an empty one.
+                PrisonMode mode = pawn.Prison?.Mode ?? PrisonMode.Hold;
+                writer.AddPawnAspect(pawn.Id, Mode, (int)mode);
+                writer.AddPawnAspect(pawn.Id, Willing, (pawn.Prison?.Willingness ?? 0) / 1_000);
                 if (PrisonerTrees.IsShackled(pawn, ctx)) writer.AddPawnAspect(pawn.Id, Shackled, 1);
                 // The risk the hourly roll uses, from the same call (design 58 §9b).
                 EscapeOdds odds = EscapeRisk.Odds(pawn, ctx);
                 writer.AddPawnAspect(pawn.Id, Escape, odds.PerDayPpm);
                 writer.AddPawnAspect(pawn.Id, EscapeWhy, (int)odds.Reasons);
-                if (record.Mode == PrisonMode.Recruit)
+                if (mode == PrisonMode.Recruit)
                 {
                     writer.AddPawnAspect(pawn.Id, Hours, Recruitment.HoursToJoin(pawn, ctx));
                     writer.AddPawnAspect(pawn.Id, Blockers,

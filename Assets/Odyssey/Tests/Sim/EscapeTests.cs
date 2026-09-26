@@ -122,6 +122,43 @@ namespace Odyssey.Tests.Sim
             Assert.That(open.PerDayPpm, Is.EqualTo(shut * 2));
         }
 
+        /// <summary>
+        /// <b>A bed raised in a cell stays a prison bed when the cell opens</b> (review 2026-09-26).
+        /// It was a prison bed only by derivation, so a broken door turned it back into a colony
+        /// bed — its prisoner stripped of it and a colonist free to claim it — while the bed that
+        /// had been marked became a shackle bed as it should.
+        /// </summary>
+        [Test]
+        public void ABedBuiltInACellStaysAPrisonBedWhenTheDoorGoes()
+        {
+            var (colony, cell, _) = Held();
+            CellRef head = Size.FromIndex(cell.Bed);
+            int second = Size.Index(head.X + 1, head.Z, head.Y);
+            RaiseAt(colony, second, BuildingHandle.Bed);
+            colony.World.Tick();
+            Assume.That(colony.Construction.BedPurposeAt(second), Is.EqualTo(BedPurpose.Prison), "the control: in a cell");
+
+            Assume.That(colony.Construction.Demolish(colony.Pawns, cell.Door, out _), Is.True);
+            colony.World.Tick();
+            Assert.That(colony.Construction.BedPurposeAt(second), Is.EqualTo(BedPurpose.Prison));
+            Assert.That(colony.Construction.Purposes!.IsShackled(second), Is.True, "a shackle bed, like its neighbour");
+        }
+
+        /// <summary>
+        /// <b>An escapee keeps her bed while she is out</b> (review 2026-09-26): the owner sweep
+        /// runs whenever the rooms change — and breaking her door changes them — and it used to
+        /// read an escapee as sleeping from no pool, and strip her.
+        /// </summary>
+        [Test]
+        public void AnEscapeeKeepsHerBedWhenTheRoomsChange()
+        {
+            var (colony, cell, prisoner) = Held();
+            Assume.That(Send(colony, new Intent(IntentKind.DebugImprison, default, prisoner.Id.Value, 2)), Is.EqualTo(IntentRejection.None));
+            Assume.That(colony.Construction.Demolish(colony.Pawns, cell.Door, out _), Is.True);
+            colony.World.Tick();
+            Assert.That(colony.Construction.BedOwnerAt(cell.Bed), Is.EqualTo(prisoner.Id.Value));
+        }
+
         [Test]
         public void TheDownedAndTheCarriedNeverRoll()
         {

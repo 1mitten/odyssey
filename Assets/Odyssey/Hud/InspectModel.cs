@@ -218,6 +218,9 @@ namespace Odyssey.Hud
         /// <summary>The one row an escapee's pane carries while she is out.</summary>
         public const string EscapingRow = "escaping";
 
+        /// <summary>The one row a released or exiled pawn's pane carries as she walks away.</summary>
+        public const string LeavingRow = "leaving";
+
         /// <summary>What the colony means to do with the prisoner on the pane; what a press on its mode row moves on from.</summary>
         public PrisonMode PrisonerMode { get; private set; }
 
@@ -725,7 +728,10 @@ namespace Odyssey.Hud
                 {
                     IsAnimal = PawnKindLabels.IsAnimal(pawn);
                     IsHostile = pawn.IsHostile;
-                    IsPrisoner = pawn.IsPrisoner;
+                    // Held, breaking out or let go (review 2026-09-26): none of them is ours to
+                    // command, so none gets a colonist's pane — a Released pawn is neither hostile
+                    // nor a prisoner by the view's words, and fell through to the full shape.
+                    IsPrisoner = pawn.Custody != PawnCustody.Free;
                     _shapeFor = Pawn;
                 }
                 else if (_shapeFor != Pawn)
@@ -779,7 +785,7 @@ namespace Odyssey.Hud
                         Subtitle = IsPrisoner ? Registry.Label(PrisonerKey) : HostileKindWord(pawn.Kind);
                         SetJob(snapshot, pawn);
                         JobIconKey = JobLabels.IconKey(pawn.JobDef);
-                        if (IsPrisoner) SetPrisonerRows(snapshot, pawn.Id, pawn.Custody == PawnCustody.Escaping);
+                        if (IsPrisoner) SetPrisonerRows(snapshot, pawn.Id, pawn.Custody);
                     }
                     SetPosition(pawn.Cell);
                     Layer = pawn.Cell.Y;
@@ -1708,8 +1714,18 @@ namespace Odyssey.Hud
         /// Every number is a published aspect the simulation's own arithmetic wrote, so the pane
         /// cannot say one thing while the chat does another. Rewritten only when a number moves.
         /// </summary>
-        void SetPrisonerRows(WorldSnapshot snapshot, PawnId id, bool escaping)
+        void SetPrisonerRows(WorldSnapshot snapshot, PawnId id, PawnCustody custody)
         {
+            bool escaping = custody == PawnCustody.Escaping;
+            if (custody == PawnCustody.Released)
+            {
+                // Let go and walking off the board (design 58 §10): nothing to set.
+                _cellRowsFor = -1;
+                _prisonRowsFor = default;
+                Row(0, LeavingRow, "let go");
+                while (CellRows.Count > 1) CellRows.RemoveAt(CellRows.Count - 1);
+                return;
+            }
             PrisonMode mode = snapshot.TryGetPawnAspect(id, PrisonAspectNames.ModeKey, out int m) ? (PrisonMode)m : PrisonMode.Hold;
             int willing = snapshot.TryGetPawnAspect(id, PrisonAspectNames.WillingKey, out int w) ? w : 0;
             int hours = snapshot.TryGetPawnAspect(id, PrisonAspectNames.HoursKey, out int h) ? h : -1;

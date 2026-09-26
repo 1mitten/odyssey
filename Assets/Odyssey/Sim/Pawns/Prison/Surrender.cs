@@ -53,10 +53,9 @@ namespace Odyssey.Sim.Pawns
             return true;
         }
 
-        /// <summary>She gives up: weapon down, taken, a bed given, and the colony told.</summary>
+        /// <summary>She gives up: taken (which puts her weapon down), a bed given, and the colony told.</summary>
         public static void Yield(Pawn target, PawnContext ctx, int tick)
         {
-            WeaponHand.PutDown(target, ctx, target.Cell);
             if (ctx.Combat == null || !ctx.Combat.Jobs.TakeIntoCustody(target)) return;
             int bed = CaptureRules.BedFor(target, target, ctx);
             if (bed >= 0) ctx.Construction?.AssignOwnerAt(bed, target.Id.Value);

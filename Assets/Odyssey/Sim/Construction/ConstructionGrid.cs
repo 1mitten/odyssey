@@ -1124,7 +1124,12 @@ namespace Odyssey.Sim.Construction
             else RaiseEdifice(cell, def, stuff, second, facing, quality);
 
             if (def.edifice == CoreContent.EdificeDoor) ctx.Nav.SetDoor(cell, isDoor: true, open: false);
-            if (def.edifice == CoreContent.EdificeBed) _items.AddBed(cell);
+            if (def.edifice == CoreContent.EdificeBed)
+            {
+                _items.AddBed(cell);
+                // Raised inside a cell: a prison bed, and marked so it stays one (design 58 §5b).
+                Purposes?.Raised(cell);
+            }
             // Cover that is crossed but never stood on (design 53 §5): the crossing's price.
             if (def.passThrough) ctx.Nav.SetPassThrough(cell, def.crossCost);
 
@@ -1969,8 +1974,11 @@ namespace Odyssey.Sim.Construction
                     continue;
                 bed.Owner = 0;
                 _edifices[i] = bed;
-                BedOwnershipChanged = true;
             }
+            // **Raised whenever the purposes moved, not only when an owner was stripped** (review
+            // 2026-09-26): an *unowned* bed that turned into a prison bed has a colonist asleep in
+            // it and nobody to strip, and the job system's wake sweep reads only this flag.
+            BedOwnershipChanged = true;
             // Asking may have solved the rooms; the key is what they are now.
             _sweptPurposes = Purposes.StateKey;
         }

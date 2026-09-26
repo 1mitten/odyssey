@@ -16,15 +16,8 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class CaptureJobDriver : RescueJobDriver
     {
-        /// <summary>Still a prison bed, still hers or nobody's, and still claimed by the carrier.</summary>
-        protected override bool StillFree(PawnContext ctx, Pawn patient)
-        {
-            int bed = Job.DestCell;
-            if (!RescueRules.IsBed(ctx, bed)) return false;
-            if (!BedRule.MayUse(BedUser.Prisoner, patient.Id.Value, BedRules.PurposeAt(ctx, bed), BedRules.OwnerAt(ctx, bed)))
-                return false;
-            return ctx.Reservations.IsReservedBy(Pawn.Id, RescueRules.BedKey(bed));
-        }
+        /// <summary>Judged as a prisoner: she is not one until she is laid down, and the bed is for one.</summary>
+        protected override BedUser UserFor(Pawn patient) => BedUser.Prisoner;
 
         /// <summary>Laid in the bed, then taken: custody, the bed hers, the jumpsuit on.</summary>
         protected override void Lay(PawnContext ctx, Pawn patient)

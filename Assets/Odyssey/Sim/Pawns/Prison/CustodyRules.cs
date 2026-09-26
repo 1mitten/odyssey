@@ -8,6 +8,7 @@ namespace Odyssey.Sim.Pawns
     /// capture, surrender, arrest and the debug menu's row — ends here, so they cannot disagree:
     /// <list type="bullet">
     /// <item>a draft ends — a prisoner is nobody's to command;</item>
+    /// <item>her weapon is put down where she is;</item>
     /// <item>a colonist taken is remembered as arrested, and her colony bed goes back to the pool;</item>
     /// <item>a capture mark is spent;</item>
     /// <item>custody is <see cref="PawnCustody.Prisoner"/>.</item>
@@ -31,6 +32,10 @@ namespace Odyssey.Sim.Pawns
             if (!CanTake(pawn)) return false;
             bool wasColonist = pawn.IsColonist;
             pawn.Drafted = false;
+            // Disarmed, whichever way she came in (design 58 §7; review 2026-09-26): a downed raider
+            // keeps her weapon by design, and a prisoner still holding it would draw it the hour she
+            // broke out.
+            WeaponHand.PutDown(pawn, ctx, pawn.Cell);
 
             PrisonRecord record = pawn.Prison ??= new PrisonRecord();
             if (wasColonist)

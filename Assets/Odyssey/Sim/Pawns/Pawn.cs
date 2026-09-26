@@ -1201,7 +1201,9 @@ namespace Odyssey.Sim.Pawns
                 | (TreatedUntilTick != 0 ? 1 << 22 : 0) | (health ? 1 << 23 : 0)
                 | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0) | ((int)Area << 27)
                 | ((int)Custody << 28));
-            if (Prison != null) Prison.ContributeTo(ref hash);
+            // An empty record is no record (review 2026-09-26): a load drops one, so hashing it
+            // would part a saved world from its twin on a prisoner freshly taken.
+            if (Prison != null && !Prison.IsEmpty) Prison.ContributeTo(ref hash);
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
             if (JumpLanding >= 0) hash.Add(JumpLanding);
