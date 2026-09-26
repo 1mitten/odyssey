@@ -421,6 +421,9 @@ namespace Odyssey.Tests.Hud
         {
             var snapshot = Frame.Write();
             snapshot.AddPawn(new PawnView(new PawnId(3), new CellRef(4, 5, 1), 620, 710, 72, JobHandle.Eat));
+            // Somebody to make an arrest, and a bed to put her in: Arrest is live only then (design 59 §16 H2).
+            snapshot.AddPawn(new PawnView(new PawnId(4), new CellRef(6, 5, 1), 620, 710, 72, JobHandle.Wait));
+            snapshot.SetPrisonBedFree(true);
 
             var pane = new InspectModel();
             pane.SetColonist(new PawnId(3));

@@ -15,11 +15,12 @@ namespace Odyssey.Tests.Hud
     {
         static readonly PawnId Held = new PawnId(6);
 
-        static WorldSnapshot Board(PrisonMode mode, int willing, int hours = -1, int blockers = 0, bool shackled = false)
+        static WorldSnapshot Board(PrisonMode mode, int willing, int hours = -1, int blockers = 0, bool shackled = false,
+            PawnCustody custody = PawnCustody.Prisoner)
         {
             WorldSnapshot frame = Frame.Write(layers: 4);
             frame.AddPawn(new PawnView(Held, new CellRef(9, 9, 1), 800, 800, 700, kind: 3,
-                flags: PawnFlags.Person, custody: PawnCustody.Prisoner));
+                flags: PawnFlags.Person, custody: custody));
             frame.AddPawnAspect(new PawnAspect(Held, PrisonAspectNames.ModeKey, (int)mode));
             frame.AddPawnAspect(new PawnAspect(Held, PrisonAspectNames.WillingKey, willing));
             if (mode == PrisonMode.Recruit)
@@ -48,6 +49,30 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.CellRows[0].Value, Is.EqualTo(Registry.Label("ui.prisoner.hold")));
             Assert.That(pane.CellRows[1].Value, Is.EqualTo("37%"));
             Assert.That(pane.PrisonerMode, Is.EqualTo(PrisonMode.Hold));
+        }
+
+        /// <summary>
+        /// Design 59 §16 H5. On Hold, with nobody having talked to her, willingness is a 0% that
+        /// cannot move and is not shown; once a warden has made a start it stays on the pane.
+        /// </summary>
+        [Test]
+        public void AHoldPrisonerNobodyHasTalkedToShowsNoWillingness()
+        {
+            InspectModel pane = Pane(Board(PrisonMode.Hold, 0));
+            Assert.That(pane.CellRows.Select(r => r.Name), Is.EqualTo(new[] { InspectModel.PrisonModeRow, InspectModel.EscapeRow }));
+        }
+
+        /// <summary>
+        /// Design 59 §16 H6. A pawn released or exiled and walking off the board is not held: the
+        /// word under her name said Prisoner while the row under it said she was leaving free.
+        /// </summary>
+        [Test]
+        public void APawnLetGoIsNotCalledAPrisoner()
+        {
+            InspectModel pane = Pane(Board(PrisonMode.Release, 0, custody: PawnCustody.Released));
+            Assert.That(pane.Subtitle, Is.EqualTo(Registry.Label(InspectModel.ReleasedKey)));
+            Assert.That(pane.Subtitle, Is.Not.EqualTo(Registry.Label(InspectModel.PrisonerKey)));
+            Assert.That(pane.CellRows.Select(r => r.Name), Is.EqualTo(new[] { InspectModel.LeavingRow }));
         }
 
         [Test]
@@ -83,14 +108,16 @@ namespace Odyssey.Tests.Hud
             Assert.That(model.CellRows[1].Value, Is.EqualTo("12%"));
         }
 
+        /// <summary>
+        /// The four modes are offered to be chosen directly, never cycled through (design 59 §16
+        /// H4): no press passes through Release or Exile on its way somewhere else. Never Ransom.
+        /// </summary>
         [Test]
-        public void TheModeCyclesThroughTheFourAndNeverOffersRansom()
+        public void TheFourModesAreOfferedToChooseAndNeverRansom()
         {
-            PrisonMode mode = PrisonMode.Hold;
-            var seen = new System.Collections.Generic.List<PrisonMode>();
-            for (int i = 0; i < 4; i++) { seen.Add(mode); mode = InspectModel.NextPrisonMode(mode); }
-            Assert.That(seen, Is.EqualTo(new[] { PrisonMode.Hold, PrisonMode.Recruit, PrisonMode.Release, PrisonMode.Exile }));
-            Assert.That(mode, Is.EqualTo(PrisonMode.Hold), "and round again");
+            Assert.That(InspectModel.OfferedModes,
+                Is.EqualTo(new[] { PrisonMode.Hold, PrisonMode.Recruit, PrisonMode.Release, PrisonMode.Exile }));
+            Assert.That(InspectModel.OfferedModes, Has.No.Member(PrisonMode.Ransom));
         }
 
         [Test]
@@ -125,6 +152,8 @@ namespace Odyssey.Tests.Hud
             WorldSnapshot frame = Frame.Write(layers: 4);
             var ada = new PawnId(1);
             frame.AddPawn(new PawnView(ada, new CellRef(4, 4, 1), 800, 800, 700, flags: PawnFlags.Person));
+            frame.AddPawn(new PawnView(new PawnId(2), new CellRef(6, 4, 1), 800, 800, 700, flags: PawnFlags.Person));
+            frame.SetPrisonBedFree(true);
             var model = new InspectModel();
             model.SetColonist(ada);
             model.Refresh(frame);
@@ -132,6 +161,33 @@ namespace Odyssey.Tests.Hud
 
             InspectModel held = Pane(Board(PrisonMode.Hold, 0));
             Assert.That(held.Commands.Any(c => c.IconKey == InspectModel.ArrestKey), Is.False);
+        }
+
+        /// <summary>
+        /// Design 59 §16 H2. Arrest was always live, and the three refusals a player can see coming
+        /// — she is down, no prison bed is free, nobody else can take her — made the press do
+        /// nothing at all. It is dim now, with the reason, from what the simulation publishes.
+        /// </summary>
+        [TestCase("down")]
+        [TestCase("nobed")]
+        [TestCase("alone")]
+        public void ArrestIsDimWithItsReasonWhenItWouldBeRefused(string why)
+        {
+            WorldSnapshot frame = Frame.Write(layers: 4);
+            var ada = new PawnId(1);
+            PawnFlags hers = PawnFlags.Person | (why == "down" ? PawnFlags.Downed : PawnFlags.None);
+            frame.AddPawn(new PawnView(ada, new CellRef(4, 4, 1), 800, 800, 700, flags: hers));
+            if (why != "alone")
+                frame.AddPawn(new PawnView(new PawnId(2), new CellRef(6, 4, 1), 800, 800, 700, flags: PawnFlags.Person));
+            frame.SetPrisonBedFree(why != "nobed");
+
+            var model = new InspectModel();
+            model.SetColonist(ada);
+            model.Refresh(frame);
+            InspectCommand arrest = model.Commands.Single(c => c.IconKey == InspectModel.ArrestKey);
+            Assert.That(arrest.Enabled, Is.False, "live, and the press would do nothing");
+            Assert.That(arrest.Reason, Is.EqualTo(InspectModel.ArrestRefusal(frame, ada)));
+            Assert.That(arrest.Reason, Is.Not.Empty);
         }
 
         /// <summary>

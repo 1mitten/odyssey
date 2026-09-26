@@ -277,5 +277,25 @@ namespace Odyssey.Tests.Sim
             CellRef p = Size.FromIndex(a.Cell), q = Size.FromIndex(b.Cell);
             return p.Y != q.Y ? int.MaxValue : System.Math.Max(System.Math.Abs(p.X - q.X), System.Math.Abs(p.Z - q.Z));
         }
+
+        /// <summary>
+        /// §16 H2, the simulation's half: whether a prison bed stands free is published, so the
+        /// pane's Arrest can be dim with its reason instead of a press that does nothing.
+        /// </summary>
+        [Test]
+        public void WhetherAPrisonBedStandsFreeIsPublished()
+        {
+            ColonyWorld colony = Board();
+            colony.World.Tick();
+            Assert.That(colony.World.Views.Current.PrisonBedFree, Is.False, "no prison bed at all");
+
+            Cell cell = BuildCell(colony);
+            colony.World.Tick();
+            Assert.That(colony.World.Views.Current.PrisonBedFree, Is.True, "one marked and empty");
+
+            HeldIn(colony, cell);
+            colony.World.Tick();
+            Assert.That(colony.World.Views.Current.PrisonBedFree, Is.False, "the only one given away");
+        }
     }
 }

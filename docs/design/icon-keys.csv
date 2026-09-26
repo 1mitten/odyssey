@@ -89,6 +89,7 @@ ui.pawn.colonist,Colonist,ui.pawn,M2,One of ours
 ui.pawn.visitor,Visitor,ui.pawn,M2,"Here peacefully, and watching"
 ui.pawn.hostile,Hostile,ui.pawn,M2,Will attack
 ui.pawn.prisoner,Prisoner,ui.pawn,M2,"Held, and someone must feed them"
+ui.pawn.released,Let go,ui.pawn,PS,"Released or exiled, and walking off the board free"
 ui.prisoner.hold,Hold,ui.prisoner,PS,"Kept in her cell, fed and tended, and nothing more asked of her"
 ui.prisoner.recruit,Recruit,ui.prisoner,PS,"A warden talks to her every six hours until she is willing to join"
 ui.prisoner.release,Release,ui.prisoner,PS,"Walked out of the cell and let go. A colonist under arrest goes back to work"

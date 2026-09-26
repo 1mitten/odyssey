@@ -113,6 +113,57 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// The colonist pane's header with every command it carries (design 59 §16 H1): Draft, the
+        /// response, Arrest and First Person. Design 57 §6 took a fourth labelled button out because
+        /// it "would have run her name under the buttons", and the prisoner line put one back. The
+        /// name line does not wrap, so the question is a width: the longest given name in the pool
+        /// and the word after it, against the room between the portrait and the buttons. Logged
+        /// either way, because the margin is the number a later button has to fit into.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheLongestNameStillClearsTheColonistsButtons()
+        {
+            GameObject root = Build();
+            try
+            {
+                yield return new WaitForSecondsRealtime(0.3f);
+                for (int i = 0; i < 3; i++) yield return null;
+                var boot = root.GetComponentInChildren<OdysseyBootstrap>();
+                var doc = root.GetComponentInChildren<UIDocument>();
+                HudDirectors? directors = boot!.Directors;
+                if (directors == null) { Assert.Ignore("no session, so there is no pane to open"); yield break; }
+                int colonists = Colonists(boot.World!.Views.Current, out Odyssey.Sim.Contracts.PawnId first);
+                Assume.That(colonists, Is.GreaterThan(0));
+
+                directors.ChooseColonist(first, boot.World!.Views.Current);
+                for (int i = 0; i < 6; i++) yield return null;
+
+                VisualElement inspect = doc!.rootVisualElement.Q("inspect");
+                VisualElement titles = inspect.Q(className: "inspect__titles");
+                VisualElement actions = inspect.Q(className: "inspect__actions");
+                var title = inspect.Q<Label>(className: "inspect__title");
+                var meta = inspect.Q<Label>(className: "inspect__meta");
+                Assume.That(titles != null && actions != null && title != null && meta != null, "the header's parts");
+
+                string longest = "";
+                foreach (string name in ColonistNamePool.Names) if (name.Length > longest.Length) longest = name;
+                float nameWidth = title!.MeasureTextSize(longest, 0, VisualElement.MeasureMode.Undefined, 0, VisualElement.MeasureMode.Undefined).x;
+                float metaWidth = meta!.MeasureTextSize(meta.text, 0, VisualElement.MeasureMode.Undefined, 0, VisualElement.MeasureMode.Undefined).x;
+                float needed = nameWidth + meta.resolvedStyle.marginLeft + metaWidth;
+                float room = actions!.worldBound.xMin - titles!.worldBound.xMin;
+                int buttons = actions.childCount;
+                Debug.Log($"[Header] {buttons} controls in the actions ({actions.worldBound.width:0} wide); room for the name line " +
+                          $"{room:0}, the longest name '{longest}' and '{meta.text}' need {needed:0}; margin {room - needed:0}");
+                Assert.That(needed, Is.LessThanOrEqualTo(room),
+                    $"'{longest}' and its word need {needed:0} and the buttons leave {room:0}: the name runs under them");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>
         /// How many colonists the frame holds, and the first of them. Out here because a span's
         /// enumerator is a ref struct, which an iterator method may not hold across a yield.
         /// </summary>

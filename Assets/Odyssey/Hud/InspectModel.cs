@@ -192,9 +192,12 @@ namespace Odyssey.Hud
         /// <summary>A held pawn's word under her name (design 59 §11b).</summary>
         public const string PrisonerKey = "ui.pawn.prisoner";
 
+        /// <summary>The word under the name of a pawn let go and walking off the board (design 59 §16 H6).</summary>
+        public const string ReleasedKey = "ui.pawn.released";
+
         // ---- the prisoner's rows (design 59 §11b) ---------------------------------------------
 
-        /// <summary>The row that says what the colony means to do with her, and cycles it when pressed.</summary>
+        /// <summary>The row that says what the colony means to do with her, and opens the choice of <see cref="OfferedModes"/> when pressed.</summary>
         public const string PrisonModeRow = "mode";
 
         /// <summary>How far talked round, as a percentage.</summary>
@@ -225,15 +228,15 @@ namespace Odyssey.Hud
         public PrisonMode PrisonerMode { get; private set; }
 
         /// <summary>
-        /// The mode a press on the mode row asks for: Hold, Recruit, Release, Exile and round again.
-        /// Ransom is a seam (design 59 §13) and is never offered.
+        /// The modes a press on the mode row offers, in order, each chosen directly (design 59 §16
+        /// H4). It used to cycle Hold, Recruit, Release, Exile, so going back from Recruit to Hold
+        /// passed through Release and Exile while the game ran — and a warden could be sent on
+        /// either in between, which for an arrested colonist sent into exile is for good. Ransom is
+        /// a seam (design 59 §13) and is never offered.
         /// </summary>
-        public static PrisonMode NextPrisonMode(PrisonMode mode) => mode switch
+        public static readonly PrisonMode[] OfferedModes =
         {
-            PrisonMode.Hold => PrisonMode.Recruit,
-            PrisonMode.Recruit => PrisonMode.Release,
-            PrisonMode.Release => PrisonMode.Exile,
-            _ => PrisonMode.Hold,
+            PrisonMode.Hold, PrisonMode.Recruit, PrisonMode.Release, PrisonMode.Exile,
         };
 
         /// <summary>The registry key that names a mode.</summary>
@@ -782,7 +785,10 @@ namespace Odyssey.Hud
                     {
                         // A bandit's job is a person's job — fighting, mostly — in a person's words,
                         // under the kind's word where the name would otherwise leave you guessing.
-                        Subtitle = IsPrisoner ? Registry.Label(PrisonerKey) : HostileKindWord(pawn.Kind);
+                        // Let go, she is not held (design 59 §16 H6): the word said Prisoner while the
+                        // row under it said she was leaving free.
+                        Subtitle = pawn.Custody == PawnCustody.Released ? Registry.Label(ReleasedKey)
+                            : IsPrisoner ? Registry.Label(PrisonerKey) : HostileKindWord(pawn.Kind);
                         SetJob(snapshot, pawn);
                         JobIconKey = JobLabels.IconKey(pawn.JobDef);
                         if (IsPrisoner) SetPrisonerRows(snapshot, pawn.Id, pawn.Custody);
@@ -815,7 +821,8 @@ namespace Odyssey.Hud
                 }
 
                 AddColonistTabs();
-                AddColonistCommands(!Tombstoned && OrderModel.IsDrafted(snapshot, Pawn), ResponseModel.Of(snapshot, Pawn));
+                AddColonistCommands(!Tombstoned && OrderModel.IsDrafted(snapshot, Pawn), ResponseModel.Of(snapshot, Pawn),
+                    Tombstoned ? null : ArrestRefusal(snapshot, Pawn));
                 RefreshSkills(snapshot);
                 return;
             }
@@ -1722,7 +1729,7 @@ namespace Odyssey.Hud
                 // Let go and walking off the board (design 59 §10): nothing to set.
                 _cellRowsFor = -1;
                 _prisonRowsFor = default;
-                Row(0, LeavingRow, "let go");
+                Row(0, LeavingRow, "walking off the board");
                 while (CellRows.Count > 1) CellRows.RemoveAt(CellRows.Count - 1);
                 return;
             }
@@ -1761,7 +1768,10 @@ namespace Odyssey.Hud
                 return;
             }
             Row(n++, PrisonModeRow, Registry.Label(PrisonModeKey(mode)));
-            Row(n++, WillingRow, (willing / 10) + "%");
+            // In Recruit mode, or once a warden has made a start (design 59 §16 H5): a Hold
+            // prisoner nobody has talked to showed a 0% that could never move. A change of mode
+            // keeps her willingness, so one put back on Hold still shows what was won.
+            if (mode == PrisonMode.Recruit || willing > 0) Row(n++, WillingRow, (willing / 10) + "%");
             if (mode == PrisonMode.Recruit)
             {
                 Row(n++, JoinsInRow, hours < 0 ? "nobody to talk to her" : Hours(hours));
@@ -1969,7 +1979,23 @@ namespace Odyssey.Hud
         /// </summary>
         public int Response { get; private set; }
 
-        void AddColonistCommands(bool drafted, int response)
+        /// <summary>
+        /// Why an arrest of <paramref name="target"/> would be refused, in the pane's words, or null
+        /// when it would be sent (design 59 §16 H2). Read off what the simulation publishes — her
+        /// state, the colony's, whether a prison bed stands free — the three refusals a player can
+        /// see coming. The simulation still decides; this only stops the press doing nothing.
+        /// </summary>
+        public static string? ArrestRefusal(WorldSnapshot snapshot, PawnId target)
+        {
+            if (!snapshot.TryGetPawn(target, out PawnView her) || her.IsDowned) return "she is down; she can only be captured";
+            if (!snapshot.PrisonBedFree) return "no free prison bed";
+            var pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+                if (pawns[i].Id != target && pawns[i].IsColonist && !pawns[i].IsDowned) return null;
+            return "nobody else is on their feet to take her";
+        }
+
+        void AddColonistCommands(bool drafted, int response, string? arrestRefusal = null)
         {
             Drafted = drafted;
             Response = response;
@@ -2008,8 +2034,8 @@ namespace Odyssey.Hud
             Commands.Add(new InspectCommand
             {
                 IconKey = ArrestKey, Label = Registry.Label(ArrestKey),
-                Enabled = !Tombstoned,
-                Reason = "the nearest colonist takes her into custody; needs a free prison bed",
+                Enabled = !Tombstoned && arrestRefusal == null,
+                Reason = arrestRefusal ?? "the nearest colonist takes her into custody",
             });
             // First Person (design 57), after the three that command her: this one only watches. Last,
             // so the response keeps its place beside Draft.

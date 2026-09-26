@@ -1010,7 +1010,7 @@ namespace Odyssey.Presentation.Ui
                     if (captured.IsSwitch) ThrowPowerSwitch();
                     else if (captured.IsOrderAction) ActOnOrder();
                     else if (captured.IsBedPurpose) ToggleBedPurpose();
-                    else if (captured.IsPrisonMode) CyclePrisonMode();
+                    else if (captured.IsPrisonMode) TogglePrisonModePicker(captured.Root);
                     else ToggleBedPicker(captured.Root);
                 });
 
@@ -1182,11 +1182,76 @@ namespace Odyssey.Presentation.Ui
                 _inspect.BedForPrisoners ? (int)BedPurpose.Colony : (int)BedPurpose.Prison));
         }
 
-        /// <summary>The prisoner's mode moves on one (design 59 §11b): an intent, applied while paused.</summary>
-        void CyclePrisonMode()
+        VisualElement? _modePicker;
+        VisualElement? _modePickerRows;
+        VisualElement? _modePickerAnchor;
+
+        /// <summary>
+        /// The prisoner's mode, chosen from the four rather than stepped through them (design 59
+        /// §16 H4): the bed owner's popover, its rows and its placement, one row a mode, the one she
+        /// is on ticked. A press sends one intent, applied while paused, and closes it.
+        /// </summary>
+        void TogglePrisonModePicker(VisualElement anchor)
         {
-            _boot?.World?.Intents.Submit(new Intent(IntentKind.SetPrisonMode, default, _inspect.Pawn.Value,
-                (int)InspectModel.NextPrisonMode(_inspect.PrisonerMode)));
+            if (_modePicker == null)
+            {
+                _modePicker = Popover("prisonmode", "What to do with her", ClosePrisonModePicker, "bedowner");
+                _modePickerRows = new VisualElement();
+                _modePickerRows.AddToClassList("bedowner__rows");
+                _modePicker.Add(_modePickerRows);
+                _hud.Add(_modePicker);
+                _modePicker.RegisterCallback<GeometryChangedEvent>(_ => PlacePrisonModePicker());
+            }
+
+            if (_modePicker.style.display == DisplayStyle.Flex)
+            {
+                ClosePrisonModePicker();
+                return;
+            }
+
+            _modePickerRows!.Clear();
+            int pawn = _inspect.Pawn.Value;
+            foreach (PrisonMode mode in InspectModel.OfferedModes)
+            {
+                var row = new VisualElement();
+                row.AddToClassList("bedowner__row");
+                VisualElement flag;
+                if (mode == _inspect.PrisonerMode)
+                {
+                    var tick = new HudGlyph(HudGlyphKind.Check, BedPickerMarkSize, HudTokens.Convert(HudTheme.TextPrimary));
+                    tick.AddToClassList("bedowner__mark");
+                    flag = tick;
+                }
+                else
+                {
+                    flag = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "bedowner__mark");
+                }
+                row.Add(flag);
+                row.Add(HudText.Make(Registry.Label(InspectModel.PrisonModeKey(mode)), HudTextRole.Body, ussClass: "bedowner__name"));
+                PrisonMode chosen = mode;
+                row.RegisterCallback<ClickEvent>(_ =>
+                {
+                    _boot?.World?.Intents.Submit(new Intent(IntentKind.SetPrisonMode, default, pawn, (int)chosen));
+                    ClosePrisonModePicker();
+                });
+                _modePickerRows.Add(row);
+            }
+
+            _modePickerAnchor = anchor;
+            _modePicker.style.display = DisplayStyle.Flex;
+            PlacePrisonModePicker();
+        }
+
+        void PlacePrisonModePicker()
+        {
+            if (_modePicker == null || _modePickerAnchor == null) return;
+            if (_modePicker.style.display.value != DisplayStyle.Flex) return;
+            PlacePopover(_modePicker, _modePickerAnchor, onTheBar: false);
+        }
+
+        void ClosePrisonModePicker()
+        {
+            if (_modePicker != null) _modePicker.style.display = DisplayStyle.None;
         }
 
         void ThrowPowerSwitch()

@@ -16,7 +16,8 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// The prison jumpsuit (design 59 §11d): worn from the moment a prisoner is laid in a
-        /// prison bed until she is free again. Drawn as the issued suit until its look is made.
+        /// prison bed until she is free again. The issued suit, recoloured to
+        /// <see cref="ColonistAppearance"/>'s prison cloth.
         /// </summary>
         Prisoner = 2,
     }

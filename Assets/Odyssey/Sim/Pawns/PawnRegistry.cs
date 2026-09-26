@@ -537,6 +537,10 @@ namespace Odyssey.Sim.Pawns
             GridSize size = world.Size;
             // What every prisoner's rows share, found once for this publish (design 59 §16 #7).
             var prison = new PrisonAspects.Shared();
+            // Whether a prison bed stands free, for the pane's Arrest (design 59 §16 H2): a walk over
+            // the beds only while one is marked, so a colony with no prison pays one flag.
+            if (_ctx.BedPurposes != null && _ctx.BedPurposes.Any)
+                writer.SetPrisonBedFree(CaptureRules.AnyFreePrisonBed(_ctx));
             for (int i = 0; i < _pawns.Count; i++)
             {
                 var pawn = _pawns[i];

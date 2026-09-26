@@ -36,7 +36,15 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Why her escape risk is what it is: <see cref="EscapeReasons"/> as a number.</summary>
         public const string EscapeWhyName = "odyssey.pawn.prison.escapewhy";
 
+        /// <summary>
+        /// Present on a downed prisoner out of her prison bed, who is to be carried back to it: the
+        /// one case Capture is offered on somebody already held (design 59 §16 H3). Asked of
+        /// <see cref="CaptureRules.WantsCapture"/>, so the menu and the order cannot disagree.
+        /// </summary>
+        public const string StrayName = "odyssey.pawn.prison.stray";
+
         public static readonly AspectKey NoBed = AspectKey.Of(NoBedName);
+        public static readonly AspectKey Stray = AspectKey.Of(StrayName);
         public static readonly AspectKey Escape = AspectKey.Of(EscapeName);
         public static readonly AspectKey EscapeWhy = AspectKey.Of(EscapeWhyName);
         public static readonly AspectKey CaptureMark = AspectKey.Of(CaptureMarkName);
@@ -102,8 +110,11 @@ namespace Odyssey.Sim.Pawns
                     writer.AddPawnAspect(pawn.Id, Blockers, (int)Recruitment.Factors(pawn, warden, ctx).Blockers);
                 }
             }
-            if (pawn.Downed && CaptureRules.WantsCapture(pawn, ctx) && CaptureRules.BedFor(pawn, pawn, ctx) < 0)
-                writer.AddPawnAspect(pawn.Id, NoBed, 1);
+            if (pawn.Downed && CaptureRules.WantsCapture(pawn, ctx))
+            {
+                if (pawn.IsPrisoner) writer.AddPawnAspect(pawn.Id, Stray, 1);
+                if (CaptureRules.BedFor(pawn, pawn, ctx) < 0) writer.AddPawnAspect(pawn.Id, NoBed, 1);
+            }
         }
     }
 }

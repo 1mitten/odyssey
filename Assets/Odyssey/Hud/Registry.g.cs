@@ -649,6 +649,7 @@ namespace Odyssey.Hud
             { "ui.pawn.hostile", "Hostile" },
             { "ui.pawn.prisoner", "Prisoner" },
             { "ui.pawn.rat", "Duct rat" },
+            { "ui.pawn.released", "Let go" },
             { "ui.pawn.synth", "Synth" },
             { "ui.pawn.visitor", "Visitor" },
             { "ui.prisoner.exile", "Exile" },

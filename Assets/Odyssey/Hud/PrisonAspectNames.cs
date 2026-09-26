@@ -36,7 +36,11 @@ namespace Odyssey.Hud
         /// <summary>Why her escape risk is what it is, as bits: see <see cref="Reason"/>.</summary>
         public const string EscapeWhy = "odyssey.pawn.prison.escapewhy";
 
+        /// <summary>Present on a downed prisoner out of her prison bed, to be carried back to it.</summary>
+        public const string Stray = "odyssey.pawn.prison.stray";
+
         public static readonly AspectKey NoBedKey = AspectKey.Of(NoBed);
+        public static readonly AspectKey StrayKey = AspectKey.Of(Stray);
         public static readonly AspectKey EscapeKey = AspectKey.Of(Escape);
         public static readonly AspectKey EscapeWhyKey = AspectKey.Of(EscapeWhy);
         public static readonly AspectKey CaptureMarkKey = AspectKey.Of(CaptureMark);

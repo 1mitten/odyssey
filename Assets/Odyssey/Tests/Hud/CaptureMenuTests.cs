@@ -17,7 +17,10 @@ namespace Odyssey.Tests.Hud
     {
         static readonly PawnId Ada = new PawnId(1), Bo = new PawnId(2), Raider = new PawnId(4), Held = new PawnId(6);
 
-        static WorldSnapshot Board(params PawnId[] drafted)
+        static WorldSnapshot Board(params PawnId[] drafted) => Board(stray: true, drafted);
+
+        /// <param name="stray">Whether the downed prisoner lies out of her bed, to be carried back.</param>
+        static WorldSnapshot Board(bool stray, params PawnId[] drafted)
         {
             WorldSnapshot frame = Frame.Write(layers: 4);
             frame.AddPawn(new PawnView(Ada, new CellRef(4, 4, 1), 800, 800, 700, flags: PawnFlags.Person));
@@ -26,6 +29,7 @@ namespace Odyssey.Tests.Hud
                 flags: PawnFlags.Person | PawnFlags.Hostile | PawnFlags.Downed));
             frame.AddPawn(new PawnView(Held, new CellRef(9, 9, 1), 800, 800, 700, kind: 3,
                 flags: PawnFlags.Person | PawnFlags.Downed, custody: PawnCustody.Prisoner));
+            if (stray) frame.AddPawnAspect(new PawnAspect(Held, PrisonAspectNames.StrayKey, 1));
             AspectKey key = AspectKey.Of(OrderModel.DraftedAspect);
             foreach (PawnId pawn in drafted) frame.AddPawnAspect(new PawnAspect(pawn, key, 1));
             return frame;
@@ -86,6 +90,19 @@ namespace Odyssey.Tests.Hud
             Assert.That(sent, Is.Empty);
             Assert.That(menu.Select(r => r.Key), Is.EqualTo(new[] { ContextMenuModel.CaptureKey, ContextMenuModel.CancelKey }),
                 "a prisoner is brought back, never finished off from a menu");
+        }
+
+        /// <summary>
+        /// Design 59 §16 H3. A prisoner lying in her own prison bed is not to be carried anywhere:
+        /// the simulation refused the Capture the menu offered, in silence, and a drafted
+        /// right-click on her cell opened the menu instead of moving there.
+        /// </summary>
+        [Test]
+        public void APrisonerInHerBedIsOfferedNothingAndTheClickIsAMove()
+        {
+            var (sent, menu) = RightClick(new[] { Ada }, Board(stray: false, Ada), Held);
+            Assert.That(menu, Is.Empty, "offered a capture the simulation would refuse");
+            Assert.That(sent.Select(i => i.Kind), Has.Member(IntentKind.OrderMove), "the right-click did not move her");
         }
 
         [Test]

@@ -129,7 +129,7 @@ namespace Odyssey.Tests.Sim
 
             int later = b.Bed(6, 3);
             Assert.That(b.At(later), Is.EqualTo(BedPurpose.Prison), "derived from the room, with no order");
-            Assert.That(b.Purposes.Marked, Does.Not.Contain(later), "and not stored");
+            Assert.That(b.Purposes.Marked, Has.No.Member(later), "and not stored");
         }
 
         [Test]

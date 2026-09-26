@@ -81,6 +81,7 @@ ui.pawn.colonist,-,,,"a human figure. No sheet contains one, and this is the mos
 ui.pawn.visitor,-,,,"human figure, neutral",-,gap
 ui.pawn.hostile,-,,,"human figure, hostile",-,gap
 ui.pawn.prisoner,-,,,"human figure, restrained",-,gap
+ui.pawn.released,-,,,"a figure walking away from an open door",-,gap
 ui.pawn.animal,06,,,boar,med,mapped
 ui.pawn.synth,-,,,a machine intelligence. Nothing in the sheets is recognisably robotic,-,gap
 ui.pawn.corpse,07,,,skull,high,mapped

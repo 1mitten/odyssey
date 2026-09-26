@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-76 entries, 58 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+77 entries, 59 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -12,6 +12,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Visitor** | `ui.pawn.visitor` | Here peacefully, and watching <br>**Needs:** human figure, neutral | no art | M2 |
 | **Hostile** | `ui.pawn.hostile` | Will attack <br>**Needs:** human figure, hostile | no art | M2 |
 | **Prisoner** | `ui.pawn.prisoner` | Held, and someone must feed them <br>**Needs:** human figure, restrained | no art | M2 |
+| **Let go** | `ui.pawn.released` | Released or exiled, and walking off the board free <br>**Needs:** a figure walking away from an open door | no art | PS |
 | **Animal** | `ui.pawn.animal` | Tame or wild creature | sheet 06 (action tiles), med | M2 |
 | **Synth** | `ui.pawn.synth` | Machine intelligence. Not alive, not harmless <br>**Needs:** a machine intelligence. Nothing in the sheets is recognisably robotic | no art | M2 |
 | **Corpse** | `ui.pawn.corpse` | Rots, upsets people, can be buried or worse | sheet 07 (anatomy), high | M2 |

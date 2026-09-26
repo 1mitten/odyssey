@@ -119,5 +119,35 @@ namespace Odyssey.Tests.Sim
                     $"PrisonPurpose.{field.Name} shares its stream");
             }
         }
+
+        /// <summary>
+        /// The simulation's half of the prison aspects' agreement (design 59 §16);
+        /// <c>PrisonAspectNamesTests</c> holds the interface's copy to the same literals.
+        /// </summary>
+        [Test]
+        public void TheAspectNamesAreSpelledAsTheInterfaceReadsThem()
+        {
+            Assert.That(PrisonAspects.NoBedName, Is.EqualTo("odyssey.pawn.prison.nobed"));
+            Assert.That(PrisonAspects.StrayName, Is.EqualTo("odyssey.pawn.prison.stray"));
+            Assert.That(PrisonAspects.CaptureMarkName, Is.EqualTo("odyssey.pawn.prison.capture"));
+            Assert.That(PrisonAspects.ModeName, Is.EqualTo("odyssey.pawn.prison.mode"));
+            Assert.That(PrisonAspects.WillingName, Is.EqualTo("odyssey.pawn.prison.willing"));
+            Assert.That(PrisonAspects.HoursName, Is.EqualTo("odyssey.pawn.prison.hours"));
+            Assert.That(PrisonAspects.BlockersName, Is.EqualTo("odyssey.pawn.prison.blockers"));
+            Assert.That(PrisonAspects.ShackledName, Is.EqualTo("odyssey.pawn.prison.shackled"));
+            Assert.That(PrisonAspects.EscapeName, Is.EqualTo("odyssey.pawn.prison.escape"));
+            Assert.That(PrisonAspects.EscapeWhyName, Is.EqualTo("odyssey.pawn.prison.escapewhy"));
+            Assert.That(new[]
+            {
+                (int)EscapeReasons.Miserable, (int)EscapeReasons.Unhappy, (int)EscapeReasons.Content,
+                (int)EscapeReasons.DoorOpen, (int)EscapeReasons.Shackled, (int)EscapeReasons.Unwatched,
+                (int)EscapeReasons.Unhurt, (int)EscapeReasons.Hurt, (int)EscapeReasons.WellKept,
+            }, Is.EqualTo(new[] { 1, 2, 4, 8, 16, 32, 64, 128, 256 }));
+            Assert.That(new[]
+            {
+                (int)RecruitBlockers.NoWarden, (int)RecruitBlockers.Hungry, (int)RecruitBlockers.Untended,
+                (int)RecruitBlockers.Shackled, (int)RecruitBlockers.LowMood, (int)RecruitBlockers.LowSocial,
+            }, Is.EqualTo(new[] { 1, 2, 4, 8, 16, 32 }));
+        }
     }
 }

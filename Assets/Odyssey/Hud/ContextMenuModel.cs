@@ -205,6 +205,11 @@ namespace Odyssey.Hud
             if (!under.IsValid || !snapshot.TryGetPawn(under, out PawnView target)) return;
             if (!target.IsPerson || !target.IsDowned || target.IsColonist) return;
             if (!target.IsHostile && target.Custody != PawnCustody.Prisoner) return;
+            // A prisoner only when she is to be brought back (design 59 §16 H3): one lying in her
+            // own prison bed was offered a Capture the simulation refused in silence, and a
+            // drafted right-click on her cell opened the menu instead of moving there.
+            if (target.Custody == PawnCustody.Prisoner && !snapshot.TryGetPawnAspect(under, PrisonAspectNames.StrayKey, out _))
+                return;
 
             bool anyColonist = false;
             PawnId primary = PawnId.None;

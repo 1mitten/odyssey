@@ -1842,6 +1842,13 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public int HearthCell { get; private set; } = -1;
 
+        /// <summary>
+        /// Whether any prison bed stands free for a new prisoner (design 59 §16 H2): what an arrest
+        /// is refused for when there is none, so the pane can say so rather than the press doing
+        /// nothing. False on a board with no prison bed; worked out only when one is marked.
+        /// </summary>
+        public bool PrisonBedFree { get; private set; }
+
         /// <summary>How many home border cells are published. See <see cref="HomeCellView"/>.</summary>
         public int HomeCellCount { get; private set; }
 
@@ -2244,6 +2251,7 @@ namespace Odyssey.Sim.Contracts
             PowerVersion = 0;
             Weather = WeatherView.None;
             HearthCell = -1;
+            PrisonBedFree = false;
             HomeCellCount = 0;
             HomeVersion = 0;
             CombatEventCount = 0;
@@ -2306,6 +2314,8 @@ namespace Odyssey.Sim.Contracts
         internal void SetWeather(in WeatherView view) => Weather = view;
 
         internal void SetHearthCell(int cell) => HearthCell = cell;
+
+        internal void SetPrisonBedFree(bool free) => PrisonBedFree = free;
 
         internal void SetHomeVersion(int version) => HomeVersion = version;
 
