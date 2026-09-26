@@ -47,6 +47,32 @@ namespace Odyssey.Tests.Sim
         static void SettleSky(ColonyWorld colony) =>
             colony.World.Tick(WeatherSystem.QuickBlendTicks + WeatherSystem.IntervalTicks);
 
+        /// <summary>
+        /// A loaded world reads the outdoor temperature the saved one did. The weather's share of it
+        /// is written on the weather's own cadence and saved nowhere, so until 2026-09-26 a load
+        /// kept the sky its build had rolled until the next boundary, and a colonist whose needs fell
+        /// due in that gap parted from the saved world by hash (found by a raid's save test). A storm
+        /// against a fresh build's own sky is the control: the two must differ for the load to
+        /// have anything to put back.
+        /// </summary>
+        [Test]
+        public void ALoadedWorldReadsTheOutdoorTemperatureItWasSavedWith()
+        {
+            ColonyWorld original = Board();
+            SetSky(original, WeatherKind.Storm, 1000);
+            SettleSky(original);
+            original.World.Tick(WeatherSystem.IntervalTicks / 2);
+            int offset = original.Pawns.Temperature!.WeatherOffsetC;
+
+            ColonyWorld restored = Board();
+            Assume.That(restored.Pawns.Temperature!.WeatherOffsetC, Is.Not.EqualTo(offset), "a fresh build already had the storm's offset");
+            restored.Load(original.Save());
+
+            Assert.That(restored.Pawns.Temperature!.WeatherOffsetC, Is.EqualTo(offset));
+            int tick = restored.World.CurrentTick;
+            Assert.That(restored.Pawns.Temperature!.OutdoorTempC(tick), Is.EqualTo(original.Pawns.Temperature!.OutdoorTempC(tick)));
+        }
+
         static void Roof(ColonyWorld colony, int cell)
         {
             int above = cell + Size.LayerStride;

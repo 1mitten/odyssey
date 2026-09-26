@@ -337,6 +337,11 @@ namespace Odyssey.Sim.Pawns
             _nav.MarkAllDirty();
             _nav.Rebuild();
 
+            // The weather's share of the outdoor temperature is written on the weather's cadence
+            // and saved nowhere: put back the value the last boundary set, or the first needs pass
+            // after a load reads the build's sky (WeatherSystem.RestoreOffset).
+            Pawns.Weather?.RestoreOffset(World.CurrentTick);
+
             // The sky map is derived from the grid, and a load writes the grid wholesale without
             // telling the chunk grid a thing: rebuilt whole (design 43 §6). Now, so a board-wide
             // walk is paid inside the loading rather than on the first tick that asks.
