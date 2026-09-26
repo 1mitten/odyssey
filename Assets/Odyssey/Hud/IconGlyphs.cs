@@ -35,6 +35,7 @@ namespace Odyssey.Hud
             { "ui.terrain.bush.picked", "ui.terrain.bush.berry" },
             { "ui.combat.condition", "ui.combat.health" },
             { "ui.bulletin.raidincoming", "ui.alert.raid" },
+            { "ui.bulletin.trader", "ui.pawn.trader" },
             { "ui.health.head", "ui.health.torso" },
             { "ui.health.arm", "ui.health.torso" },
             { "ui.health.leg", "ui.health.torso" },
@@ -73,6 +74,8 @@ namespace Odyssey.Hud
             { "ui.res.scrap", "M4 7l8-4 8 4v10l-8 4-8-4V7z M9 12l3 3 5-5" },
             { "ui.res.ironore", "M12 2l8 5v10l-8 5-8-5V7l8-5z M8 10l4 3 4-3" },
             { "ui.res.coal", "M5 9l5-5 9 3 2 7-6 6-8-2z" },
+            // gold (design 65): a stack of three coins seen from the side
+            { "ui.res.gold", "M4 7a8 3 0 1 0 16 0 8 3 0 1 0-16 0z M4 7v4c0 1.7 3.6 3 8 3s8-1.3 8-3V7 M4 11v4c0 1.7 3.6 3 8 3s8-1.3 8-3v-4 M4 15v3c0 1.7 3.6 3 8 3s8-1.3 8-3v-3" },
             // food
             { "ui.res.meal", "M4 13h16a8 8 0 0 1-16 0z M3 13h18 M9 9c0-2 2-2 2-4 M13 9c0-2 2-2 2-4" },
             { "ui.res.meal.veg", "M4 13h16a8 8 0 0 1-16 0z M3 13h18 M9 9c0-2 2-2 2-4 M13 9c0-2 2-2 2-4" },
@@ -122,6 +125,8 @@ namespace Odyssey.Hud
             { "ui.pawn.colonist", "M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M4 21a8 8 0 0 1 16 0" },
             { "ui.pawn.bandit", "M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M4 21a8 8 0 0 1 16 0 M8 7h8" },
             { "ui.pawn.gunman", "M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M4 21a8 8 0 0 1 16 0 M15 14h6" },
+            // the trader (design 65): a person with a case at its side
+            { "ui.pawn.trader", "M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M4 21a8 8 0 0 1 16 0 M16 13h6v6h-6z M18 13v-1h2v1" },
             // the butcher's four levels (design 62): a pig's head and a cleaver; scarred, bloodied, crowned
             { "ui.pawn.butcher", "M5 12c0-4 3-7 7-7s7 3 7 7-3 7-7 7-7-3-7-7z M10 13h4v3h-4z M7 5L5 2 M17 5l2-3 M20 14l3-4v8z" },
             { "ui.pawn.butcher.scarred", "M5 12c0-4 3-7 7-7s7 3 7 7-3 7-7 7-7-3-7-7z M10 13h4v3h-4z M7 5L5 2 M17 5l2-3 M8 7l4 4" },

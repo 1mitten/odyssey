@@ -83,6 +83,23 @@ namespace Odyssey.Hud
                     ("Fighting it", "Spread out: it strikes three cells at a time. Guns from range, and never from a perch.")),
                 new[] { ("ui.pawn.bandit", "the rest of the band"), ("ui.item.pistol", "the answer to it"), ("ui.arch.tool.sandbag", "cover against its rocks") },
                 alsoKeys: new[] { "ui.pawn.butcher.scarred", "ui.pawn.butcher.blood", "ui.pawn.butcher.king" }),
+
+            // The trader (design 65): the first guest — neither ours nor hostile.
+            Keyed("ui.pawn.trader", People, "Person", "Visitor",
+                "A guest. Walks in from an edge with a purse and a pack of goods, waits by the hearth for about a day and walks out again. Takes no work and no orders, and nobody fights it on sight.",
+                "The trader event, from the debug menu's Events tab", AlmanacAction.FindOnMap,
+                new[] {
+                    ("Purse", "400 to 900 gold"), ("Carries", "4 to 7 kinds of goods, and a pistol that leaves with it"),
+                    ("Stays", "24 hours, the clock stopped while a deal is open"), ("Pays", "60% of a thing's value"),
+                    ("Charges", "140%, at least one gold above what it pays"), ("Doors", "Never opens the colony's; waits outside"),
+                },
+                Effects("BEHAVIOUR",
+                    "Select a colonist and right-click the trader for " + L("ui.command.trade") + ": she walks over, the game pauses and the trade window opens on Sell. A deal is applied whole or refused whole, and what you buy is set down beside the trader for haulers.",
+                    ("Hurt by accident", "A stray shot, a raider or a fall sends it home at once."),
+                    ("Attacked on purpose", "A drafted colonist's Ctrl-attack turns it hostile for good; it keeps its coat."),
+                    ("A raid", "Sends it home the moment the band arrives."),
+                    (L("ui.status.downed"), "Heals where it lies and leaves when it can.")),
+                new[] { ("ui.res.gold", "what it pays in"), ("ui.bulletin.trader", "its arrival"), ("ui.arch.tool.campfire", "where it waits") }),
         };
 
         static IReadOnlyList<AlmanacEntry> FaunaEntries() => new List<AlmanacEntry>

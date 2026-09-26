@@ -92,11 +92,14 @@ the next session learns to ignore.
   → Spawn → Items → **Give gold**. Watch the trader walk from the edge to the fire in an ochre coat.
   Select a colonist and right-click the trader → **Trade**: she walks over, the game pauses and the
   window opens on Sell. Move some wood, press Tab (Buy), take a pistol, and read the foot. Confirm,
-  and the pistol and any gold owed should be set down beside the trader and hauled away. **A wrong
-  answer looks like** a trader lost indoors or wandering off the fire, a window that does not open or
-  opens twice, a foot you have to add up yourself, the list scrolling, or bought goods landing in a
-  tree or never hauled. Then Ctrl-right-click it with a drafted colonist: it should turn on you. A
-  stray bullet should send it home instead.
+  and the window should close of itself as the pistol and any gold owed are set down beside the
+  trader and hauled away. Then trade again at a fireside crowded with stacks and buy more than can
+  land: the window should stay up and say *The deal was refused; nothing moved*, and clear that the
+  moment you change a quantity. **A wrong answer looks like** a trader lost indoors or wandering off
+  the fire, a window that does not open or opens twice, a foot you have to add up yourself, the list
+  scrolling, bought goods landing in a tree or never hauled, or a Confirm that closes the window with
+  nothing changed and nothing said. Then Ctrl-right-click it with a drafted colonist: it should turn
+  on you. A stray bullet should send it home instead.
 
 - **Do the frogs read as frogs, and are they where the water is?** (`claude/frog`, design 30 §8.)
   New game on the meadow and look along a stream or a pond: there should be groups of three to five

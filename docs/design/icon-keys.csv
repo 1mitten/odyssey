@@ -381,6 +381,7 @@ ui.trade.negotiating,negotiating,ui.trade,TR,"Who is trading, under the trader's
 ui.trade.reason.nothing,Nothing to trade,ui.trade,TR,Why Confirm is off: nothing is moving
 ui.trade.reason.gold,Not enough gold,ui.trade,TR,Why Confirm is off: the colony owes more gold than it has
 ui.trade.reason.purse,The trader cannot pay,ui.trade,TR,Why Confirm is off: the trader owes more gold than it carries
+ui.trade.reason.refused,The deal was refused; nothing moved,ui.trade,TR,"Why Confirm is off after a press: the simulation re-checked the deal and turned it down whole, nearly always for want of room beside the trader to set the goods down. Changing any quantity clears it"
 ui.trade.reset,Reset,ui.trade,TR,Nothing moving in either mode
 ui.trade.confirm,Confirm,ui.trade,TR,"Make the deal: sold goods leave the stores, bought goods and any gold owed are set down beside the trader"
 ui.trade.pane.leaves,Leaves in,ui.trade,TR,"On a trader's pane: how long it stays before walking out"

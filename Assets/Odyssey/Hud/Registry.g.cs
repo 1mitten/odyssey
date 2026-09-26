@@ -956,6 +956,7 @@ namespace Odyssey.Hud
             { "ui.trade.reason.gold", "Not enough gold" },
             { "ui.trade.reason.nothing", "Nothing to trade" },
             { "ui.trade.reason.purse", "The trader cannot pay" },
+            { "ui.trade.reason.refused", "The deal was refused; nothing moved" },
             { "ui.trade.reset", "Reset" },
             { "ui.trade.sell", "Sell" },
             { "ui.trade.sellingfor", "Selling for" },

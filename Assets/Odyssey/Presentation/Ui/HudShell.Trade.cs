@@ -48,6 +48,7 @@ namespace Odyssey.Presentation.Ui
         {
             _trade.Cancel(_tradeOrders);
             SubmitTradeOrders();
+            SyncTradeModal();
         }
 
         /// <summary>One item row's elements, pooled: a heading reuses the same row with the item parts hidden.</summary>
@@ -344,7 +345,11 @@ namespace Odyssey.Presentation.Ui
             _tradeConfirmLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             _tradeConfirm.RegisterCallback<ClickEvent>(_ =>
             {
-                if (_trade.Confirm(_tradeOrders)) SubmitTradeOrders();
+                // The window stays up: the simulation's answer arrives on the next publish, and
+                // RefreshTrade closes it (applied) or paints the refusal (design 65 §12).
+                var world = _boot?.World;
+                if (world != null && _trade.Confirm(_tradeOrders, world.Views.Current)) SubmitTradeOrders();
+                PaintTrade();
             });
             band.Add(_tradeConfirm);
             return band;
@@ -539,16 +544,24 @@ namespace Odyssey.Presentation.Ui
             _trade.RowsPerPage = !float.IsNaN(height) && height > 0f && height < TradeLayout.PagingBelowHeight
                 ? TradeLayout.RowsPerPage : 0;
 
-            bool showing = _trade.Refresh(world.Views.Current,
+            _trade.Refresh(world.Views.Current,
                 def => def >= 0 && def < content.Items.Length ? (int)content.Items[def].category : 0);
+            SyncTradeModal();
+            if (_trade.Showing) PaintTrade();
+        }
+
+        /// <summary>The modal, the keys and the clock follow the model: shown, held and stopped exactly while it is up.</summary>
+        void SyncTradeModal()
+        {
+            if (_tradeModal == null) return;
+            bool showing = _trade.Showing;
             if (showing != _tradeModal.Showing)
             {
                 _tradeModal.Show(showing);
                 if (showing) CloseContextMenu();
                 HoldTradeKeys(showing);
             }
-            _boot!.ModalHeld = showing;
-            if (showing) PaintTrade();
+            if (_boot != null) _boot.ModalHeld = showing;
         }
 
         /// <summary>Tab switches the mode while the window is up (design 65 §6).</summary>
@@ -567,9 +580,6 @@ namespace Odyssey.Presentation.Ui
             if (world != null)
                 for (int i = 0; i < _tradeOrders.Count; i++) world.Intents.Submit(_tradeOrders[i]);
             _tradeOrders.Clear();
-            _tradeModal?.Show(false);
-            HoldTradeKeys(false);
-            if (_boot != null) _boot.ModalHeld = false;
         }
 
         bool _tradeHoldsKeys;

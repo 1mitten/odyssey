@@ -290,7 +290,9 @@ namespace Odyssey.Sim.Trade
         /// <c>TradeCommit(A = trader, B = balance)</c>: the lines since the last commit, applied whole
         /// or refused whole. Refused unless the session is ready, something moves, every count is one
         /// the side holds, the balance is the one the ledger showed, the side that pays can pay, and
-        /// every bought stack has somewhere to land.
+        /// every bought stack has somewhere to land. <b>An applied deal ends the session</b> (design 65
+        /// §6): the window sees the session gone on the next publish and closes; a refused one leaves
+        /// the session open, so the ledger stays up and can say so (§12).
         /// </summary>
         public IntentRejection HandleCommit(Intent intent)
         {
@@ -353,6 +355,11 @@ namespace Odyssey.Sim.Trade
             if (balance > 0) ColonyTradeStock.Take(_ctx, trader.Cell, ItemIndex.Gold, (int)balance);
             visit.Purse += (int)balance;
             TradeDrops.Apply(_ctx, _plan);
+
+            // The deal is the session's whole purpose: done, the negotiator's job ends of its own
+            // accord and the window, seeing no ready session, closes. Before the review the window
+            // sent a TradeCancel behind every Confirm, which also closed it over a refusal (§12).
+            EndSession(visit);
             return IntentRejection.None;
         }
 

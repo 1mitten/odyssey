@@ -14630,3 +14630,40 @@ change: signed lines and one commit.
 **Owed:** the Unity tier (`HudShell.Trade.cs`, the pane's rows, the pause gate and Escape are
 uncompiled), the module catalogue rebuilt on the owner's machine for gold's coin art, and the first
 play.
+
+## 2026-09-26 — Trading, reviewed and merged with `main`
+
+The trading branch (`claude/wonderful-clarke-kkd9pq`) was reviewed cold after T7 and merged with a
+`main` that had moved 347 files since the fork: the butcher, world generation, the ride along, the
+cracks, the clouds and the Almanac. Design 65 §12 is the record; this is the reasoning.
+
+**Renumber first, merge second.** `main` had taken design numbers 57–64 while this branch called
+itself 57, and the ride along now *is* 57. Ten of this branch's files cite "design 57" and `main`
+cites "design 57" in the same ten files, so a merge before the renumber would have left two
+meanings of one number in one file with no way to tell them apart. The renumber went in as its own
+commit on the branch's files only, checked first that no "design 57" existed at the fork base, and
+then the merge could not mix them. The same ordering is worth keeping for any branch that names a
+design number `main` may take.
+
+**The one behavioural finding: a refused deal was silent.** Confirm sent lines, commit *and* a
+`TradeCancel`, and closed the window on the spot. The simulation's refusal (whole, by design) then
+had nowhere to go but a throttled console warning, and the player saw the window shut, the
+colonist walk off and nothing change. The fix moved the session's end into the simulation — an
+applied `HandleCommit` ends the session — and made the window wait for the first publish after the
+press: the session gone means applied, still ready means refused. That "after the press" needed a
+publish stamp, `WorldSnapshot.Generation`, because a paused world republishes over the same tick
+and `Tick` cannot order two frames. The double buffer's A/B identity would have worked for the
+paused case and failed on parity for a running one, so the counter went in rather than the trick.
+
+**Two smaller ones.** The drop radius (6) reached past the trade radius (4), so the gold a deal
+paid could land where the next deal could not count it — the exact case the radius exists for. And
+the window kept the session it had opened for across a colony change, so a second colony's first
+visit would never have opened its window. Both have tests now.
+
+**What the merge itself moved:** trader kind 6 → 10 (the butcher's four took 6–9), hash bit 28 → 30
+(the butcher's knockback and throw took 28 and 29), the content fingerprint re-taken, the save
+sections ordered raids, part-mined rock, trade. Handles 28 (job), 18 (item) and 6 (incident) held.
+
+**Owed:** the Unity tier on the merge — `HudShell.Trade.cs` is still a reading, not a compile — and
+the first play.
+

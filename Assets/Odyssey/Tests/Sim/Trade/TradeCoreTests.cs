@@ -118,8 +118,12 @@ namespace Odyssey.Tests.Sim.Trade
             Assert.That(visit.Purse, Is.EqualTo(purse + 8));
         }
 
+        /// <summary>
+        /// The reason the trade radius exists (design 65 §4): what one deal pays out can be spent in the
+        /// next before anybody hauls it. So a drop lands inside that radius, never merely near it.
+        /// </summary>
         [Test]
-        public void GoldOwedToTheColonyIsSetDownBesideTheTrader()
+        public void GoldOwedToTheColonyIsSetDownWhereTheNextDealCanSpendIt()
         {
             ColonyWorld colony = Board();
             var (visit, trader) = Session(colony);
@@ -128,7 +132,35 @@ namespace Odyssey.Tests.Sim.Trade
             Assert.That(Held(colony, ItemIndex.Gold), Is.EqualTo(50));
             ColonyItem gold = colony.Pawns.Items.Items.First(i => !i.Despawned && i.DefIndex == ItemIndex.Gold);
             CellRef at = Size.FromIndex(gold.Cell), t = Size.FromIndex(trader.Cell);
-            Assert.That(System.Math.Max(System.Math.Abs(at.X - t.X), System.Math.Abs(at.Z - t.Z)), Is.LessThanOrEqualTo(TradeDrops.MaxRadius));
+            Assert.That(System.Math.Max(System.Math.Abs(at.X - t.X), System.Math.Abs(at.Z - t.Z)),
+                Is.LessThanOrEqualTo(ColonyTradeStock.TradeRadius));
+            Assert.That(TradeDrops.MaxRadius, Is.LessThanOrEqualTo(ColonyTradeStock.TradeRadius),
+                "a drop radius past the trade radius is gold the next deal cannot see");
+
+            var counts = new int[colony.Pawns.Content.Items.Length];
+            ColonyTradeStock.Count(colony.Pawns, trader.Cell, counts);
+            Assert.That(counts[ItemIndex.Gold], Is.EqualTo(50), "the gold just paid counts towards the next deal");
+        }
+
+        /// <summary>
+        /// An applied deal is the end of the session (design 65 §6, §12): the negotiator's job ends and
+        /// the window closes on seeing no ready session. A refused one leaves it open, so the ledger
+        /// stays up to be corrected rather than vanishing with nothing moved.
+        /// </summary>
+        [Test]
+        public void AnAppliedDealEndsTheSessionAndARefusedOneDoesNot()
+        {
+            ColonyWorld colony = Board();
+            var (visit, trader) = Session(colony, purse: 10);
+            Beside(colony, trader, ItemIndex.Wood, 40);
+
+            Assert.That(Deal(colony, trader, -40, (ItemIndex.Wood, -40)), Is.EqualTo(IntentRejection.NotPermitted), "the purse is 10");
+            Assert.That(visit.InSession, Is.True, "refused: the session stays open");
+            Assert.That(visit.Ready, Is.True);
+
+            Assert.That(Deal(colony, trader, -10, (ItemIndex.Wood, -10)), Is.EqualTo(IntentRejection.None));
+            Assert.That(visit.InSession, Is.False, "applied: the session is over");
+            Assert.That(visit.Ready, Is.False);
         }
 
         [Test]

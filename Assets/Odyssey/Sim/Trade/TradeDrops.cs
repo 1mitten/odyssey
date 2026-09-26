@@ -14,8 +14,13 @@ namespace Odyssey.Sim.Trade
     /// </summary>
     public static class TradeDrops
     {
-        /// <summary>How far from the trader a bought stack may land, in cells. INVENTED.</summary>
-        public const int MaxRadius = 6;
+        /// <summary>
+        /// How far from the trader a bought stack may land, in cells: <b>the trade radius itself</b>,
+        /// so everything a deal sets down — the gold owed above all — is inside the ring the next deal
+        /// counts from (design 65 §4). It was 6 against a radius of 4 until the review (§12), so gold
+        /// paid to a crowded fireside could land two cells past where it could be spent.
+        /// </summary>
+        public const int MaxRadius = ColonyTradeStock.TradeRadius;
 
         /// <summary>One stack to set down: what, how many, and where.</summary>
         public readonly struct Drop

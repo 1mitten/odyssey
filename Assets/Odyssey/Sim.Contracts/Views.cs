@@ -1820,6 +1820,15 @@ namespace Odyssey.Sim.Contracts
         int[] _edificeHitPoints = Array.Empty<int>();
 
         public int Tick { get; private set; }
+
+        /// <summary>
+        /// Which publish this frame is, counting from one: the store's <c>PublishCount</c> stamped on
+        /// the frame it built, so a reader that remembers a number can tell whether a publish came
+        /// after it — which <see cref="Tick"/> cannot say, since a paused world republishes over the
+        /// same tick. Nought on a frame written by hand. The trade window reads it to know when the
+        /// simulation has answered its Confirm (design 65 §12).
+        /// </summary>
+        public int Generation { get; internal set; }
         public int SliceLayer { get; private set; }
         public GridSize Size { get; private set; }
 

@@ -95,6 +95,16 @@ namespace Odyssey.Hud
                 new[] { ("ui.pawn.bandit", "most of the band"), ("ui.pawn.gunman", "the armed ones"), ("ui.arch.tool.campfire", "the hearth they go for") },
                 alsoKeys: new[] { "ui.bulletin.raidincoming" }),
 
+            Keyed("ui.bulletin.trader", Events, "Event", Registry.Label("ui.bulletin.arrival"),
+                "A trader walks in from one edge and waits by the hearth for about a day. Send a colonist to it to trade.",
+                "The debug menu's Events tab", AlmanacAction.None,
+                new[] { ("Brings", "One trader, a purse of 400 to 900 gold and 4 to 7 kinds of goods"), ("Stays", "About a day"), ("Written", "When it arrives, with the arrival chime") },
+                Effects("EVENT",
+                    "One trader at a time: the event refuses while a visit is on the board. There is no storyteller yet, so only the debug menu sends one.",
+                    ("Ends early", "A raid arriving, or the trader being hurt by accident, sends it home."),
+                    ("Refused", "While another trader is on the board, or the board has no reachable edge.")),
+                new[] { ("ui.pawn.trader", "who comes"), ("ui.res.gold", "what it pays in"), ("ui.bulletin.raidincoming", "what sends it home") }),
+
             Keyed("ui.bulletin.theft", Events, "Event", "Loss",
                 "A bandit with nobody left to fight and nothing to break carries the nearest stack off the board.",
                 "Written on the Events panel when it happens", AlmanacAction.None,

@@ -100,7 +100,7 @@ there is not enough room, **the whole deal is refused**.
 **Arrival.**
 - The incident is `Incident_Trader` (bulletin `ui.bulletin.trader`, with the arrival chime). There
   is no storyteller: the debug Events tab fires it.
-- `TraderWorker` spawns one trader, pawn kind 6 *Trader*, on an edge chosen by `EdgeArrival`.
+- `TraderWorker` spawns one trader, pawn kind 10 *Trader* (6 on the branch; the butcher's four took 6–9 on `main` first), on an edge chosen by `EdgeArrival`.
 - The trader is a rolled person with a trader outfit and a name from the pool, and carries a pistol.
 - Groups and pack animals are later work. The visit holds a list of pawns from the start, so a group
   adds rows rather than restructuring anything.
@@ -166,9 +166,11 @@ open. It is built to the owner's spec, **mockups 28a Sell and 28b Buy**
 
 **Where the numbers live.** The quantities are `TradeModel`'s (Hud, engine-free) until *Confirm*.
 Confirm submits one `TradeLine(trader, def, signedQty)` per moving row, then
-`TradeCommit(trader, balance)`, then `TradeCancel(trader)`, which ends the session. The window then
-closes. The simulation re-validates everything at the commit and applies the deal atomically or
-rejects it whole. All of these intents apply while paused.
+`TradeCommit(trader, balance)`, and **waits**. The simulation re-validates everything at the commit
+and applies the deal atomically or rejects it whole; **an applied deal ends the session**, so the
+window closes on the next publish, and a refused one leaves it open, so the window stays up, keeps
+the ledger and says *The deal was refused; nothing moved* until a quantity changes (§12). All of
+these intents apply while paused: the paused loop drains them and republishes over the same tick.
 
 **The pause** is `OdysseyBootstrap.ModalHeld`, a gate ORed with `ClockHeld`. The wake assigns
 `ClockHeld` outright, so trade must not share that flag. While the window is up the game's keys are
@@ -186,7 +188,7 @@ no Draft button, and two rows, *Leaves in 14 h* and *Carrying 640 gold*.
 | **Deliberate**: a colonist ordered to attack the trader (Ctrl-attack; an ordinary right-click never attacks a visitor) | The trader turns hostile and fights back through the hostile tree |
 
 **How turning hostile is stored.** It is a per-pawn `Pawn.TurnedHostile`, saved in `odyssey.trade`
-(layout 2) and hashed at bit 28 of the pawn word, both only while set. `Pawn.Faction` reads it
+(layout 2) and hashed at bit 30 of the pawn word (28 on the branch; `main` took 28 and 29 for the butcher), both only while set. `Pawn.Faction` reads it
 first. The trader keeps its outfit: its `PawnFlags.Visitor` is by kind and stays set beside
 `Hostile`, `PawnOutfits` checks it first, and `PawnView.IsVisitor` requires `Hostile` to be absent.
 Its visit ends with the blow, and its stock is lost. Raiders only ever target colonists, so they
@@ -236,8 +238,9 @@ unedited, because the new state is hashed only while it exists.
   weapon should not roll a lottery ticket at the drop.
 - **The trader's traverse mode is the bandit's**: a guest never opens the colony's doors. A hearth
   indoors means it waits outside, the nearest it can reach.
-- **Confirm also ends the session.** Without that, the negotiator would stand at the trader until
-  she was reordered.
+- **An applied deal ends the session** (the simulation's `HandleCommit`, since the review — the
+  build had the window send a `TradeCancel` behind every Confirm, §12). Without that, the negotiator
+  would stand at the trader until she was reordered.
 - **One trader at a time.** The incident refuses while a visit exists. A debug-spawned visitor is
   adopted into a visit with the first trader kind.
 
@@ -252,3 +255,56 @@ two rows, the pause gate and Escape are **uncompiled until the Unity tier runs**
 - **Confirm the currency name**, *Gold*, against the registry's *Credit chit*.
 - **Look over the value table** in §3.
 - **Decide what a trader looks like**, since the characters were deferred.
+
+## 12. Review, 2026-09-26 (merged with `main`)
+
+Reviewed on the branch after T7, then merged with `main`, which had taken eight designs and four
+pawn kinds in the meantime. What the review found, and what the merge moved.
+
+**Found by reading, fixed:**
+
+- **A refused deal vanished without a word.** Confirm sent the lines, the commit *and* a
+  `TradeCancel`, then closed the window — so if the simulation refused the commit (it can, whole:
+  no room within reach of the trader to set the goods down is the one cause a frozen world leaves),
+  the window shut, the negotiator walked off and nothing had moved, with the only record a console
+  warning. The fault is the one `docs/bug-patterns.md` keeps finding under new clothes: a silent
+  failure neither tier can see. Now **the simulation ends the session when a deal is applied**
+  (`HandleCommit` → `EndSession`) and Confirm waits: the first frame published after the press that
+  still shows the session ready is the refusal, and the window keeps the ledger with Confirm off
+  and the reason `ui.trade.reason.refused`, cleared by any change to a quantity. To know "after the
+  press" exactly, `WorldSnapshot.Generation` stamps every publish with the store's count — `Tick`
+  cannot, because a paused world republishes over one tick. `TradeModelTests` cover the wait, the
+  same frame not being an answer, the close on an applied deal and the refusal;
+  `TradeCoreTests.AnAppliedDealEndsTheSessionAndARefusedOneDoesNot` covers the simulation's half.
+- **The drop radius reached past the trade radius.** `TradeDrops.MaxRadius` was 6 against
+  `ColonyTradeStock.TradeRadius` 4, so gold owed to the colony could be set down two cells beyond
+  where the next deal could spend it — the exact case §4 gives as the reason for the radius. The
+  drop radius *is* the trade radius now, one owner, and
+  `GoldOwedToTheColonyIsSetDownWhereTheNextDealCanSpendIt` asserts the gold counts on a fresh
+  `Count`.
+- **The window remembered a session across colonies.** `TradeModel` kept the (visit, session) it
+  had opened for through `OnSessionChanged`, so a loaded or new colony whose first session was also
+  visit 1, session 1 would never see its window. `Forget()` clears the marks on a session change.
+
+**Read and left alone**, with the reason: `HandleLine` buffers lines until the commit and `Tick`
+clears them, which is safe because the paused drain applies a Confirm's lines and commit in one
+pass and the running tick's drain does the same; a `Landed` swing on a guest reports both
+`SwingResolved` and `DamageApplied`, so `SendAway` is called twice and is idempotent by design;
+the trader's `Wait` while held is sixty ticks, so a negotiator arriving mid-wait finds it still.
+
+**What the merge moved.** `main` had taken design numbers 57–64 (the ride along took 57), so this
+is design **65**, renumbered in every citation before the merge so none could be mistaken for the
+ride along's. The butcher's four kinds took 6–9, so the trader is **kind 10** and `PawnKindIndex.Count`
+11; `main` took pawn-hash bits 28 and 29 for the butcher's knockback immunity and throw, so
+`TurnedHostile` is **bit 30**. Job 28, item 18 and incident 6 were untouched. The save section list
+is raids, then `main`'s part-mined rock, then trade. The content fingerprint was re-taken. `main`'s
+Almanac (design 64) gates every key the game can show on a page and a picture, so gold, the trader
+and its event each have an Almanac entry and line art in `IconGlyphs` now — under Materials, People
+and Events. Nothing
+of the butcher's touches a visitor: it hunts colonists and moves as a bandit, so a trader is
+ignored by it as by the raids.
+
+**Still uncompiled** until the Unity tier runs: `HudShell.Trade.cs` (now with `SyncTradeModal`),
+the pane's two rows, the pause gate and Escape. Every API the shell calls was checked by name
+against the shipped Presentation and Hud sources in this review; that is a reading, not a compile.
+

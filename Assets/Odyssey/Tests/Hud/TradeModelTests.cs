@@ -29,9 +29,11 @@ namespace Odyssey.Tests.Hud
         };
 
         /// <summary>The brief's table: the colony's stock and the trader's, with the prices the simulation makes.</summary>
-        static WorldSnapshot Frame(int session = 1, bool ready = true, int colonyGold = 312, int purse = 640, bool present = true)
+        static WorldSnapshot Frame(int session = 1, bool ready = true, int colonyGold = 312, int purse = 640, bool present = true,
+            int generation = 1)
         {
             WorldSnapshot frame = global::Odyssey.Tests.Hud.Frame.Write(layers: 4);
+            frame.Generation = generation;
             frame.AddPawn(new PawnView(Ada, new CellRef(4, 4, 1), 800, 800, 700, flags: PawnFlags.Person));
             frame.AddPawn(new PawnView(Guest, new CellRef(5, 4, 1), 800, 800, 700, kind: PawnKindLabels.Trader,
                 flags: PawnFlags.Person | PawnFlags.Visitor));
@@ -268,13 +270,13 @@ namespace Odyssey.Tests.Hud
         // ---- what the buttons send ------------------------------------------------------------------
 
         [Test]
-        public void ConfirmSendsEveryRowThenTheCommitThenTheCancelAndCloses()
+        public void ConfirmSendsEveryRowThenTheCommitAndWaitsForTheAnswer()
         {
-            TradeModel model = Opened();
+            WorldSnapshot frame = Frame();
+            TradeModel model = Opened(frame);
             SampleDeal(model);
             var sent = new List<Intent>();
-            Assert.That(model.Confirm(sent), Is.True);
-            Assert.That(model.Showing, Is.False);
+            Assert.That(model.Confirm(sent, frame), Is.True);
 
             var lines = sent.Where(i => i.Kind == IntentKind.TradeLine).Select(i => (i.B, i.C)).ToList();
             Assert.That(lines, Is.EquivalentTo(new[]
@@ -282,18 +284,107 @@ namespace Odyssey.Tests.Hud
                 (ItemHandle.Wood, -120), (ItemHandle.Carrots, -40), (ItemHandle.MedicalSupplies, 3), (ItemHandle.Pistol, 1),
             }));
             Assert.That(sent.All(i => i.A == Guest.Value), Is.True);
-            Assert.That(sent[sent.Count - 2].Kind, Is.EqualTo(IntentKind.TradeCommit));
-            Assert.That(sent[sent.Count - 2].B, Is.EqualTo(134));
-            Assert.That(sent[sent.Count - 1].Kind, Is.EqualTo(IntentKind.TradeCancel));
+            Assert.That(sent[sent.Count - 1].Kind, Is.EqualTo(IntentKind.TradeCommit));
+            Assert.That(sent[sent.Count - 1].B, Is.EqualTo(134));
+            Assert.That(sent.Any(i => i.Kind == IntentKind.TradeCancel), Is.False, "the simulation ends an applied session itself");
+
+            // Up, with the ledger, and Confirm off with nothing to say until the answer comes.
+            Assert.That(model.Showing, Is.True);
+            Assert.That(model.AwaitingAnswer, Is.True);
+            Assert.That(model.CanConfirm, Is.False);
+            Assert.That(model.DisabledReasonKey, Is.Empty);
+            Assert.That(model.QuantityOf(TradeMode.Sell, ItemHandle.Wood), Is.EqualTo(120));
+
+            // A second press while waiting sends nothing.
+            var again = new List<Intent>();
+            Assert.That(model.Confirm(again, frame), Is.False);
+            Assert.That(again, Is.Empty);
         }
 
         [Test]
         public void ConfirmSendsNothingWhileItIsOff()
         {
-            TradeModel model = Opened();
+            WorldSnapshot frame = Frame();
+            TradeModel model = Opened(frame);
             var sent = new List<Intent>();
-            Assert.That(model.Confirm(sent), Is.False);
+            Assert.That(model.Confirm(sent, frame), Is.False);
             Assert.That(sent, Is.Empty);
+            Assert.That(model.Showing, Is.True);
+        }
+
+        /// <summary>The same frame again is no answer: a publish that predates the press cannot carry the verdict.</summary>
+        [Test]
+        public void TheFrameConfirmWasPressedOnIsNotTheAnswer()
+        {
+            WorldSnapshot frame = Frame();
+            TradeModel model = Opened(frame);
+            SampleDeal(model);
+            Assert.That(model.Confirm(new List<Intent>(), frame), Is.True);
+            Assert.That(model.Refresh(frame, CategoryOf), Is.True);
+            Assert.That(model.AwaitingAnswer, Is.True);
+            Assert.That(model.Refused, Is.False);
+        }
+
+        /// <summary>An applied deal ends the session (design 65 §12): the next frame has no ready session, and the window closes.</summary>
+        [Test]
+        public void AnAppliedDealClosesTheWindow()
+        {
+            WorldSnapshot frame = Frame();
+            TradeModel model = Opened(frame);
+            SampleDeal(model);
+            Assert.That(model.Confirm(new List<Intent>(), frame), Is.True);
+            Assert.That(model.Refresh(Frame(present: false, generation: 2), CategoryOf), Is.False);
+            Assert.That(model.Showing, Is.False);
+        }
+
+        /// <summary>
+        /// A refused deal leaves the session open (design 65 §12): the first frame after the press that
+        /// still shows it ready is the refusal. The ledger stays as it was and Confirm is off with the
+        /// reason, until a quantity changes — a changed ledger is a new deal.
+        /// </summary>
+        [Test]
+        public void ARefusedDealSaysSoAndKeepsTheLedger()
+        {
+            WorldSnapshot frame = Frame();
+            TradeModel model = Opened(frame);
+            SampleDeal(model);
+            Assert.That(model.Confirm(new List<Intent>(), frame), Is.True);
+
+            Assert.That(model.Refresh(Frame(generation: 2), CategoryOf), Is.True);
+            Assert.That(model.Showing, Is.True);
+            Assert.That(model.AwaitingAnswer, Is.False);
+            Assert.That(model.Refused, Is.True);
+            Assert.That(model.DisabledReasonKey, Is.EqualTo(TradeModel.RefusedKey));
+            Assert.That(model.CanConfirm, Is.False);
+            Assert.That(model.QuantityOf(TradeMode.Sell, ItemHandle.Wood), Is.EqualTo(120), "the ledger is kept");
+            Assert.That(model.QuantityOf(TradeMode.Buy, ItemHandle.Pistol), Is.EqualTo(1));
+
+            model.SetMode(TradeMode.Sell);
+            model.Step(ItemHandle.Wood, -1, shift: true);
+            Assert.That(model.Refused, Is.False, "a changed ledger is a new deal");
+            Assert.That(model.CanConfirm, Is.True);
+
+            // Reset clears it too.
+            Assert.That(model.Confirm(new List<Intent>(), Frame(generation: 2)), Is.True);
+            Assert.That(model.Refresh(Frame(generation: 3), CategoryOf), Is.True);
+            Assert.That(model.Refused, Is.True);
+            model.Reset();
+            Assert.That(model.Refused, Is.False);
+        }
+
+        /// <summary>
+        /// A new colony (design 65 §12): the window forgets which session it opened for, or a loaded
+        /// colony whose first visit is also visit 1, session 1 would never see its window.
+        /// </summary>
+        [Test]
+        public void ANewColonyForgetsTheSessionThisOneOpenedFor()
+        {
+            TradeModel model = Opened();
+            model.Cancel(new List<Intent>());
+            Assert.That(model.Refresh(Frame(), CategoryOf), Is.False, "the control: the same session never reopens");
+
+            model.Forget();
+            Assert.That(model.Refresh(Frame(), CategoryOf), Is.True, "another colony's visit 1, session 1 opens");
             Assert.That(model.Showing, Is.True);
         }
 

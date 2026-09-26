@@ -1013,8 +1013,10 @@ namespace Odyssey.Presentation.Ui
         void OnSessionChanged()
         {
             // A trade belongs to one colony (design 65 §6): a session coming or going puts the
-            // window away and lets go of the clock, or a loaded colony would wake paused behind it.
-            _trade.Close();
+            // window away and lets go of the clock, or a loaded colony would wake paused behind it —
+            // and forgets which session it opened for, or the next colony's visit 1, session 1
+            // would never open (§12).
+            _trade.Forget();
             _tradeModal?.Show(false);
             HoldTradeKeys(false);
             if (_boot != null) _boot.ModalHeld = false;

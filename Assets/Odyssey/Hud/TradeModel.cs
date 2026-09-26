@@ -71,9 +71,13 @@ namespace Odyssey.Hud
     ///
     /// <para><b>The quantities are the window's</b>, one per item per mode, and the deal spans both
     /// modes: switching loses nothing. They are clamped to what the side holds on every refresh.
-    /// Nothing is sent until Confirm, which sends every moving row as a <c>TradeLine</c>, the
-    /// <c>TradeCommit</c> with the balance shown, and the <c>TradeCancel</c> that ends the session —
-    /// the simulation re-checks the whole deal and applies it whole or not at all.</para>
+    /// Nothing is sent until Confirm, which sends every moving row as a <c>TradeLine</c> and the
+    /// <c>TradeCommit</c> with the balance shown, then <b>waits for the simulation's answer</b>: it
+    /// re-checks the whole deal and applies it whole or not at all. Applied, it ends the session and
+    /// the window closes on the next publish; refused, the session stays open, and the first publish
+    /// after the Confirm that still shows it ready is the refusal — the window keeps the ledger and
+    /// says so, until a quantity changes (design 65 §12). Before the review Confirm also sent the
+    /// <c>TradeCancel</c> and closed at once, so a refused deal vanished with nothing moved and no word.</para>
     ///
     /// <para><b>Prices are the simulation's</b> (<see cref="TradeRowView"/>). This class multiplies
     /// and adds them; it never works one out.</para>
@@ -93,7 +97,7 @@ namespace Odyssey.Hud
         public const string GoldKey = "ui.res.gold", YouKey = "ui.trade.you", TraderWordKey = "ui.trade.trader";
         public const string LeavesInKey = "ui.trade.leavesin", NegotiatingKey = "ui.trade.negotiating";
         public const string NothingKey = "ui.trade.reason.nothing", NoGoldKey = "ui.trade.reason.gold",
-            NoPurseKey = "ui.trade.reason.purse";
+            NoPurseKey = "ui.trade.reason.purse", RefusedKey = "ui.trade.reason.refused";
         public const string ResetKey = "ui.trade.reset", ConfirmKey = "ui.trade.confirm", CancelKey = "ui.menu.cancel";
         public const string TraderKindKey = "ui.pawn.trader";
         public const string PaneLeavesKey = "ui.trade.pane.leaves", PaneCarryingKey = "ui.trade.pane.carrying";
@@ -103,7 +107,7 @@ namespace Odyssey.Hud
         {
             TitleKey, SellKey, BuyKey, ItemKey, QualityKey, InStockKey, PriceKey, QuantityKey, TotalKey, AllKey,
             SellingForKey, BuyingForKey, YouPayKey, YouReceiveKey, BalanceKey, GoldKey, YouKey, TraderWordKey,
-            LeavesInKey, NegotiatingKey, NothingKey, NoGoldKey, NoPurseKey, ResetKey, ConfirmKey, CancelKey,
+            LeavesInKey, NegotiatingKey, NothingKey, NoGoldKey, NoPurseKey, RefusedKey, ResetKey, ConfirmKey, CancelKey,
             TraderKindKey, PaneLeavesKey, PaneCarryingKey,
         };
 
@@ -114,6 +118,11 @@ namespace Odyssey.Hud
         readonly List<TradeLine> _pool = new List<TradeLine>();
 
         int _openedVisit = -1, _openedSession = -1;
+
+        // The Confirm round trip (design 65 §12): the generation of the newest frame when Confirm was
+        // pressed, and whether the answer is still owed or came back as a refusal.
+        int _pendingGeneration;
+        bool _pending, _refused;
 
         /// <summary>The window is up.</summary>
         public bool Showing { get; private set; }
@@ -160,14 +169,24 @@ namespace Odyssey.Hud
         public bool TraderShort => Balance < 0 && -Balance > Purse;
 
         // ---- the buttons ------------------------------------------------------------------------
-        /// <summary>The key of why Confirm is off, or empty while it is on.</summary>
+        /// <summary>
+        /// The key of why Confirm is off, or empty while it is on — or while the simulation's answer to
+        /// the last Confirm is still owed, which is off with no reason to give.
+        /// </summary>
         public string DisabledReasonKey =>
-            SellCount + BuyCount == 0 ? NothingKey
+            _refused ? RefusedKey
+            : SellCount + BuyCount == 0 ? NothingKey
             : ColonyShort ? NoGoldKey
             : TraderShort ? NoPurseKey
             : string.Empty;
 
-        public bool CanConfirm => DisabledReasonKey.Length == 0;
+        public bool CanConfirm => !_pending && DisabledReasonKey.Length == 0;
+
+        /// <summary>Confirm has been pressed and no publish has answered it yet.</summary>
+        public bool AwaitingAnswer => _pending;
+
+        /// <summary>The last Confirm came back refused: the ledger is as it was, and says so.</summary>
+        public bool Refused => _refused;
 
         // ---- the list ---------------------------------------------------------------------------
         /// <summary>Headings and items of the current mode, in the game's category order, on the current page.</summary>
@@ -219,6 +238,7 @@ namespace Odyssey.Hud
         void Open(in TradeView view)
         {
             Showing = true;
+            _pending = _refused = false;
             _openedVisit = view.Visit;
             _openedSession = view.Session;
             Trader = view.Trader;
@@ -235,12 +255,32 @@ namespace Odyssey.Hud
         {
             if (!Showing) return;
             Showing = false;
+            _pending = _refused = false;
             _lines.Clear();
             Version++;
         }
 
+        /// <summary>
+        /// A new colony: close, and forget which session was opened for, so the next colony's first
+        /// session opens even when it shares the visit and session numbers of this one's last.
+        /// </summary>
+        public void Forget()
+        {
+            Close();
+            _openedVisit = _openedSession = -1;
+        }
+
         void Read(WorldSnapshot frame, in TradeView trade, Func<int, int> categoryOf)
         {
+            // The session is still ready on a frame published after the Confirm: the simulation
+            // re-checked the deal and turned it down whole. Applied, it would have ended the session
+            // and Refresh would have closed the window before reaching here.
+            if (_pending && frame.Generation > _pendingGeneration)
+            {
+                _pending = false;
+                _refused = true;
+            }
+
             Array.Clear(_rows, 0, _rows.Length);
             ReadOnlySpan<TradeRowView> rows = frame.TradeRows;
             for (int i = 0; i < rows.Length; i++)
@@ -385,6 +425,7 @@ namespace Odyssey.Hud
         {
             Array.Clear(_sell, 0, _sell.Length);
             Array.Clear(_buy, 0, _buy.Length);
+            _refused = false;
             if (_categoryOf != null) Rebuild(_categoryOf);
         }
 
@@ -400,6 +441,8 @@ namespace Odyssey.Hud
 
         void Set(int item, int value)
         {
+            // A changed ledger is a new deal: a refusal was about the old one.
+            _refused = false;
             TradeRowView r = _rows[item]!.Value;
             if (Mode == TradeMode.Sell) _sell[item] = Clamp(value, r.ColonyCount);
             else _buy[item] = Clamp(value, r.TraderCount);
@@ -410,11 +453,13 @@ namespace Odyssey.Hud
         public int QuantityOf(TradeMode mode, int item) => mode == TradeMode.Sell ? _sell[item] : _buy[item];
 
         /// <summary>
-        /// Confirm: every moving row as a <c>TradeLine</c> (sold negative, bought positive), the
-        /// <c>TradeCommit</c> with the balance shown, and the <c>TradeCancel</c> that ends the
-        /// session; then the window closes. Nothing is sent while Confirm is off.
+        /// Confirm: every moving row as a <c>TradeLine</c> (sold negative, bought positive), then the
+        /// <c>TradeCommit</c> with the balance shown. The window stays up with Confirm off until a
+        /// frame published after <paramref name="current"/> answers: the session gone (applied — the
+        /// next <see cref="Refresh"/> closes), or still ready (refused — the ledger stays and says so).
+        /// Nothing is sent while Confirm is off, the answer to the last press included.
         /// </summary>
-        public bool Confirm(List<Intent> into)
+        public bool Confirm(List<Intent> into, WorldSnapshot current)
         {
             if (!Showing || !CanConfirm) return false;
             int trader = Trader.Value;
@@ -424,8 +469,10 @@ namespace Odyssey.Hud
                 if (_buy[item] > 0) into.Add(new Intent(IntentKind.TradeLine, default, trader, item, _buy[item]));
             }
             into.Add(new Intent(IntentKind.TradeCommit, default, trader, Balance));
-            into.Add(new Intent(IntentKind.TradeCancel, default, trader));
-            Close();
+            _pending = true;
+            _refused = false;
+            _pendingGeneration = current.Generation;
+            Version++;
             return true;
         }
 

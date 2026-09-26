@@ -52,7 +52,7 @@ note: the colony's stock is scanned on publish only while a trader is on the boa
 - Rename the CSV row to gold, then run all three content gates.
 
 **T2 — A neutral visitor side** (plumbing only).
-- `Faction.Visitor = 3`, and `PawnKind_Trader` appended as kind 6.
+- `Faction.Visitor = 3`, and `PawnKind_Trader` appended as kind 10 (6 before the merge with `main`).
 - A `VisitorTree` (Downed → `VisitorThinkNode` → Idle), routed at `JobSystem.cs:506`. The node walks
   to `RaidTargets.Resolve` and mills there (lift `Mill` into a shared helper), or heads for the edge
   while `Leaving`.
@@ -123,7 +123,7 @@ note: the colony's stock is scanned on publish only while a trader is on the boa
 - A `VisitorHarmListener` on `CombatHooks`, in the style of `FriendlyFireListener`.
 - **Deliberate:** a colonist whose `CombatTarget` is the trader, reached only through a Ctrl-attack
   order (`CombatOrders.Route:52`). The trader then carries `FactionOverride = Hostile`, saved in
-  `odyssey.trade` and hashed at pawn-word bit 28 only while set. The outfit is kept.
+  `odyssey.trade` and hashed at pawn-word bit 30 (28 before the merge) only while set. The outfit is kept.
 - **Anything else** (strays, raiders, falls): cancel the session and leave at once.
 
 ## Verification

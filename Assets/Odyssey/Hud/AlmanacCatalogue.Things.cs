@@ -77,6 +77,21 @@ namespace Odyssey.Hud
                 Specs("Coal lies deeper than iron and is rarer. It can be stored and hauled; no building takes it as fuel.",
                     ("Hidden", "Drawn as rock until uncovered", "Mining a cell uncovers the six touching it")),
                 new[] { ("ui.res.ironore", "the shallower seam"), ("ui.terrain.rock", "the stone round it"), ("ui.arch.tool.generator", "burns wood, not coal") }),
+
+            // Gold (design 65 §2–§3): the currency is a thing, stored and hauled like any other, and
+            // never a row in a ledger — it is the balance.
+            Keyed("ui.res.gold", Materials, "Currency", "Traded",
+                "The currency. A real item that stacks, is stored under Items and can be hauled or stolen; every other thing's value is a number of it. A trade's balance is paid in it and never listed as a line.",
+                "Paid by a trader; the debug menu's Give gold", AlmanacAction.FindOnMap,
+                new[] {
+                    ("Stack", "500"), ("Storage", Registry.Label("ui.res.category.items")),
+                    ("Value", "1, by definition"), ("Spent", "From the stores, and from stacks within 4 cells of the trader"),
+                },
+                Specs("A trader pays six tenths of a thing's value and charges fourteen tenths, always at least one gold above what it would pay, so buying and selling back always loses.",
+                    (L("ui.res.wood") + ", " + Lc("ui.res.stone") + ", " + Lc("ui.res.carrots"), "1 each", "Pays 1, charges 2"),
+                    (L("ui.res.medkit"), "20", "Pays 12, charges 28"),
+                    (L("ui.item.pistol"), "150", "Pays 90, charges 210")),
+                new[] { ("ui.pawn.trader", "who pays in it"), ("ui.bulletin.trader", "when one comes"), ("ui.item.pistol", "the dearest thing") }),
         };
 
         static IReadOnlyList<AlmanacEntry> FoodEntries() => new List<AlmanacEntry>
