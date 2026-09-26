@@ -13940,3 +13940,28 @@ mille, because the √n divisor and the ×0.7 lose too much in thousandths.
 
 No golden moved after P3. Unity has compiled none of it: the pane's rows, the Arrest button and the
 jumpsuit are Presentation code the fast tier never sees.
+
+## 2026-09-26 — The prisoner line reviewed: ten faults, and what the first build's tests could not see
+
+A high-effort review of the whole branch returned ten findings, reviewed and unverified. Each was
+checked in the code before any fix; **all ten were real**. Design 58 §15e tables them.
+
+**The worst was one the tests were built to catch and did not.** `CustodyTests` already
+round-tripped a prisoner through a save and compared hashes, but it set every field of the record
+first, and the fault lived in the record being *empty*: a freshly taken prisoner holds an empty
+record, a load drops an empty record, and the hash counted it. The save-mid-raid gate would have
+found it the first time a surrender and a save met. The lesson is the one the determinism tests
+keep teaching: **round-trip the state the game actually makes, not the state a test finds
+interesting**, and for any sparse record ask whether empty and absent hash the same.
+
+**Most of the rest were the edges between custody and systems written before it.** The attack
+drivers knew a target could die or go down, not that she could give up. The wake sweep assumed a
+bed goes wrong only when its owner is taken away. The outfit's owner read the Hostile flag that
+custody now rewrites. The bed purpose derived from rooms forgot itself when the room opened. None of
+these is a prisoner rule. Each is an older rule meeting a new state, which is where a review earns
+its keep.
+
+**Every fix went in test first, and every new test was run against the code without its fix**
+(six failed, six then passed). The first build's tests had passed on their first run more often
+than was comfortable, and running the negative controls is what makes a green result mean
+something. No golden moved.

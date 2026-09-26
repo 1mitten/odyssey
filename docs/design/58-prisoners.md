@@ -547,6 +547,25 @@ limit and left its queued frontier marked visited, and the next region's flood t
 as walls. The fill now flags the limit and carries on (`docs/bug-patterns.md`, 2026-09-26). No golden
 moved. It is temperature's code, and every room on `main` is judged by it.
 
+### 15e. The review (2026-09-26)
+
+A high-effort review of the whole line found ten faults, and each was confirmed in the code before
+it was fixed. Every fix below has a test that fails without it and passes with it, except §15e-6,
+which is a guard against a case no board here can build. No golden moved.
+
+| # | Fault | Fix |
+|---|---|---|
+| 1 | **A prisoner freshly taken hashed differently after a load.** `Take` leaves an empty record; the load drops an empty record; the hash counted it. The pane then showed Hold and 0 % after a load too, because both the publish gate and the pane asked for a record | An empty record is no record to the hash; the pane and its publish gate ask custody (`CustodyTests.AFreshlyTakenPrisonerSurvivesASaveToTheSameHash`) |
+| 2 | **A captured raider kept her weapon**, and would have drawn it the hour she broke out | `CustodyRules.Take` puts it down, so every way in disarms (`CaptureTests.ACapturedRaiderIsDisarmed`) |
+| 3 | **A colonist ordered to attack went on striking a raider who had surrendered** | Both attack drivers end on a held target, as on a downed one (`PrisonFateTests.ASurrenderEndsTheAttackOnHer`) |
+| 4 | **Marking an unowned bed left the colonist asleep in it** | The owner sweep raises the wake flag whenever the purposes moved (`PrisonerMindTests.MarkingAnUnownedBedWakesTheColonistInIt`) |
+| 5 | **A surrendered raider walking to her cell was drawn in the colony's suit**, and a colonist resisting arrest would have been drawn as a bandit; a leased figure never changed clothes | Held but undressed, she wears what her kind came in; a figure whose outfit moves is repainted or re-leased (`PrisonerOutfitTests`) |
+| 6 | **A prisoner woken in the wrong bed was put back to sleep by the colonist chooser**, whose fallback is the colony's fireside | `ResumeSleep` is for colonists; a prisoner's own tree picks her bed |
+| 7 | **An escapee lost her bed to the first owner sweep**, which runs whenever rooms change, such as when she breaks her door | An escapee sleeps from the prisoners' pool (`EscapeTests.AnEscapeeKeepsHerBedWhenTheRoomsChange`) |
+| 8 | **A bed raised inside a cell turned back into a colony bed when the cell opened** | A bed raised in a cell is marked at the raise (`BedPurposes.Raised`, `EscapeTests.ABedBuiltInACellStaysAPrisonBedWhenTheDoorGoes`) |
+| 9 | **A pawn let go got a colonist's full pane**, whose commands the simulation refuses | Every custody other than Free gets the bare pane; a released pawn's one row says *let go* |
+| 10 | **Capture's bed choice was a copy of the rescue's** (bug-patterns P1) | `RescueRules.BedFor` takes the pool to judge from; the rescue driver's `StillFree` asks a virtual `UserFor` |
+
 ### 15c. Still owed
 
 - **Unity.** The fast tier compiles neither Presentation nor Editor: the pane's mode row, the
