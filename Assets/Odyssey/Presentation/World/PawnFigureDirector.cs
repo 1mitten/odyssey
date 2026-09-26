@@ -1264,6 +1264,8 @@ namespace Odyssey.Presentation.World
             ApplyWorkPose();
             CheckSocialGreetings();
             ApplyGazePose(deltaTime);
+            // After the gaze, which has just set the head absolutely: the nod goes on top (design 59 §6).
+            ApplyFaces(deltaTime, stepConversations: true);
             // Last, after every pass that turns the head: what is shrunk is the pose as drawn.
             ApplyHeadHidden();
         }
@@ -1427,6 +1429,9 @@ namespace Odyssey.Presentation.World
             ApplyFooting();
             ApplyWorkPose();
             ApplyGazePose(deltaTime);
+            // The faces too, or a photographed talker would keep the clip's head. Conversations are
+            // stepped only by Sync, so a harness calling both does not run their clock twice.
+            ApplyFaces(deltaTime, stepConversations: false);
             // The chips as well: under the player loop Unity steps them, and in an editor tool
             // with no player loop nothing does, so a photographed blow would throw wood that
             // never moved. Stepping them here costs the game nothing, because the game never
@@ -2298,6 +2303,24 @@ namespace Odyssey.Presentation.World
                 return;
             }
 
+            // Tier 3.5: Conversation — each looks at the other's head (design 59 §5).
+            if (TalkPartnerHead(figure.Pawn, out Vector3 partnerHead))
+            {
+                figure.Gaze.ActivePriority = GazePriority.Conversation;
+                figure.Gaze.HasTarget = true;
+                figure.Gaze.TargetWorldPosition = partnerHead;
+                figure.Gaze.IsGlancing = false;
+                figure.Gaze.GazeWeight = 1f;
+                return;
+            }
+            if (figure.Gaze.ActivePriority == GazePriority.Conversation)
+            {
+                // The talk is over: back to the ambient clock from the start of a dwell.
+                figure.Gaze.ActivePriority = GazePriority.PathForward;
+                figure.Gaze.HasTarget = false;
+                figure.Gaze.StateTimer = 0f;
+            }
+
             // If an active social greeting glance is running:
             if (figure.Gaze.ActivePriority == GazePriority.SocialPassing)
             {
@@ -2355,7 +2378,8 @@ namespace Odyssey.Presentation.World
             {
                 Figure a = _figures[i];
                 if (a.Pawn < 0 || a.Transform == null) continue;
-                if (a.Gaze.ActivePriority >= GazePriority.WorkFocus) continue;
+                // Somebody mid-conversation does not break off to greet a passer-by.
+                if (a.Gaze.ActivePriority >= GazePriority.Conversation) continue;
                 if (a.Gaze.SocialCooldown > 0f) continue;
 
                 Vector3 posA = a.Transform.position;
@@ -2557,6 +2581,8 @@ namespace Odyssey.Presentation.World
             // And somebody else's fight: a body lent to a colonist walking into view must not open
             // with the last tenant's stagger (design 33 §5f).
             figure.Fight.Forget();
+            // And somebody else's blink: seeded by this pawn, so her rhythm is her own (design 59 §4).
+            figure.Face = Odyssey.Hud.FaceMotion.Start(pawn.Value);
             // And somebody else's weapon, until this pawn's own is read on the first pose — and
             // whether it was drawn: the new pawn's is taken as the frame finds it (design 33 §8b).
             HideWeapon(figure);

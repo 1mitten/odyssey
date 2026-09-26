@@ -269,6 +269,12 @@ namespace Odyssey.Presentation.World
             /// <summary>Runtime procedural gaze and head-look state for this figure.</summary>
             public LookGazeState Gaze;
 
+            /// <summary>The eyes and brows, bound at rest with the other bones; null on a rig with neither (design 59).</summary>
+            public FaceRig? FaceRig;
+
+            /// <summary>The blink and the talking rhythm. Restarted on every lease; the expression and the conversation are the director's.</summary>
+            public Odyssey.Hud.FaceMotion Face;
+
             // The legs. Bound for the crouch; see BindWorkBones.
             public Transform? Hips;
             public Transform? LeftUpperLeg;
