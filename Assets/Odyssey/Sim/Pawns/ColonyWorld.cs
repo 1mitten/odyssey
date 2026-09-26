@@ -246,6 +246,14 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Write the whole world to a stream.</summary>
         public void Save(Stream stream, SaveRecipe? recipe = null) => WorldSave.Save(World, stream, SaveComponents, recipe);
 
+        /// <summary>
+        /// Write the whole world, then sections that are not the board's own (design 64 §12: the
+        /// campaign above it). Appended after every board section, so a build that does not know
+        /// them skips them and the board loads as it always did.
+        /// </summary>
+        public void Save(Stream stream, SaveRecipe? recipe, IReadOnlyList<ISaveable> extra) =>
+            WorldSave.Save(World, stream, Joined(extra), recipe);
+
         public byte[] Save(SaveRecipe? recipe = null)
         {
             using var buffer = new MemoryStream();
@@ -268,6 +276,26 @@ namespace Odyssey.Sim.Pawns
             Pawns.Pawns.BackfillSkills(header.FormatVersion);
             RebuildDerived();
             return header;
+        }
+
+        /// <summary>
+        /// Load the world and sections that are not the board's own, as <see cref="Save(Stream, SaveRecipe, IReadOnlyList{ISaveable})"/>
+        /// wrote them. The extra sections load after the board's, so they find it whole.
+        /// </summary>
+        public SaveHeader Load(Stream stream, IReadOnlyList<ISaveable> extra)
+        {
+            var header = WorldSave.Load(World, stream, Joined(extra));
+            Pawns.Pawns.BackfillSkills(header.FormatVersion);
+            RebuildDerived();
+            return header;
+        }
+
+        List<ISaveable> Joined(IReadOnlyList<ISaveable> extra)
+        {
+            var all = new List<ISaveable>(SaveComponents.Count + extra.Count);
+            for (int i = 0; i < SaveComponents.Count; i++) all.Add(SaveComponents[i]);
+            for (int i = 0; i < extra.Count; i++) all.Add(extra[i]);
+            return all;
         }
 
         public SaveHeader Load(byte[] bytes)

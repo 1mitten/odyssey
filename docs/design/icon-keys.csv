@@ -979,3 +979,4 @@ ui.world.region.deep,{name} Deep,ui.world,WG,A sea's name in one of its frames
 ui.world.region.shelf,The {name} Shelf,ui.world,WG,A sea's name in one of its frames
 ui.world.region.sound,{name} Sound,ui.world,WG,A sea's name in one of its frames
 ui.world.region.gulfof,Gulf of {name},ui.world,WG,A sea's name in one of its frames
+ui.situation.salvagecache,Salvage cache,ui.situation,EX,"A stash of salvage somebody hid and somebody still guards. Scrap metal, medical supplies and food, for whoever can take it"

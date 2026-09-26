@@ -819,6 +819,7 @@ namespace Odyssey.Hud
             { "ui.settings.vsync", "VSync" },
             { "ui.settings.wake", "Wake-up" },
             { "ui.settings.wallsdown", "Walls down" },
+            { "ui.situation.salvagecache", "Salvage cache" },
             { "ui.skill.animals", "Animals" },
             { "ui.skill.construction", "Construction" },
             { "ui.skill.cooking", "Cooking" },

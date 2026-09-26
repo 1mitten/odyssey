@@ -48,6 +48,9 @@ namespace Odyssey.Sim.Saving
             _writer.Write(bytes);
         }
 
+        /// <summary>A planet tile whole, as the header writes its site (design 64 §12).</summary>
+        public void Write(SiteTile site) => WorldSave.WriteTile(_writer, site);
+
         public void Write(CellRef cell)
         {
             _writer.Write(cell.X);
@@ -88,6 +91,9 @@ namespace Odyssey.Sim.Saving
         public uint ReadUInt() => _reader.ReadUInt32();
         public long ReadLong() => _reader.ReadInt64();
         public short ReadShort() => _reader.ReadInt16();
+
+        /// <summary>The reader of <see cref="SaveWriter.Write(SiteTile)"/>.</summary>
+        public SiteTile ReadSite() => WorldSave.ReadTile(_reader);
 
         public string ReadString()
         {
@@ -287,8 +293,14 @@ namespace Odyssey.Sim.Saving
         /// <para>11 (design 59, world generation): the <b>header</b> grew the planet site — a flag,
         /// then the world seed and the tile's fields, the biome by Def name. A file at 10 or below
         /// reads back no site and rebuilds the board it always did. Nothing in a section moved.</para>
+        ///
+        /// <para>12 (design 64, expeditions): a new section, <c>odyssey.campaign</c>, holding the
+        /// places, the chart, the colonists on the road and every live site board. Nothing in an
+        /// older section moved and a file at 11 or below loads as a campaign with no expedition;
+        /// the number moved so that a build from before expeditions <b>refuses</b> a file with
+        /// people on the road rather than skipping the section and losing them in silence.</para>
         /// </remarks>
-        public const int CurrentFormatVersion = 11;
+        public const int CurrentFormatVersion = 12;
 
         public static void Save(SimWorld world, Stream stream, IReadOnlyList<ISaveable> components,
             SaveRecipe? recipe = null)
@@ -485,6 +497,23 @@ namespace Odyssey.Sim.Saving
             binary.Write(recipe.Site.HasValue);
             if (!(recipe.Site is SiteTile site)) return;
             binary.Write(recipe.WorldSeed);
+            WriteTile(binary, site);
+        }
+
+        static SiteTile? ReadSite(BinaryReader binary, out uint worldSeed)
+        {
+            worldSeed = 0;
+            if (!binary.ReadBoolean()) return null;
+            worldSeed = binary.ReadUInt32();
+            return ReadTile(binary);
+        }
+
+        /// <summary>
+        /// One planet tile's fields, the biome by Def name: the header's site and, since format 12,
+        /// every place a campaign remembers (design 64 §12). One encoding for both.
+        /// </summary>
+        internal static void WriteTile(BinaryWriter binary, SiteTile site)
+        {
             binary.Write(site.TileIndex);
             binary.Write(site.Column);
             binary.Write(site.Row);
@@ -498,11 +527,9 @@ namespace Odyssey.Sim.Saving
             binary.Write(site.Coastal);
         }
 
-        static SiteTile? ReadSite(BinaryReader binary, out uint worldSeed)
+        /// <summary>The reader of <see cref="WriteTile"/>.</summary>
+        internal static SiteTile ReadTile(BinaryReader binary)
         {
-            worldSeed = 0;
-            if (!binary.ReadBoolean()) return null;
-            worldSeed = binary.ReadUInt32();
             int index = binary.ReadInt32();
             int column = binary.ReadInt32();
             int row = binary.ReadInt32();

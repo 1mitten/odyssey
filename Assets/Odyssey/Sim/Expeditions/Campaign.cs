@@ -63,7 +63,11 @@ namespace Odyssey.Sim.Expeditions
             Ids.Reset(home.Pawns.Pawns.Ids.Peek);
             home.Pawns.Pawns.Ids = Ids;
             AddBoard(home, place: -1);
+            SeedPlanet(home);
         }
+
+        /// <summary>The slot the next board will take. Slots are never reused.</summary>
+        public int NextSlot => _nextSlot;
 
         /// <summary>The board in a slot, or null if it has been discarded or never existed.</summary>
         public Board? BoardAt(int slot)

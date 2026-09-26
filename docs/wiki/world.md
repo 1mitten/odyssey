@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006. The planet's biomes and terrain are proposals for veto (design 59): only Meadow can be settled until more art arrives.
 
-187 entries, 161 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+188 entries, 162 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -245,6 +245,12 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **The {name} Shelf** | `ui.world.region.shelf` | A sea's name in one of its frames | no art | WG |
 | **{name} Sound** | `ui.world.region.sound` | A sea's name in one of its frames | no art | WG |
 | **Gulf of {name}** | `ui.world.region.gulfof` | A sea's name in one of its frames | no art | WG |
+
+## Places on the planet
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Salvage cache** | `ui.situation.salvagecache` | A stash of salvage somebody hid and somebody still guards. Scrap metal, medical supplies and food, for whoever can take it | no art | EX |
 
 ---
 

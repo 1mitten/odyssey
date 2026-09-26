@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The situations a place on the planet can be (design 64 §7). A place is seeded on a land tile at
+  campaign start with one of these, chosen by weight among those that stand in its biome, and cast
+  from its own seed when a party arrives: which stacks the cache holds, and how many guard it.
+
+  The first slice has one (design 64 §7c): a salvage cache with a hazard. The cache sits near the
+  site board's centre; the guards are bandits, who fight anybody who comes. A place remembers being
+  cleared (every guard down or gone) and looted (every stack gone), and a revisit rebuilds the same
+  board from the same seed with those applied.
+
+  The names are registry keys (ui.situation.*).
+-->
+<Defs>
+
+  <SituationDef>
+    <defName>Situation_SalvageCache</defName>
+    <labelKey>ui.situation.salvagecache</labelKey>
+    <biomes><li>Biome_Meadow</li></biomes>
+    <weight>1</weight>
+    <perThousandTiles>20</perThousandTiles>
+    <minHexesFromHome>1</minHexesFromHome>
+    <cache>
+      <li><item>Item_Salvage</item><min>20</min><max>50</max></li>
+      <li><item>Item_Salvage</item><min>10</min><max>30</max></li>
+      <li><item>Item_MedicalSupplies</item><min>2</min><max>6</max></li>
+      <li><item>Item_Meal</item><min>4</min><max>10</max></li>
+    </cache>
+    <guardKind>PawnKind_Bandit</guardKind>
+    <guardsMin>2</guardsMin>
+    <guardsMax>3</guardsMax>
+  </SituationDef>
+
+</Defs>

@@ -269,7 +269,7 @@ namespace Odyssey.Tests.Sim
             byte[] bytes = colony.Save(colony.Recipe(3));
 
             SaveHeader header = WorldSave.ReadHeaderOnly(new MemoryStream(bytes));
-            Assert.That(header.FormatVersion, Is.EqualTo(11));
+            Assert.That(header.FormatVersion, Is.EqualTo(WorldSave.CurrentFormatVersion));
             Assert.That(header.Recipe.Site, Is.EqualTo(site));
             Assert.That(header.Recipe.WorldSeed, Is.EqualTo(424242u));
         }

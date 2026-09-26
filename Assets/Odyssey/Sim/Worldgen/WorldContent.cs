@@ -136,7 +136,8 @@ namespace Odyssey.Sim.Worldgen
         public static DefLoader Register(DefLoader loader) =>
             loader.Register<TerrainDef>().Register<OreKindDef>().Register<PlantDef>().Register<ClimateDef>()
                 .Register<Weather.WeatherDef>().Register<WildPlantDef>()
-                .Register<Worldgen.Planet.BiomeDef>().Register<Worldgen.Planet.PlanetDef>();
+                .Register<Worldgen.Planet.BiomeDef>().Register<Worldgen.Planet.PlanetDef>()
+                .Register<Expeditions.SituationDef>();
 
         /// <summary>
         /// The whole terrain table, in index order. A missing or misspelt kind throws here
@@ -177,6 +178,7 @@ namespace Odyssey.Sim.Worldgen
             _weathers = null;
             _planet = null;
             _biomes = null;
+            _situations = null;
         }
 
         static Worldgen.Planet.PlanetDef? _planet;
@@ -195,6 +197,22 @@ namespace Odyssey.Sim.Worldgen
             var table = new List<Worldgen.Planet.BiomeDef>(defs.Table<Worldgen.Planet.BiomeDef>().All);
             table.Sort((a, b) => a.priority != b.priority ? a.priority.CompareTo(b.priority)
                 : string.CompareOrdinal(a.defName, b.defName));
+            return table.ToArray();
+        }
+
+        static Expeditions.SituationDef[]? _situations;
+
+        /// <summary>
+        /// Every situation a place may be (design 64 §7), in defName order: the index a place saves
+        /// is into this, so its order is a contract, like every other table here.
+        /// </summary>
+        public static Expeditions.SituationDef[] Situations => _situations ??= SituationsFromDefs(ContentPack.Core);
+
+        public static Expeditions.SituationDef[] SituationsFromDefs(DefDatabase defs)
+        {
+            if (!defs.HasTable<Expeditions.SituationDef>()) return System.Array.Empty<Expeditions.SituationDef>();
+            var table = new List<Expeditions.SituationDef>(defs.Table<Expeditions.SituationDef>().All);
+            table.Sort((a, b) => string.CompareOrdinal(a.defName, b.defName));
             return table.ToArray();
         }
 
