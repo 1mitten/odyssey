@@ -583,7 +583,6 @@ namespace Odyssey.Tests.Sim
             // to, so people and animals take different legs. GoldenColonyProbe against the branch's
             // base: items, food, rest, mood, experience, passions and failed jobs identical; only
             // where they stand, the progress into their steps and the wanders (99 -> 100) differ.
-<<<<<<< HEAD
             // 2026-09-25, the culvert frog (design 30 §8): the meadow's table gained frogs on the
             // bank and its density went 15 -> 21, so the board is seeded with three more animals
             // (pawns 15 -> 18). GoldenColonyProbe against main (4c40e189): items, experience, passions and
@@ -601,12 +600,10 @@ namespace Odyssey.Tests.Sim
             // Merged with raids (design 55), 2026-09-26: the gunman keeps kind 4 and the frog moves
             // to 5, and a pawn's kind is hashed. GoldenColonyProbe on the frog branch (fca2ef08) and
             // on the merge is identical on all three boards, so only the number moved.
-            Generated = 5385105565351640744UL,
-            Simulated = 1457182368184692081UL,
-=======
-            Generated = 15749010853226102691UL,
-            Simulated = 7847500519175945995UL,
->>>>>>> origin/claude/prisoner-bed-assignment-98afc0
+            // Merged with prisoners (design 58) under the factions line, 2026-09-26: re-taken from
+            // the merged code; see the journal for the probe against both parents.
+            Generated = 13526168981504517089UL,
+            Simulated = 17399694390494026444UL,
         };
 
         /// <summary>

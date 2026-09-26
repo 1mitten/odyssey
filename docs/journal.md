@@ -13922,7 +13922,6 @@ and saved nowhere, so a loaded world stood in its build's sky until the next bou
 `main` for every save, and was fixed here because the raid test cannot pass without it. The lesson
 is in `docs/bug-patterns.md`: a value one system writes into another is derived state no section owns.
 
-<<<<<<< HEAD
 ## 2026-09-26 — Waking into the world
 
 The owner asked for the jump from the menu into a colony to stop feeling like loading: fade the menu
@@ -14016,7 +14015,7 @@ prompt, and none existed. Design 61 had only promised one.
   Design 61 and the plan say F8 now.
 - The lesson is the CLAUDE.md one: **check the code before trusting a status line**, including one's
   own from that morning.
-=======
+
 ## 2026-09-26 — Prisoners designed: a bed that makes a room, and two owners before any feature
 
 The owner asked for a prisoner system "similar-ish to RimWorld's but improved", with beds assignable
@@ -14083,4 +14082,22 @@ mille, because the √n divisor and the ×0.7 lose too much in thousandths.
 
 No golden moved after P3. Unity has compiled none of it: the pane's rows, the Arrest button and the
 jumpsuit are Presentation code the fast tier never sees.
->>>>>>> origin/claude/prisoner-bed-assignment-98afc0
+
+## 2026-09-26 — Factions F0 begins: the prisoner line merged underneath, and a merge done twice
+
+The owner approved the factions plan (orcs later). F0 extends the prisoner line's `Allegiance`, so
+`claude/lucid-euler-9puelu` now carries that line merged in. The prisoner branch had been cut before
+`main` gained the frog, so this merge also did the prisoner line's own merge with `main`:
+- the Spawn tab's row count takes both sets of rows, so it is 24;
+- the pawn content fingerprint and the played board's two goldens are re-taken from the merged code.
+
+**Measured, not assumed.** `GoldenColonyProbe` was run on the merge, on `main` and on the prisoner
+branch. The merge's census is **identical to `main`'s in every number on all three boards**, so no
+colony does anything different; the hash moved only because it now sees the prisoner line's job
+definitions and custody bits. The prisoner branch alone differs from `main` in the played board's
+frogs, which is the frog work it did not have.
+
+**A slip worth recording.** The first attempt committed three C# files and three documents with
+their conflict markers still in. The merge's list of conflicts was cut short by a `tail`, and
+`git add -A` staged everything. The fast tier caught it at compile time (CS8300), and the follow-up
+commit resolves each hunk. The lesson is in `docs/lessons.md`.

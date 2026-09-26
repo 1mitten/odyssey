@@ -2753,3 +2753,14 @@ simulation is deterministic; a real per-frame allocation lands in the same place
 that wanders is the runtime's, on the test thread. The test now takes the least of three windows,
 which a structure that reallocates every frame still fails. The lesson is the method: instrument by
 phase before bisecting commits, because an intermittent failure bisects badly.
+
+## A merge's conflict list is not optional reading (2026-09-26)
+
+A merge printed its conflicts, the output was piped through `tail -5`, and only the last two were
+seen: the generated wiki. They were regenerated and `git add -A` staged the rest. That committed
+three C# files and three documents **with their conflict markers in**. The fast tier caught the C#
+at compile time (CS8300); nothing would have caught the documents.
+
+**Before concluding any merge, run `git diff --name-only --diff-filter=U`, and after resolving,
+`git grep -n '^<<<<<<< \|^>>>>>>> '`.** Both must be empty before `git add`. Never truncate a
+merge's output.

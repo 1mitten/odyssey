@@ -23,7 +23,6 @@ the next session learns to ignore.
 
 ## Open
 
-<<<<<<< HEAD
 - **Do the frogs read as frogs, and are they where the water is?** (`claude/frog`, design 30 §8.)
   New game on the meadow and look along a stream or a pond: there should be groups of three to five
   bright emerald, red-eyed frogs on the banks (about 0.9 m long since the owner's first ask), and none
@@ -34,7 +33,7 @@ the next session learns to ignore.
   hops or lurches backwards at the start of one; frogs far from water; a frog too small to find from
   your normal camera height; a green that still sinks into the grass; or frogs you would rather see swimming, which
   is a cost stated in §8b.
-=======
+
 - **Prisoners, the whole line** (`claude/prisoner-bed-assignment-98afc0`, design 58 §15). Build a
   small walled, roofed room with a door and a bed; select the bed and press *for prisoners*. Spawn
   a bandit from the debug menu, fight it down, right-click it and choose *Capture*.
@@ -50,7 +49,6 @@ the next session learns to ignore.
   - Right-click beside a drafted squad standing near another colonist. Wrong: a menu appears
     instead of the move.
 
->>>>>>> origin/claude/prisoner-bed-assignment-98afc0
 - **Polish batch: trees, drops, the fire, the roster, the pane, the fade** (`claude/polish-batch`,
   designs 20 §14, 23 §11, 31 §20, 25 §10, 14 §10–§11, 38 §27).
   - Gather six or more colonists round a campfire at night. Each should be on their own tile, with
