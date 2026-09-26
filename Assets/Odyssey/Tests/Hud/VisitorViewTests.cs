@@ -6,7 +6,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// A guest on the interface side (design 57 §5, T2): the published Visitor flag keeps a trader
+    /// A guest on the interface side (design 65 §5, T2): the published Visitor flag keeps a trader
     /// off every surface that means "one of ours", dresses it as a trader, and gives it a guest's
     /// pane — no tab strip, no needs, the kind's word under its name.
     /// </summary>

@@ -61,7 +61,7 @@ namespace Odyssey.Tests.Hud
             // it binds nothing and clashes with nothing; it is read only while the wake holds the
             // keys (HotkeyDirector.Suspended), when no binding is live.
             { "anyKey", "HudShell.Wake.cs" },
-            // Tab inside the trade window (design 57 §6): switches Sell and Buy. Fixed, as Escape is
+            // Tab inside the trade window (design 65 §6): switches Sell and Buy. Fixed, as Escape is
             // — Tab is no HudKey, so nothing can bind it — and read only while that modal is up,
             // when it holds the game's keys (HotkeyDirector.Suspended).
             { "tabKey", "HudShell.Trade.cs" },

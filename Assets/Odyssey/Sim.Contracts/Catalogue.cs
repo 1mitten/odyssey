@@ -112,7 +112,7 @@ namespace Odyssey.Sim.Contracts
         public const int AttackRanged = 27;
 
         /// <summary>
-        /// Walk beside a trader and negotiate (design 57 §6): the colonist the right-click's Trade
+        /// Walk beside a trader and negotiate (design 65 §6): the colonist the right-click's Trade
         /// sends. Its working toil lasts as long as the session. Above <c>JobSystem.HashedAlways</c>,
         /// so its counters reach the hash only once one has run and no golden moved.
         /// </summary>
@@ -287,7 +287,7 @@ namespace Odyssey.Sim.Contracts
         public const int Pistol = 17;
 
         /// <summary>
-        /// Gold (design 57 §2): the currency. A real item, 500 to a stack, category Items, stored
+        /// Gold (design 65 §2): the currency. A real item, 500 to a stack, category Items, stored
         /// and hauled like any other. A trade ledger never shows it as a row; it is the balance.
         /// </summary>
         public const int Gold = 18;
@@ -400,7 +400,7 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A band of hostiles walks in from one edge, gathers, probes, and assaults (design 55).</summary>
         public const int Raid = 5;
 
-        /// <summary>A trader walks in from an edge, waits by the hearth about a day, and leaves (design 57).</summary>
+        /// <summary>A trader walks in from an edge, waits by the hearth about a day, and leaves (design 65).</summary>
         public const int Trader = 6;
 
         public const int Count = 7;

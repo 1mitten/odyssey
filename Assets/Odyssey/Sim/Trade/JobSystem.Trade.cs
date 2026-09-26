@@ -7,7 +7,7 @@ namespace Odyssey.Sim.Pawns
     public partial class JobSystem
     {
         /// <summary>
-        /// The right-click's Trade (design 57 §6): one colonist sent to negotiate with a trader,
+        /// The right-click's Trade (design 65 §6): one colonist sent to negotiate with a trader,
         /// drafted or not, as Tend is. The trader is held where it stands from this moment (the
         /// session is open but not yet ready), and the window opens when she arrives beside it.
         ///

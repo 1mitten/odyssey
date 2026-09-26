@@ -7,7 +7,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// Gold and what things are worth (design 57 §2–§3, T1): the content a trade is made from.
+    /// Gold and what things are worth (design 65 §2–§3, T1): the content a trade is made from.
     /// </summary>
     public class TradeContentTests
     {

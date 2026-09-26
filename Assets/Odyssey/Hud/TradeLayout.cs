@@ -3,7 +3,7 @@
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// The trade window's measurements (design 57 §6, mockups 28a Sell and 28b Buy). Every number
+    /// The trade window's measurements (design 65 §6, mockups 28a Sell and 28b Buy). Every number
     /// here is the owner's spec's, named once so the view writes none of them.
     ///
     /// <para><b>The width includes the chrome</b>: UI Toolkit's <c>width</c> is a border box, and

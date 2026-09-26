@@ -346,7 +346,7 @@
   </JobDef>
 
   <!--
-    The negotiator (design 57 section 6), JobHandle 28: walk beside the trader, then stand there
+    The negotiator (design 65 section 6), JobHandle 28: walk beside the trader, then stand there
     for as long as the session lasts. Not casually interruptible - a player sent her - and it
     never expires, because its working toil is the time the trade window is open.
   -->

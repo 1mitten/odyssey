@@ -4,7 +4,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Sim.Trade
 {
     /// <summary>
-    /// What harm does to a guest (design 57 §7; the owner's <i>"1 and 3 depending"</i>):
+    /// What harm does to a guest (design 65 §7; the owner's <i>"1 and 3 depending"</i>):
     /// <list type="bullet">
     /// <item><b>On purpose</b> — a colonist swinging or shooting at the guest it was ordered to attack,
     /// hit or miss — turns it hostile (<see cref="TradeSystem.Turn"/>).</item>

@@ -4,7 +4,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Sim.Trade
 {
     /// <summary>
-    /// <b>The one owner of what a trader pays and charges</b> (design 57 §3). The ledger's rows, the
+    /// <b>The one owner of what a trader pays and charges</b> (design 65 §3). The ledger's rows, the
     /// commit that re-checks them and anything later that prices a thing all ask here, so a price
     /// shown and a price charged cannot disagree. Per-mille integers, so a price is the same on every
     /// machine.

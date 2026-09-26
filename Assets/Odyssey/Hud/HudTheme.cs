@@ -509,7 +509,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// A quality tier's ink, by <see cref="QualityHandle"/> (the trade window's Quality column,
-        /// design 57 §6, mockup 28a): none, Poor in <see cref="Bad"/>, Normal in
+        /// design 65 §6, mockup 28a): none, Poor in <see cref="Bad"/>, Normal in
         /// <see cref="TextMeta"/>, Decent a pale gold, Uber a sea green, Epic a violet. The owner's
         /// values; a tier is also always named, so the colour is the second cue.
         /// </summary>

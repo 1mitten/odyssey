@@ -13963,7 +13963,7 @@ picture before it merges (design 56 §11).
 
 The owner asked for trading in the reference's mould, re-dressed for Odyssey: gold as the currency,
 and a debug-menu event bringing one person in from an edge to the hearth, where a right-click
-*Trade* opens a deal. **Documents only**: an interview (`trading-interview.md`), design 57 and
+*Trade* opens a deal. **Documents only**: an interview (`trading-interview.md`), design 65 and
 `docs/plans/trading.md`. No code is started until the plan is approved.
 
 **Three surveys found the game had the parts and not the side.**
@@ -13977,7 +13977,7 @@ and a debug-menu event bringing one person in from an edge to the hearth, where 
 
 **Eight answers, and every recommendation was taken but one.** The harm question came back as
 *"1 and 3 depending"*. It is read as accidental harm sending the trader away and a deliberate,
-ordered attack turning them hostile, and design 57 §7 asks the owner to confirm that reading.
+ordered attack turning them hostile, and design 65 §7 asks the owner to confirm that reading.
 
 **Decisions to keep.**
 - **Gold is an item, not a number.** The unused *Credit chit* row is renamed rather than joined by a

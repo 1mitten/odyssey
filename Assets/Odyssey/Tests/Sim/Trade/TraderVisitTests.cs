@@ -12,7 +12,7 @@ using Odyssey.Sim.Trade;
 namespace Odyssey.Tests.Sim.Trade
 {
     /// <summary>
-    /// The trader's visit (design 57 §5, T3): the incident walks one trader on at an edge with a
+    /// The trader's visit (design 65 §5, T3): the incident walks one trader on at an edge with a
     /// purse and a stock, it goes to the colony, it leaves when its stay runs out or a raid comes,
     /// it takes its pistol with it, and a save taken mid-visit resumes the same visit.
     /// </summary>

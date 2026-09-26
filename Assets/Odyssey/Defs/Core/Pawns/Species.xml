@@ -238,7 +238,7 @@
   </PawnKindDef>
 
   <!--
-    The trader (design 57 section 5): a person who walks in from an edge, waits by the colony's
+    The trader (design 65 section 5): a person who walks in from an edge, waits by the colony's
     fire for about a day and walks out again. The first kind of the Visitor faction: neither one of
     ours nor hostile, so it has no needs, no work and no draft, and nobody fights it on sight. It
     carries a pistol, which leaves with it. It keeps the bandit's traverse mode - a person who does

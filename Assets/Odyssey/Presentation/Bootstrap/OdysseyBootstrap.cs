@@ -604,7 +604,7 @@ namespace Odyssey.Presentation.Bootstrap
         public bool ClockHeld { get; set; }
 
         /// <summary>
-        /// Whether a pausing modal holds the colony's clock — the trade window (design 57 §6). A gate
+        /// Whether a pausing modal holds the colony's clock — the trade window (design 65 §6). A gate
         /// beside <see cref="ClockHeld"/> and never a speed, for its reason; kept apart from it
         /// because the wake assigns that flag outright and would release a trade's hold.
         /// </summary>

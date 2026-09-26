@@ -7,7 +7,7 @@ using Odyssey.Sim.Pawns.Wildlife;
 namespace Odyssey.Sim.Events
 {
     /// <summary>
-    /// Where something walks on from (design 55 §4, design 57 §5): a side of the board with any
+    /// Where something walks on from (design 55 §4, design 65 §5): a side of the board with any
     /// reachable edge cell, a centre drawn on it, and that side's cells sorted by distance from the
     /// centre, nearest first. The raid's and the trader's arrivals share it, so the two cannot come
     /// to disagree about which cells are an edge a pawn can walk in from. Lifted out of the raid's

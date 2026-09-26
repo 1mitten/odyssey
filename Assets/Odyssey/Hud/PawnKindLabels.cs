@@ -36,7 +36,7 @@ namespace Odyssey.Hud
             "ui.pawn.gunman",
             // The frog of the banks (design 30 §8).
             "ui.pawn.frog",
-            // The trader (design 57 §5), the first visitor.
+            // The trader (design 65 §5), the first visitor.
             "ui.pawn.trader",
         };
 

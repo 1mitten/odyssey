@@ -6,7 +6,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Sim.Trade
 {
     /// <summary>
-    /// Where what the colony bought is set down (design 57 §4): beside the trader, a stack at a time
+    /// Where what the colony bought is set down (design 65 §4): beside the trader, a stack at a time
     /// by each item's stack limit, through <see cref="ColonyItems.NearestCellWithSpace"/> — so a
     /// bought stack obeys the rule every drop obeys and never lands in a tree, on a bed or on a
     /// stack of something else. <b>Every cell is planned before anything changes</b>: a deal with
@@ -61,7 +61,7 @@ namespace Odyssey.Sim.Trade
 
         /// <summary>
         /// Set a plan down. A bought weapon is Normal: the trader sells serviceable goods, and a price
-        /// that ignores quality should not buy a lottery ticket (design 57 §3).
+        /// that ignores quality should not buy a lottery ticket (design 65 §3).
         /// </summary>
         public static void Apply(PawnContext ctx, IReadOnlyList<Drop> plan)
         {

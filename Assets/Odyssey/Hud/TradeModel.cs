@@ -6,7 +6,7 @@ using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
 {
-    /// <summary>Which half of the deal the trade window shows (design 57 §6, mockups 28a and 28b).</summary>
+    /// <summary>Which half of the deal the trade window shows (design 65 §6, mockups 28a and 28b).</summary>
     public enum TradeMode
     {
         /// <summary>What the colony sells: its stock, at what the trader pays.</summary>
@@ -60,7 +60,7 @@ namespace Odyssey.Hud
     }
 
     /// <summary>
-    /// The trade window (design 57 §6; the owner's mockups 28a Sell and 28b Buy), as data the shell
+    /// The trade window (design 65 §6; the owner's mockups 28a Sell and 28b Buy), as data the shell
     /// draws and the intents its buttons send. No UnityEngine, so every rule is proven in the fast
     /// tier; the view only lays the lines out.
     ///
@@ -80,7 +80,7 @@ namespace Odyssey.Hud
     /// </summary>
     public sealed class TradeModel
     {
-        // ---- the registry's words (design 57 §6) -------------------------------------------------
+        // ---- the registry's words (design 65 §6) -------------------------------------------------
         public const string TitleKey = "ui.tab.trade";
         public const string SellKey = "ui.trade.sell", BuyKey = "ui.trade.buy";
         public const string ItemKey = "ui.trade.col.item", QualityKey = "ui.trade.col.quality",

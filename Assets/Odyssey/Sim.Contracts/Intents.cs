@@ -366,7 +366,7 @@ namespace Odyssey.Sim.Contracts
         QueryShot,
 
         /// <summary>
-        /// Send one colonist to trade with a trader (design 57 §6): <c>A</c> is the negotiator's
+        /// Send one colonist to trade with a trader (design 65 §6): <c>A</c> is the negotiator's
         /// <c>PawnId</c> value and <c>B</c> the trader's. The colonist walks beside the trader and
         /// opens a session, and the ledger opens when the session is ready. Handler:
         /// <c>JobSystem.HandleOrderTrade</c>. Appended.
@@ -374,7 +374,7 @@ namespace Odyssey.Sim.Contracts
         OrderTrade,
 
         /// <summary>
-        /// One row of a deal (design 57 §6): <c>A</c> is the trader's <c>PawnId</c> value, <c>B</c> the
+        /// One row of a deal (design 65 §6): <c>A</c> is the trader's <c>PawnId</c> value, <c>B</c> the
         /// item def, <c>C</c> the signed count — above nought the colony buys, below it the colony
         /// sells. Buffered, never applied alone: a <see cref="TradeCommit"/> after it applies the
         /// whole deal or none of it. Handler: <c>TradeSystem.HandleLine</c>. Appended.
@@ -382,7 +382,7 @@ namespace Odyssey.Sim.Contracts
         TradeLine,
 
         /// <summary>
-        /// Close the deal the <see cref="TradeLine"/>s before it describe (design 57 §6): <c>A</c> is the
+        /// Close the deal the <see cref="TradeLine"/>s before it describe (design 65 §6): <c>A</c> is the
         /// trader's <c>PawnId</c> value and <c>B</c> the balance the ledger showed, in gold the colony
         /// pays (below nought, gold it receives). Re-validated whole; refused whole. Handler:
         /// <c>TradeSystem.HandleCommit</c>. Appended.
@@ -390,7 +390,7 @@ namespace Odyssey.Sim.Contracts
         TradeCommit,
 
         /// <summary>
-        /// End the negotiation with a trader (design 57 §6): <c>A</c> is the trader's <c>PawnId</c>
+        /// End the negotiation with a trader (design 65 §6): <c>A</c> is the trader's <c>PawnId</c>
         /// value. The ledger's Cancel. Handler: <c>TradeSystem.HandleCancel</c>. Appended.
         /// </summary>
         TradeCancel,
@@ -523,7 +523,7 @@ namespace Odyssey.Sim.Contracts
             IntentKind.EditBill => true,
             // A view question, like QueryCell: the readout answers paused as well as running.
             IntentKind.QueryShot => true,
-            // The trade window is a modal that pauses the game (design 57 §6): its Confirm and its
+            // The trade window is a modal that pauses the game (design 65 §6): its Confirm and its
             // Cancel are the whole of what a player does in it, and a deal that waited for play to
             // be pressed would leave the ledger reading one thing and the stores another. The order
             // that sends a negotiator is a colonist's order like any other.

@@ -10,7 +10,7 @@ using Odyssey.Sim.Saving;
 namespace Odyssey.Sim.Trade
 {
     /// <summary>
-    /// One trader on the board (design 57 §5): who, what kind, how long it has left, its purse and
+    /// One trader on the board (design 65 §5): who, what kind, how long it has left, its purse and
     /// its stock. The stock is counts, not things: nothing of it is on the board until the colony
     /// buys it, when it is set down beside the trader.
     /// </summary>
@@ -27,7 +27,7 @@ namespace Odyssey.Sim.Trade
         /// <summary>The tick it arrived.</summary>
         public int ArrivedTick;
 
-        /// <summary>Ticks of its stay still to run. Counts down only while no negotiation is open (design 57 §5).</summary>
+        /// <summary>Ticks of its stay still to run. Counts down only while no negotiation is open (design 65 §5).</summary>
         public int StayLeft;
 
         /// <summary>The gold it carries.</summary>
@@ -36,7 +36,7 @@ namespace Odyssey.Sim.Trade
         /// <summary>How many of each item it carries, by <c>ItemIndex</c>. Gold is never here: it is the purse.</summary>
         public int[] Stock = Array.Empty<int>();
 
-        /// <summary>The negotiating colonist's pawn id, or 0 while nobody is (design 57 §6).</summary>
+        /// <summary>The negotiating colonist's pawn id, or 0 while nobody is (design 65 §6).</summary>
         public int Negotiator;
 
         /// <summary>The negotiator is beside the trader and the ledger may open.</summary>
@@ -52,7 +52,7 @@ namespace Odyssey.Sim.Trade
     }
 
     /// <summary>
-    /// Every trader on the board, and the clock that sends each home (design 57 §5). A visit starts
+    /// Every trader on the board, and the clock that sends each home (design 65 §5). A visit starts
     /// when the trader incident spawns one — or when any visitor appears without one, which is how
     /// the debug menu's Spawn trader row gets a purse and a stock — and ends when the trader walks
     /// off an edge, dies, or is taken off the board.
@@ -73,14 +73,14 @@ namespace Odyssey.Sim.Trade
         /// <summary>How often visitors without a visit are looked for, in ticks.</summary>
         public const int AdoptTicks = 30;
 
-        /// <summary>The record layout this build writes. 1: the first. 2: the guests turned hostile (design 57 §7).</summary>
+        /// <summary>The record layout this build writes. 1: the first. 2: the guests turned hostile (design 65 §7).</summary>
         public const int Layout = 2;
 
         readonly PawnContext _ctx;
         readonly List<Visit> _visits = new List<Visit>();
         int _nextId = 1;
 
-        // The deal being described (design 57 §6): the TradeLines since the last commit, for one
+        // The deal being described (design 65 §6): the TradeLines since the last commit, for one
         // trader. Never saved or hashed — it lives from one intent drain to the commit in the same
         // drain, and is thrown away by the commit, by a line for another trader and by the tick.
         readonly List<(int Item, int Count)> _lines = new List<(int Item, int Count)>();
@@ -173,7 +173,7 @@ namespace Odyssey.Sim.Trade
                 Pawn? trader = _ctx.Pawns.Get(new PawnId(visit.Pawn));
                 if (trader == null)
                 {
-                    // Dead, or taken off the board some other way. Its stock goes with it (design 57 §5).
+                    // Dead, or taken off the board some other way. Its stock goes with it (design 65 §5).
                     _visits.RemoveAt(v);
                     continue;
                 }
@@ -196,7 +196,7 @@ namespace Odyssey.Sim.Trade
 
         /// <summary>
         /// Send the trader home now: the session ends, and it turns for the nearest edge. What an
-        /// expired stay, a raid, and accidental harm all do (design 57 §5, §7).
+        /// expired stay, a raid, and accidental harm all do (design 65 §5, §7).
         /// </summary>
         public void SendAway(Visit visit, Pawn trader)
         {
@@ -208,7 +208,7 @@ namespace Odyssey.Sim.Trade
         }
 
         /// <summary>
-        /// The colony attacked this guest on purpose (design 57 §7): it is an enemy from now on. Its
+        /// The colony attacked this guest on purpose (design 65 §7): it is an enemy from now on. Its
         /// visit ends — the session with it, the stock lost — and it thinks again at once, with the
         /// hostile mind. It keeps its pistol and its coat.
         /// </summary>
@@ -233,7 +233,7 @@ namespace Odyssey.Sim.Trade
             visit.Ready = false;
         }
 
-        /// <summary>Off the board, with its pistol: a guest's weapon leaves with it (design 57 §5).</summary>
+        /// <summary>Off the board, with its pistol: a guest's weapon leaves with it (design 65 §5).</summary>
         void Depart(Pawn trader)
         {
             ColonyItem? weapon = WeaponHand.Held(trader, _ctx);
@@ -259,7 +259,7 @@ namespace Odyssey.Sim.Trade
 
         TraderKind[] Kinds() => _ctx.Incidents?.Content.Traders ?? Array.Empty<TraderKind>();
 
-        // ---- the deal (design 57 §6) -------------------------------------------------------------
+        // ---- the deal (design 65 §6) -------------------------------------------------------------
 
         /// <summary>The kind of trader a visit is.</summary>
         public TraderKind KindOf(Visit visit) => Kinds()[visit.Kind];
@@ -475,7 +475,7 @@ namespace Odyssey.Sim.Trade
                 }
             }
 
-            // Layout 2: every guest turned hostile, by pawn id (design 57 §7).
+            // Layout 2: every guest turned hostile, by pawn id (design 65 §7).
             IReadOnlyList<Pawn> all = _ctx.Pawns.All;
             int turned = 0;
             for (int i = 0; i < all.Count; i++) if (all[i].TurnedHostile) turned++;

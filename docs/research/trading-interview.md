@@ -20,7 +20,7 @@ hearth / campfire and you can right click and select trade. Can we get a decent 
 happen, ask all the questions about the mechanisms and fill in any gaps."*
 
 **Read next:**
-- `docs/design/57-trading.md`, the design these answers decide.
+- `docs/design/65-trading.md`, the design these answers decide.
 - `docs/plans/trading.md`
 
 **The reference page could not be read.** `rimworldwiki.com` is blocked by this environment's
@@ -76,11 +76,11 @@ Nothing was copied from it.
 
 **How the harm answer is read.** Accidental harm (a stray shot, a raider, friendly fire, a fall)
 makes the trader leave at once. A **deliberate** attack, where a colonist is ordered to attack the
-trader, turns them hostile. This reading is recorded in design 57 §6 for the owner to confirm.
+trader, turns them hostile. This reading is recorded in design 65 §6 for the owner to confirm.
 
 ## 4. Gaps filled without asking
 
-Each of these is recorded in design 57 with its reason, so it can be overruled:
+Each of these is recorded in design 65 with its reason, so it can be overruled:
 - the currency key (rename `ui.res.credit` to `ui.res.gold`)
 - a base value for every item
 - the rounding

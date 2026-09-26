@@ -926,7 +926,7 @@ namespace Odyssey.Presentation.Rendering
         // Royale's SM_Wep_Pistol_Heavy_01, the ground item and the held prop alike.
         public const string ItemPistol = Prefix + "item.pistol";
 
-        /// <summary>Gold (design 57 §2): PolygonGeneric's coin stack, heaped by the stack.</summary>
+        /// <summary>Gold (design 65 §2): PolygonGeneric's coin stack, heaped by the stack.</summary>
         public const string ItemGold = Prefix + "item.gold";
 
 
@@ -948,7 +948,7 @@ namespace Odyssey.Presentation.Rendering
             // The kitchen (design 48 §4), handles 14 to 16.
             ItemCookedMeal, ItemVegetableMeal, ItemBurntMeal,
             ItemPistol,
-            // Gold (design 57 §2), handle 18.
+            // Gold (design 65 §2), handle 18.
             ItemGold,
         };
 

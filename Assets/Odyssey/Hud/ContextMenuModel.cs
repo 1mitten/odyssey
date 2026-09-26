@@ -217,11 +217,11 @@ namespace Odyssey.Hud
             into.Add(new ContextMenuRow(TendKey, label, enabled: true, string.Empty, order));
         }
 
-        /// <summary>The Trade row's verb (design 57 §6): "Trade", "Open the ledger with this trader".</summary>
+        /// <summary>The Trade row's verb (design 65 §6): "Trade", "Open the ledger with this trader".</summary>
         public const string TradeKey = "ui.command.trade";
 
         /// <summary>
-        /// Trade, on a trader under the pointer (design 57 §6) that is not leaving and that nobody
+        /// Trade, on a trader under the pointer (design 65 §6) that is not leaving and that nobody
         /// else is negotiating with — read off its published <see cref="TradeView"/>. The primary
         /// colonist of the selection, the first standing one, is sent; a selection whose every
         /// colonist is down gets the row disabled, reason "Downed". No colonist selected, no row.

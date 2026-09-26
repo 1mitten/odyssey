@@ -286,13 +286,13 @@ namespace Odyssey.Hud
             GroupAnimalsKey = "ui.debug.group.animals", GroupWeaponsKey = "ui.debug.group.weapons",
             GroupItemsKey = "ui.debug.group.items";
 
-        /// <summary>The heading over the guests (design 57 §5): the trader, and later a caravan.</summary>
+        /// <summary>The heading over the guests (design 65 §5): the trader, and later a caravan.</summary>
         public const string GroupVisitorsKey = "ui.debug.group.visitors";
 
         public static readonly string[] SpawnGroups =
             { GroupColonistsKey, GroupHostilesKey, GroupVisitorsKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey };
 
-        /// <summary>A trader near the camera, and a heap of gold to trade with (design 57).</summary>
+        /// <summary>A trader near the camera, and a heap of gold to trade with (design 65).</summary>
         public const string SpawnTraderKey = "ui.debug.spawntrader", GiveGoldKey = "ui.debug.givegold";
 
         /// <summary>Three bandits at once, spread over neighbouring tiles; and every unarmed colonist given a weapon.</summary>

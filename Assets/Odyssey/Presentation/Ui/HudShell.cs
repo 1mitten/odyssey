@@ -627,7 +627,7 @@ namespace Odyssey.Presentation.Ui
             // once today, and if that ever changes the later one should be the one on top.
             BuildLeavePrompt();
 
-            // The trade window (design 57 §6), a modal like the two prompts and after them.
+            // The trade window (design 65 §6), a modal like the two prompts and after them.
             BuildTrade();
 
             // Last of all, above every modal: the cover a new world is drawn behind (CurtainFrames).

@@ -123,7 +123,7 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
-            // The trade window is a modal too (design 57 §6): Escape is its Cancel, and nothing
+            // The trade window is a modal too (design 65 §6): Escape is its Cancel, and nothing
             // behind it hears the key.
             if (_shell != null && _shell.TradeOpen)
             {

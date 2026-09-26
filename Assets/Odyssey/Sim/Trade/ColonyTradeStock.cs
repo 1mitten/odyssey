@@ -7,7 +7,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Sim.Trade
 {
     /// <summary>
-    /// What the colony can trade (design 57 §4): every stack in a store — a stockpile cell or a
+    /// What the colony can trade (design 65 §4): every stack in a store — a stockpile cell or a
     /// shelf, the set the Inventory tab counts — and every loose stack within
     /// <see cref="TradeRadius"/> of the trader, on its layer. Nothing carried, nothing forbidden and
     /// nothing a job has claimed. The radius is what lets gold a deal has just paid out, set down

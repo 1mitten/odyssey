@@ -24,7 +24,7 @@ namespace Odyssey.Sim.Pawns
             // with the weapon already on the ground. C4 (rescue) needed no listener.
             ctx.CombatHooks.Add(new FriendlyFireListener(ctx));
 
-            // Trading (design 57 §7): harm to a guest — on purpose turns it hostile, by accident
+            // Trading (design 65 §7): harm to a guest — on purpose turns it hostile, by accident
             // sends it home. After friendly fire, which never looks at a guest.
             ctx.CombatHooks.Add(new Trade.VisitorHarmListener(ctx));
         }

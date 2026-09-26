@@ -11,7 +11,7 @@ using static Odyssey.Tests.Sim.CombatFixture;
 namespace Odyssey.Tests.Sim.Trade
 {
     /// <summary>
-    /// Harm to a guest (design 57 §7, T7; the owner's "1 and 3 depending"): a colonist ordered to
+    /// Harm to a guest (design 65 §7, T7; the owner's "1 and 3 depending"): a colonist ordered to
     /// attack the trader turns it hostile; any other blow — a raider's, a stray, a colonist aiming at
     /// somebody else — sends it home. A trader turned hostile stays hostile across a save.
     /// </summary>

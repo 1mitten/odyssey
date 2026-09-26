@@ -9,7 +9,7 @@ using UnityEngine.UIElements;
 namespace Odyssey.Presentation.Ui
 {
     /// <summary>
-    /// <see cref="HudShell"/>: the trade window (design 57 §6; the owner's mockups 28a Sell and
+    /// <see cref="HudShell"/>: the trade window (design 65 §6; the owner's mockups 28a Sell and
     /// 28b Buy). A pausing modal over the settings window's scrim, 820 wide and centred: a header
     /// with the trader's face, name and stay; the Sell | Buy switch; the column heads; the list,
     /// category headings between items; the foot's four figures; and Reset, the reason, Cancel and
@@ -43,7 +43,7 @@ namespace Odyssey.Presentation.Ui
         /// <summary>Whether the trade window is up, for whoever owns the Escape key.</summary>
         public bool TradeOpen => _trade.Showing;
 
-        /// <summary>Escape over the trade window: the window's Cancel (design 57 §6).</summary>
+        /// <summary>Escape over the trade window: the window's Cancel (design 65 §6).</summary>
         public void CancelTrade()
         {
             _trade.Cancel(_tradeOrders);
@@ -452,7 +452,7 @@ namespace Odyssey.Presentation.Ui
             qty.style.flexDirection = FlexDirection.Row;
             qty.style.alignItems = Align.Center;
 
-            // Minus and plus are neutral (design 57 §6): neither direction is good or bad.
+            // Minus and plus are neutral (design 65 §6): neither direction is good or bad.
             ui.Less = TradeControlBox(TradeLayout.QtyButton);
             ui.Less.Add(new PathGlyph(HudIcons.Minus, 11f, HudTokens.TextPrimary, stroke: 3f));
             ui.Less.RegisterCallback<ClickEvent>(e => StepTrade(ui, -1, e.shiftKey));
@@ -551,7 +551,7 @@ namespace Odyssey.Presentation.Ui
             if (showing) PaintTrade();
         }
 
-        /// <summary>Tab switches the mode while the window is up (design 57 §6).</summary>
+        /// <summary>Tab switches the mode while the window is up (design 65 §6).</summary>
         void ReadTradeKeys()
         {
             if (!_trade.Showing) return;

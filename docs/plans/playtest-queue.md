@@ -24,7 +24,7 @@ the next session learns to ignore.
 ## Open
 
 - **Does trading read, from the trader walking in to the goods on the ground?** (`claude/wonderful-clarke-kkd9pq`,
-  design 57.) Debug → Events → **Trader**, or Debug → Spawn → Visitors → **Spawn trader**, and Debug
+  design 65.) Debug → Events → **Trader**, or Debug → Spawn → Visitors → **Spawn trader**, and Debug
   → Spawn → Items → **Give gold**. Watch the trader walk from the edge to the fire in an ochre coat.
   Select a colonist and right-click the trader → **Trade**: she walks over, the game pauses and the
   window opens on Sell. Move some wood, press Tab (Buy), take a pistol, and read the foot. Confirm,

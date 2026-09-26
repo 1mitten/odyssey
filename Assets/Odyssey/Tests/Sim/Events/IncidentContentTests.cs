@@ -42,7 +42,7 @@ namespace Odyssey.Tests.Sim.Events
         // 2026-09-25, raids (design 55): Incident_Raid appended at index 5 — Bad, ThreatBig, worker
         // Raid, the first Def with a per-worker block (<raid>), gates earliestDay 3 and
         // minRefireDays 4 (invented). No golden moved: no golden fires an incident.
-        // 2026-09-26, trading (design 57 §5): Incident_Trader appended at index 6 — Good, Arrival,
+        // 2026-09-26, trading (design 65 §5): Incident_Trader appended at index 6 — Good, Arrival,
         // worker Trader, with a <trader> block naming TraderKind_General; and TraderKindDef, the
         // general-goods trader (purse 400-900, 4-7 lines of ten, x1.4 / x0.6, 24 hours).
         const ulong ContentFingerprint = 7020584576778211073UL;

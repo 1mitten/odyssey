@@ -339,7 +339,7 @@
   </ItemDef>
 
   <!--
-    Gold (design 57 section 2): the currency. A real item, stored, hauled and filtered like any
+    Gold (design 65 section 2): the currency. A real item, stored, hauled and filtered like any
     commodity, and never a row in a trade ledger: it is the balance. 500 to a stack, the one limit
     the research gives for a currency (a-14 section 4). Filed under Items, the category that was
     empty until now. Its value is 1 by definition: every other value is a number of it.

@@ -1,8 +1,8 @@
-# 57 — Trading
+# 65 — Trading
 
 **Written 2026-09-26**, from the owner's request and a two-round interview the same day
 (`docs/research/trading-interview.md`). Branch `claude/wonderful-clarke-kkd9pq`. Plan:
-`docs/plans/trading.md`. **Designed; nothing built.** Phase gate: the plan waits for approval.
+`docs/plans/trading.md`. **Built T1–T7; §10 is what was built, §12 the review.** Numbered 57 on the branch and renumbered 65 on merging `main`, which had taken 57–64 meanwhile.
 
 > *"We need to plan out a trading system similar to this but to fit in with Odyssey's content. We
 > should look to use gold as currency … a random character could walk into the map from the edge

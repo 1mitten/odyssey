@@ -222,7 +222,7 @@ namespace Odyssey.Sim.Pawns
         public Faction Faction => TurnedHostile ? Faction.Hostile : Content.KindOf(Kind).faction;
 
         /// <summary>
-        /// A guest the colony attacked on purpose (design 57 §7): a trader a colonist was ordered to
+        /// A guest the colony attacked on purpose (design 65 §7): a trader a colonist was ordered to
         /// strike is an enemy from that blow on, whatever its kind says. Saved in the trade section
         /// and folded into the hash as bit 28 of the kind word, both only while set, so no colony
         /// that never did it saves or hashes differently.
@@ -236,7 +236,7 @@ namespace Odyssey.Sim.Pawns
         public bool IsColonist => IsPerson && Faction == Faction.Colony;
 
         /// <summary>
-        /// A guest: a person of the <see cref="Faction.Visitor"/> faction (design 57 §5), a trader
+        /// A guest: a person of the <see cref="Faction.Visitor"/> faction (design 65 §5), a trader
         /// today. Neither one of ours nor hostile, so it thinks with the visitor's mind, has no needs,
         /// takes no work and no orders, and nobody fights it on sight.
         /// </summary>
@@ -1182,7 +1182,7 @@ namespace Odyssey.Sim.Pawns
                 | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0)
                 | (TreatedUntilTick != 0 ? 1 << 22 : 0) | (health ? 1 << 23 : 0)
                 | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0) | ((int)Area << 27)
-                // A guest turned hostile (design 57 §7) is bit 28, nought for everybody else.
+                // A guest turned hostile (design 65 §7) is bit 28, nought for everybody else.
                 | (TurnedHostile ? 1 << 28 : 0));
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);

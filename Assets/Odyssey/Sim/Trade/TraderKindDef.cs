@@ -6,7 +6,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Sim.Trade
 {
     /// <summary>
-    /// What kind of trader comes (design 57 §5): who walks in, what purse they carry, what they have
+    /// What kind of trader comes (design 65 §5): who walks in, what purse they carry, what they have
     /// to sell and at what gap, and how long they stay. Loaded from <c>Traders.xml</c> and bound by
     /// <see cref="TraderKind.Bind"/>. One kind today, general goods; a weapons dealer or a food
     /// merchant is another row in that file, not another class.
@@ -27,7 +27,7 @@ namespace Odyssey.Sim.Trade
         public int linesMax = 7;
 
         /// <summary>
-        /// What the trader charges, per mille of an item's value (design 57 §3): 1,400 is ×1.4. Always
+        /// What the trader charges, per mille of an item's value (design 65 §3): 1,400 is ×1.4. Always
         /// above <see cref="buyPerMille"/>, and <c>TradePricing</c> holds a unit's gap besides, so a
         /// buy-and-sell-back loop always loses.
         /// </summary>
@@ -113,7 +113,7 @@ namespace Odyssey.Sim.Trade
     }
 
     /// <summary>
-    /// A trader incident's own parameters (design 57 §5): which kind of trader comes. The second
+    /// A trader incident's own parameters (design 65 §5): which kind of trader comes. The second
     /// per-worker block on <see cref="Events.IncidentDef"/>, after the raid's.
     /// </summary>
     public sealed class TraderParams

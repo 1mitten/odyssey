@@ -5,7 +5,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Sim.Trade
 {
     /// <summary>
-    /// <c>Job_Trade</c> (design 57 §6): walk to the stance beside the trader (0), then negotiate (1)
+    /// <c>Job_Trade</c> (design 65 §6): walk to the stance beside the trader (0), then negotiate (1)
     /// for as long as the session lasts. <see cref="Job.WorkTicks"/> carries the trader's pawn id,
     /// as the doctor's job carries the patient's.
     ///

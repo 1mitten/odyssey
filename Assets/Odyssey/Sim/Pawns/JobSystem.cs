@@ -503,7 +503,7 @@ namespace Odyssey.Sim.Pawns
             // that returned false for a person would be a node every colonist evaluated on
             // every think, and the animal's whole mind is one node anyway.
             // A hostile person consults the hostile tree (design 33 §5), for the same reason, and a
-            // visitor the visitor's (design 57 §5): a guest who fell into the colonist's tree would
+            // visitor the visitor's (design 65 §5): a guest who fell into the colonist's tree would
             // take the colony's work.
             ThinkNode[] tree = !pawn.IsPerson ? AnimalTree
                 : pawn.IsHostile ? HostileTree
@@ -542,7 +542,7 @@ namespace Odyssey.Sim.Pawns
         };
 
         /// <summary>
-        /// A visitor's mind (design 57 §5): down, else its visit — walk to the hearth and stay about
+        /// A visitor's mind (design 65 §5): down, else its visit — walk to the hearth and stay about
         /// it, or walk out by the nearest edge once it is leaving — else idle, which settles it at
         /// the fire. No needs, no work, no draft, no self-defence: it is nobody's to order.
         /// </summary>

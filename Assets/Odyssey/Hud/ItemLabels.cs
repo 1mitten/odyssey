@@ -41,7 +41,7 @@ namespace Odyssey.Hud
             "ui.res.meal", "ui.res.meal.veg", "ui.res.meal.burnt",
             // The pistol (design 47), ItemHandle 17, after the kitchen's meals.
             "ui.item.pistol",
-            // Gold (design 57 §2), ItemHandle 18: the currency.
+            // Gold (design 65 §2), ItemHandle 18: the currency.
             "ui.res.gold",
         };
 

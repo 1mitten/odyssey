@@ -9,7 +9,7 @@ using static Odyssey.Tests.Sim.CombatFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The visitor side (design 57 §5, T2): a trader is a person who is neither one of ours nor an
+    /// The visitor side (design 65 §5, T2): a trader is a person who is neither one of ours nor an
     /// enemy. It thinks with its own mind, has no needs, is published as a guest, walks to the
     /// hearth (else the colony's start), heals where it lies, and no bandit hunts it.
     /// </summary>

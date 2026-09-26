@@ -2128,7 +2128,7 @@ namespace Odyssey.EditorTools
                 scale = new Vector3(1.5f, 1.5f, 1.5f),
             });
 
-            // Gold (design 57 §2): PolygonGeneric's small coin stack, 0.30 x 0.43 x 0.33 at source,
+            // Gold (design 65 §2): PolygonGeneric's small coin stack, 0.30 x 0.43 x 0.33 at source,
             // drawn as authored so the heap pass scatters a few for a big stack. PROPOSED: judge it on
             // the board beside a pile of medical supplies.
             rows.Add(new ModuleEntry

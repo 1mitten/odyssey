@@ -217,7 +217,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The frog of the banks (design 30 §8): kind 5, species 3. Appended after the gunman.</summary>
         public const int CulvertFrog = 5;
 
-        /// <summary>The trader (design 57 §5): a person of the Visitor faction, appended after the frog.</summary>
+        /// <summary>The trader (design 65 §5): a person of the Visitor faction, appended after the frog.</summary>
         public const int Trader = 6;
 
         public const int Count = 7;
@@ -227,7 +227,7 @@ namespace Odyssey.Sim.Pawns
     /// Whose side a kind is on (design 33 §3): <b>hostility comes from the kind</b>, so no pawn
     /// carries a saved field for it. The colony's own people are <see cref="Colony"/>; animals are
     /// <see cref="Wild"/> until something tames one; a bandit is <see cref="Hostile"/> and fights
-    /// on sight; a trader is a <see cref="Visitor"/> (design 57 §5): neither one of ours nor an
+    /// on sight; a trader is a <see cref="Visitor"/> (design 65 §5): neither one of ours nor an
     /// enemy, with a mind of its own and nobody's orders.
     /// </summary>
     public enum Faction : byte
@@ -739,7 +739,7 @@ namespace Odyssey.Sim.Pawns
         public int ateThought = -1;
 
         /// <summary>
-        /// What one unit is worth, in gold (design 57 §3). A trader's prices are made from it by
+        /// What one unit is worth, in gold (design 65 §3). A trader's prices are made from it by
         /// <c>TradePricing</c> and nowhere else, and it is the first brick of a colony wealth
         /// measure. Zero means it cannot be traded; gold itself is 1 by definition.
         /// </summary>
@@ -1587,7 +1587,7 @@ namespace Odyssey.Sim.Pawns
                 "Job_Cook",
                 // The ranged attack (design 47 §2d).
                 "Job_AttackRanged",
-                // The negotiator (design 57 §6), appended.
+                // The negotiator (design 65 §6), appended.
                 "Job_Trade");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
@@ -1626,7 +1626,7 @@ namespace Odyssey.Sim.Pawns
                 "Item_CookedMeal", "Item_VegetableMeal", "Item_BurntMeal",
                 // The pistol (design 47), the first ranged weapon.
                 "Item_Pistol",
-                // Gold (design 57 §2), the currency, appended.
+                // Gold (design 65 §2), the currency, appended.
                 "Item_Gold");
             content.Recipes = ByName<RecipeDef>(defs, "Recipe_Meal");
             for (int r = 0; r < content.Recipes.Length; r++)
@@ -1654,7 +1654,7 @@ namespace Odyssey.Sim.Pawns
                 "PawnKind_Gunman",
                 // The frog of the banks (design 30 §8), appended after the gunman.
                 "PawnKind_CulvertFrog",
-                // The trader (design 57 §5), the first visitor, appended after the frog.
+                // The trader (design 65 §5), the first visitor, appended after the frog.
                 "PawnKind_Trader");
             content.Species = ByName<SpeciesDef>(defs,
                 "Species_Person", "Species_MiddenHog", "Species_DuctRat", "Species_CulvertFrog");

@@ -166,7 +166,7 @@ namespace Odyssey.Sim.Pawns
             // colony gets the events that fire one.
             var raids = new Events.RaidSystem(pawns) { Jobs = pipeline };
             pawns.Raids = raids;
-            // The traders (design 57): a clock in the pawn phase at order 16, hashed and saved only
+            // The traders (design 65): a clock in the pawn phase at order 16, hashed and saved only
             // while a visit exists, so its registration moved no golden.
             var trade = new Trade.TradeSystem(pawns) { Jobs = pipeline };
             pawns.Trade = trade;

@@ -319,7 +319,7 @@ namespace Odyssey.Hud
         /// rather than a pretend typist, because a focus change must never clear it. While it is set
         /// the shell reads <c>anyKey</c> by name — the one unbindable read besides Escape, the
         /// capture and Shift, and harmless because it names no key (<c>HotkeyClashTests</c>).
-        /// The trade window (design 57 §6) sets it too while it is up, and reads Tab by name to
+        /// The trade window (design 65 §6) sets it too while it is up, and reads Tab by name to
         /// switch Sell and Buy: fixed as Escape is, and no <see cref="HudKey"/>, so it clashes with
         /// nothing a player can bind.
         /// </summary>

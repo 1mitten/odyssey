@@ -11,7 +11,7 @@ using Odyssey.Sim.Trade;
 namespace Odyssey.Tests.Sim.Trade
 {
     /// <summary>
-    /// The trade itself (design 57 §3–§4, §6, T4): prices from one owner, a deal applied whole —
+    /// The trade itself (design 65 §3–§4, §6, T4): prices from one owner, a deal applied whole —
     /// sold goods out of the colony's stock, bought goods and gold owed set down beside the trader —
     /// and every way a deal is refused whole, with nothing moved.
     /// </summary>

@@ -10,7 +10,7 @@ using Odyssey.Sim.Pawns.Wildlife;
 namespace Odyssey.Sim.Trade
 {
     /// <summary>
-    /// A trader walks in (design 57 §5): one person of the incident's trader kind, on an edge drawn
+    /// A trader walks in (design 65 §5): one person of the incident's trader kind, on an edge drawn
     /// the way a raid's is (<see cref="EdgeArrival"/>), with a purse and a stock rolled at the
     /// arrival. Its own mind takes it to the hearth; <see cref="TradeSystem"/> sends it home.
     ///

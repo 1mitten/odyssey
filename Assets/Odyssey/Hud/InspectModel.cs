@@ -290,14 +290,14 @@ namespace Odyssey.Hud
         public bool IsHostile;
 
         /// <summary>
-        /// The selected pawn is a guest — a trader (design 57 §5). A person, not ours and not an
+        /// The selected pawn is a guest — a trader (design 65 §5). A person, not ours and not an
         /// enemy: its pane is the bandit's shape (a face, the name, the kind's word, what it is doing)
         /// with no tabs, no needs and no Draft button. Set from the view's flags on every refresh.
         /// </summary>
         public bool IsVisitor;
 
         /// <summary>
-        /// A trader's two lines (design 57 §6, the pane of mockup 27e): "Leaves in 14 h" and
+        /// A trader's two lines (design 65 §6, the pane of mockup 27e): "Leaves in 14 h" and
         /// "Carrying 640 gold", each split so the number can be set in mono. Empty for anybody else,
         /// and for a guest with no visit published.
         /// </summary>
@@ -586,10 +586,10 @@ namespace Odyssey.Hud
         static readonly string VisitorWord = Registry.Label("ui.pawn.visitor").ToLowerInvariant();
         static readonly string TraderWord = PawnKindLabels.Label(PawnKindLabels.Trader).ToLowerInvariant();
 
-        /// <summary>The word under a guest's name: "trader" for the trader (design 57 §5), else "visitor".</summary>
+        /// <summary>The word under a guest's name: "trader" for the trader (design 65 §5), else "visitor".</summary>
         static string VisitorKindWord(int kind) => kind == PawnKindLabels.Trader ? TraderWord : VisitorWord;
 
-        /// <summary>The trader's stay and purse, off its published visit (design 57 §6).</summary>
+        /// <summary>The trader's stay and purse, off its published visit (design 65 §6).</summary>
         void RefreshVisitor(WorldSnapshot snapshot, PawnId pawn)
         {
             VisitorLeavesValue = VisitorCarryingValue = string.Empty;

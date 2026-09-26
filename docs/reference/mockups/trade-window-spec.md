@@ -4,14 +4,14 @@
 in `trade-window-brief.md`, and handed over with *"fit it into the style we have … and go ahead"*.
 It supersedes the brief's five-state two-column ledger. Built as `Odyssey.Hud.TradeModel`,
 `Odyssey.Hud.TradeLayout` and `HudShell.Trade.cs`. Where the build departs from this file and why
-is design 57 §10.
+is design 65 §10.
 
 ## What it is
 
 A pausing modal. It opens when the negotiating colonist reaches the trader. It has two modes,
 **Sell** and **Buy**, and one deal spans both. Gold is an item and never a row: it is the balance.
 The deal commits all at once on Confirm: sold goods leave the stores, and bought goods and any gold
-owed are set down beside the trader. Prices come from design 57 §3; the view computes none.
+owed are set down beside the trader. Prices come from design 65 §3; the view computes none.
 
 **Not drawn, even greyed:** factions and goodwill, haggling, gifts, quests and caravans, condition
 or rot, a world map.

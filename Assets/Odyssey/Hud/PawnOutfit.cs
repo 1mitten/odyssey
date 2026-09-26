@@ -14,7 +14,7 @@ namespace Odyssey.Hud
         Issued = 0,
         Bandit = 1,
 
-        /// <summary>A trader's travelling clothes (design 57 §5): the person as rolled, in an ochre coat.</summary>
+        /// <summary>A trader's travelling clothes (design 65 §5): the person as rolled, in an ochre coat.</summary>
         Trader = 2,
     }
 
@@ -28,7 +28,7 @@ namespace Odyssey.Hud
     {
         /// <summary>A hostile person dresses as a bandit, a visitor as a trader; everybody else as the colony does.</summary>
         public static PawnOutfit For(PawnFlags flags) =>
-            // A guest by kind first: a trader the colony turned hostile keeps its coat (design 57 §7).
+            // A guest by kind first: a trader the colony turned hostile keeps its coat (design 65 §7).
             (flags & (PawnFlags.Person | PawnFlags.Visitor)) == (PawnFlags.Person | PawnFlags.Visitor)
                 ? PawnOutfit.Trader
                 : (flags & (PawnFlags.Person | PawnFlags.Hostile)) == (PawnFlags.Person | PawnFlags.Hostile)

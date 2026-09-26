@@ -254,7 +254,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public Events.RaidSystem? Raids { get; set; }
 
-        /// <summary>The traders on the board and their visits (design 57). Set by the composition root.</summary>
+        /// <summary>The traders on the board and their visits (design 65). Set by the composition root.</summary>
         public Trade.TradeSystem? Trade { get; set; }
 
         /// <summary>

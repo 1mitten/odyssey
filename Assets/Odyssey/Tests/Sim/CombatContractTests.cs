@@ -83,7 +83,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(JobHandle.Cook, Is.EqualTo(26));
             // And the ranged line's (design 47 §3a), 27 after the kitchen's.
             Assert.That(JobHandle.AttackRanged, Is.EqualTo(27));
-            // The negotiator at 28 (design 57 §6).
+            // The negotiator at 28 (design 65 §6).
             Assert.That(JobHandle.Trade, Is.EqualTo(28));
             Assert.That(JobHandle.Count, Is.EqualTo(29));
             Assert.That(new[] { ItemHandle.Bat, ItemHandle.Crowbar, ItemHandle.Machete, ItemHandle.ArcBlade },
@@ -96,7 +96,7 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(new[] { 14, 15, 16 }));
             // The pistol at 17, after the kitchen's meals (design 47).
             Assert.That(ItemHandle.Pistol, Is.EqualTo(17));
-            // Gold at 18 (design 57 §2), the currency.
+            // Gold at 18 (design 65 §2), the currency.
             Assert.That(ItemHandle.Gold, Is.EqualTo(18));
             Assert.That(ItemHandle.Count, Is.EqualTo(19));
             Assert.That(WorkHandle.Rescue, Is.EqualTo(5));
@@ -117,7 +117,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(PawnKindIndex.Gunman, Is.EqualTo(4));
             // And the culvert frog at 5, after the gunman (design 30 §8): six.
             Assert.That(PawnKindIndex.CulvertFrog, Is.EqualTo(5));
-            // The trader at 6 (design 57 §5), the first visitor, after the frog.
+            // The trader at 6 (design 65 §5), the first visitor, after the frog.
             Assert.That(PawnKindIndex.Trader, Is.EqualTo(6));
             Assert.That(PawnKindIndex.Count, Is.EqualTo(7));
 
@@ -155,7 +155,7 @@ namespace Odyssey.Tests.Sim
                   "Item_CookedMeal", "Item_VegetableMeal", "Item_BurntMeal",
                   // The pistol (design 47), after the kitchen.
                   "Item_Pistol",
-                  // Gold (design 57 §2), appended.
+                  // Gold (design 65 §2), appended.
                   "Item_Gold" }));
             Assert.That(content.Items[ItemIndex.Pistol].weapon!.ranged, Is.Not.Null, "the pistol is a gun");
             Assert.That(content.Items[ItemIndex.Machete].weapon!.ranged, Is.Null, "a machete is not");

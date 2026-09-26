@@ -158,7 +158,7 @@
 
   <!--
     A trader walks in from one edge, waits by the hearth (else the colony's start) for about a day,
-    and walks out again (docs/design/57-trading.md section 5). Send a colonist to it with the
+    and walks out again (docs/design/65-trading.md section 5). Send a colonist to it with the
     right-click Trade row. What it carries and at what prices is its trader kind's (Traders.xml).
     The gates are INVENTED and read by nothing until a storyteller exists.
   -->

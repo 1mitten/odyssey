@@ -1,7 +1,7 @@
 # Trading — plan
 
-**Written 2026-09-26.** Design: `docs/design/57-trading.md`. Interview:
-`docs/research/trading-interview.md`. **Approved and built 2026-09-26: T0–T7 on this branch** (design 57 §10 has the as-built notes). Each unit is test-first, has at least one commit of its own, and leaves the fast and
+**Written 2026-09-26.** Design: `docs/design/65-trading.md`. Interview:
+`docs/research/trading-interview.md`. **Approved and built 2026-09-26: T0–T7 on this branch** (design 65 §10 has the as-built notes). Each unit is test-first, has at least one commit of its own, and leaves the fast and
 Long tiers green.
 
 Paths are under `Assets/Odyssey/` unless shown otherwise. The line numbers were read on `081302f9`.
@@ -33,7 +33,7 @@ The code was checked against the surveys before this plan was written.
 
 ## Units (on `claude/wonderful-clarke-kkd9pq`, one commit or more per unit, test-first)
 
-**T0 — design doc** `docs/design/57-trading.md` (**done 2026-09-26**, with this plan). It holds the decisions above, the price formula,
+**T0 — design doc** `docs/design/65-trading.md` (**done 2026-09-26**, with this plan). It holds the decisions above, the price formula,
 the stock rule, the harm rule, and the save and hash plan. It also records the process §3 scaling
 note: the colony's stock is scanned on publish only while a trader is on the board. Add the
 *Read this* row to `CLAUDE.md`, and a journal entry.

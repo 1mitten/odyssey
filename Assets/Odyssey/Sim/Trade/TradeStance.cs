@@ -4,7 +4,7 @@ using Odyssey.Sim.Pawns;
 
 namespace Odyssey.Sim.Trade
 {
-    /// <summary>Where a negotiator stands to trade (design 57 §6): beside the trader.</summary>
+    /// <summary>Where a negotiator stands to trade (design 65 §6): beside the trader.</summary>
     public static class TradeStance
     {
         /// <summary>The nearest walkable cell beside <paramref name="target"/> the pawn can reach, or -1.</summary>

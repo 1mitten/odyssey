@@ -8,7 +8,7 @@ using Odyssey.Sim.Pawns.Wildlife;
 namespace Odyssey.Sim.Trade
 {
     /// <summary>
-    /// What a visitor does because it is visiting (design 57 §5), ahead of the idle node in
+    /// What a visitor does because it is visiting (design 65 §5), ahead of the idle node in
     /// <c>JobSystem.VisitorTree</c>:
     /// <list type="bullet">
     /// <item><b>Leaving</b>: walk to the nearest edge it can reach and wait there, where the trade
@@ -40,7 +40,7 @@ namespace Odyssey.Sim.Trade
                 return Wait(job, mode);
             }
 
-            // Held by a negotiation (design 57 §6): stand where the negotiator is walking to.
+            // Held by a negotiation (design 65 §6): stand where the negotiator is walking to.
             if (ctx.Trade?.VisitOf(pawn.Id.Value) is { InSession: true }) return Wait(job, mode);
 
             int anchor = RaidTargets.Resolve(ctx, -1);

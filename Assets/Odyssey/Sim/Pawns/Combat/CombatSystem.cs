@@ -167,7 +167,7 @@ namespace Odyssey.Sim.Pawns
             // A colonist in a bed (design 33 §1), plus a tended injury's own heal wherever she is
             // (design 43 §6, a-02:41): a tended colonist still at work heals too.
             else if (pawn.IsColonist) perDay = (InBed(pawn) ? combat.bedHealPerDay : 0) + TendHealPerDay(pawn);
-            // A visitor heals as an animal does, anywhere (design 57 §5): nobody will put a guest to
+            // A visitor heals as an animal does, anywhere (design 65 §5): nobody will put a guest to
             // bed, and a downed trader that never healed would lie by the fire for ever.
             else if (pawn.IsVisitor) perDay = combat.animalHealPerDay;
             else return;

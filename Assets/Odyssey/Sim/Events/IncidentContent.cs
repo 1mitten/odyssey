@@ -93,7 +93,7 @@ namespace Odyssey.Sim.Events
         public RaidParams? raid;
 
         /// <summary>
-        /// A trader's own parameters (design 57 §5): which kind of trader comes. Null for any
+        /// A trader's own parameters (design 65 §5): which kind of trader comes. Null for any
         /// incident that is not a trader's arrival.
         /// </summary>
         public Trade.TraderParams? trader;
@@ -121,7 +121,7 @@ namespace Odyssey.Sim.Events
             "Incident_MedicalDrop",
             // A band of hostiles from one edge (design 55), appended.
             "Incident_Raid",
-            // A trader walks in from an edge and waits by the hearth (design 57), appended.
+            // A trader walks in from an edge and waits by the hearth (design 65), appended.
             "Incident_Trader",
         };
 
@@ -138,7 +138,7 @@ namespace Odyssey.Sim.Events
         };
 
         /// <summary>
-        /// Every trader kind in index order (design 57 §5), the same contract as <see cref="Order"/>:
+        /// Every trader kind in index order (design 65 §5), the same contract as <see cref="Order"/>:
         /// position <i>is</i> the kind index a visit saves, so append, never insert.
         /// </summary>
         public static readonly string[] TraderOrder =
@@ -206,7 +206,7 @@ namespace Odyssey.Sim.Events
             for (int m = 0; m < MixOrder.Length; m++)
                 content.Mixes[m] = RaidMix.Bind(OneMix(defs, MixOrder[m]), pawns);
 
-            // The trader kinds (design 57 §5), bound before the workers validate: a trader's Def
+            // The trader kinds (design 65 §5), bound before the workers validate: a trader's Def
             // names one.
             content.Traders = new Trade.TraderKind[TraderOrder.Length];
             for (int t = 0; t < TraderOrder.Length; t++)

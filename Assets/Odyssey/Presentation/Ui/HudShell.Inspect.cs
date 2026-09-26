@@ -801,7 +801,7 @@ namespace Odyssey.Presentation.Ui
             // Any other campfire offers to be the hearth: one button, nine under the header.
             if (_inspect.OffersHearth) _inspectBody.Add(MakeHearthButton());
 
-            // A trader's two lines (design 57 §6): how long it stays and what it carries.
+            // A trader's two lines (design 65 §6): how long it stays and what it carries.
             _visitorLeaves = _visitorCarrying = null;
             if (_inspect.IsVisitor) _inspectBody.Add(MakeVisitorLines());
 
@@ -2069,7 +2069,7 @@ namespace Odyssey.Presentation.Ui
         Label? _visitorLeaves, _visitorCarrying;
 
         /// <summary>
-        /// A trader's body (design 57 §6, mockup 27e): two 30 px rows, a label and a mono figure —
+        /// A trader's body (design 65 §6, mockup 27e): two 30 px rows, a label and a mono figure —
         /// "Leaves in 14 h" and "Carrying 640 gold". No tabs and no Draft: a guest takes no orders.
         /// </summary>
         VisualElement MakeVisitorLines()

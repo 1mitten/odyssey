@@ -10,7 +10,7 @@ using Odyssey.Sim.Trade;
 namespace Odyssey.Tests.Sim.Trade
 {
     /// <summary>
-    /// The negotiator (design 57 §6, T5): a colonist sent by Trade walks beside the trader, which
+    /// The negotiator (design 65 §6, T5): a colonist sent by Trade walks beside the trader, which
     /// holds still for her; arriving makes the session ready; the session ends with the window's
     /// Cancel, a draft, or the trader being sent away; the stay clock stops while it is open; and a
     /// save taken while it is ready resumes ready.

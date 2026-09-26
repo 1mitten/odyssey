@@ -8,7 +8,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// The right-click's Trade (design 57 §6, T5): on a trader under the pointer with a colonist
+    /// The right-click's Trade (design 65 §6, T5): on a trader under the pointer with a colonist
     /// selected, one row that sends the first standing colonist; disabled with "Downed" when every
     /// selected colonist is down; no row while the trader is leaving or somebody else negotiates.
     /// </summary>
@@ -82,7 +82,7 @@ namespace Odyssey.Tests.Hud
         public void NoRowWithNoColonistSelected() =>
             Assert.That(RightClick(Board()), Is.Empty);
 
-        /// <summary>A guest is attacked only on purpose (design 57 §7): Ctrl with a drafted colonist, as a colonist is.</summary>
+        /// <summary>A guest is attacked only on purpose (design 65 §7): Ctrl with a drafted colonist, as a colonist is.</summary>
         [Test]
         public void CtrlRightClickWithADraftedColonistAttacksTheTrader()
         {

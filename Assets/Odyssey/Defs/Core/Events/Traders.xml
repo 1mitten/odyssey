@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Who trades with the colony (docs/design/57-trading.md section 5). A trader walks in from an edge,
+  Who trades with the colony (docs/design/65-trading.md section 5). A trader walks in from an edge,
   waits by the hearth for stayHours, and leaves. It carries a purse rolled between purseMin and
   purseMax and linesMin to linesMax lines drawn by weight from its stock, each a count between min
   and max. It sells at sellPerMille of an item's value and buys at buyPerMille (section 3).

@@ -484,7 +484,7 @@ namespace Odyssey.Sim.Pawns
             new Cooking.CookJobDriver(),
             // The ranged attack (design 47 §2d), JobHandle 27, after the kitchen's.
             new AttackRangedJobDriver(),
-            // The negotiator (design 57 §6), JobHandle 28.
+            // The negotiator (design 65 §6), JobHandle 28.
             new Trade.TradeJobDriver(),
         };
 
@@ -590,7 +590,7 @@ namespace Odyssey.Sim.Pawns
                 PawnFlags flags = PawnFlags.None;
                 if (pawn.IsPerson) flags |= PawnFlags.Person;
                 if (pawn.IsHostile) flags |= PawnFlags.Hostile;
-                // A guest by kind, even one turned hostile (design 57 §7): the flag keeps its coat on,
+                // A guest by kind, even one turned hostile (design 65 §7): the flag keeps its coat on,
                 // and PawnView.IsVisitor asks for the flag without Hostile.
                 if (pawn.IsPerson && pawn.Content.KindOf(pawn.Kind).faction == Faction.Visitor) flags |= PawnFlags.Visitor;
                 if (pawn.Drafted) flags |= PawnFlags.Drafted;

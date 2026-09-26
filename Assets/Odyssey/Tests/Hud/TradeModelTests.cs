@@ -8,7 +8,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// The trade window's model (design 57 §6; the owner's mockups 28a Sell and 28b Buy): it opens
+    /// The trade window's model (design 65 §6; the owner's mockups 28a Sell and 28b Buy): it opens
     /// itself once per ready session, each mode lists only its side's stock under the game's category
     /// headings, the deal spans both modes, figures clamp, the foot totals the owner's sample deal,
     /// Confirm's three reasons, and exactly what Confirm and Cancel send.

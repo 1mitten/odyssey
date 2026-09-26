@@ -59,7 +59,7 @@ namespace Odyssey.Hud
             // The ranged attack (design 47 §2d), JobHandle 27, after the kitchen's: a word of its own rather than
             // "Fighting", so a line of shooters reads as shooting.
             "ui.status.shooting",
-            // The negotiator (design 57 §6), JobHandle 28: walking to a trader and trading.
+            // The negotiator (design 65 §6), JobHandle 28: walking to a trader and trading.
             "ui.status.trading",
         };
 

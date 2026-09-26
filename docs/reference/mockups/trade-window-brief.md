@@ -3,7 +3,7 @@
 **2026-09-26.** The prompt below is handed to Claude Design verbatim, with the attachments listed at
 the end. Decisions behind it: `docs/research/trading-interview.md` (owner: gold as a real item,
 goods sold out of stores and bought goods set down beside the trader, a colonist sent by
-right-click, a pausing modal) and `docs/design/57-trading.md` (the model the window shows; the
+right-click, a pausing modal) and `docs/design/65-trading.md` (the model the window shows; the
 prices in the table are its §3 formula). It is built as unit T6 of `docs/plans/trading.md` once the
 design is agreed and the simulation units under it exist.
 

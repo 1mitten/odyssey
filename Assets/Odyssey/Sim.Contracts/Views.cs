@@ -109,7 +109,7 @@ namespace Odyssey.Sim.Contracts
         KnockedDown = 1 << 7,
 
         /// <summary>
-        /// A guest by kind (design 57 §5): a person of the visitor faction, a trader today. Not one of
+        /// A guest by kind (design 65 §5): a person of the visitor faction, a trader today. Not one of
         /// ours, so it is on no roster, takes no orders and wears no uniform. Still set on a guest
         /// turned hostile (§7), beside <see cref="Hostile"/>, so it keeps its coat. The flags widened
         /// from a byte to carry it: the eight before it were all taken.
@@ -349,7 +349,7 @@ namespace Odyssey.Sim.Contracts
         public bool IsColonist => (Flags & (PawnFlags.Person | PawnFlags.Hostile | PawnFlags.Visitor)) == PawnFlags.Person;
 
         /// <summary>
-        /// A guest: a person of the visitor faction (design 57 §5), a trader today — and not one the
+        /// A guest: a person of the visitor faction (design 65 §5), a trader today — and not one the
         /// colony has turned hostile (§7), which is an enemy in a trader's coat.
         /// </summary>
         public bool IsVisitor =>
@@ -909,7 +909,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// A trader on the board and its negotiation (design 57 §5–§6): what the trader's pane and the
+    /// A trader on the board and its negotiation (design 65 §5–§6): what the trader's pane and the
     /// trade window read. One per visit; there is at most one visit today.
     /// </summary>
     public readonly struct TradeView
@@ -959,7 +959,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// One item a visit's ledger can move (design 57 §3–§4): how many each side holds and the two
+    /// One item a visit's ledger can move (design 65 §3–§4): how many each side holds and the two
     /// prices. <b>The prices are the simulation's</b>, made by <c>TradePricing</c>; the interface
     /// shows them and never works one out. Published only while a session is ready.
     /// </summary>
@@ -2007,10 +2007,10 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Every raid on the board, oldest first. See <see cref="RaidView"/>.</summary>
         public ReadOnlySpan<RaidView> Raids => new ReadOnlySpan<RaidView>(_raids, 0, RaidCount);
 
-        /// <summary>Every trader on the board and its negotiation (design 57). See <see cref="TradeView"/>.</summary>
+        /// <summary>Every trader on the board and its negotiation (design 65). See <see cref="TradeView"/>.</summary>
         public ReadOnlySpan<TradeView> Trades => new ReadOnlySpan<TradeView>(_trades, 0, TradeCount);
 
-        /// <summary>The ledger's rows for every ready session (design 57). See <see cref="TradeRowView"/>.</summary>
+        /// <summary>The ledger's rows for every ready session (design 65). See <see cref="TradeRowView"/>.</summary>
         public ReadOnlySpan<TradeRowView> TradeRows => new ReadOnlySpan<TradeRowView>(_tradeRows, 0, TradeRowCount);
 
         public ReadOnlySpan<PawnView> Pawns => new ReadOnlySpan<PawnView>(_pawns, 0, PawnCount);
