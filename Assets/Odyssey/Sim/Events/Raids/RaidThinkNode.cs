@@ -7,7 +7,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Sim.Events
 {
     /// <summary>
-    /// What a raid member does because it is in a raid (design 53 §3, §5), ahead of the bandit's
+    /// What a raid member does because it is in a raid (design 55 §3, §5), ahead of the bandit's
     /// own mind in <c>JobSystem.HostileTree</c>. It asks the member's group what the band is doing:
     /// <list type="bullet">
     /// <item><b>Arriving, gathering, probing</b>: mill about the band's point — a short walk within
@@ -15,7 +15,7 @@ namespace Odyssey.Sim.Events
     /// <item><b>Assaulting</b>: walk toward the target a leg at a time, and <b>hand over</b> —
     /// return false, so the tree falls through to <see cref="HostileThinkNode"/> — whenever there is
     /// something to fight: a colonist near, a grudge, the target reached, or a target it cannot
-    /// reach. The fighting is the bandit's own mind, unchanged (design 53 §12).</item>
+    /// reach. The fighting is the bandit's own mind, unchanged (design 55 §12).</item>
     /// <item><b>Withdrawing</b>: walk to the nearest edge and leave (<see cref="Theft.FillLeave"/>).</item>
     /// </list>
     /// <para>A pawn in no raid is declined after one dictionary lookup, so a debug-spawned bandit
@@ -49,7 +49,7 @@ namespace Odyssey.Sim.Events
             if (group.Phase == RaidPhase.Withdrawing)
             {
                 if (Theft.FillLeave(ctx, pawn, mode, job)) return true;
-                // No edge it can reach: let it go, or it holds the band open for ever (design 53 §6).
+                // No edge it can reach: let it go, or it holds the band open for ever (design 55 §6).
                 ctx.Raids!.Release(pawn);
                 return false;
             }
@@ -185,7 +185,7 @@ namespace Odyssey.Sim.Events
         }
     }
 
-    /// <summary>Where a raid's assault makes for (design 53 §5): the hearth, else the colony's start.</summary>
+    /// <summary>Where a raid's assault makes for (design 55 §5): the hearth, else the colony's start.</summary>
     public static class RaidTargets
     {
         /// <summary>How many rings out from the hearth or the start to look for a cell a raider can stand on.</summary>
@@ -228,19 +228,21 @@ namespace Odyssey.Sim.Events
 
     /// <summary>
     /// Named random purposes for the raid, beside <see cref="IncidentPurpose"/> and for its reason:
-    /// each draw its own stream. SHA-256's round constants K21 to K24, the next unspent after the
-    /// body's (<c>PawnPurpose.HitRegion</c>, <c>FallSplit</c>).
+    /// each draw its own stream. SHA-256's round constants K24 to K27. The first three were K21 to
+    /// K23 until cover reached <c>main</c> on them (<c>PawnPurpose.RangedCover*</c>) and a merge
+    /// with no conflict marker put a raid's edge and a shot's cover roll on one stream; they moved
+    /// on 2026-09-26 (design 55 §15). Grep the constant before taking the next one.
     /// </summary>
     public static class RaidPurpose
     {
         /// <summary>Which side of the board, and where on it, the band walks on.</summary>
-        public const uint Edge = 0x4A74_84AA;
+        public const uint Edge = 0xA831_C66D;
 
         /// <summary>The order the band's kinds walk on in.</summary>
-        public const uint Slots = 0x5CB0_A9DC;
+        public const uint Slots = 0xB003_27C8;
 
         /// <summary>How long it gathers.</summary>
-        public const uint Loiter = 0x76F9_88DA;
+        public const uint Loiter = 0xBF59_7FC7;
 
         /// <summary>A member's mill: wait or walk, and where. Mixed with the pawn's id, as a wander is.</summary>
         public const uint Mill = 0x983E_5152;

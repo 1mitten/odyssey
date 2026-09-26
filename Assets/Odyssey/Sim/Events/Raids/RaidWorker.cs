@@ -10,13 +10,13 @@ using Odyssey.Sim.Pawns.Wildlife;
 namespace Odyssey.Sim.Events
 {
     /// <summary>
-    /// A raid's own parameters (design 53 §8), the nested block design 23 §8 recommended the day
+    /// A raid's own parameters (design 55 §8), the nested block design 23 §8 recommended the day
     /// a second worker wanted fields the first did not: <c>&lt;raid&gt;…&lt;/raid&gt;</c> on an
     /// <see cref="IncidentDef"/>. Every number but the owner's is INVENTED and a playtest number.
     /// </summary>
     public sealed class RaidParams
     {
-        // ---- the size, when the caller leaves it to the incident (design 53 §9) ---------------
+        // ---- the size, when the caller leaves it to the incident (design 55 §9) ---------------
 
         /// <summary>Raiders per standing colonist.</summary>
         public int perColonist = 1;
@@ -63,7 +63,7 @@ namespace Odyssey.Sim.Events
         public string mix = "RaidMix_Mixed";
     }
 
-    /// <summary>How big a raid is when the caller leaves it to the incident (design 53 §9).</summary>
+    /// <summary>How big a raid is when the caller leaves it to the incident (design 55 §9).</summary>
     public static class RaidBudget
     {
         /// <summary>
@@ -90,7 +90,7 @@ namespace Odyssey.Sim.Events
     }
 
     /// <summary>
-    /// A raid (design 53): a band of hostiles, made from a mix, that walks on along one edge,
+    /// A raid (design 55): a band of hostiles, made from a mix, that walks on along one edge,
     /// gathers, probes, assaults the hearth and withdraws at half. This worker decides everything
     /// at the moment it fires and hands it to <see cref="RaidSystem"/>, which only runs the clock.
     ///
@@ -99,7 +99,7 @@ namespace Odyssey.Sim.Events
     /// loiter, and — per member, per think — the mill. A raid fired on another tick comes from
     /// another edge; the same raid fired on the same tick of the same world is the same raid.</para>
     ///
-    /// <para><b>Refused, not trimmed</b> (design 53 §9): a band that would take the board past
+    /// <para><b>Refused, not trimmed</b> (design 55 §9): a band that would take the board past
     /// <see cref="PawnRegistry.PawnCeiling"/> does not fire, and the debug row says so.</para>
     /// </summary>
     public sealed class RaidWorker : IncidentWorker
@@ -214,7 +214,7 @@ namespace Odyssey.Sim.Events
             raids.Begin(parms.Def, mixIndex, ctx.Tick, gather, probe, target, loiter, p.probeHours * Calendar.TicksPerHour,
                 p.gatherRadius, p.earlyTriggerCells, p.retreatPerMille, arrivals);
 
-            // The Events row: the mix and the size ride in the entry's detail (design 53 §7).
+            // The Events row: the mix and the size ride in the entry's detail (design 55 §7).
             ctx.Ledger.Record(parms.Def, gather, ctx.Tick, mixIndex, size);
             return true;
         }
@@ -229,7 +229,7 @@ namespace Odyssey.Sim.Events
         /// <summary>
         /// How many more pawns the board can take under <see cref="PawnRegistry.PawnCeiling"/>, the
         /// members of every raid still walking on counted as already here. The one owner of that
-        /// sum: the debug row reads it to say why a raid was refused (design 53 §9).
+        /// sum: the debug row reads it to say why a raid was refused (design 55 §9).
         /// </summary>
         public static int Room(PawnContext pawns) =>
             PawnRegistry.PawnCeiling - pawns.Pawns.Count - (pawns.Raids?.PendingArrivals ?? 0);

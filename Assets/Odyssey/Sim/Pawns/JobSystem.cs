@@ -528,7 +528,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// A bandit's mind (design 33 §1, §5): down, else hunt — a colonist, else a building, else
         /// what it came for, which it carries off the board (§14b, §17) — else idle. No needs, no
-        /// work, no draft: it is never one of ours. A raid member asks its band first (design 53 §3):
+        /// work, no draft: it is never one of ours. A raid member asks its band first (design 55 §3):
         /// the raid's node declines for a pawn in no raid, so a lone bandit thinks as it always did.
         /// </summary>
         static readonly ThinkNode[] HostileTree =
@@ -784,6 +784,10 @@ namespace Odyssey.Sim.Pawns
             // keeps this from becoming every colonist sleeping in the mud.
             if (pawn.Needs[NeedIndex.Rest] <= 0)
             {
+                // Where she stands — unless a tree stands there too, or somebody else does, in
+                // which case the one step out of it first (owner, 2026-09-25). Only the ring
+                // beside her: a collapse is a stumble, not a walk.
+                if (StepOutFirst(pawn, ctx, job, FreeSpot.CollapseRings)) return true;
                 job.Reset(JobIndex.Sleep);
                 job.TargetCell = -1;
                 return true;
@@ -848,7 +852,35 @@ namespace Odyssey.Sim.Pawns
             // Reserved, unlike the idler's: she is going to be there for hours, and a second
             // sleeper lying in the same cell is the fault the beds' own reservations prevent.
             int fireside = FiresideTarget.Find(pawn, ctx, reserve: true);
+            if (fireside < 0 && StepOutFirst(pawn, ctx, job, FreeSpot.GroundRings)) return true;
             job.TargetCell = fireside;
+            return true;
+        }
+
+        /// <summary>
+        /// When she may not lie where she stands — a tree stands there, or another pawn is on the
+        /// cell or walking into it — write a walk to the nearest cell she may lie in and answer
+        /// true; she sleeps when she gets there, because she is still tired and the next think
+        /// asks again from a cell that passes (owner, 2026-09-25: *"colonists sometimes sleep
+        /// through trees, double check they don't"*).
+        ///
+        /// <para><b>A walk and then a sleep, not a sleep with a target.</b> A sleep with a target
+        /// is how the job says "a bed or a fireside", and the ground's memory is keyed on its
+        /// absence — so a target here would have been a night in the mud remembered as a night in
+        /// a bed. Two jobs keep the one rule intact.</para>
+        ///
+        /// <para>False, and she lies where she is, when her own cell is fine or when nothing within
+        /// <paramref name="rings"/> is — a colonist boxed in by trunks still has to sleep, and a
+        /// walk to nowhere would be a think every tick for ever. Design 20 §14.</para>
+        /// </summary>
+        static bool StepOutFirst(Pawn pawn, PawnContext ctx, Job job, int rings)
+        {
+            if (FreeSpot.CanLie(pawn, ctx, pawn.Cell)) return false;
+            int spot = FreeSpot.Nearest(pawn, ctx, rings);
+            if (spot < 0) return false;
+            job.Reset(JobIndex.Wander);
+            job.TargetCell = spot;
+            job.Mode = pawn.OwnMode;
             return true;
         }
     }
@@ -1357,49 +1389,80 @@ namespace Odyssey.Sim.Pawns
             if (warmth == null || warmth.HeatSourceCount == 0) return -1;
 
             GridSize size = ctx.Size;
-            int best = -1;
-            int bestDistance = int.MaxValue;
 
-            for (int i = 0; i < warmth.HeatSourceCount; i++)
+            // **The ring beside the fire first, then the ring behind it** (owner, 2026-09-25:
+            // *"colonists stand around the campfire in the same tile … first separate tiles"*).
+            // A cell another pawn stands on or is walking to is not free, so a crowd fills the
+            // eight round the fire and then stands a step further out rather than on top of
+            // one another; when both rings are full there is no fireside, and she wanders or
+            // lies down as she would with no fire at all. Nobody ever shares. Design 31 §20.
+            for (int ring = 1; ring <= Rings; ring++)
             {
-                CellRef fire = size.FromIndex(warmth.HeatSourceCell(i));
+                int best = -1;
+                int bestDistance = int.MaxValue;
 
-                // The eight around it, in a fixed order, so two colonists choosing on the same
-                // tick choose the same way and the hash does not depend on iteration luck.
-                for (int dz = -1; dz <= 1; dz++)
-                for (int dx = -1; dx <= 1; dx++)
+                for (int i = 0; i < warmth.HeatSourceCount; i++)
                 {
-                    if (dx == 0 && dz == 0) continue;
+                    CellRef fire = size.FromIndex(warmth.HeatSourceCell(i));
 
-                    int x = fire.X + dx;
-                    int z = fire.Z + dz;
-                    if (!size.Contains(x, z, fire.Y)) continue;
-
-                    int cell = size.Index(x, z, fire.Y);
-                    if (cell == pawn.Cell)
+                    // Round it, in a fixed order, so two colonists choosing on the same tick
+                    // choose the same way and the hash does not depend on iteration luck.
+                    for (int dz = -ring; dz <= ring; dz++)
+                    for (int dx = -ring; dx <= ring; dx++)
                     {
-                        if (excludeOwn) continue;
-                        return cell;                      // already there
+                        if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dz)) != ring) continue;
+
+                        int x = fire.X + dx;
+                        int z = fire.Z + dz;
+                        if (!size.Contains(x, z, fire.Y)) continue;
+
+                        int cell = size.Index(x, z, fire.Y);
+
+                        // Never in a tree, whether to stand or to sleep: FreeSpot's first half,
+                        // asked before "already there" so a colonist in a trunk is not there.
+                        if (ctx.TreeAt(cell)) continue;
+
+                        if (cell == pawn.Cell)
+                        {
+                            if (excludeOwn) continue;
+                            // Already there — unless somebody else is too, when she moves on
+                            // and the one who did not think yet keeps the cell.
+                            if (!ctx.Pawns.IsClaimedByOther(pawn, cell)) return cell;
+                            continue;
+                        }
+
+                        if (reserve)
+                        {
+                            long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
+                            if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
+                        }
+
+                        int distance = ctx.Distance(pawn.Cell, cell);
+                        if (distance > Reach || distance >= bestDistance) continue;
+
+                        if (!ctx.Reachable(pawn, cell)) continue;
+
+                        // Last, because it is the one question that walks the pawns: only a cell
+                        // that would otherwise win pays for it.
+                        if (ctx.Pawns.IsClaimedByOther(pawn, cell)) continue;
+
+                        bestDistance = distance;
+                        best = cell;
                     }
-
-                    if (reserve)
-                    {
-                        long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
-                        if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
-                    }
-
-                    if (!ctx.Reachable(pawn, cell)) continue;
-
-                    int distance = ctx.Distance(pawn.Cell, cell);
-                    if (distance > Reach || distance >= bestDistance) continue;
-
-                    bestDistance = distance;
-                    best = cell;
                 }
+
+                if (best >= 0) return best;
             }
 
-            return best;
+            return -1;
         }
+
+        /// <summary>
+        /// How many rings round a fire count as its fireside: the eight beside it, then the
+        /// sixteen a step further out — room for twenty-four round one fire before anybody is
+        /// turned away. Only the first ring sits (<see cref="FireBeside"/>); the second stands.
+        /// </summary>
+        public const int Rings = 2;
 
         /// <summary>
         /// The heat source in the ring round <paramref name="cell"/> — one of the eight beside it
@@ -1421,6 +1484,74 @@ namespace Odyssey.Sim.Pawns
                 if (System.Math.Abs(fire.X - at.X) <= 1 && System.Math.Abs(fire.Z - at.Z) <= 1) return source;
             }
 
+            return -1;
+        }
+    }
+
+    /// <summary>
+    /// Where a body may lie down on the ground: the one owner of that question (owner,
+    /// 2026-09-25: *"colonists sometimes sleep through trees, double check they don't"* and
+    /// *"don't have them exactly over each other — that should never happen in any scenario"*).
+    ///
+    /// <para>A tree blocks nothing — pawns walk through a trunk's cell and the grid calls it
+    /// walkable — so walkability cannot say it, and a colonist who went down where she stood
+    /// could go down inside one. The bedless sleeper, the exhausted collapse and the sleeper
+    /// who runs out on the way to her bed all ask here; the fireside asks the tree half itself,
+    /// because it also chooses for people who only stand. Design 20 §14.</para>
+    /// </summary>
+    static class FreeSpot
+    {
+        /// <summary>How far a tired colonist looks for somewhere to lie, in rings: out of a copse.</summary>
+        public const int GroundRings = 3;
+
+        /// <summary>How far a collapse looks: one step, because it is a stumble and not a walk.</summary>
+        public const int CollapseRings = 1;
+
+        /// <summary>
+        /// Can <paramref name="pawn"/> lie in this cell? Standable, no tree in it, and no other
+        /// pawn on it or walking into it.
+        /// </summary>
+        public static bool CanLie(Pawn pawn, PawnContext ctx, int cell) =>
+            (uint)cell < (uint)ctx.Size.CellCount
+            && ctx.Cells.IsWalkable(cell)
+            && !ctx.TreeAt(cell)
+            && !ctx.Pawns.IsClaimedByOther(pawn, cell);
+
+        /// <summary>
+        /// The nearest cell round her, on her own layer, that she may lie in, can reserve and can
+        /// reach; -1 when there is none within <paramref name="rings"/>. Ring by ring in a fixed
+        /// order, nearest by the travel estimate within a ring, so the answer is a function of the
+        /// board. <b>Scales with the rings squared times the pawns</b> — at most 48 candidates for
+        /// the ground search, asked once when she lies down and never per tick.
+        /// </summary>
+        public static int Nearest(Pawn pawn, PawnContext ctx, int rings)
+        {
+            GridSize size = ctx.Size;
+            CellRef at = size.FromIndex(pawn.Cell);
+            for (int ring = 1; ring <= rings; ring++)
+            {
+                int best = -1, bestDistance = int.MaxValue;
+                for (int dz = -ring; dz <= ring; dz++)
+                for (int dx = -ring; dx <= ring; dx++)
+                {
+                    if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dz)) != ring) continue;
+                    int x = at.X + dx, z = at.Z + dz;
+                    if (!size.Contains(x, z, at.Y)) continue;
+                    int cell = size.Index(x, z, at.Y);
+
+                    int distance = ctx.Distance(pawn.Cell, cell);
+                    if (distance >= bestDistance) continue;
+                    if (!ctx.Cells.IsWalkable(cell) || ctx.TreeAt(cell)) continue;
+                    long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
+                    if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
+                    if (!ctx.Reachable(pawn, cell)) continue;
+                    if (ctx.Pawns.IsClaimedByOther(pawn, cell)) continue;
+
+                    bestDistance = distance;
+                    best = cell;
+                }
+                if (best >= 0) return best;
+            }
             return -1;
         }
     }
@@ -1465,6 +1596,10 @@ namespace Odyssey.Sim.Pawns
                 if (cell == pawn.Cell) continue;
                 if (avoidSlopes && ctx.Nav.Grid.CostClass[cell] == Worldgen.Natural.NaturalContent.CostClassSlope) continue;
                 if (!ctx.Reachable(pawn, cell, mode)) continue;
+                // Not where another pawn stands or is heading (owner, 2026-09-25: never exactly
+                // over each other). Last, because it is the one test that walks the pawns; a
+                // taken draw is simply another of the eight attempts. Design 31 §20.
+                if (ctx.Pawns.IsClaimedByOther(pawn, cell)) continue;
 
                 job.Reset(JobIndex.Wander);
                 job.TargetCell = cell;

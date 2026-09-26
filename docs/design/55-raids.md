@@ -1,4 +1,4 @@
-# 53 — Raids
+# 55 — Raids
 
 **Written 2026-09-25**, from the owner's request and a two-round interview the same day. Branch
 `claude/sharp-lamport-8q5u4h`. Plan: `docs/plans/raids.md`.
@@ -313,5 +313,13 @@ so a loaded world stood in its own build's sky until the next boundary. Fixed on
 the same PR (`docs/bug-patterns.md`, 2026-09-26).
 
 **Also:** the mix dropdown's order is now held to `MixOrder` and the Defs by a test that reads both
-off the disk (`RaidMixLabels` claimed a test that did not exist); the design renumbered 50 → 53,
-because the birds reached `main` as 50 first and two open PRs hold 51 and 52.
+off the disk (`RaidMixLabels` claimed a test that did not exist); the design renumbered 50 → 53 → 55,
+because the birds reached `main` as 50 first, cover as 53 while this review ran, and open PRs hold
+51 (traits) and 54 (kit).
+
+**And a second merge, the same day, found a collision no marker showed.** Cover reached `main` with
+its three random streams on SHA-256's round constants K21–K23 (`PawnPurpose.RangedCover*`), which
+are exactly the raid's edge, slot-order and loiter streams. Both use `DeterministicRandom.ForTick`,
+so a raid fired on the tick a shot was aimed would have drawn from the same numbers. The raid's three
+moved to K25–K27; its mill stays on K24, which is its alone. The pawn content fingerprint was re-taken
+from the merged pack.

@@ -1049,3 +1049,40 @@ a thing that goes stale and this popover is rebuilt on open precisely so nothing
 - Double beds (2×2), medical beds, guest rules — nothing wants them yet.
 - **Releasing a bed its owner has stopped using** — the other half of the 2026-09-19 ask. Wants a
   death or a departure model first; until one exists there is no state it could fire on (§13).
+
+## 14. Nobody lies down in a tree — 2026-09-25
+
+Owner: *"Colonists sometimes sleep through trees, double check they don't."*
+
+**Why it could happen.** A tree blocks nothing — the grid calls its cell walkable and pawns walk
+through the trunk — so every rule that asked "can she be here?" said yes. Three roads led into a
+trunk: a bedless sleeper with no fire lay down where she stood (`TargetCell = -1`), the fireside
+could offer a ring cell a tree stood in, and a sleeper whose rest ran out on the way to her bed
+dropped wherever the path had taken her, trunks included.
+
+**One owner, `FreeSpot`** (in `JobSystem.cs`, beside `FiresideTarget`): a cell she may lie in is
+walkable, holds no tree (`PawnContext.TreeAt`, which asks the grid of standing orders — the one
+thing that can say a handle is a tree), and is not held by another pawn (design 31 §20).
+
+- **The bedless sleeper steps out first.** When her own cell fails, `TrySleep` hands back a
+  *wander* to the nearest cell that passes within `FreeSpot.GroundRings` (3) — out of a copse —
+  and she lies down on the next think, still tired, from a cell that passes. A walk and then a
+  sleep rather than a sleep with a target, because a sleep's target is how the job says "a bed or
+  a fireside" and the ground's `SleptOnGround` memory is keyed on its absence; a target would have
+  been a night in the mud remembered as a night in a bed.
+- **The collapse stumbles one step.** At zero rest the same, but within `CollapseRings` (1): a
+  collapse is a stumble, not a walk. Boxed in by trunks on every side she goes down where she is —
+  a body at zero rest does not hike, and a walk to nowhere would be a think every tick.
+- **A collapse on the way waits for open ground.** The sleep driver's cut-short-the-walk branch now
+  also asks `FreeSpot.CanLie` of her current cell, so a colonist crossing a band of trees when her
+  rest runs out walks on to the first cell past it and goes down there.
+- The fireside never offers a tree (design 31 §20).
+
+**Tests** — `TreeTrunkTests`: stepping out of one tree, out of a copse (three rings), the one-step
+collapse, the boxed-in collapse, a fireside with seven of its eight cells planted, and end to end
+a tired colonist in a copse asleep outside it. `ACollapseOnTheWayToBedWaitsUntilSheIsOutOfTheTrees`
+carries its own control: with no trees she goes down on the very cell her rest ran out on; with the
+driver's check removed, the trees run fails.
+
+**Not moved:** a colonist with a free cell under her and no tree lies down exactly where she always
+did (`WithNoTreeSheStillLiesWhereSheStands`), and no golden colony slept on the ground in its window.

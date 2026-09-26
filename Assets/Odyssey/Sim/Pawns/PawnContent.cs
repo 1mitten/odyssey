@@ -209,7 +209,7 @@ namespace Odyssey.Sim.Pawns
         public const int Bandit = 3;
 
         /// <summary>
-        /// The bandit with a pistol (design 53 §8): its own kind so a raid mix can name it. Appended.
+        /// The bandit with a pistol (design 55 §8): its own kind so a raid mix can name it. Appended.
         /// </summary>
         public const int Gunman = 4;
         public const int Count = 5;
@@ -1604,7 +1604,7 @@ namespace Odyssey.Sim.Pawns
                 "PawnKind_Colonist", "PawnKind_MiddenHog", "PawnKind_DuctRat",
                 // The debug-spawned hostile person (design 33 §1), appended.
                 "PawnKind_Bandit",
-                // The bandit with a pistol, a raid's second kind (design 53 §8), appended.
+                // The bandit with a pistol, a raid's second kind (design 55 §8), appended.
                 "PawnKind_Gunman");
             content.Species = ByName<SpeciesDef>(defs,
                 "Species_Person", "Species_MiddenHog", "Species_DuctRat");
@@ -1925,7 +1925,7 @@ namespace Odyssey.Sim.Pawns
         // Built as the eleventh and twelfth, moved to the twelfth and thirteenth when the stream
         // jump shipped first, and moved again when cooking (Burn) and ranged (RangedHit) shipped
         // with those: two purposes on one stream would let a cooking or shooting roll decide
-        // where a blow lands. The twentieth and twenty-first are free.
+        // where a blow lands. The twentieth and twenty-first are free; cover took the next three.
 
         /// <summary>
         /// Which region a hit lands on, by coverage (design 43 §2). SHA-256's twentieth round
@@ -1935,5 +1935,18 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>How a fall's damage is split into hits and spread (design 43 §7). The twenty-first.</summary>
         public const uint FallSplit = 0x2DE9_2C6F;
+
+        // Cover's three (design 53 §2d, §2e). SHA-256's twenty-second, twenty-third and
+        // twenty-fourth round constants. Built on the twentieth to the twenty-second, moved when
+        // health (design 43) shipped first on the twentieth and twenty-first.
+
+        /// <summary>Whether cover defeats a shot whose aim roll hit (design 53 §2d).</summary>
+        public const uint RangedCover = 0x4A74_84AA;
+
+        /// <summary>Which piece of cover a defeated shot is fired into, weighted by what each gave.</summary>
+        public const uint RangedCoverPick = 0x5CB0_A9DC;
+
+        /// <summary>Whether a stray crossing a cover cell is caught by it, salted by the cell as well as the shooter.</summary>
+        public const uint RangedCoverIntercept = 0x76F9_88DA;
     }
 }

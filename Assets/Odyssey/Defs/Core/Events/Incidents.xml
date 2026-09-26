@@ -118,7 +118,7 @@
   </IncidentDef>
 
   <!--
-    A raid (docs/design/53-raids.md): a band of hostiles walks on along one edge, gathers for two to
+    A raid (docs/design/55-raids.md): a band of hostiles walks on along one edge, gathers for two to
     four hours, probes about halfway in for an hour, then assaults the hearth, and the rest withdraw
     once half are down. The debug menu names a size and a mix; a caller that names neither gets the
     headcount-and-days size below and the Mixed band. The gates are for the storyteller that will

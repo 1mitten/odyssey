@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-134 entries, 108 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+136 entries, 110 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -117,6 +117,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Surrounding land** | `ui.settings.surround` | The land carried past the rim so the board does not end in mid-air | no art | M1 |
 | **Ground relief** | `ui.settings.relief` | The roll of the drawn ground. The cells underneath stay flat | no art | M1 |
 | **See through to selection** | `ui.settings.seethrough` | Fade whatever stands between the camera and a selected colonist | no art | M1 |
+| **Trees fade for every colonist** | `ui.settings.seethroughall` | Fade the trees in front of every colonist on screen, not only the selected ones | no art | M3 |
 | **Cut away the ceiling** | `ui.settings.cutaway` | See into rooms on this layer. Off shows the floor above you | no art | M3 |
 | **Walls down** | `ui.settings.wallsdown` | Lower walls to a stump and hide the storeys above, so you can see inside. Building shows them in full | no art | M3 |
 | **Keys** | `ui.settings.keys` | Every key the game reads, and what each one may be changed to | no art | M3 |
@@ -137,6 +138,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Quality** | `ui.settings.quality` | Set every lever on this page at once, from Low to Ultra. Custom once any is moved by hand | no art | MF |
 | **Grass** | `ui.settings.vegetation` | How thick the grass is strewn, from bare ground to every cell. Decoration, in no cell and no save | no art | MF |
 | **Grass distance** | `ui.settings.grassdist` | How far from the camera grass is still drawn. Past it the ground carries the field | no art | MF |
+| **Butterflies** | `ui.settings.butterflies` | How many butterflies the meadow near the camera may hold, from none to a swarm. They glow at night. Decoration, in no cell and no save | no art | AB |
 | **Grass shadows** | `ui.settings.foliageshadows` | Whether grass casts shadows. Off, as it has always shipped: a shadow centimetres long on grass the same colour | no art | MF |
 | **Resolution** | `ui.settings.resolution` | How many pixels the game is drawn at. Only a built game can change it | no art | M3 |
 | **Exit game** | `ui.settings.exit` | Leave the game. The row asks twice, because leaving is not undoable | no art | M3 |

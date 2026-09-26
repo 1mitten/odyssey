@@ -346,5 +346,24 @@ namespace Odyssey.Sim.Weather
         }
 
         int Clamp(int kind) => kind < 0 || kind >= _defs.Length ? 0 : kind;
+
+        /// <summary>
+        /// After a load, put back the temperature offset the weather last wrote. <b>The offset is
+        /// not saved</b> — it is derived — and it is written only on a weather pass, every
+        /// <see cref="IntervalTicks"/>, so until the next pass a loaded colony read the fresh
+        /// board's offset while the run that was never saved read the loaded sky's. The needs pass
+        /// samples a colonist's ambient in between, and a save mid-fight on a cloudy day parted from
+        /// its twin 46 ticks after the load, on one colonist's mood (found by the cover gate,
+        /// <c>CoverGateTests</c>, 2026-09-25). <paramref name="nextTick"/> is the world's tick after
+        /// the load — the next to run — so the last pass was at the interval at or below the tick
+        /// before it, and the offset is the sky's at that pass, exactly as the unbroken run holds
+        /// it. Nothing on a world that has not ticked yet.
+        /// </summary>
+        public void ReapplyOffset(int nextTick)
+        {
+            if (_ctx.Temperature == null || !_started || nextTick <= 0) return;
+            int last = (nextTick - 1) / IntervalTicks * IntervalTicks;
+            _ctx.Temperature.WeatherOffsetC = ViewAt(last).TempOffsetC;
+        }
     }
 }

@@ -62,6 +62,13 @@ namespace Odyssey.Hud
         public const string GiveCarrotsKey = "ui.debug.givecarrots";
         public const string SkipDayKey = "ui.debug.skipday";
         public const string SkipMorningKey = "ui.debug.skipmorning";
+
+        /// <summary>
+        /// Skip to ten at night, when it is fully dark (design 52 §5). The butterflies' glow is the
+        /// one thing that only exists after dusk, and <see cref="SkipMorningKey"/> lands at four in
+        /// the morning with about a minute of night left — too short to judge a spectacle by.
+        /// </summary>
+        public const string SkipNightKey = "ui.debug.skipnight";
         public const string RipenCropsKey = "ui.debug.ripen";
 
         /// <summary>Completes the project in hand, which is how a Research tab project becomes done until the mechanism exists (design 34).</summary>
@@ -124,7 +131,7 @@ namespace Odyssey.Hud
             SpawnBanditsKey, ArmColonistsKey, SpawnPistolKey, SpawnGunmanKey, HurtKey, HealKey, KillKey, GiveMedkitsKey,
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey, GiveCarrotsKey,
-            SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
+            SkipDayKey, SkipMonthKey, SkipMorningKey, SkipNightKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
             JumpsFailKey,
             WeatherTabKey, WeatherClearKey, WeatherOvercastKey, WeatherDrizzleKey, WeatherRainKey,
             WeatherDownpourKey, WeatherStormKey, RainParticlesKey, WetGlossKey,
@@ -132,7 +139,7 @@ namespace Odyssey.Hud
         };
 
         /// <summary>
-        /// The raid's two controls on the Events tab (design 53 §9): how many, and who. Their row
+        /// The raid's two controls on the Events tab (design 55 §9): how many, and who. Their row
         /// labels, and the word the size reads at 0.
         /// </summary>
         public const string RaidSizeKey = "ui.debug.raid.size",
@@ -403,7 +410,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// How many the next raid brings, 0 to <see cref="RaidSizeMax"/>. 0 is <i>Auto</i>: the
-        /// incident's own headcount-and-days size (design 53 §9). Kept for the session, so a second
+        /// incident's own headcount-and-days size (design 55 §9). Kept for the session, so a second
         /// raid is one click.
         /// </summary>
         public int RaidSize { get; private set; }
@@ -419,7 +426,7 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// What the Raid row says when the raid it was asked for will not fire (design 53 §9:
+        /// What the Raid row says when the raid it was asked for will not fire (design 55 §9:
         /// refused, not trimmed, and says so): too many for the room left under the pawn ceiling,
         /// or, when there is room, no edge the band can reach. A debug line, so plain ASCII.
         /// </summary>
@@ -432,7 +439,7 @@ namespace Odyssey.Hud
         public static string RaidSizeText(int size) => size <= 0 ? Registry.Label(RaidAutoKey) : size.ToString();
 
         /// <summary>
-        /// The raid, as the debug row sends it (design 53 §9): the incident in A, the size in B (0 for
+        /// The raid, as the debug row sends it (design 55 §9): the incident in A, the size in B (0 for
         /// the incident's own) and the mix plus one in C.
         /// </summary>
         public Intent RaidIntent(int incidentDef) =>

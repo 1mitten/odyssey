@@ -578,6 +578,80 @@ namespace Odyssey.Sim.Contracts
         /// <see cref="Miss"/>.
         /// </summary>
         Shot = 13,
+
+        /// <summary>
+        /// Cover took a bullet (design 53 §2e): a shot the cover roll defeated, fired into the piece
+        /// it picked, or a stray caught by cover it crossed. <see cref="CombatEventView.Cell"/> is the
+        /// cover's cell, <see cref="CombatEventView.Target"/> whom the shot was at (or <c>default</c>)
+        /// and <see cref="CombatEventView.Amount"/> the damage the cover took, nought for a thing with
+        /// no hit points (a tree, a rock face). Presentation raises the <i>Cover</i> floater and the
+        /// dust there. A building struck also reports its <see cref="Hit"/> as any blow does.
+        /// </summary>
+        Covered = 14,
+    }
+
+    /// <summary>
+    /// What one shot would come to (design 53 §8b): the answer to a <c>QueryShot</c>, published
+    /// while the question stands and never saved or hashed. Every number is the simulation's own —
+    /// the rule that rolls the shot is the rule that fills this — so the readout and the dice
+    /// cannot disagree.
+    /// </summary>
+    public readonly struct ShotReportView
+    {
+        public readonly PawnId Shooter;
+        public readonly PawnId Target;
+
+        /// <summary>The aim roll's chance, per mille: skill, distance, the gun and its quality.</summary>
+        public readonly int AimPerMille;
+
+        /// <summary>The cover the target has from this shot, per mille (noisy-OR over its neighbours).</summary>
+        public readonly int CoverPerMille;
+
+        /// <summary>What the player is told: the aim times what the cover leaves, or nought out of range or sight.</summary>
+        public readonly int TotalPerMille;
+
+        /// <summary>Centre to centre, in millimetres.</summary>
+        public readonly int DistanceMm;
+
+        /// <summary>The shooter's Shooting level.</summary>
+        public readonly int ShootingLevel;
+
+        /// <summary>The gun, as an item def index.</summary>
+        public readonly int WeaponDef;
+
+        /// <summary>What the shot's descent leaves of low cover, per mille — 1,000 on the level.</summary>
+        public readonly int LowElevationPerMille;
+
+        /// <summary>
+        /// The piece of cover that gives the most, as an <see cref="EdificeHandle"/> value; -1 for a
+        /// rock face, and nought for no cover.
+        /// </summary>
+        public readonly int TopCoverEdifice;
+
+        /// <summary>How many pieces of cover the target has from this shot.</summary>
+        public readonly int CoverPieces;
+
+        public readonly bool InRange;
+        public readonly bool InSight;
+
+        public ShotReportView(PawnId shooter, PawnId target, int aimPerMille, int coverPerMille, int totalPerMille,
+            int distanceMm, int shootingLevel, int weaponDef, int lowElevationPerMille, int topCoverEdifice,
+            int coverPieces, bool inRange, bool inSight)
+        {
+            Shooter = shooter;
+            Target = target;
+            AimPerMille = aimPerMille;
+            CoverPerMille = coverPerMille;
+            TotalPerMille = totalPerMille;
+            DistanceMm = distanceMm;
+            ShootingLevel = shootingLevel;
+            WeaponDef = weaponDef;
+            LowElevationPerMille = lowElevationPerMille;
+            TopCoverEdifice = topCoverEdifice;
+            CoverPieces = coverPieces;
+            InRange = inRange;
+            InSight = inSight;
+        }
     }
 
     /// <summary>
@@ -756,7 +830,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// What a raid is doing (design 53 §3), in order. The phase is the simulation's; the words and
+    /// What a raid is doing (design 55 §3), in order. The phase is the simulation's; the words and
     /// the horn are presentation's.
     /// </summary>
     public enum RaidPhase : byte
@@ -778,7 +852,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// One raid on the board (design 53 §3): its phase, where its standing members are, and where
+    /// One raid on the board (design 55 §3): its phase, where its standing members are, and where
     /// it is going. Published every frame a raid exists; neither saved nor hashed — the group is.
     /// What the alert and the Events row jump the camera to, and what the alert is raised for.
     /// </summary>
@@ -2036,6 +2110,22 @@ namespace Odyssey.Sim.Contracts
         /// handle: the row arrives the publish after the question, and is withdrawn the publish
         /// after the question is withdrawn.
         /// </summary>
+        ShotReportView _shotReport;
+        bool _hasShotReport;
+
+        /// <summary>The answer to the standing <c>QueryShot</c>, if there is one (design 53 §8b).</summary>
+        public bool TryGetShotReport(out ShotReportView report)
+        {
+            report = _shotReport;
+            return _hasShotReport;
+        }
+
+        internal void SetShotReport(in ShotReportView report)
+        {
+            _shotReport = report;
+            _hasShotReport = true;
+        }
+
         public bool TryGetCellDetail(int cellIndex, out CellDetail detail)
         {
             for (int i = 0; i < CellDetailCount; i++)
@@ -2075,6 +2165,7 @@ namespace Odyssey.Sim.Contracts
             // reader rebuilds it, and a frame nobody asks about never pays for one at all.
             _aspectsIndexed = false;
             CellDetailCount = 0;
+            _hasShotReport = false;
             BulletinCount = 0;
             FallingCount = 0;
             ProjectileCount = 0;

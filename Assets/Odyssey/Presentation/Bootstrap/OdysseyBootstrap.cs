@@ -153,8 +153,8 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Fade whatever stands between the camera and a selected colonist, so a tree cannot hide the person you are watching.")]
         public bool seeThroughToSelection = true;
 
-        [Tooltip("See-through for every colonist on screen, not only the selected ones (design 38 §19).")]
-        public bool seeThroughToEveryColonist = true;
+        [Tooltip("See-through for every colonist on screen, not only the selected ones (design 38 §19). Off by default since 2026-09-25 (design 38 §27): on, the trees cleared round the colony with nothing selected. The Graphics setting \"Trees fade for every colonist\" writes it.")]
+        public bool seeThroughToEveryColonist;
 
         [Tooltip("How wide the beam to a selected colonist is, in metres. It stands for the width of the person, not the thickness of the line.")]
         [Range(0.2f, 3f)]
@@ -192,6 +192,10 @@ namespace Odyssey.Presentation.Bootstrap
         CellGrid? _grid;
         WorldRenderModel? _model;
         ChunkRenderer? _renderer;
+
+        /// <summary>Scratch for a cover piece's ghost boxes (design 53 §7); drawn and forgotten each frame.</summary>
+        readonly Matrix4x4[] _coverGhost = new Matrix4x4[CoverShape.MaxParts];
+        readonly int[] _coverGhostShades = new int[CoverShape.MaxParts];
         PawnContext? _pawns;
         PawnFigureDirector? _figures;
         DesignatePresenter? _designate;
@@ -235,6 +239,12 @@ namespace Odyssey.Presentation.Bootstrap
 
         /// <summary>For tests and the overlay: the weather as drawn this session, or null.</summary>
         public WeatherLook? Weather => _weather;
+
+        /// <summary>The butterflies near the camera (design 52): drawn, never simulated.</summary>
+        ButterflyDirector? _butterflies;
+
+        /// <summary>The butterflies, for the tests, the settings and the overlay. Null between sessions.</summary>
+        public ButterflyDirector? Butterflies => _butterflies;
 
         /// <summary>The key light the day moves, kept so the renderer's shadow margin can sweep
         /// towards it (design 38 §18).</summary>
@@ -402,6 +412,11 @@ namespace Odyssey.Presentation.Bootstrap
             /// compute path research d-23 ranked second.
             /// </summary>
             Birds,
+            /// The butterflies (design 52): the meadow's step, the buffer upload and its one or two
+            /// procedural calls. Its own line so the Butterflies ladder's cost can be read off the
+            /// overlay and the trace, which is what decides the presets' rungs (§9).
+            /// </summary>
+            Butterflies,
             Count,
         }
 
@@ -410,6 +425,9 @@ namespace Odyssey.Presentation.Bootstrap
         /// that poses a pawn. See <see cref="FrameSection.Crowd"/>.
         /// </summary>
         readonly Rendering.PawnCrowdIndex _crowd = new Rendering.PawnCrowdIndex();
+
+        /// <summary>This frame's crowd index, for a pose asked for outside the draw passes.</summary>
+        public Rendering.PawnCrowdIndex CrowdIndex => _crowd;
 
         readonly double[] _sectionMs = new double[(int)FrameSection.Count];
         readonly Stopwatch _sectionTimer = new Stopwatch();
@@ -1110,6 +1128,12 @@ namespace Odyssey.Presentation.Bootstrap
                 _weather = new WeatherLook(_model, transform);
                 // The birds (design 50): rooks and a buzzard over the board, perching on what is drawn.
                 _birds = new BirdDirector(_model);
+                // The butterflies (design 52), seeded from the world so a board shows the same
+                // meadow twice, and sized by the player's rung.
+                _butterflies = new ButterflyDirector(_model, _world.Seed)
+                {
+                    Capacity = Preferences.Value(GraphicsLadder.Butterflies),
+                };
             }
 
             // Which family each weapon swings in (design 33 §5j), read once off the content, so a
@@ -1372,6 +1396,22 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         /// <summary>
+        /// Skip to ten at night — the night key, fully dark — with seven and a half hours of night
+        /// ahead, so the butterflies' glow can be watched rather than glimpsed (design 52 §5). The
+        /// same ordinary ticks as <see cref="DebugSkipToMorning"/>.
+        /// </summary>
+        public void DebugSkipToNight()
+        {
+            if (_world == null || Colony == null) return;
+            int day = Colony.Pawns.Content.DayTicks;
+            int night = day / 24 * 22;
+            int now = _world.CurrentTick % day;
+            int skip = (night - now + day) % day;
+            if (skip == 0) skip = day;
+            DebugSkipTicks(skip);
+        }
+
+        /// <summary>
         /// The scene's own key light, when the inspector field is empty.
         ///
         /// <para>Found rather than created, because the scene builder already places a sun and a
@@ -1569,7 +1609,7 @@ namespace Odyssey.Presentation.Bootstrap
                 _renderer.Render(activeLayer, slice);
 
                 // Once per session, a few hundred frames in: which way the scenery went on this
-                // machine's API, so a player log says whether the GPU path ran (design 38 §22).
+                // machine's API, so a player log says whether the GPU path ran (design 38 §27).
                 if (!_sceneryPathLogged && ++_framesRendered == 300)
                 {
                     _sceneryPathLogged = true;
@@ -1666,6 +1706,7 @@ namespace Odyssey.Presentation.Bootstrap
             // The fight (design 33 §1): a bar over the hurt and the drafted, the hostile marker,
             // then the moments since last frame, handed on once each, and the words they float.
             DrawCombatMarks(_world.Views.Current, movePerTick, activeLayer, slice);
+            UpdateShotReadout(_world.Views.Current);
             _combatFeedback.Floaters.Step(_world.Views.Current.Running ? Time.deltaTime : 0f);
             int bloodLowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model?.LowestOutdoorLayer ?? int.MaxValue));
             int bloodHighest = slice.HighestVisibleLayer(activeLayer, _world.Views.Current.Size.SizeY);
@@ -1704,6 +1745,22 @@ namespace Odyssey.Presentation.Bootstrap
                 slice.BelowSurface(activeLayer),
                 slice.HighestVisibleLayer(activeLayer, _world.Views.Current.Size.SizeY));
             MarkSection(FrameSection.Birds);
+            // The butterflies after the weather, which has eased the rain and cloud they read, and
+            // in the band the blood is drawn in. Real seconds while the world runs and none on a
+            // pause: a ten-beat wing at speed 3 would strobe (design 52 §7). The hour, the season
+            // and the sky are the game's.
+            if (_butterflies != null)
+            {
+                float hour = _daylight != null && _daylight.Hour >= 0f ? _daylight.Hour : Daylight.HourOf(_world.CurrentTick);
+                _butterflies.Sync(_world.Views.Current.Running ? Time.deltaTime : 0f, _world.CurrentTick, hour,
+                    _weather?.Cloud ?? 0f, _weather?.Rain ?? _world.Views.Current.Weather.RainPerMille / 1000f,
+                    _crowd,
+                    cameraRig != null ? cameraRig.Focus : transform.position,
+                    cameraRig != null ? cameraRig.TargetDistance : 48f,
+                    cameraRig != null ? cameraRig.transform.position : transform.position,
+                    bloodLowest, bloodHighest, slice.BelowSurface(activeLayer));
+            }
+            MarkSection(FrameSection.Butterflies);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
 
@@ -2318,6 +2375,16 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
+            // Cover's ghost (design 53 §7a-bis), from the same bags the mesher draws: a lone piece,
+            // the way a line of them looks before its neighbours stand. A ghost has one colour, so
+            // the cloths are ignored.
+            if (CoverShape.Draws(what.edifice))
+            {
+                int count = CoverShape.Parts(what.edifice, cell.X, cell.Z, cell.Y, 0, _coverGhost, _coverGhostShades);
+                for (int part = 0; part < count; part++) _renderer.DrawGhost(module, tint, _coverGhost[part]);
+                return;
+            }
+
             // A ladder's ghost stands on the face the built one will stand on: the wall it would be
             // fixed to if there is one, and the rotation the player has turned it to if there is
             // not. Asked of the model rather than worked out here, because that rule has one owner
@@ -2909,7 +2976,7 @@ namespace Odyssey.Presentation.Bootstrap
                 for (int i = 0; i < selected.Count && lines < MaxSightLines; i++)
                 {
                     if (!snapshot.TryGetPawn(selected[i], out PawnView pawn)) continue;
-                    _sight.Add(eye, FeetOf(pawn, movePerTick) + Vector3.up * lift);
+                    _sight.Add(eye, FeetOf(pawn, snapshot.Pawns, movePerTick) + Vector3.up * lift);
                     lines++;
                 }
             }
@@ -2920,13 +2987,15 @@ namespace Odyssey.Presentation.Bootstrap
             // Then every other colonist on screen, nearest the focus first, up to a fixed count
             // (owner, 2026-09-24: trees fade for every colonist). Bounded so the cost does not
             // grow with the colony: each line is a slab test per instance in the chunks it crosses.
+            // Off by default since 2026-09-25 — the Graphics switch "Trees fade for every
+            // colonist" turns it on (design 38 §27: the trees cleared with nothing selected).
             _sightCandidates.Clear();
             System.ReadOnlySpan<PawnView> pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length && seeThroughToEveryColonist; i++)
             {
                 if (!pawns[i].IsColonist) continue;
                 if (selection != null && selection.HasPawn && Selected(selection.Pawns, pawns[i].Id)) continue;
-                Vector3 feet = FeetOf(pawns[i], movePerTick);
+                Vector3 feet = FeetOf(pawns[i], pawns, movePerTick);
                 _sightCandidates.Add((Flat(feet - focus), feet + Vector3.up * lift));
             }
             lines += AddNearest(eye, MaxColonistSightLines);
@@ -2938,10 +3007,12 @@ namespace Odyssey.Presentation.Bootstrap
             SightLinesLastFrame = _sight.Count;
         }
 
-        Vector3 FeetOf(in PawnView pawn, int movePerTick)
+        // Runs before the frame's crowd index is rebuilt, so it takes the linear scan: bounded by the
+        // sight-line count, and a stale index would miss a colonist who arrived this tick.
+        Vector3 FeetOf(in PawnView pawn, System.ReadOnlySpan<PawnView> everyone, int movePerTick)
         {
             if (_figures != null && _figures.TryGetFeet(pawn.Id, out Vector3 feet)) return feet;
-            return PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+            return PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model, everyone);
         }
 
         static float Flat(Vector3 v) => v.x * v.x + v.z * v.z;
@@ -3109,7 +3180,7 @@ namespace Odyssey.Presentation.Bootstrap
                 if (!snapshot.TryGetPawn(mark.Pawn, out PawnView pawn)) continue;
 
                 if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model, snapshot.Pawns, _crowd);
                 _renderer.DrawMarker(feet + Vector3.up * (colonistCursor.y + DraftMarkerLift), DraftMarkerSize, hue);
 
                 if (mark.OrderCell < 0 || selection == null || !IsSelected(selection, pawn.Id)) continue;
@@ -3123,7 +3194,7 @@ namespace Odyssey.Presentation.Bootstrap
                 if (!snapshot.TryGetPawn(order.Pawn, out PawnView pawn)) continue;
 
                 if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model, snapshot.Pawns, _crowd);
                 DrawOrderLine(feet, order.OrderCell, line);
             }
         }
@@ -3267,7 +3338,7 @@ namespace Odyssey.Presentation.Bootstrap
                 if (!bar && !hostile) continue;
 
                 if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model, snapshot.Pawns, _crowd);
 
                 // The top of the pawn as the cursor has it: the colonist's box, an animal's own,
                 // and a body on the ground much lower.
@@ -3294,7 +3365,79 @@ namespace Odyssey.Presentation.Bootstrap
                     _renderer.DrawMarker(feet + Vector3.up * (top + DraftMarkerLift), DraftMarkerSize, hostileInk);
             }
 
+            // A struck building's bar (design 33 §13k, built with cover, design 53 §7d): one row per
+            // building something has hit, none for a whole one, so a sandbag line worn down in a
+            // fight shows how much is left of each piece. Over the thing's top, the order mark's own
+            // height, and the same pieces and inks as a pawn's bar.
+            ReadOnlySpan<EdificeDamageView> struck = snapshot.EdificeDamage;
+            for (int i = 0; i < struck.Length; i++)
+            {
+                EdificeDamageView row = struck[i];
+                if ((uint)row.CellIndex >= (uint)snapshot.Size.CellCount) continue;
+                if (!CombatFeedbackModel.BuildingHealthBar(snapshot, row.CellIndex, out int hp, out int hpMax)) continue;
+                CellRef cell = snapshot.Size.FromIndex(row.CellIndex);
+                if (cell.Y < lowest || cell.Y > highest) continue;
+                float top = _model.MarkHeight(row.CellIndex, slice.wallsLowered);
+                Vector3 centre = GroundRelief.Lift(CellMetrics.FloorCentre(cell)) + Vector3.up * (top + CombatMarks.BarLift);
+                Color fill = Ui.HudTokens.Convert(HealthBarLayout.InkOf(HealthBarInk.Fill,
+                    CombatFeedbackModel.HealthBarColour(hp, hpMax)));
+                int pieces = HealthBarLayout.Pieces(CombatMarks.Fraction(hp, hpMax), _barPieces);
+                for (int p = 0; p < pieces; p++)
+                {
+                    HealthBarInk ink = _barPieces[p].Ink;
+                    Color colour = ink == HealthBarInk.Fill ? fill : ink == HealthBarInk.Plate ? plate : outline;
+                    _renderer.GatherBarPiece(colour, CombatMarks.Place(in _barPieces[p], centre, facing));
+                }
+            }
+
             _renderer.FlushBarPieces();
+        }
+
+        PawnId _shotShooter, _shotTarget;
+
+        /// <summary>
+        /// The hit-chance readout (design 53 §8b): with one drafted colonist selected and a hostile
+        /// under the pointer, ask the simulation what her shot would come to and show its answer
+        /// beside the cursor. The question is sent only when the pair changes; the answer is the
+        /// published <see cref="ShotReportView"/>, so the words can never promise odds the dice do
+        /// not keep. A colonist with no gun gets no answer, and so no readout.
+        /// </summary>
+        void UpdateShotReadout(WorldSnapshot snapshot)
+        {
+            if (_world == null) return;
+            PawnId shooter = default, target = default;
+            Vector2 pointer = default;
+            IReadOnlyList<PawnId>? selected = Directors?.Selection?.Pawns;
+            bool could = selected != null && selected.Count == 1 && snapshot.TryGetPawn(selected[0], out PawnView chosen)
+                && chosen.IsDrafted && !chosen.IsDowned;
+            // The rig resolves the hover cell only while the readout could show (next frame on).
+            if (cameraRig != null) cameraRig.WantsPointerCell = could;
+            if (could && snapshot.TryGetPawn(selected![0], out chosen)
+                && cameraRig != null && cameraRig.CellUnderPointer(out CellRef cell, out pointer))
+            {
+                var pawns = snapshot.Pawns;
+                for (int i = 0; i < pawns.Length; i++)
+                {
+                    if (pawns[i].Cell != cell || !pawns[i].IsHostile) continue;
+                    shooter = chosen.Id;
+                    target = pawns[i].Id;
+                    break;
+                }
+            }
+
+            if (shooter != _shotShooter || target != _shotTarget)
+            {
+                _shotShooter = shooter;
+                _shotTarget = target;
+                _world.Intents.Submit(new Intent(IntentKind.QueryShot, default,
+                    shooter.IsValid ? shooter.Value : 0, target.IsValid ? target.Value : 0));
+            }
+
+            string? text = null;
+            if (target.IsValid && snapshot.TryGetShotReport(out ShotReportView report)
+                && report.Shooter == shooter && report.Target == target)
+                text = ShotReadout.Text(report);
+            _hudShell?.SetShotReadout(text, pointer);
         }
 
         /// <summary>One bar's pieces, reused for every bar every frame.</summary>
@@ -3342,7 +3485,7 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 LockOnRings.Ring ring = rings[i];
                 if (snapshot.TryGetPawn(ring.Target, out PawnView pawn))
-                    _ringPlaces[ring.Target.Value] = RingPlaceOf(in pawn, movePerTick);
+                    _ringPlaces[ring.Target.Value] = RingPlaceOf(in pawn, snapshot.Pawns, movePerTick);
                 if (!_ringPlaces.TryGetValue(ring.Target.Value, out RingPlace place)) continue;
                 if (place.Layer < lowest || place.Layer > highest || ring.Alpha <= 0f) continue;
                 if (snapshot.TryGetPawn(ring.Target, out PawnView standing)
@@ -3372,10 +3515,10 @@ namespace Odyssey.Presentation.Bootstrap
         /// (<see cref="PawnFigureDirector.TryGetAnimalBox"/>) centred where the box is, a person
         /// the colonist cursor's box at the feet, and a person lying down half a body's length.
         /// </summary>
-        RingPlace RingPlaceOf(in PawnView pawn, int movePerTick)
+        RingPlace RingPlaceOf(in PawnView pawn, System.ReadOnlySpan<PawnView> everyone, int movePerTick)
         {
             if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+                feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model, everyone, _crowd);
 
             if (pawn.IsAnimal && _figures != null
                 && _figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 box, out Vector3 size))
@@ -3477,7 +3620,7 @@ namespace Odyssey.Presentation.Bootstrap
                     // uses it: a working colonist is stepped off their cell, and a bracket drawn from
                     // the pose would sit on the cell while the person stands beside it.
                     if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                        feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+                        feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model, snapshot.Pawns, _crowd);
                     _renderer.DrawSelectionBracket(
                         feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, strength, seeThrough: true);
                 }
@@ -4259,6 +4402,7 @@ namespace Odyssey.Presentation.Bootstrap
             _fires?.Dispose();
             _weather?.Dispose();
             _birds?.Dispose();
+            _butterflies?.Dispose();
             _floaterView?.Dispose();
             _hearthMark?.Dispose();
             _hearthMark = null;
@@ -4298,6 +4442,7 @@ namespace Odyssey.Presentation.Bootstrap
             _fires = null;
             _weather = null;
             _birds = null;
+            _butterflies = null;
             _corpses = null;
             _floaterView = null;
             _colonistMaterials = null;

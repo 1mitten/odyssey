@@ -6,7 +6,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// The raid's two debug controls and its Events row (design 53 §7, §9): what the row sends, what
+    /// The raid's two debug controls and its Events row (design 55 §7, §9): what the row sends, what
     /// the size reads, and what the bulletin says.
     /// </summary>
     public class RaidDebugTests
@@ -62,7 +62,7 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// A refused raid says why on its row (design 53 §9): too many for the room, with the room;
+        /// A refused raid says why on its row (design 55 §9): too many for the room, with the room;
         /// and with room enough, the one other reason the door refuses. Never a negative room.
         /// </summary>
         [Test]

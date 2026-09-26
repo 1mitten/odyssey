@@ -151,7 +151,7 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// A raid's mix is carried as an index (design 53 §8): the debug dropdown sends one and the
+        /// A raid's mix is carried as an index (design 55 §8): the debug dropdown sends one and the
         /// Events row and the alert name one. <see cref="RaidMixLabels"/> spells the keys in index
         /// order because this assembly cannot import the Defs, so the order is read here off the
         /// disk: <c>IncidentContent.MixOrder</c> for which mix is which index, and the mix Defs for

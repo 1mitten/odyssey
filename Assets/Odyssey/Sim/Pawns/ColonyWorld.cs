@@ -209,7 +209,7 @@ namespace Odyssey.Sim.Pawns
                 // The bullets in the air (design 47 §2c): appended, no format bump. A save from
                 // before guns has no section and loads with nothing in flight.
                 pawns.Projectiles,
-                // The raids on the board (design 53 §10): appended, no format bump. A save from
+                // The raids on the board (design 55 §10): appended, no format bump. A save from
                 // before raids has no section and loads with no band.
                 pawns.Raids!,
             };
@@ -293,6 +293,10 @@ namespace Odyssey.Sim.Pawns
             // its seed before a save is read over it.
             Construction.RebuildLadderConnectors(Pawns);
             Construction.RebuildDoors(Pawns);
+
+            // The weather's temperature offset is derived and written only every weather pass, so
+            // a loaded colony takes it back here or reads the fresh board's until the next pass.
+            Pawns.Weather?.ReapplyOffset(World.CurrentTick);
 
             // And which cells hold furniture nothing may be put down in — derived from the same
             // edifice list, for the same reason.
@@ -458,7 +462,7 @@ namespace Odyssey.Sim.Pawns
             var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns())
             {
                 Chunks = chunks,
-                // What a raid makes for with no hearth (design 53 §5). Derived, so a load has it too.
+                // What a raid makes for with no hearth (design 55 §5). Derived, so a load has it too.
                 ColonyStart = outcome.StartCell,
             };
             var solver = new SupportSolver(grid);

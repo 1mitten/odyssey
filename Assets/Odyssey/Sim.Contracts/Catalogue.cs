@@ -384,7 +384,7 @@ namespace Odyssey.Sim.Contracts
         /// After <see cref="BanditLeft"/> at the merge with main (2026-09-25); bandits shipped first.</summary>
         public const int MedicalDrop = 4;
 
-        /// <summary>A band of hostiles walks in from one edge, gathers, probes, and assaults (design 53).</summary>
+        /// <summary>A band of hostiles walks in from one edge, gathers, probes, and assaults (design 55).</summary>
         public const int Raid = 5;
 
         public const int Count = 6;
@@ -503,7 +503,10 @@ namespace Odyssey.Sim.Contracts
         /// design 45, which reached main first. See <c>CoreContent.EdificeGalley</c>.</summary>
         public const int Galley = 22;
 
-        public const int Count = 23;
+        /// <summary>Sandbags (design 53 §4): low cover, crossed but never stood on. See <c>CoreContent.EdificeSandbags</c>.</summary>
+        public const int Sandbags = 23;
+
+        public const int Count = 24;
     }
 
     /// <summary>
@@ -593,7 +596,10 @@ namespace Odyssey.Sim.Contracts
         /// <summary>The galley (design 48 §5): one cell, powered, where meals are cooked from bills.</summary>
         public const int Galley = 12;
 
-        public const int Count = 13;
+        /// <summary>Sandbags (design 53 §4): cheap low cover, always stone, dragged as a line.</summary>
+        public const int Sandbags = 13;
+
+        public const int Count = 14;
     }
 
     /// <summary>

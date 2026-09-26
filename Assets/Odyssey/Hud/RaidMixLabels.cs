@@ -3,7 +3,7 @@
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// What each raid mix is called (design 53 §8), by registry key, parallel to the simulation's
+    /// What each raid mix is called (design 55 §8), by registry key, parallel to the simulation's
     /// <c>IncidentContent.MixOrder</c> exactly as <see cref="IncidentLabels"/> is parallel to its
     /// incident order: appended, never inserted. The debug dropdown lists these, and a raid's Events
     /// row names its mix by them. <c>RegistryTests.TheRaidMixKeysAreTheDefsInTheContentsOrder</c>

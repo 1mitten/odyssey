@@ -147,7 +147,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#health">Health and anatomy<b>39</b></a></li>
 <li><a href="#events">Events<b>51</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
-<li><a href="#world">World and interface<b>134</b></a></li>
+<li><a href="#world">World and interface<b>136</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>30</b></a></li>
 </ul></nav>
 <main>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>916</b><i>named entries</i></div>
+<div class="stat"><b>924</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>644</b><i>no art yet</i></div>
+<div class="stat m"><b>652</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1143,9 +1143,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
-<div class="row" id="ui.arch.tool.sandbag" data-hay="sandbags ui.arch.tool.sandbag fast cover from salvage " data-gap="0">
+<div class="row" id="ui.arch.tool.sandbag" data-hay="sandbags ui.arch.tool.sandbag cheap, quick low cover. climbed over, never stood on " data-gap="0">
 <div class="nm">Sandbags<span class="k">ui.arch.tool.sandbag</span></div>
-<div class="dsc">Fast cover from salvage</div>
+<div class="dsc">Cheap, quick low cover. Climbed over, never stood on</div>
 <div class="art"><span class="pill">high</span> salvage gear</div>
 <div class="ms">M3</div>
 </div>
@@ -2557,7 +2557,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 </section>
 <section id="events" data-sec="1">
 <h2>Events <em class="count">51 entries</em></h2>
-<p class="blurb">Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about. A raid's mix names who a band of hostiles is made of (design 53).</p>
+<p class="blurb">Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about. A raid's mix names who a band of hostiles is made of (design 55).</p>
 <h3 class="nsh">Alerts</h3>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
@@ -3060,7 +3060,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">134 entries</em></h2>
+<h2>World and interface <em class="count">136 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -3563,6 +3563,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M1</div>
 </div>
+<div class="row gap" id="ui.settings.seethroughall" data-hay="trees fade for every colonist ui.settings.seethroughall fade the trees in front of every colonist on screen, not only the selected ones " data-gap="1">
+<div class="nm">Trees fade for every colonist<span class="k">ui.settings.seethroughall</span></div>
+<div class="dsc">Fade the trees in front of every colonist on screen, not only the selected ones</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 <div class="row gap" id="ui.settings.cutaway" data-hay="cut away the ceiling ui.settings.cutaway see into rooms on this layer. off shows the floor above you " data-gap="1">
 <div class="nm">Cut away the ceiling<span class="k">ui.settings.cutaway</span></div>
 <div class="dsc">See into rooms on this layer. Off shows the floor above you</div>
@@ -3682,6 +3688,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">How far from the camera grass is still drawn. Past it the ground carries the field</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">MF</div>
+</div>
+<div class="row gap" id="ui.settings.butterflies" data-hay="butterflies ui.settings.butterflies how many butterflies the meadow near the camera may hold, from none to a swarm. they glow at night. decoration, in no cell and no save " data-gap="1">
+<div class="nm">Butterflies<span class="k">ui.settings.butterflies</span></div>
+<div class="dsc">How many butterflies the meadow near the camera may hold, from none to a swarm. They glow at night. Decoration, in no cell and no save</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">AB</div>
 </div>
 <div class="row gap" id="ui.settings.foliageshadows" data-hay="grass shadows ui.settings.foliageshadows whether grass casts shadows. off, as it has always shipped: a shadow centimetres long on grass the same colour " data-gap="1">
 <div class="nm">Grass shadows<span class="k">ui.settings.foliageshadows</span></div>
@@ -4092,7 +4104,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 916, "gaps": 644};</script>
+<script>window.WIKI={"total": 924, "gaps": 652};</script>
 <script>
 (function(){
   var D = window.WIKI;

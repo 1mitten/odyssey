@@ -27,7 +27,7 @@ namespace Odyssey.Hud
             "ui.bulletin.theft",
             "ui.bulletin.banditleft",
             "ui.bulletin.medicaldrop",
-            // A band walking in from one edge (design 53): its Events row is the warning.
+            // A band walking in from one edge (design 55): its Events row is the warning.
             "ui.bulletin.raidincoming",
         };
 

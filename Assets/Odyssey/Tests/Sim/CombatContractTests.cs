@@ -109,7 +109,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(SkillIndex.Shooting, Is.EqualTo(8));
             Assert.That(SkillIndex.Count, Is.EqualTo(9));
             Assert.That(PawnKindIndex.Bandit, Is.EqualTo(3));
-            // 5 since the raid appended the gunman at 4 (design 53 §8).
+            // 5 since the raid appended the gunman at 4 (design 55 §8).
             Assert.That(PawnKindIndex.Gunman, Is.EqualTo(4));
             Assert.That(PawnKindIndex.Count, Is.EqualTo(5));
 
@@ -230,7 +230,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(JobSystem.AnimalMind.Select(n => n.Name),
                 Is.EqualTo(new[] { "Downed", "AnimalCombat", "AnimalShelter", "AnimalIdle" }));
             Assert.That(JobSystem.HostileMind.Select(n => n.Name),
-                Is.EqualTo(new[] { "Downed", "Raid", "Hostile", "Idle" }), "the raid asks its band first (design 53 §3)");
+                Is.EqualTo(new[] { "Downed", "Raid", "Hostile", "Idle" }), "the raid asks its band first (design 55 §3)");
         }
 
         [Test]

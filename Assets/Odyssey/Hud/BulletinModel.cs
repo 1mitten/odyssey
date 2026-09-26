@@ -87,7 +87,7 @@ namespace Odyssey.Hud
         public int ArrivedFavourability { get; private set; }
 
         /// <summary>
-        /// A raid arrived last refresh (design 53 §7): its row sounds the war horn rather than the
+        /// A raid arrived last refresh (design 55 §7): its row sounds the war horn rather than the
         /// chime its favourability would pick, because a raid and a theft are not the same news.
         /// </summary>
         public bool ArrivedRaid { get; private set; }
@@ -202,7 +202,7 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// A raid's row (design 53 §7): its detail is the mix and the band's size rather than a thing
+        /// A raid's row (design 55 §7): its detail is the mix and the band's size rather than a thing
         /// and a count, so it reads "Raid warning · Mixed × 20". The mix's name is the registry's.
         /// </summary>
         public static string RaidTitle(string key, int mix, int size)

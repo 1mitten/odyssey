@@ -50,6 +50,12 @@ namespace Odyssey.Sim.Pawns
             public bool ToTheDeath;
 
             public int DamageMilli;
+
+            /// <summary>
+            /// The piece of cover the cover roll fired it into (design 53 §2d), or -1: it strikes
+            /// that cell's thing on arrival, and <see cref="EndCell"/> is the same cell.
+            /// </summary>
+            public int CoverCell = -1;
         }
 
         readonly List<Entry> _inFlight = new List<Entry>();
@@ -63,7 +69,7 @@ namespace Odyssey.Sim.Pawns
         public int Count => _inFlight.Count;
 
         public Entry Launch(int shooter, int target, int weapon, int startCell, int endCell, int fireTick, int impactTick,
-            bool aimed, bool toTheDeath, int damageMilli)
+            bool aimed, bool toTheDeath, int damageMilli, int coverCell = -1)
         {
             if (impactTick <= fireTick) throw new ArgumentOutOfRangeException(nameof(impactTick));
             var entry = new Entry
@@ -78,6 +84,7 @@ namespace Odyssey.Sim.Pawns
                 Aimed = aimed,
                 ToTheDeath = toTheDeath,
                 DamageMilli = damageMilli,
+                CoverCell = coverCell,
             };
             _inFlight.Add(entry);
             return entry;
@@ -120,6 +127,8 @@ namespace Odyssey.Sim.Pawns
                 hash.Add(e.Aimed ? 1 : 0);
                 hash.Add(e.ToTheDeath ? 1 : 0);
                 hash.Add(e.DamageMilli);
+                // Only when set, so a flight with no cover hashes as it did before cover (design 53 §11).
+                if (e.CoverCell >= 0) hash.Add(e.CoverCell);
             }
         }
 
@@ -149,8 +158,12 @@ namespace Odyssey.Sim.Pawns
                 writer.Write(e.EndCell);
                 writer.Write(e.FireTick);
                 writer.Write(e.ImpactTick);
-                writer.Write((e.Aimed ? 1 : 0) | (e.ToTheDeath ? 2 : 0));
+                // Bit 4 says a cover cell follows the damage (design 53 §2d): a file written before
+                // cover never sets it, so it loads unchanged and no format number moves.
+                bool covered = e.CoverCell >= 0;
+                writer.Write((e.Aimed ? 1 : 0) | (e.ToTheDeath ? 2 : 0) | (covered ? 4 : 0));
                 writer.Write(e.DamageMilli);
+                if (covered) writer.Write(e.CoverCell);
             }
         }
 
@@ -174,6 +187,7 @@ namespace Odyssey.Sim.Pawns
                 e.Aimed = (flags & 1) != 0;
                 e.ToTheDeath = (flags & 2) != 0;
                 e.DamageMilli = reader.ReadInt();
+                e.CoverCell = (flags & 4) != 0 ? reader.ReadInt() : -1;
                 _inFlight.Add(e);
             }
         }

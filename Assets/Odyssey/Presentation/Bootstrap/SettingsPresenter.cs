@@ -2,6 +2,7 @@
 using Odyssey.Hud;
 using Odyssey.Presentation.Audio;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Presentation.World;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -262,6 +263,7 @@ namespace Odyssey.Presentation.Bootstrap
                 director.SeedValue(GraphicsLadder.VegetationDensity, _bootstrap.grassScatter);
                 director.Seed(GraphicsOption.GroundRelief, _bootstrap.groundRelief > 0f);
                 director.Seed(GraphicsOption.SeeThrough, _bootstrap.seeThroughToSelection);
+                director.Seed(GraphicsOption.FadeForEveryColonist, _bootstrap.seeThroughToEveryColonist);
                 director.Seed(GraphicsOption.CutAwayCeiling,
                     _bootstrap.cameraRig != null && _bootstrap.cameraRig.slice != null
                     && _bootstrap.cameraRig.slice.suppressActiveCeiling);
@@ -404,6 +406,12 @@ namespace Odyssey.Presentation.Bootstrap
                     // change and it takes effect on the next frame with no remesh.
                     if (_bootstrap != null) _bootstrap.seeThroughToSelection = on;
                     break;
+
+                case GraphicsOption.FadeForEveryColonist:
+                    // The same frame-by-frame read: UpdateSightLines asks the field each frame
+                    // (owner, 2026-09-25: off by default, design 38 §27).
+                    if (_bootstrap != null) _bootstrap.seeThroughToEveryColonist = on;
+                    break;
             }
         }
 
@@ -432,6 +440,13 @@ namespace Odyssey.Presentation.Bootstrap
 
                 case GraphicsLadder.GrassDistance:
                     renderer.FoliageDrawDistance = DrawDistanceOf(_director.Value(ladder));
+                    break;
+
+                // The meadow's capacity (design 52 §8): a resize of a few arrays, no re-mesh. A new
+                // session reads the rung when it builds its director, so this is only the live press.
+                case GraphicsLadder.Butterflies:
+                    ButterflyDirector? butterflies = _bootstrap?.Butterflies;
+                    if (butterflies != null) butterflies.Capacity = _director.Value(ladder);
                     break;
             }
         }

@@ -773,7 +773,7 @@ namespace Odyssey.EditorTools
                 // The raid siren carries its own crescendo and is nine seconds long; a second
                 // one starting over the first would be a mess, so its cooldown covers the clip.
                 AlertSound(SoundIds.AlertRaid, "alert-raid", 0.9f, cooldown: 10f),
-                // A raid arriving at the edge (design 53 §7): the war horn, 18 s and kept whole, so
+                // A raid arriving at the edge (design 55 §7): the war horn, 18 s and kept whole, so
                 // its cooldown covers the clip for the same reason as the siren's. It baked to
                 // -17.3 LUFS against the siren's -18.6, so 1.3 dB comes off here: 0.9 x 0.86.
                 AlertSound(SoundIds.AlertRaidArrive, "alert-raid-arrive", 0.78f, cooldown: 19f),

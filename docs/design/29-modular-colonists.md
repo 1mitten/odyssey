@@ -661,7 +661,7 @@ where the packs are absent.
 ## Addendum, 2026-09-25 — the pawn ceiling moved to 400
 
 `PawnRegistry.PawnCeiling` went from 200 to 400 so that a raid of up to two hundred fits beside a
-full colony (owner; design 53 §11a has the tick measurement). The frame side stands on the 384
+full colony (owner; design 55 §11a has the tick measurement). The frame side stands on the 384
 colonists measured healthy on 2026-09-23 and on `FrameTimeTests.TheFrameWithARaidOfTwoHundred`,
 a Measurement arm owed on the owner's machine. Raiders past the 64-figure ceiling are drawn in the
 far form, in the bandit's far materials.

@@ -75,6 +75,9 @@ namespace Odyssey.Sim
         /// </summary>
         public void AddCellDetail(in CellDetail detail) => _target.AddCellDetail(detail);
 
+        /// <summary>The answer to the standing <c>QueryShot</c> (design 53 §8b).</summary>
+        public void SetShotReport(in ShotReportView report) => _target.SetShotReport(report);
+
         /// <summary>Publish one entry of the incident ledger. See <see cref="BulletinView"/>.</summary>
         public void AddBulletin(in BulletinView view) => _target.AddBulletin(view);
 
@@ -172,6 +175,15 @@ namespace Odyssey.Sim
         /// published. Set through a <c>WatchHome</c> intent; view state like <see cref="WatchPower"/>.
         /// </summary>
         public bool WatchHome { get; internal set; }
+
+        /// <summary>
+        /// The shot the interface has asked about (design 53 §8b): the shooter's and the target's
+        /// pawn ids, nought for no question. View state like <see cref="QueryCell"/>.
+        /// </summary>
+        public int QueryShotShooter { get; internal set; }
+
+        /// <inheritdoc cref="QueryShotShooter"/>
+        public int QueryShotTarget { get; internal set; }
 
         public int PublishCount { get; private set; }
 

@@ -580,3 +580,46 @@ over the board it costs nothing when it is shut, which is most of the time.
 - **The build palette's tools, the inspect pane's tabs beyond Needs, and nine of the eleven
   command-bar items** are still disabled with a reason, as they were. This pass changed how the HUD
   looks and measures, not what the game can do.
+
+## 10. A roster click selects; a double click closes in (owner, 2026-09-25)
+
+**Was:** a plain left click on a roster card selected her, moved the slice to her layer and glided
+the camera to her at the current zoom (`HudDirectors.ChooseColonist`, on the release since design 33
+§20c). **Is:** a single click **selects only** — no slice change, no camera move; the view stays where
+the player left it. A **double click** on the same card selects her, moves the slice to her layer,
+glides the camera to her **and zooms in close** (`HudDirectors.CloseInOnColonist`,
+`CameraDirector.CloseUpMetres` = 14 m, clamped by the rig to its own 10 m floor).
+
+- **One threshold.** `Odyssey.Hud.DoubleClick.Seconds` (0.35 s) is the world pick's double click
+  (`SelectionPresenter`, select-everyone-on-screen) and the card's. It was a literal in
+  `SelectionPresenter`; the presenter now reads the shared constant rather than a copy.
+- **Unscaled clock**, so it works while paused. A sweep or a Shift-click between two clicks breaks
+  the pair (`DoubleClick.Forget`); a third click starts a new pair rather than making a second double.
+- **The zoom rides the glide.** `CameraDirector.JumpTo(cell, distance)` carries a distance;
+  `SliceCameraRig.TakeJumpRequest` sets the zoom target once when it takes the request, so zoom and
+  glide share the rig's smoothing and a wheel turn during the glide still wins. Every request carries
+  a serial (`JumpSerial`), so a second request for the cell already being glided to is taken again.
+- **Unchanged:** Shift-click toggles, a drag across cards selects the range (design 33 §20c),
+  right-drag reorders. Every other caller of `ChooseColonist` — alerts, the Events panel, the Work,
+  Assign and Almanac rows — keeps its jump at the current zoom.
+- **Tests:** `DoubleClickTests` (the pair, too slow, another card, a forgotten first click, the
+  shared threshold), `CameraDirectorTests.AJumpCarriesAZoomOnlyWhenItAsksForOne`,
+  `HudDirectorsTests.ClosingInOnAColonistAlsoZooms`. The card's pointer wiring is in
+  `HudShell.Panels.cs` (`FinishRosterSweep`) and, like every click, is not reachable by a test.
+
+## 11. The inspect pane at 85% (owner, 2026-09-25)
+
+**Was:** every panel opaque, `HudTheme.PanelFill` at alpha 1 (owner, 2026-09-21, of the storage
+pane: "remove the transparency so we get clarity"; the reasoning is the header of `Hud.uss`). **Is:**
+the inspect pane — the colonist info pane — is `HudTheme.InspectFill`, the same colour at **0.85**.
+The roster cards and every other panel stay opaque.
+
+- **It is one element whatever is selected**, so a tile's, a store's or an animal's pane is 85% too.
+  That is deliberate rather than overlooked: the pane is one surface, and two fills by selection kind
+  would be a flicker as the selection changes.
+- **One owner.** `.inspect { background-color }` in `Hud.uss` overrides `.panel`'s by coming later
+  at the same specificity; `HudStyleSheetTests` holds it to the token.
+- **What it costs, measured** (`HudLayoutTests.TheInspectPanesTranslucencyCostsOnlyTheDimInkAHair`),
+  over pure white terrain, the worst case: primary ink 11.2:1, meta 6.5:1, **dim 4.44:1** — a hair
+  under the 4.5:1 body minimum, and above it over anything darker than white (4.74:1 over a light
+  grey). The test pins the dim ink at 4.4 so it cannot slide further unseen.

@@ -87,6 +87,10 @@ namespace Odyssey.Presentation.Ui
                 "Skips the night and hands back the clock at dawn, with a whole watchable day "
                     + "ahead: the harvest happens on screen, not inside the skip",
                 () => _boot!.DebugSkipToMorning()));
+            _debugCheats.Add(DebugActionRow(DebugDirector.SkipNightKey,
+                "Skips to ten at night, fully dark, with seven hours of night ahead: the "
+                    + "butterflies' glow at its brightest (design 52)",
+                () => _boot!.DebugSkipToNight()));
             _debugCheats.Add(DebugActionRow(DebugDirector.RipenCropsKey,
                 "Brings every standing crop to ripeness at once, daylight window and all - "
                     + "the harvest half without the four-day wait",
@@ -297,7 +301,7 @@ namespace Odyssey.Presentation.Ui
                 if (!content.Workers[i].Fireable) continue;
                 int def = i;
 
-                // A raid carries its two controls under its row (design 53 §9): how many and who.
+                // A raid carries its two controls under its row (design 55 §9): how many and who.
                 // The row sends what they hold; they hold it for the session.
                 if (content.Workers[i] is RaidWorker)
                 {
@@ -317,7 +321,7 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// The raid's size (design 53 §9): the Settings window's own fader, whole numbers from 0 to
+        /// The raid's size (design 55 §9): the Settings window's own fader, whole numbers from 0 to
         /// <see cref="DebugDirector.RaidSizeMax"/>, the figure after it reading <i>Auto</i> at 0.
         /// </summary>
         VisualElement DebugRaidSizeRow()
@@ -360,7 +364,7 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// The raid's mix (design 53 §8): the Settings window's own select, one choice per mix in
+        /// The raid's mix (design 55 §8): the Settings window's own select, one choice per mix in
         /// the content's order, named by <see cref="RaidMixLabels"/>.
         /// </summary>
         VisualElement DebugRaidMixRow()
@@ -490,7 +494,7 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// Fire a raid of the size and mix the two controls hold (design 53 §9). The incident's own
+        /// Fire a raid of the size and mix the two controls hold (design 55 §9). The incident's own
         /// door is asked first, so a refusal is said on the row rather than only in the console: a
         /// second band of 200 beside the first does not fit under the ceiling, and a press that
         /// does nothing visible reads as a broken button. The intent is sent either way; the

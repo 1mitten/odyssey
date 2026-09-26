@@ -11,7 +11,7 @@ using static Odyssey.Tests.Sim.WeaponFixture;
 namespace Odyssey.Tests.Sim.Events
 {
     /// <summary>
-    /// Who a raid is made of (design 53 §8): the gunman kind, the three mixes, and the exact split
+    /// Who a raid is made of (design 55 §8): the gunman kind, the three mixes, and the exact split
     /// of a band between a mix's rows.
     /// </summary>
     public class RaidMixTests
