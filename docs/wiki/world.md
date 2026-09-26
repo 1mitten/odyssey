@@ -8,16 +8,16 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
-| **Grass** | `ui.terrain.grass` | The living surface. Trees grow here and nothing else <br>**Needs:** a tuft of grass on a ground tile | no art | M1 |
+| **Grass** | `ui.terrain.grass` | The living surface. Trees and bushes grow here, and carrots can be sown <br>**Needs:** a tuft of grass on a ground tile | no art | M1 |
 | **Bare Earth** | `ui.terrain.bareearth` | Soil with the grass worn off it <br>**Needs:** a bare soil tile | no art | M1 |
-| **Gravel** | `ui.terrain.gravel` | Stony ground. Poor soil, firm footing <br>**Needs:** a tile of loose stones | no art | M1 |
+| **Gravel** | `ui.terrain.gravel` | Loose gravel of the ruined city. Poor soil <br>**Needs:** a tile of loose stones | no art | M1 |
 | **Sand** | `ui.terrain.sand` | Loose and barren. What a riverbed is made of <br>**Needs:** a plain sand tile | no art | M1 |
-| **Marsh** | `ui.terrain.marsh` | Wet ground fringing water. Crossed at three quarters pace <br>**Needs:** a reed or two on wet ground | no art | M1 |
-| **Shallow Water** | `ui.terrain.water.shallow` | Wadeable, at a third of walking pace. Nothing can be built on it without a bridge <br>**Needs:** ripples with the bed showing through | no art | M1 |
+| **Marsh** | `ui.terrain.marsh` | Wet ground fringing water. Crossed at seven tenths pace, and too poor to sow <br>**Needs:** a reed or two on wet ground | no art | M1 |
+| **Shallow Water** | `ui.terrain.water.shallow` | Wadeable, at a third of walking pace. Nothing can be built on it <br>**Needs:** ripples with the bed showing through | no art | M1 |
 | **Deep Water** | `ui.terrain.water.deep` | Out of your depth. Colonists will not enter it and paths go round <br>**Needs:** flat dark water, no bed visible | no art | M1 |
 | **Rock** | `ui.terrain.rock` | Natural stone. Mined, not cleared <br>**Needs:** a face of natural stone | no art | M1 |
 | **Subsoil** | `ui.terrain.subsoil` | The band between soil and rock. Cheap to dig <br>**Needs:** a tile of dug earth | no art | M1 |
-| **Bedrock** | `ui.terrain.bedrock` | The floor of the world. Deliberately punitive to mine <br>**Needs:** a tile of dark, banded stone | no art | M1 |
+| **Bedrock** | `ui.terrain.bedrock` | The floor of the world. It cannot be mined <br>**Needs:** a tile of dark, banded stone | no art | M1 |
 | **Packed Gravel** | `ui.terrain.packedgravel` | Stony ground, packed hard. Firm footing, poor soil | no art | M3 |
 | **Birch** | `ui.terrain.tree.birch` | A slim white-barked tree. Quick to chop, not much wood in it <br>**Needs:** a slim pale-trunked tree | no art | M3 |
 | **Meadow tree** | `ui.terrain.tree.meadow` | A broad round-crowned tree of the open meadow. Chopped for wood <br>**Needs:** a round-crowned tree | no art | M3 |
@@ -33,9 +33,9 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
 | **Clear** | `ui.weather.clear` | Open sky <br>**Needs:** clear sky or sun | no art | M1 |
-| **Cloudy** | `ui.weather.cloudy` | Less light, no other effect <br>**Needs:** cloud | no art | M1 |
-| **Rain** | `ui.weather.rain` | Puts out fires, waters crops | sheet 06 (action tiles), med | M1 |
-| **Storm** | `ui.weather.storm` | Rain, wind and lightning <br>**Needs:** lightning | no art | M1 |
+| **Cloudy** | `ui.weather.cloudy` | Less light, and a little colder <br>**Needs:** cloud | no art | M1 |
+| **Rain** | `ui.weather.rain` | Slows anyone under open sky a little, and waters the crops | sheet 06 (action tiles), med | M1 |
+| **Storm** | `ui.weather.storm` | The heaviest rain, and the coldest weather <br>**Needs:** lightning | no art | M1 |
 | **Snow** | `ui.weather.snow` | Cold, and it settles | sheet 06 (action tiles), high | M1 |
 | **Fog** | `ui.weather.fog` | Sight and shooting suffer <br>**Needs:** fog or mist | no art | M1 |
 | **Ashfall** | `ui.weather.ashfall` | Filth from the sky, and no sun <br>**Needs:** ash falling | no art | M1 |

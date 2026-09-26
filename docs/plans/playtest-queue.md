@@ -23,6 +23,17 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the Almanac read true, and do its pages find their things?** (`claude/almanac-refresh`,
+  design 64.) Rewritten against the code: 110 pages in 19 categories, keyed by registry key, icons
+  drawn, links resolved, the info button opening the page for what is selected. Look for:
+  - whether the rail's nineteen categories are findable, or too many to scan;
+  - whether the line icons read at 20 px in the index beside the sixteen pixel-art ones, or look
+    like two different games;
+  - the info button on a birch, a picked berry bush, a crowbar, a bandit and a colonist on her
+    Needs tab: each should open its own page;
+  - *Find on map* on Coal before any is dug: the button should say *None on this map* and the
+    Almanac stay open.
+
 - **Does the World screen read as a planet, and does the site change the colony?** (`claude/busy-meitner-zkrhtu`,
   the reviewed `claude/sharp-euler-a6xtci`; design 59.) **Second look after the first (2026-09-26, §4e–§4f):** the planet is
   128 x 64 with warped coasts and a sea share that varies by seed, zoom goes to 8x, temperatures in the site panel are

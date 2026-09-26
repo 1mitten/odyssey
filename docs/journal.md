@@ -14341,3 +14341,34 @@ its swatch, temperatures in red, amber and green, a planet "at least 4x" and "mo
 - **Nothing outlives the menu**: `ReleaseWorldMap` destroys the texture, drops the buffer, the names and
   the planet and pauses the ease timer when a colony goes live. Before this the texture and its buffer
   sat in memory for the whole game, and the ease timer fired every 16 ms under it.
+
+## 2026-09-26 — the Almanac rewritten against the code
+
+The owner asked for the in-game Almanac to be *"completely up-to-date with everything in game. The
+information is correct and links are good"*, and how far icons could go. It was worse than
+out of date: apart from Fauna it was the mock-up's text. Steel, concrete, pines, silver prices,
+smelting, three traits and a cold-snap event, none of them in the game; a wall at "240 ticks";
+live counts that were constants; related links to entries that did not exist; an info button
+that guessed from the title; a Find on map that closed the page on a skill and did nothing; and
+not one icon drawn.
+
+**Five fact passes, one per domain, every fact with a file and line**, came back before any page
+was written, and found as much outside the Almanac as in it: thirty false registry descriptions
+(bedrock "punitive to mine" cannot be mined; coal "burns hot" is burned by nothing; marsh is 71%
+pace, not three quarters; rain puts out no fires and storms throw no lightning), a meat meal no
+cook can make, a pace readout that leaves out the Moving capacity, and a quality-roll comment that
+contradicts its own code. Design 64 §5 lists them.
+
+**The catalogue is keyed by registry key now**, so a page's name and its index line are the
+registry's (`emit_labels.py` emits descriptions for the Almanac's namespaces), a link is a key,
+and the info button opens the page for the key the pane is drawing. 110 pages in 19 categories.
+
+**Three tests keep it that way.** One walks the HUD's own tables of what the game can show and
+fails on any key without a page; one resolves every link; one reads the Def XML and holds 93 quoted
+numbers to it. The registry guard caught about fifty of my own labels on the first run —
+"Structure", "Mine", "Power", "Harvest" — which were each a registry name typed a second time.
+
+**Icons**: 16 pages draw the owner's pixel art, and the rest a line icon of their own. Eight more
+are on sheet 06 and unexported; twenty-six more are on the six sheets never committed; fifty-seven
+have no source. Photographing the 3D ones in the game (a studio beside `PortraitStudio`, never
+committed, because a Synty render is still Synty) covers about forty-five of those (design 64 §4).
