@@ -147,8 +147,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#health">Health and anatomy<b>39</b></a></li>
 <li><a href="#events">Events<b>51</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
-<li><a href="#world">World and interface<b>137</b></a></li>
-<li><a href="#proper-nouns">Proper nouns<b>31</b></a></li>
+<li><a href="#world">World and interface<b>187</b></a></li>
+<li><a href="#proper-nouns">Proper nouns<b>32</b></a></li>
 </ul></nav>
 <main>
 <div class="lede"><h1>Every named thing in the game</h1>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>929</b><i>named entries</i></div>
+<div class="stat"><b>980</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>657</b><i>no art yet</i></div>
+<div class="stat m"><b>708</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -3078,8 +3078,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">137 entries</em></h2>
-<p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
+<h2>World and interface <em class="count">187 entries</em></h2>
+<p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006. The planet's biomes and terrain are proposals for veto (design 59): only Meadow can be settled until more art arrives.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
@@ -3934,11 +3934,323 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="ms">INV</div>
 </div>
 </div>
+<h3 class="nsh">Biomes</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.biome.ocean" data-hay="ocean ui.biome.ocean open water. nothing can be built on it " data-gap="1">
+<div class="nm">Ocean<span class="k">ui.biome.ocean</span></div>
+<div class="dsc">Open water. Nothing can be built on it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.biome.meadow" data-hay="meadow ui.biome.meadow temperate grass and woodland, streams and ponds. the ground the colony knows " data-gap="1">
+<div class="nm">Meadow<span class="k">ui.biome.meadow</span></div>
+<div class="dsc">Temperate grass and woodland, streams and ponds. The ground the colony knows</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.biome.coldsteppe" data-hay="cold steppe ui.biome.coldsteppe cold, open grassland: long winters and little shelter " data-gap="1">
+<div class="nm">Cold steppe<span class="k">ui.biome.coldsteppe</span></div>
+<div class="dsc">Cold, open grassland: long winters and little shelter</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.biome.dryscrub" data-hay="dry scrub ui.biome.dryscrub warm dry ground of thorn and low bushes. water is scarce " data-gap="1">
+<div class="nm">Dry scrub<span class="k">ui.biome.dryscrub</span></div>
+<div class="dsc">Warm dry ground of thorn and low bushes. Water is scarce</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.biome.marsh" data-hay="marsh ui.biome.marsh waterlogged ground: reeds, pools and soft footing " data-gap="1">
+<div class="nm">Marsh<span class="k">ui.biome.marsh</span></div>
+<div class="dsc">Waterlogged ground: reeds, pools and soft footing</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.biome.ice" data-hay="ice ui.biome.ice ice all year round, on land and on the polar sea. nothing grows " data-gap="1">
+<div class="nm">Ice<span class="k">ui.biome.ice</span></div>
+<div class="dsc">Ice all year round, on land and on the polar sea. Nothing grows</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+</div>
+<h3 class="nsh">Terrain on the planet</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.hills.flat" data-hay="flat ui.hills.flat level ground. room to build, little stone " data-gap="1">
+<div class="nm">Flat<span class="k">ui.hills.flat</span></div>
+<div class="dsc">Level ground. Room to build, little stone</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.hills.rolling" data-hay="rolling ui.hills.rolling gentle rises and terraces. the board every measurement was taken on " data-gap="1">
+<div class="nm">Rolling<span class="k">ui.hills.rolling</span></div>
+<div class="dsc">Gentle rises and terraces. The board every measurement was taken on</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.hills.hilly" data-hay="hilly ui.hills.hilly steep terraces and more exposed rock " data-gap="1">
+<div class="nm">Hilly<span class="k">ui.hills.hilly</span></div>
+<div class="dsc">Steep terraces and more exposed rock</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.hills.mountainous" data-hay="mountainous ui.hills.mountainous high terraces over deep rock. twenty-four layers deep " data-gap="1">
+<div class="nm">Mountainous<span class="k">ui.hills.mountainous</span></div>
+<div class="dsc">High terraces over deep rock. Twenty-four layers deep</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.hills.sheer" data-hay="sheer ui.hills.sheer too steep to settle " data-gap="1">
+<div class="nm">Sheer<span class="k">ui.hills.sheer</span></div>
+<div class="dsc">Too steep to settle</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+</div>
+<h3 class="nsh">The World screen's words</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.world.title" data-hay="world ui.world.title the planet, and where on it the colony lands " data-gap="1">
+<div class="nm">World<span class="k">ui.world.title</span></div>
+<div class="dsc">The planet, and where on it the colony lands</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.site" data-hay="site ui.world.site the tile the colony lands on " data-gap="1">
+<div class="nm">Site<span class="k">ui.world.site</span></div>
+<div class="dsc">The tile the colony lands on</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.random" data-hay="random site ui.world.random pick another tile the colony could land on " data-gap="1">
+<div class="nm">Random site<span class="k">ui.world.random</span></div>
+<div class="dsc">Pick another tile the colony could land on</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.next" data-hay="next ui.world.next on to the colony's name, size and people " data-gap="1">
+<div class="nm">Next<span class="k">ui.world.next</span></div>
+<div class="dsc">On to the colony's name, size and people</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.legend" data-hay="legend ui.world.legend what each colour and mark on the map means " data-gap="1">
+<div class="nm">Legend<span class="k">ui.world.legend</span></div>
+<div class="dsc">What each colour and mark on the map means</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.biome" data-hay="biome ui.world.biome what grows there " data-gap="1">
+<div class="nm">Biome<span class="k">ui.world.biome</span></div>
+<div class="dsc">What grows there</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.hills" data-hay="hills ui.world.hills how hilly the ground is " data-gap="1">
+<div class="nm">Hills<span class="k">ui.world.hills</span></div>
+<div class="dsc">How hilly the ground is</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.temperature" data-hay="mean temperature ui.world.temperature the year's average, out of doors " data-gap="1">
+<div class="nm">Mean temperature<span class="k">ui.world.temperature</span></div>
+<div class="dsc">The year's average, out of doors</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.seasons" data-hay="seasons ui.world.seasons each season's average, out of doors " data-gap="1">
+<div class="nm">Seasons<span class="k">ui.world.seasons</span></div>
+<div class="dsc">Each season's average, out of doors</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.rainfall" data-hay="rainfall ui.world.rainfall how much rain falls in a year " data-gap="1">
+<div class="nm">Rainfall<span class="k">ui.world.rainfall</span></div>
+<div class="dsc">How much rain falls in a year</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.latitude" data-hay="latitude ui.world.latitude how far from the equator. the further out, the harder the seasons bite " data-gap="1">
+<div class="nm">Latitude<span class="k">ui.world.latitude</span></div>
+<div class="dsc">How far from the equator. The further out, the harder the seasons bite</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.depth" data-hay="board depth ui.world.depth how many layers the board has, sky to bedrock " data-gap="1">
+<div class="nm">Board depth<span class="k">ui.world.depth</span></div>
+<div class="dsc">How many layers the board has, sky to bedrock</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.unavailable" data-hay="not yet available ui.world.unavailable only meadow sites can be settled for now. other biomes arrive with a later art pack. " data-gap="1">
+<div class="nm">Not yet available<span class="k">ui.world.unavailable</span></div>
+<div class="dsc">Only Meadow sites can be settled for now. Other biomes arrive with a later art pack.</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.water" data-hay="open water ui.world.water the colony cannot land on the sea " data-gap="1">
+<div class="nm">Open water<span class="k">ui.world.water</span></div>
+<div class="dsc">The colony cannot land on the sea</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.steep" data-hay="too steep to settle ui.world.steep sheer ground: no colony could find its footing " data-gap="1">
+<div class="nm">Too steep to settle<span class="k">ui.world.steep</span></div>
+<div class="dsc">Sheer ground: no colony could find its footing</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.subtitle" data-hay="pick a site to drop your colony ui.world.subtitle the world screen's subtitle " data-gap="1">
+<div class="nm">Pick a site to drop your colony<span class="k">ui.world.subtitle</span></div>
+<div class="dsc">The World screen's subtitle</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.wraphint" data-hay="the map wraps east to west ui.world.wraphint walk off the right edge and you come in on the left " data-gap="1">
+<div class="nm">The map wraps east to west<span class="k">ui.world.wraphint</span></div>
+<div class="dsc">Walk off the right edge and you come in on the left</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.zoomhint" data-hay="drag to pan, double-click to zoom ui.world.zoomhint how to move about the map " data-gap="1">
+<div class="nm">Drag to pan, double-click to zoom<span class="k">ui.world.zoomhint</span></div>
+<div class="dsc">How to move about the map</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.settleable" data-hay="settleable ui.world.settleable a colony can land here " data-gap="1">
+<div class="nm">Settleable<span class="k">ui.world.settleable</span></div>
+<div class="dsc">A colony can land here</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.selectedsite" data-hay="selected site ui.world.selectedsite the tile the colony would land on " data-gap="1">
+<div class="nm">Selected site<span class="k">ui.world.selectedsite</span></div>
+<div class="dsc">The tile the colony would land on</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.tile" data-hay="tile ui.world.tile the tile's column and row on the planet " data-gap="1">
+<div class="nm">Tile<span class="k">ui.world.tile</span></div>
+<div class="dsc">The tile's column and row on the planet</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.foot" data-hay="click a tile to inspect it. random site picks a temperate meadow. ui.world.foot the stats panel's foot " data-gap="1">
+<div class="nm">Click a tile to inspect it. Random site picks a temperate Meadow.<span class="k">ui.world.foot</span></div>
+<div class="dsc">The stats panel's foot</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.zoomin" data-hay="zoom in ui.world.zoomin closer to the ground " data-gap="1">
+<div class="nm">Zoom in<span class="k">ui.world.zoomin</span></div>
+<div class="dsc">Closer to the ground</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.zoomout" data-hay="zoom out ui.world.zoomout further from the ground " data-gap="1">
+<div class="nm">Zoom out<span class="k">ui.world.zoomout</span></div>
+<div class="dsc">Further from the ground</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.fit" data-hay="fit ui.world.fit the whole planet in view " data-gap="1">
+<div class="nm">Fit<span class="k">ui.world.fit</span></div>
+<div class="dsc">The whole planet in view</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.north" data-hay="n ui.world.north north of the equator " data-gap="1">
+<div class="nm">N<span class="k">ui.world.north</span></div>
+<div class="dsc">North of the equator</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.south" data-hay="s ui.world.south south of the equator " data-gap="1">
+<div class="nm">S<span class="k">ui.world.south</span></div>
+<div class="dsc">South of the equator</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.mm" data-hay="mm ui.world.mm millimetres of rain a year " data-gap="1">
+<div class="nm">mm<span class="k">ui.world.mm</span></div>
+<div class="dsc">Millimetres of rain a year</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.layers" data-hay="layers ui.world.layers layers from sky to bedrock " data-gap="1">
+<div class="nm">layers<span class="k">ui.world.layers</span></div>
+<div class="dsc">Layers from sky to bedrock</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.to" data-hay="to ui.world.to between the coldest and the warmest month, as in 2 to 26 " data-gap="1">
+<div class="nm">to<span class="k">ui.world.to</span></div>
+<div class="dsc">Between the coldest and the warmest month, as in 2 to 26</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.region.reach" data-hay="{name} reach ui.world.region.reach a land region's name in one of its frames " data-gap="1">
+<div class="nm">{name} Reach<span class="k">ui.world.region.reach</span></div>
+<div class="dsc">A land region's name in one of its frames</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.region.downs" data-hay="the {name} downs ui.world.region.downs a land region's name in one of its frames " data-gap="1">
+<div class="nm">The {name} Downs<span class="k">ui.world.region.downs</span></div>
+<div class="dsc">A land region's name in one of its frames</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.region.hold" data-hay="{name} hold ui.world.region.hold a land region's name in one of its frames " data-gap="1">
+<div class="nm">{name} Hold<span class="k">ui.world.region.hold</span></div>
+<div class="dsc">A land region's name in one of its frames</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.region.greater" data-hay="greater {name} ui.world.region.greater a land region's name in one of its frames " data-gap="1">
+<div class="nm">Greater {name}<span class="k">ui.world.region.greater</span></div>
+<div class="dsc">A land region's name in one of its frames</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.region.seaof" data-hay="sea of {name} ui.world.region.seaof a sea's name in one of its frames " data-gap="1">
+<div class="nm">Sea of {name}<span class="k">ui.world.region.seaof</span></div>
+<div class="dsc">A sea's name in one of its frames</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.region.deep" data-hay="{name} deep ui.world.region.deep a sea's name in one of its frames " data-gap="1">
+<div class="nm">{name} Deep<span class="k">ui.world.region.deep</span></div>
+<div class="dsc">A sea's name in one of its frames</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.region.shelf" data-hay="the {name} shelf ui.world.region.shelf a sea's name in one of its frames " data-gap="1">
+<div class="nm">The {name} Shelf<span class="k">ui.world.region.shelf</span></div>
+<div class="dsc">A sea's name in one of its frames</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.region.sound" data-hay="{name} sound ui.world.region.sound a sea's name in one of its frames " data-gap="1">
+<div class="nm">{name} Sound<span class="k">ui.world.region.sound</span></div>
+<div class="dsc">A sea's name in one of its frames</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.region.gulfof" data-hay="gulf of {name} ui.world.region.gulfof a sea's name in one of its frames " data-gap="1">
+<div class="nm">Gulf of {name}<span class="k">ui.world.region.gulfof</span></div>
+<div class="dsc">A sea's name in one of its frames</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+</div>
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="proper-nouns" data-sec="1" class="nouns">
-<h2>Proper nouns <em class="count">31 entries</em></h2>
-<p class="blurb">Names that are not interface keys: people, places, factions, creatures, the calendar. The brief requires every one of these to be ours rather than borrowed, so this table exists to make the empty rows impossible to miss. <strong>0 of 31 have no name at all</strong>, including the city the whole prototype is set in.</p>
+<h2>Proper nouns <em class="count">32 entries</em></h2>
+<p class="blurb">Names that are not interface keys: people, places, factions, creatures, the calendar. The brief requires every one of these to be ours rather than borrowed, so this table exists to make the empty rows impossible to miss. <strong>0 of 32 have no name at all</strong>, including the city the whole prototype is set in.</p>
 <div class="tbl">
 <div class="row head"><div>Category</div><div>Name</div><div>Notes</div><div class="st">Status</div></div>
 <div class="row" id="world.planet" data-hay="the world carrow a city-world: one settlement that grew until it covered the planet. short, bleak, easy to say, and it survives being said a thousand times. the register throughout is english industrial rather than classical or invented-exotic: a working future, not a mythic one proposed" data-gap="0">
@@ -4127,6 +4439,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">244 given names in three registers — settled, frontier and yard — owner-supplied 2026-09-18. The eight invented for the mockups are in the frontier register. The pool has its own file because it would drown this table, and its own wiki page so every name can be read and struck; the order of that file is load-bearing, since a name is arithmetic on a saved seed</div>
 <div class="st approved">approved</div>
 </div>
+<div class="row" id="world.regionnames" data-hay="regions and seas on the planet generated from the world seed s1=ver cal mor ess tal ond bra hes kel iv sar dun ul quen ash; s2=an ere oth ia ul ane ess ir orra en ys; s3=- - d n th ry ck. a name is s1+s2+s3 (a dash is no ending), shown bare, with -ia, or in a frame from ui.world.region.* (reach, downs, hold, greater; sea of, deep, shelf, sound, gulf of). drawn on the world map only, regenerated from the seed, never saved. from claude design's specification, 2026-09-26 (design 59 §9c); regionnamestests holds the code to these tables proposed" data-gap="0">
+<div class="nm">Regions and seas on the planet<span class="k">world.regionnames</span></div>
+<div>Generated from the world seed</div>
+<div class="dsc">S1=Ver Cal Mor Ess Tal Ond Bra Hes Kel Iv Sar Dun Ul Quen Ash; S2=an ere oth ia ul ane ess ir orra en ys; S3=- - d n th ry ck. A name is S1+S2+S3 (a dash is no ending), shown bare, with -ia, or in a frame from ui.world.region.* (Reach, Downs, Hold, Greater; Sea of, Deep, Shelf, Sound, Gulf of). Drawn on the World map only, regenerated from the seed, never saved. From Claude Design's specification, 2026-09-26 (design 59 §9c); RegionNamesTests holds the code to these tables</div>
+<div class="st proposed">proposed</div>
+</div>
 </div>
 <p class="empty" hidden>No proper nouns match.</p>
 </section>
@@ -4134,7 +4452,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 929, "gaps": 657};</script>
+<script>window.WIKI={"total": 980, "gaps": 708};</script>
 <script>
 (function(){
   var D = window.WIKI;

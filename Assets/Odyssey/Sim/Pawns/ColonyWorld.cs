@@ -226,7 +226,22 @@ namespace Odyssey.Sim.Pawns
         /// — so it is the one field every caller here has to supply for itself.
         /// </summary>
         public SaveRecipe Recipe(int day) =>
-            new SaveRecipe(Request.Map, Scenario.defName, Request.Name, day, Request.Barren, Request.Wooded);
+            new SaveRecipe(Request.Map, Scenario.defName, Request.Name, day, Request.Barren, Request.Wooded,
+                Request.WorldSeed, Request.Site);
+
+        /// <summary>
+        /// The climate a request's colony lives in: the site's (design 59 §7), or the content's
+        /// temperate curve itself when there is no site — the same object, not a copy, so a world
+        /// with no site is today's to the reference.
+        /// </summary>
+        public static Worldgen.ClimateDef ClimateFor(ColonyRequest request) =>
+            request.Site is SiteTile site
+                ? Worldgen.Planet.SiteClimate.For(site, Worldgen.WorldContent.Climate)
+                : Worldgen.WorldContent.Climate;
+
+        /// <summary>How much more often it rains at a request's site, per mille; 1000 with none.</summary>
+        public static int WetFor(ColonyRequest request) =>
+            request.Site is SiteTile site ? SiteRules.WetPerMille(site.RainfallMm) : 1000;
 
         /// <summary>Write the whole world to a stream.</summary>
         public void Save(Stream stream, SaveRecipe? recipe = null) => WorldSave.Save(World, stream, SaveComponents, recipe);
@@ -396,7 +411,7 @@ namespace Odyssey.Sim.Pawns
         /// method chooses, which is why this method exists at all.</para>
         /// </summary>
         public static MapGenDef DefFor(MapType map, GridSize size, bool barren, bool wooded,
-            int surfaceRelief = -1)
+            int surfaceRelief = -1, SiteTile? site = null)
         {
             MapGenDef gen = MapGenerator.DefaultDef(map, size);
             if (barren && gen is NaturalMapGenDef natural)
@@ -404,6 +419,11 @@ namespace Odyssey.Sim.Pawns
                 if (wooded) natural.MakeWooded();
                 else natural.MakeBarren();
             }
+
+            // A planet site's hills (design 59 §5), after the preset so they scale what it chose.
+            // No site, no change: that is what keeps every golden where it is.
+            if (site is SiteTile tile && gen is NaturalMapGenDef sited)
+                Worldgen.Planet.SiteBoard.Apply(sited, tile.Hills, size);
 
             if (surfaceRelief >= 0 && gen is NaturalMapGenDef hills)
             {
@@ -447,7 +467,8 @@ namespace Odyssey.Sim.Pawns
             // would keep a felled tree's shade for ever and disagree with the played game.
             ChunkGrid chunks = request.Chunks ?? new ChunkGrid(size);
 
-            MapGenDef gen = DefFor(request.Map, size, request.Barren, request.Wooded, request.SurfaceRelief);
+            MapGenDef gen = DefFor(request.Map, size, request.Barren, request.Wooded, request.SurfaceRelief,
+                request.Site);
             if (!request.Wildlife)
             {
                 gen.wildlife = System.Array.Empty<Wildlife.WildlifeEntry>();
@@ -485,7 +506,7 @@ namespace Odyssey.Sim.Pawns
 
             SimWorld world = builder
                 .AddColony(pawns, designations, support, nav, outcome.Placements,
-                    out ConstructionGrid construction, jobs)
+                    out ConstructionGrid construction, jobs, ClimateFor(request), WetFor(request))
                 // The level-keeper for the world's animals (design 30 §3). Inert on a world whose
                 // table is empty, which is the bare board and every test built on it.
                 .AddTickable(_ => new Wildlife.WildlifeSystem(pawns, jobs, gen, outcome.StartCell,

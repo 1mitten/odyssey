@@ -1950,6 +1950,8 @@ namespace Odyssey.Tests.PlayMode
                 {
                     ("start", null),
                     ("setup", "setup__back"),
+                    // The World screen (design 59 §9): the setup page's frame and its worded Back.
+                    ("world", "setup__back"),
                 };
                 int exemptSeen = 0;
 
