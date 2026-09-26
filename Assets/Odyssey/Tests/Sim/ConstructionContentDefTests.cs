@@ -134,7 +134,9 @@ namespace Odyssey.Tests.Sim
         // because everything from the shelf to sandbags reached main first; the stair's edifice
         // was 13 and moved to 24 for the same reason. The hit points are INVENTED on the merge,
         // because the branch predates combat. Re-taken from the merged table.
-        const ulong BuildingFingerprint = 1380534130894489342UL;
+        // Moved again the same day: `secondEdifice` removed from BuildingDef. It was the two-cell
+        // stair's and no row had set it since the stair became one cell. Re-taken.
+        const ulong BuildingFingerprint = 16814629638888440776UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

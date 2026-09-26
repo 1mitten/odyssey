@@ -22,25 +22,6 @@ namespace Odyssey.Sim.Construction
         /// <summary>The <c>CoreContent.Edifice*</c> value this becomes when it is finished.</summary>
         public ushort edifice;
 
-        /// <summary>
-        /// The edifice value the <b>second</b> cell becomes, when that differs from the first.
-        /// 0 — the default and every building but the stair — means both cells carry
-        /// <see cref="edifice"/>, which is what a bed does.
-        ///
-        /// <para>Only meaningful with <see cref="footprint"/> 2. A stair's halves really are
-        /// different things — one sits on the floor and one 1.5 m up, facing opposite ways — and
-        /// worldgen has always stamped them as two values, so a built stair carrying one value
-        /// would be the odd one out for the mesher's partner scan, for <c>EdificeLabels</c> and for
-        /// the render mirror (U44, docs/design/60-stairs.md §4).</para>
-        ///
-        /// <para><b>A field rather than a special case in two helpers.</b>
-        /// <see cref="BuildingForEdifice"/> and <c>EdificeFootprint.Cells</c> both resolve a
-        /// building from one value, so without this the second cell would answer
-        /// <see cref="BuildingHandle.None"/> and report a one-cell footprint — and stop being
-        /// claimed by its own site.</para>
-        /// </summary>
-        public ushort secondEdifice;
-
         /// <summary>Whether the finished thing stops a colonist walking through the cell.</summary>
         public bool blocking = true;
 
@@ -456,13 +437,6 @@ namespace Odyssey.Sim.Construction
         {
             for (int i = 1; i < BuildingTable.Length; i++)
                 if (BuildingTable[i].edifice == edifice) return i;
-
-            // The second half of a two-value thing answers its own building too, or a stair's
-            // upper cell would be nobody's (U44). Walked separately rather than folded into the
-            // loop above so the head still wins when a def names the same value twice.
-            for (int i = 1; i < BuildingTable.Length; i++)
-                if (BuildingTable[i].secondEdifice != 0 && BuildingTable[i].secondEdifice == edifice)
-                    return i;
 
             return BuildingHandle.None;
         }

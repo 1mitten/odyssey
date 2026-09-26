@@ -242,20 +242,7 @@ namespace Odyssey.Sim.Construction
             if (def.footprint > 1)
             {
                 int second = EdificeFootprint.SecondCell(index, def.edifice, facing, _grid.Size);
-
                 if (second < 0 || !Allows(second)) return IntentRejection.NotPermitted;
-
-                // **And asked as the thing it is, when the two halves differ.** The line above
-                // answers for a wall, which is all a bed's far cell has ever needed — both its
-                // halves are the same thing and a wall's question covers them. A stair is the
-                // first buildable whose far half has a rule of its own: the shaft over THAT cell
-                // has to be open too, and nothing a wall is asked would catch a slab there.
-                //
-                // Narrowed to `secondEdifice` rather than asked of every two-cell thing, because
-                // widening it to the bed would newly demand a clear cell of the bed's far half —
-                // a real behaviour change, to a different unit, riding in on this one.
-                if (def.secondEdifice != 0 && !Allows(second, building))
-                    return IntentRejection.NotPermitted;
 
                 // A site standing on the far cell is an order the bed would eat: refuse rather
                 // than refund somebody's half-delivered wall out from under them.
@@ -651,10 +638,6 @@ namespace Odyssey.Sim.Construction
         /// <summary>
         /// Whether a stair may climb out of this cell: the cell above has to be open, exactly as a
         /// ladder's does.
-        ///
-        /// <para>Asked per cell rather than per stair, which is what lets one rule cover both
-        /// halves — <see cref="Allows(int, int)"/> is put to each of a two-cell order's cells, so
-        /// each half answers for the cell over its own head.</para>
         /// </summary>
         bool AllowsStair(int index)
         {
@@ -665,22 +648,15 @@ namespace Odyssey.Sim.Construction
         }
 
         /// <summary>
-        /// A stair standing in this cell, <b>or ordered into it</b> — either half of one.
-        ///
-        /// <para>The ordered half needs the footprint, not just the cell: a two-cell order is one
-        /// site on its head cell, so the far half is claimed rather than written, and asking
-        /// <c>_building[cell]</c> alone would let a player pour a floor over the top half of a
-        /// stair they had already ordered. <see cref="HeadClaimingSite"/> is the same lookup
-        /// <see cref="SiteAt"/> makes for a click.</para>
+        /// A stair standing in this cell, <b>or ordered into it</b>: <see cref="LadderHereOrOrdered"/>'s
+        /// twin. A colony stair is one cell, so its order is on the cell itself; either half of a
+        /// stamped stairwell answers <see cref="IsStair"/>.
         /// </summary>
         bool StairHereOrOrdered(int cell)
         {
             if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
             if (IsStair(cell)) return true;
-            if (_building[cell] == BuildingHandle.Stair) return true;
-
-            int head = HeadClaimingSite(cell);
-            return head >= 0 && _building[head] == BuildingHandle.Stair;
+            return _building[cell] == BuildingHandle.Stair;
         }
 
         /// <summary>Whether a ladder may go up from this cell: the cell above has to be open.</summary>
@@ -1142,7 +1118,7 @@ namespace Odyssey.Sim.Construction
             // moved under the far one while the wood was being fetched — the ground below it can
             // have been mined out. The order dies and the material goes back rather than half a
             // bed standing on air, which is the same answer a collapse will give when it exists.
-            if (second >= 0 && !Allows(second, def.secondEdifice != 0 ? building : BuildingHandle.Wall))
+            if (second >= 0 && !Allows(second))
             {
                 Refund(cell);
                 Clear(cell);
@@ -1338,115 +1314,6 @@ namespace Odyssey.Sim.Construction
         }
 
         /// <summary>
-        /// The head cell of a built stair occupying this cell, or -1. The lower half is its own
-        /// head; the upper half stores the opposite facing, so the same derivation that finds a
-        /// bed's far cell finds a stair's head from its far half (U44).
-        /// </summary>
-        int StairHeadAt(int cell)
-        {
-            if ((uint)cell >= (uint)_grid.Size.CellCount) return -1;
-            int handle = _grid.Edifice[cell];
-            if (handle < 0 || handle >= _edifices.Count) return -1;
-
-            PlacedEdifice placed = _edifices[handle];
-            if (placed.Removed) return -1;
-            if (placed.Def == CoreContent.EdificeStairLower) return placed.CellIndex;
-            if (placed.Def != CoreContent.EdificeStairUpper) return -1;
-
-            return EdificeFootprint.SecondCell(placed.CellIndex, placed.Def, placed.Facing, _grid.Size);
-        }
-
-        /// <summary>
-        /// Re-derive the connector of the stair touching this cell, in either direction.
-        ///
-        /// <para><see cref="RefreshLadder"/>'s twin and deliberately the same shape: work out what
-        /// is <em>wanted</em>, compare it against what the graph holds, and add or remove. Being
-        /// idempotent both ways is what lets every place either end can change call it without
-        /// anybody tracking which change it was.</para>
-        ///
-        /// <para><b>Both ends or nothing</b>, which is <c>ConnectorRegistrar</c>'s rule about
-        /// worldgen's own stairs applied to a built one: <i>"half a stairwell is not a narrower
-        /// stairwell, it is a portal whose far end is a hole."</i></para>
-        ///
-        /// <para>The existing connector is looked up by <b>touching</b> rather than by matching,
-        /// because the removal case has by then lost the record it would need to name the far
-        /// cell — the stair is already gone.</para>
-        /// </summary>
-        void RefreshStair(PawnContext ctx, int cell)
-        {
-            if ((uint)cell >= (uint)_grid.Size.CellCount) return;
-
-            // **The colony's own stair is one cell, and its connector is the ladder's shape.**
-            // Kept as its own method rather than a branch inside the two-cell arithmetic below,
-            // because the two have nothing in common but the word: this one has no far half to
-            // derive, no facing to trust, and one cell above to ask about. Called unconditionally
-            // so that the *removal* case works — a demolished stair leaves a cell that answers
-            // IsFullStair false, and the whole job of this method is to notice that.
-            RefreshFullStair(ctx, cell);
-
-            // **Worldgen's stairwells are not ours to manage, and this line is why the M2 demo
-            // failed before it existed.** A stamped stair carries no facing — the generator had
-            // nowhere to put one and the mesher infers it by scanning for the partner — so
-            // deriving the far half from Facing 0 picks the wrong cell, `wanted` comes out false,
-            // and the connector ConnectorRegistrar put there is torn out. Measured: the ruined
-            // city's demo dropped from nine stair steps in a day to three, and a colonist starved
-            // two storeys under its food.
-            //
-            // The same split RebuildLadderConnectors states: the generator's connectors come back
-            // when the seed is regenerated, and these are the ones a colony added afterwards.
-            if (IsStair(cell) && !IsOurs(cell)) return;
-
-            int stride = _grid.Size.LayerStride;
-            int head = StairHeadAt(cell);
-
-            // The head's own record, read through the grid — and asked for rather than assumed,
-            // because this method is called across a seven-cell fan-out after any structure
-            // change and is the one place a derived cell is used as an index. A head that names
-            // an empty cell is a stair with one half left standing, which nothing can produce
-            // today; the guard costs a comparison and turns that into "no connector" rather than
-            // into an exception in the tick.
-            int headHandle = head >= 0 ? _grid.Edifice[head] : -1;
-            int second = headHandle >= 0
-                ? EdificeFootprint.SecondCell(
-                    head, CoreContent.EdificeStairLower, _edifices[headHandle].Facing, _grid.Size)
-                : -1;
-
-            // **Both upper cells open, and at least one of them somewhere to arrive.** Measured,
-            // because the first cut demanded arrival at both and registered nothing at all: you
-            // walk on to the lower half, climb to the upper, and step off at the TOP of the flight
-            // — the cell over the lower half is passed through, not arrived in, and asking it for
-            // a landing of its own refuses every stair that does not happen to run alongside a
-            // floor. Worldgen never saw it because a stamped shell has a real floor over both
-            // cells.
-            //
-            // Open at both, though, and that half of ConnectorRegistrar's rule stands: a flight
-            // with rock over one of its halves is not a narrower flight, it is a colonist walking
-            // into the ceiling.
-            bool wanted = head >= 0 && second >= 0 && IsStair(second)
-                && head + stride < _grid.Size.CellCount && second + stride < _grid.Size.CellCount
-                && StandsOnAFooting(head) && StandsOnAFooting(second)
-                && StairTopIsOpen(head + stride) && StairTopIsOpen(second + stride)
-                && (StairArrivesAt(head + stride) || StairArrivesAt(second + stride));
-
-            int existing = ctx.Nav.TwoCellConnectorTouching(cell);
-            if (existing >= 0 && wanted)
-            {
-                Pathing.Connector? con = ctx.Nav.GetConnector(existing);
-                int low = head < second ? head : second;
-                int high = head < second ? second : head;
-                if (con != null && con.LowerCells[0] == low && con.LowerCells[1] == high) return;
-            }
-
-            if (existing >= 0) ctx.Nav.RemoveConnector(existing);
-            if (!wanted) return;
-
-            ctx.Nav.AddConnector(
-                Pathing.ConnectorKind.Stair,
-                new[] { head, second },
-                new[] { head + stride, second + stride });
-        }
-
-        /// <summary>
         /// The connector of the colony's own one-cell stair at this cell, re-derived.
         ///
         /// <para><b>Deliberately <see cref="RefreshLadder"/>'s shape, line for line</b>, because a
@@ -1461,12 +1328,13 @@ namespace Odyssey.Sim.Construction
         /// colonist walking into the ceiling. That is <c>ConnectorRegistrar</c>'s rule about
         /// worldgen's stairwells said of one cell instead of two.</para>
         ///
-        /// <para><b>No <c>IsOurs</c> guard, unlike the two-cell path.</b> That guard exists because
-        /// a <i>stamped</i> stair carries no facing and deriving its far half picks the wrong cell;
-        /// nothing the generator stamps is ever <see cref="CoreContent.EdificeStairFull"/>, so
-        /// there is nothing here to protect from the derivation — and there is no derivation.</para>
+        /// <para><b>Worldgen's two-cell stairwells are not this method's</b>, and need no guard: their
+        /// connectors are two-cell (<c>ConnectorRegistrar</c>'s), which
+        /// <c>OneCellConnectorAt</c> never returns, and nothing the generator stamps is ever
+        /// <see cref="CoreContent.EdificeStairFull"/>. The two-cell path this used to carry, for a
+        /// colony-built Lower + Upper pair, went when the stair became one cell (design 60 §10).</para>
         /// </summary>
-        void RefreshFullStair(PawnContext ctx, int cell)
+        void RefreshStair(PawnContext ctx, int cell)
         {
             if ((uint)cell >= (uint)_grid.Size.CellCount) return;
 
@@ -1527,8 +1395,8 @@ namespace Odyssey.Sim.Construction
         }
 
         /// <summary>
-        /// Is the cell over a stair's half clear enough to climb through? Solid rock, a blocking
-        /// edifice or water over either half stops the whole flight, whichever half arrives.
+        /// Is the cell over a stair clear enough to climb into? Solid rock, a blocking edifice or
+        /// water there is a colonist walking into the ceiling.
         /// </summary>
         bool StairTopIsOpen(int top)
         {
@@ -1543,8 +1411,8 @@ namespace Odyssey.Sim.Construction
         ///
         /// <para>The same argument <see cref="RebuildLadderConnectors"/> makes, and the reason this
         /// unit costs no save format: a built stair is an edifice and edifices are saved; its
-        /// connector is not, because it is derived. Walks the lower halves only — the upper half is
-        /// the same stair and would ask the same question twice.</para>
+        /// connector is not, because it is derived. The colony's own stairs only: worldgen's are
+        /// registered by <c>ConnectorRegistrar</c> when the board is regenerated from its seed.</para>
         /// </summary>
         public void RebuildStairConnectors(PawnContext ctx)
         {
@@ -1552,8 +1420,7 @@ namespace Odyssey.Sim.Construction
             {
                 PlacedEdifice placed = _edifices[i];
                 if (placed.Removed || !placed.Built) continue;
-                if (placed.Def != CoreContent.EdificeStairLower
-                    && placed.Def != CoreContent.EdificeStairFull) continue;
+                if (placed.Def != CoreContent.EdificeStairFull) continue;
                 RefreshStair(ctx, placed.CellIndex);
             }
         }
@@ -1662,19 +1529,6 @@ namespace Odyssey.Sim.Construction
             }
 
             return false;
-        }
-
-        /// <summary>
-        /// Whether what stands in this cell is the colony's rather than the generator's — the
-        /// <c>PlacedEdifice.Built</c> bit, asked by cell.
-        /// </summary>
-        bool IsOurs(int cell)
-        {
-            if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
-            int handle = _grid.Edifice[cell];
-            if (handle < 0 || handle >= _edifices.Count) return false;
-            PlacedEdifice placed = _edifices[handle];
-            return !placed.Removed && placed.Built;
         }
 
         /// <summary>
@@ -1897,26 +1751,6 @@ namespace Odyssey.Sim.Construction
         /// <para>What it was is returned, so the caller can pay the refund without asking the world
         /// a question whose answer it has just destroyed.</para>
         /// </summary>
-        /// <summary>
-        /// Does the cell a two-cell record derived actually hold the other half of it?
-        ///
-        /// <para>Either the very same record — a bed, whose two cells both point at one handle —
-        /// or a record whose def is the opposite stair half. Anything else means the facing the
-        /// derivation used was not the one the thing was placed at, which is every stair the
-        /// generator stamped, and the derived cell is somebody else's.</para>
-        /// </summary>
-        bool IsTheOtherHalfOf(int secondHandle, int handle, ushort def)
-        {
-            if (secondHandle == handle) return true;
-            if (secondHandle < 0 || secondHandle >= _edifices.Count) return false;
-
-            ushort partner = def == CoreContent.EdificeStairLower ? CoreContent.EdificeStairUpper
-                : def == CoreContent.EdificeStairUpper ? CoreContent.EdificeStairLower
-                : (ushort)0;
-
-            return partner != 0 && _edifices[secondHandle].Def == partner;
-        }
-
         public bool Demolish(PawnContext ctx, int cell, out PlacedEdifice was)
         {
             int handle = _grid.Edifice[cell];
@@ -1932,32 +1766,14 @@ namespace Odyssey.Sim.Construction
             // Both cells go from the record, not from the click: a two-cell thing taken apart by
             // naming either half must leave neither half behind, and clearing "whichever cell was
             // clicked" is how the other one survives to point at a record that says it is gone.
-            //
-            // A stair's far half stores the opposite facing, so this is symmetric for it too: click
-            // either half and SecondCell names the other (U44).
             int second = EdificeFootprint.SecondCell(was.CellIndex, was.Def, was.Facing, _grid.Size);
 
-            // And the far half may be a record of its OWN — a stair, and nothing else today. Read
-            // before the cells are cleared, because clearing them is what loses the pointer.
-            int secondHandle = second >= 0 ? _grid.Edifice[second] : -1;
-
-            // **And the derived cell has to hold the other half**, which is the same guard
-            // RefreshStair carries a few hundred lines up and for the same reason. `Cells()`
-            // answers 2 for either stair half whoever stamped it, and a worldgen stair carries no
-            // facing — so a stamped stair's `SecondCell` is derived from Facing 0 and names
-            // whatever happens to lie north of it. Measured: without this, demolishing one takes
-            // the neighbouring wall out of the grid and flags its record Removed.
-            //
-            // A bed's far cell points at this same handle, so it passes; a built stair's holds the
-            // opposite half; a one-cell thing never gets here, because SecondCell answered -1.
-            // Nothing can reach the bad case through the gesture today, because
-            // DesignationGrid.CanDeconstruct refuses anything the colony did not build — but
-            // nothing ties that refusal to this method, and tying it here costs one comparison.
-            if (second >= 0 && !IsTheOtherHalfOf(secondHandle, handle, was.Def))
-            {
-                second = -1;
-                secondHandle = -1;
-            }
+            // **And the derived cell has to point at this record.** Both cells of a two-cell thing
+            // hold its one handle, so for anything the colony built this is always true. It is here
+            // for a record whose facing was never the one it stands at - a stamped one, which
+            // carries none - so that a derivation from facing 0 can never take the neighbour to the
+            // north out with it (StairTests, 2026-09-21).
+            if (second >= 0 && _grid.Edifice[second] != handle) second = -1;
 
             // 1. The thing itself.
             _grid.RemoveEdifice(was.CellIndex);
@@ -1969,16 +1785,6 @@ namespace Odyssey.Sim.Construction
             PlacedEdifice gone = was;
             gone.Removed = true;
             _edifices[handle] = gone;
-
-            // A second record left standing would be walked by RebuildStairConnectors on the next
-            // load and hand back a connector for a stair that is not there. The cell was already
-            // proved to hold the other half above, so there is nothing more to check here.
-            if (secondHandle >= 0 && secondHandle != handle)
-            {
-                PlacedEdifice far = _edifices[secondHandle];
-                far.Removed = true;
-                _edifices[secondHandle] = far;
-            }
 
             // A bed leaves the sleep chooser's list with the world; its owner goes with it, in
             // that the record nobody will read again still says who it was.
