@@ -90,6 +90,24 @@ namespace Odyssey.Sim.Pawns
         public int SurfaceRelief = -1;
 
         /// <summary>
+        /// The planet tile the colony lands on (design 59), or null for a board with no world:
+        /// every test, every golden, the debug scenes and every save written before format 11.
+        /// <b>Null builds exactly today's board, climate and weather</b> — that is the seam's one
+        /// rule, and <c>SiteSeamTests</c> holds it field for field.
+        ///
+        /// <para>A site shapes the board's hills (<see cref="Worldgen.Planet.SiteBoard"/>) and its
+        /// climate and rain (<see cref="Worldgen.Planet.SiteClimate"/>). It does not choose
+        /// <see cref="Seed"/> — the caller derives that with <see cref="SiteRules.BoardSeed"/> — nor
+        /// the depth, which <c>BuildSession</c> decides with <see cref="SiteRules.BoardLayers"/>
+        /// before this request exists.</para>
+        /// </summary>
+        public SiteTile? Site;
+
+        /// <summary>The planet's seed, when there is a <see cref="Site"/>. Saved in the header so a
+        /// later World view can regenerate the planet; nothing in the board reads it.</summary>
+        public uint WorldSeed;
+
+        /// <summary>
         /// The presentation chunk grid, when a renderer will be attached, so the support system
         /// and the jobs that edit the world can mark chunks dirty. Null for a headless run.
         /// </summary>

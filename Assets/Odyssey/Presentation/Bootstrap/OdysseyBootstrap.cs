@@ -246,6 +246,12 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>The butterflies, for the tests, the settings and the overlay. Null between sessions.</summary>
         public ButterflyDirector? Butterflies => _butterflies;
 
+        /// <summary>The Meadow cloud rings round the camera (design 63): drawn, never simulated.</summary>
+        CloudDirector? _clouds;
+
+        /// <summary>The clouds, for the tests and the player bench. Null between sessions.</summary>
+        public CloudDirector? Clouds => _clouds;
+
         /// <summary>The key light the day moves, kept so the renderer's shadow margin can sweep
         /// towards it (design 38 §18).</summary>
         Light? _keyLight;
@@ -417,6 +423,11 @@ namespace Odyssey.Presentation.Bootstrap
             /// overlay and the trace, which is what decides the presets' rungs (§9).
             /// </summary>
             Butterflies,
+            /// <summary>
+            /// The cloud rings (design 63): two calls when the camera can see the sky and none when
+            /// it cannot, which is the colony camera at every pitch but its lowest.
+            /// </summary>
+            Clouds,
             Count,
         }
 
@@ -829,8 +840,14 @@ namespace Odyssey.Presentation.Bootstrap
         /// <c>WorldSave.Load</c> refuses a world of a different size anyway.</para>
         /// </summary>
         public void BuildSession(uint? seedOverride, SaveHeader? from, uint[]? colonists,
-            string? name, GridSize? sizeOverride)
+            string? name, GridSize? sizeOverride, SiteTile? site = null, uint worldSeed = 0)
         {
+            // A planet site (design 59), from the World screen on a new game or from the header on
+            // a load. Null for every caller before world generation and every test, which then
+            // builds exactly the board it always did.
+            SiteTile? sessionSite = from != null ? from.Recipe.Site : site;
+            uint sessionWorldSeed = from != null ? from.Recipe.WorldSeed : worldSeed;
+
             if (HasSession)
                 throw new System.InvalidOperationException(
                     "a session is already built; call TeardownSession before building another");
@@ -866,6 +883,11 @@ namespace Odyssey.Presentation.Bootstrap
             GridSize size = from != null
                 ? from.Size
                 : sizeOverride ?? new GridSize(sizeX, sizeZ, layers);
+            // A mountainous site is 24 layers deep (design 59 §5) — decided here, with the rest of
+            // the size, so the chunk grid and the render model below are built at the same depth
+            // as the world. A load needs nothing: the header's size already carries it.
+            if (from == null && sessionSite is SiteTile hillSite)
+                size = new GridSize(size.SizeX, size.SizeZ, SiteRules.BoardLayers(size.SizeY, hillSite.Hills));
             var chunks = new ChunkGrid(size);
 
             // The render model is built before the world, because the mirror the world publishes
@@ -895,7 +917,11 @@ namespace Odyssey.Presentation.Bootstrap
             if (colonists != null && colonists.Length > 0 && from == null)
                 scenarioDef = scenarioDef.WithColonists(colonists.Length);
 
-            uint sessionSeed = from != null ? from.Seed : seedOverride ?? seed;
+            // With a site, the board's seed is the tile's of the world (design 59 §8): the same
+            // world and tile always give the same colony. A load's comes from its file either way.
+            uint sessionSeed = from != null ? from.Seed
+                : sessionSite is SiteTile seedSite ? SiteRules.BoardSeed(sessionWorldSeed, seedSite.TileIndex)
+                : seedOverride ?? seed;
             MapType sessionMap = from != null && from.Recipe.Map != MapType.Unknown
                 ? from.Recipe.Map
                 : mapType;
@@ -915,6 +941,8 @@ namespace Odyssey.Presentation.Bootstrap
                 Wooded = from != null ? from.Recipe.Wooded : woodedMap,
                 SurfaceRelief = from != null ? -1 : surfaceReliefOverride,
                 Map = sessionMap,
+                Site = sessionSite,
+                WorldSeed = sessionWorldSeed,
                 Chunks = chunks,
 
                 // A colony keeps the name it was saved under. Nothing names one yet — that is the
@@ -1148,6 +1176,8 @@ namespace Odyssey.Presentation.Bootstrap
                 {
                     Capacity = Preferences.Value(GraphicsLadder.Butterflies),
                 };
+                // The clouds (design 63): the Meadow demo's two rings, where the packs are present.
+                _clouds = new CloudDirector(_model, MeadowLook.Loaded);
             }
 
             // Which family each weapon swings in (design 33 §5j), read once off the content, so a
@@ -1790,6 +1820,17 @@ namespace Odyssey.Presentation.Bootstrap
                     bloodLowest, bloodHighest, slice.BelowSurface(activeLayer));
             }
             MarkSection(FrameSection.Butterflies);
+            // The clouds after the weather, which has eased the cover, the gloom and the wind they
+            // read, and after the daylight, whose graded light colours them. Game seconds, so a
+            // paused world holds the sky (design 63 §5).
+            _clouds?.Sync(cameraRig != null ? cameraRig.GetComponent<Camera>() : null,
+                Time.deltaTime * _world.GameSpeed, Time.unscaledDeltaTime,
+                _weather?.Cloud ?? _world.Views.Current.Weather.CloudPerMille / 1000f,
+                _weather?.Gloom ?? 0f,
+                _weather?.Rain ?? _world.Views.Current.Weather.RainPerMille / 1000f,
+                _weather?.Wind ?? 1f,
+                _daylight, slice.BelowSurface(activeLayer));
+            MarkSection(FrameSection.Clouds);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
 
@@ -4543,6 +4584,7 @@ namespace Odyssey.Presentation.Bootstrap
             _weather?.Dispose();
             _birds?.Dispose();
             _butterflies?.Dispose();
+            _clouds?.Dispose();
             _floaterView?.Dispose();
             _hearthMark?.Dispose();
             _hearthMark = null;
@@ -4583,6 +4625,7 @@ namespace Odyssey.Presentation.Bootstrap
             _weather = null;
             _birds = null;
             _butterflies = null;
+            _clouds = null;
             _corpses = null;
             _floaterView = null;
             _colonistMaterials = null;

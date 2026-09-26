@@ -39,7 +39,7 @@ namespace Odyssey.Tests.Sim
         /// the whole reason this test exists, and it did its job on the way to 3.
         /// </summary>
         [Test]
-        public void TheFormatVersionIsTen()
+        public void TheFormatVersionIsEleven()
         {
             // 2 was U36's recipe header; 3 U38's barren/wooded recipe flags; 4 the beds' edifice
             // record (facing, quality, owner) and a construction site's facing byte; 5 U42's
@@ -48,8 +48,9 @@ namespace Odyssey.Tests.Sim
             // item's ContainerId, and the zones leaving the items section for two of their own;
             // 9 design 28's TemperatureSeverity, appended to the pawn record after the
             // starvation bar; 10 design 47's Shooting, no layout change, a guard that deals the
-            // seventh skill once to a colonist from an older file. See WorldSave.CurrentFormatVersion.
-            Assert.That(WorldSave.CurrentFormatVersion, Is.EqualTo(10));
+            // seventh skill once to a colonist from an older file; 11 design 59's planet site in
+            // the header. See WorldSave.CurrentFormatVersion.
+            Assert.That(WorldSave.CurrentFormatVersion, Is.EqualTo(11));
         }
 
         [Test]

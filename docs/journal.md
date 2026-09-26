@@ -13958,6 +13958,106 @@ Written in a container with no Unity: the model and its setting are proven in th
 engine half is uncompiled and owes both Unity tiers, a player build and the hitch tour's mid-wake
 picture before it merges (design 56 §11).
 
+
+## 2026-09-26 — World generation: a planet the board is chosen from
+
+The owner asked for RimWorld-style world generation, *"simple for now with seams"*. Documents only
+today: interview, research `a-13`, design 59, the Claude Design brief and the plan. No code.
+
+**The exploration made the seam smaller than the request sounded.** There was no world layer at all,
+but nearly every knob a world tile would turn already existed as a field on `NaturalMapGenDef`:
+relief, trees, water, rock, wildlife. The two things hard-wired globally were the climate
+(`WorldContent.Climate`, whose own comment said "one Def per map type") and the weather's season
+weights. So the seam is a site record handed to `ColonyWorld.DefFor` and `ColonyComposition`, and
+**the rule that makes it safe is that a request with no site builds exactly today's board**. The
+goldens, every test world and every save before format 11 take that path, and design 59 §11 asserts
+it field for field rather than trusting it.
+
+**Three decisions worth keeping.**
+- **The save stores the tile's fields, not just the world seed and a tile index.** Rebuilding the
+  tile from the seed would let a retune of the planet generator change a saved colony's climate
+  without anyone touching its save. That is the same reason `SaveRecipe` carries barren and wooded.
+- **One reference latitude (53°, 9 °C mean, 1,000 mm) reproduces `Climate_Temperate` exactly.** So
+  the curve is scaled round what has already been played and tuned, not replaced.
+- **The seasons are the planet's, with no hemisphere flip.** Wash, Glare and Rime are named, keyed
+  in the weather table and promised by the almanac. A southern Glare that froze would contradict
+  all three.
+
+**Two things the arithmetic corrected in the first draft.**
+- The settleable meadow band (3–17 °C) sits between about 39° and 61°. Its seasonality runs from
+  ×0.78 to ×1.13, not up to ×1.5, so **between two meadows the mean moves more than the swing
+  does**.
+- The biome names were first drafted as the reference's own labels and were replaced with ours
+  (Pinewood, Frost barrens, Dust flats, Wildwood).
+
+**The research could not read a single page.** The proxy refused every fetch over two capped passes,
+so `a-13` is built from search extracts, with recalled items marked. Nothing in design 59 depends on
+an unconfirmed number: every constant is ours, to be tuned and measured.
+
+**Nor could the fast tier run.** The container's network policy refuses the .NET installer
+(`dot.net`), so the one generated C# change (the registry gaining its `ui.biome`, `ui.hills` and
+`ui.world` rows) waits on CI.
+
+## 2026-09-26 — World generation built: a planet, a site, and the board it makes
+
+The owner approved design 59 and pasted Claude Design's specification for the World screen. It
+disagreed with the design three times, and the owner ruled:
+- **the specification's six biomes**
+- **our hill names**, because its five were the reference's own labels
+- **region names and zoom built now**
+
+The whole line went in the same day, as six commits on `claude/sharp-euler-a6xtci`.
+
+**The seam held its one rule.** A request with no site builds exactly today's board, climate and
+weather:
+- asserted field for field against `PlayedMap`
+- a Rolling site equal to it too
+- the Long tier's goldens untouched
+
+A site shapes the board through `SiteBoard`. Relief is set; outcrops and caverns are *scaled from
+the preset*, so a bare board stays bare. The site's climate comes through `SiteClimate`, a new Def
+that never writes through the shared one. The reference site (53°, 9 °C, 1,000 mm) is
+`Climate_Temperate` to the centi-degree. The rules both the colony and the World screen need live
+once, in `Sim.Contracts.SiteRules`, because the interface cannot call the simulation:
+- seasonality by latitude
+- the board seed of a tile
+- a mountainous board's 24 layers
+
+**The planet is 2.1 ms.** It is integer passes on separate streams, with the sea and the hills cut
+by rank so every world has the same shares. A wrapped lattice gives the east–west seam in integers;
+a test holds plain noise's seam at the join against it. Every world has a settleable tile: held over
+1,000 seeds, and 300 in the default tier.
+
+**The painter was fifteen times too slow and is now inside its budget.**
+- The first version took 447 ms at 2× in Debug, picking each pixel by cube rounding into a float
+  buffer.
+- A scanline nearest-centre fill cut it to 215.
+- One pass with the finish written as an affine map per pixel, stamped hill marks and a reused
+  buffer cut it to 115 in Debug and 58 in Release.
+- Tabulating the sheen and vignette cut it to 87 in Debug and **31 in Release**.
+
+The player build compiles Release. The Unity figure is owed.
+
+**Three faults found on the way, none shipped:**
+- **The header change broke two ranged-combat tests.** They relabelled saves by poking the version
+  field. `SaveFixtures.AsFormat` now does it properly.
+- **The type-setting rule rejected the specification's label styling.** The spec wanted tracking and
+  a bold weight in the stylesheet, which `TheSheetSetsNoTypeAtAll` forbids. The labels take their
+  roles instead, recorded as departures in §9a.
+- **A name clash would have broken the Unity build.** A method named `DashedOutline` in `HudShell`
+  would have shadowed the type of that name and broken `HudShell.Settings.cs`'s `new DashedOutline()`.
+  Only a compile would have caught it, and there is no Unity in the container, so it was found by
+  grepping for every new member name across the partials.
+
+**The mountains cost memory, not frames.** Twenty-four layers is +48 %: 110 MiB for a Huge
+mountainous board against 74.5. The first reading said the deeper board was smaller, which was the
+first arm paying for the process (lessons).
+
+**Owed:**
+- Both Unity tiers and a player build. The World page has never been compiled.
+- The owner's first look (playtest queue).
+- A ruling on whether 110 MiB is too much for a Huge mountainous board.
+
 ## 2026-09-26 — Riding along with a colonist
 
 The owner asked for a first-person mode opened from the colonist card, *"locked until esc"*, to see
@@ -14140,6 +14240,63 @@ unchanged; 3 × 17.0 / 30.9 ≈ 1.65 here, a 2.12 ms budget), and an unknown mac
 3. The label goes on after the fix is merged, or every PR branched from the old `main` could fail
 on whichever runner picked it up.
 
+## 2026-09-26 — World generation reviewed and merged with `main`: a seam on the date line, dead poles, and a test that typed into the wrong page
+
+Reviewed on `claude/busy-meitner-zkrhtu` (branched from `claude/sharp-euler-a6xtci`), with `main`
+merged in first: 38 commits, the conflicts all append-only. **`main` had taken design 57 (First
+Person) and 58 (cracks) meanwhile, so world generation is design 59**. As with the ride when the wake
+took 56, only the lines this branch wrote were renumbered, 128 of them. The save format is still
+11, because `main` is at 10.
+
+Three reviews ran in parallel: the Sim seam, the engine-free models, and the Presentation code acting
+as the compiler, since no tier here compiles it. **The seam held.** A probe built Flat to
+Mountainous on three world seeds, saved, loaded and ran on 1,500 ticks: the ground layer was
+11/10/9/16 and the hash was identical on both copies. The Presentation reading found **no compile
+errors**. What it did find:
+
+- **The date line drew as a dark valley.** The vignette and the diagonal sheen were baked into the
+  one texture, and the page lays three copies side by side for the wrap. So every zoom past 1× showed
+  the texture's darkest edges meeting: 115 and 105 against 255 in the middle, on a white planet. The
+  finish is by row alone now (design 59 §9a); a column paints the same whichever copy it is in.
+- **The pole notches were painted and dead.** The painter clamps the nearest row to the first or
+  last, so the zig-zag above and below the pole hexes is painted as those tiles. `TileAt` said −1
+  there: 1 % of the map, along both edges. The pick clamps the same way now. A new test walks every
+  pixel at 1× and 2× and holds the painter's own copy of the hex arithmetic to the pick's.
+- **`StartScreenTests.TheWorldIsBuiltFromTheSeedInTheBox` would have failed every run.** It typed
+  4242 into the World page's seed box while the setup page was showing, then asserted the board was
+  built on 4242. With a site, the board is built on `BoardSeed(4242, tile)`. Its sibling typed
+  "twelve" into the same hidden box and checked Start on a page a bad seed can no longer reach. Both
+  now type on the World page, where a player types.
+- **A ten-megabyte texture per shell** was made `HideAndDontSave` and never destroyed. That is one
+  per PlayMode test that presses New game.
+- **The map keys fired while typing a seed.** The event's target is the field's inner text element,
+  not the `TextField`, so 0, − and Enter reached the map. The page now asks
+  `HotkeyDirector.Typing`, the one owner of "a field has the keyboard".
+- **Smaller fixes:**
+  - every hover rebuilt the site panel's twenty labels;
+  - the overlay could divide by a fit of 0 before the first layout;
+  - the texture is whole pixels but was stretched to the fractional map size;
+  - 2.25× read "2.2x", because `Math.Round` rounds a half to even;
+  - a `HudTheme` doc comment had come off `ZonesHue` onto the map inks;
+  - the hill ink had two owners;
+  - `WorldLayout`'s frame constants were read by nothing, though the class said a test held them.
+    `HudStyleSheetTests` holds twenty-four of them to the sheet now.
+- **The Sim side had one wrong number.** A Hilly board had Rolling's 3 caverns rather than §5's 4,
+  because ×1.333 of 3 truncates to 3. The order test asserted `>=`. The scale rounds now, and
+  `EachBandIsTheTablesNumbers` pins the table. `BoardSeed` could deal 0, which §8 promised it never
+  would.
+
+**Recorded, not changed, for the owner** (design 59 §7): `annualMeanC` is the season curve's
+anchor, not the year's mean. The base offsets average +3.8 °C, so a colony lives its year up to
++4.3 °C warmer than its tile's stated temperature, while the biome bands are cut on the stated one.
+Changing it breaks the reference site's equality with `Climate_Temperate`.
+
+**Still owed:**
+- both Unity tiers and a player build; nothing on this branch has been compiled by Unity;
+- the paint's Mono figure;
+- a seed box that repaints on every usable keystroke (31 ms Release);
+- whether the arrows step the selection or move focus into the seed box, which only a keyboard can
+  say.
 ### 2026-09-26 — the inspect header: two toggles, and the response leaves it
 
 Claude Design's mockup 24c replaced the colonist header's four checkbox buttons with two large
@@ -14166,6 +14323,100 @@ the Assign tab's column holds it for every colonist at once.
 
 The owner played it the same day: *"it's great - happy to get this resolved and get it ready for a
 merge"*. Nothing moved, so Z for First Person and the 40 px tile stand.
+
+## 2026-09-26 — the World screen's first look: four times the planet
+
+The owner's first look at the World screen asked for four things: the site name level with the foot of
+its swatch, temperatures in red, amber and green, a planet "at least 4x" and "more random", and a bigger
+"World". Then, mid-change: *"make sure it's disposed and garbage collected once off the screen"*.
+
+- **The planet is 128 x 64** (design 59 §4e). Same features at twice the resolution (`featureScale`),
+  finer coasts from five elevation octaves, a domain warp to break the value noise's lattice, and a sea
+  share that moves 35–55 % with the seed. Generation went 2 → 12 ms.
+- **The paint was the cost that mattered**: measured on the real size in one run, 332 ms at 2x against
+  203 at 1.5x (Debug), once per seed. 1.5x, mipmapped, because at the fit the texture is drawn at a third
+  of its size.
+- **The misalignment was the line box again**: a self-sized label is about twice its point size tall,
+  so caption plus name was 55 px centred on a 44 px swatch. Fixed boxes now (§4f).
+- **Nothing outlives the menu**: `ReleaseWorldMap` destroys the texture, drops the buffer, the names and
+  the planet and pauses the ease timer when a colony goes live. Before this the texture and its buffer
+  sat in memory for the whole game, and the ease timer fired every 16 ms under it.
+
+## 2026-09-26 — Clouds: the Meadow demo's rings, re-lit for a whole day
+
+The owner, looking at a clear sky: it *"at least looks bare"*; were there clouds in the packs,
+*"happy to use what synty has if effective … keep it performant."* A census of all eleven packs
+found flat cloud props in six, skydomes in four, and in the Meadow biome a proper answer: a toon
+`Clouds` shader graph and two cloud rings, the pair the Meadow demo scene hangs round itself. The
+owner chose the rings over the props, cover following the weather, a slow drift, and the birds'
+budget. `docs/design/63-clouds.md`.
+
+**Where the sky is seen decided the geometry.** The colony camera at its usual 48° sees none (its
+highest ray is 24° down), and at its lowest pitch the top edge only touches the horizon. The sky is
+First Person's (design 57): 60° of lens at eye height. So the rings are centred on the camera every
+frame at the world's height, and **nothing is submitted when the highest ray in the view is below
+the ring's lowest point** — normal play costs the clouds nothing at all, not even a depth pass.
+
+**Cover is height.** The shader is opaque and its "Cloud Strength" is a vertical wobble, not a
+density, so a clear sky squashes the rings to a low band and full cover stands them up to the demo's
+banks. Nothing in the shader changed; the licensed material is copied and never written.
+
+**Two of the pack's features were off by the second sheet, both measured from pixels.** Its
+scattering weights a lerp by the sun's direction *per channel*, so a high noon sun made the clouds
+lilac (202, 187, 202). Its fog lerps by 0.18 plus the distance fog, which in our haze is about 1 at
+a ring's range, so it overshot past the fog colour, inverted the shading and put the night clouds
+at pure blue (0, 0, 29). The haze is a constant blend in `CloudColours` now — exact for a ring at
+one range — and the night clouds sample at (113, 120, 140). The colours come from the graded
+`DaylightState`, so Overcast's grey reaches the clouds with no weather code of their own;
+`DaylightDirector` gained `State` and a `Version` so they are rewritten only when the light moved.
+
+**One thing unexplained**: the first frame the pack's shader drew in a fresh editor came out black
+on the shadowed faces and never again — not the colours, not the fog, not the scattering, each
+ruled out by a probe. The sheet throws a picture away first. Whether an editor session shows one
+black frame of cloud is unknown; a player compiles its shaders ahead.
+
+**The plan's keep-alive was not needed.** The material reaches a player as a reference from
+`MeadowLook.asset`, so its shader goes with it, and the rings are not instanced, so there is no
+`INSTANCING_ON` variant to keep.
+
+**Cost**: `FrameSection.Clouds` 0.002 ms with nothing seen, 0.010 ms drawing both rings at 4K. The
+frame difference is inside the noise at every arm, and at 4K the noise was ±4 ms — six editor
+windows and two batch runs from other worktrees were on the machine, and the colony view "gained"
+3 ms while submitting nothing. So the GPU was measured in a development player instead, where
+`PlayerBench` reads the GPU's own clock (a new `-odyssey-bench-clouds` arm): **5.92 ms with the
+clouds, 5.88 without, 5.91 again** at 3840 × 2160 with an eye at the horizon — about 0.03 ms.
+
+**The player build was refused first, for a reason that was `main`'s**: the cracks' two shaders
+(design 58) are found at runtime and had never been added to the always-included list, so no
+player could be built from `main` that day. `ShaderInclusion.Apply` added them; the EditMode tier
+had been green throughout, which is `lessons.md`'s point about two green tiers again.
+
+## 2026-09-26 — Clouds: gone by night, heavier in rain, slate in a storm
+
+The owner, after the first build: *"make the clouds faded or not there at night as we want to darken
+things up and also stormy/rainy need moodier clouds."* Asked for the balance, they chose: **gone at
+night**, fading **after** the golden hour (19:30–21:00) and back before dawn's (05:00–06:30); rain
+**heavier with its colour kept**, so the rule of 2026-09-25 stands; and a storm as **dark slate,
+darker than the sky**. `docs/design/63-clouds.md` §4c–§4d.
+
+An opaque shader cannot fade, so fading is two things at once: the rings sink to a quarter of their
+height and every colour converges on the sky behind them, taken where the gradient sky puts it at the
+band's middle. At nought nothing is submitted, so the night sky now costs nothing at all.
+
+**The storm needed a second go, found from logged colours rather than pictures.** The first darkened
+the undersides to slate, (95, 99, 109) against a sky of (143, 155, 171), and the deck still read
+light, because with the sun behind a player the faces in view are the lit tops, which were
+(186, 191, 197). The tops now go to 85% of the sky's own brightness too; the sheet logs every
+picture's colours beside the sky's so the next retune can be read instead of guessed.
+
+## 2026-09-26 — Clouds: the snap at the end of the night fade
+
+The owner: *"I see the clouds snap in from night to evening."* The fade kept a quarter of the rings'
+height to its last frame, and a band coloured like the sky is still a band against a gradient, so it
+vanished at 21:00 and reappeared at 05:00 in one frame each. The rings now sink to the eye line and
+flatten, which puts them edge-on — nothing left to see — and a jump in the hour is eased over four
+real seconds instead of taken. A pixel diff against clouds-off at 2% presence found nothing looking
+away from the sun and 39 pixels in 1.44 million looking up. Design 63 §4e.
 
 ## 2026-09-26 — The art came back, then faces
 

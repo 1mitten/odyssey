@@ -23,6 +23,28 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the World screen read as a planet, and does the site change the colony?** (`claude/busy-meitner-zkrhtu`,
+  the reviewed `claude/sharp-euler-a6xtci`; design 59.) **Second look after the first (2026-09-26, §4e–§4f):** the planet is
+  128 x 64 with warped coasts and a sea share that varies by seed, zoom goes to 8x, temperatures in the site panel are
+  red/amber/green, the site name sits on the swatch's foot, and "World" is bigger. New game now opens on a **World** screen: a hex planet with ice caps, a dry-scrub belt round
+  the equator and Meadow at mid-latitudes, region and sea names, a legend, and a site already picked.
+  Look for:
+  - whether Meadow can be found at a glance, and whether the other biomes reading *Not yet available* is
+    clear rather than a fault;
+  - whether the names help or clutter, and whether zoom to 4x (wheel, double-click, + / -, 0 to fit)
+    and panning across the east–west seam feel right;
+  - Next is disabled on sea, Sheer or a non-Meadow tile, with the reason in the site panel.
+  - zoom to 2x and pan across the date line: the planet should run on without a dark band down the join;
+  - press the arrows with nothing focused: they should step the selection, not jump into the seed box
+    (and typing 0, - or Enter in the seed box should not zoom the map or press Next);
+  - hover along the very top and bottom edge: the ice there should outline and click like any tile.
+
+  Then take a **Mountainous** Meadow: the board should be 24 layers with rock under the valleys and
+  higher terraces — does it look like mountains, or just steeper hills? Take a cold, high-latitude
+  Meadow and skip a few months (Debug → Skip one month): Rime should bite harder than on the suggested
+  site. A wrong answer looks like: the map a patchwork nobody would call a planet, Meadow lost in the
+  colours, names over the zoom buttons, or a mountainous board indistinguishable from today's.
+
 - **Faces and talking: do the expressions and the talking read, and at what zoom?**
   (`claude/face-expressions`, design 59.) Debug menu (backtick) > **Faces**. Zoom right in on two
   colonists standing near each other, select one, press **Talk**; then, with nobody selected, try
@@ -38,7 +60,6 @@ the next session learns to ignore.
     speaking. Wrong: the hand pops up or drops rather than rising and falling, or you never see two
     colonists fall to talking by themselves at a meal or by the fire in ten minutes of play (the
     chance is a guess, §5c).
-
 - **First Person: does the shoulder camera show a colonist's day and a fight clearly?**
   (`claude/planning-session-fok6wm`, design 57.) Select a colonist, press **First Person** on her
   card, and let her work, walk up a terrace and go through a door.
@@ -51,6 +72,21 @@ the next session learns to ignore.
     or the pointer stays hidden.
   - Read the strip at the bottom. Wrong: a missing fact you wanted, or it covers the action.
   - Check the card's buttons now Prioritise is gone. Wrong: her name runs under them.
+
+- **Do the clouds make the sky look lived in, and do they follow the weather?** (`claude/clouds`,
+  design 63.) Select a colonist and press **First Person**; look along the horizon.
+  - A clear noon. Wrong: the sky still reads bare, or the band of cloud looks like a painted strip
+    rather than cloud.
+  - Debug → Weather: Rain, then Storm. Rain should look heavier but keep the meadow's colour; a
+    storm should be a slate deck darker than the sky. Wrong: rain that looks like a clear day, a
+    storm that still reads light, or one so dark it looks like night at noon.
+  - Watch dusk into night and night into dawn. They should keep their gold at sunset, dissolve
+    into the sky between 19:30 and 21:00, be gone all night, and return 05:00–06:30. Wrong: the
+    night still too light, a cloud that pops rather than fades, or dawn arriving without them.
+  - Run at speed 3 and pause. Wrong: the drift is too quick to feel like weather, or the clouds keep
+    moving on a pause.
+  - Look straight up. Wrong: you wanted clouds overhead too; the rings are a horizon band by
+    design (63 §9), and overhead cloud is a second technique.
 
 - **Do the frogs read as frogs, and are they where the water is?** (`claude/frog`, design 30 §8.)
   New game on the meadow and look along a stream or a pond: there should be groups of three to five
