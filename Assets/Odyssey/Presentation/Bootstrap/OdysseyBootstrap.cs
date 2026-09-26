@@ -2092,8 +2092,11 @@ namespace Odyssey.Presentation.Bootstrap
             }
         }
 
-        /// <summary>The telegraph's red: the fight's, dimmed so the ground reads through it.</summary>
-        public static readonly Color SweepTelegraphColour = new Color(0.86f, 0.16f, 0.12f, 0.42f);
+        /// <summary>
+        /// The telegraph's red. At 42 per cent over the meadow it read brown — red and green make
+        /// brown — in the first photograph (design 62 §8b), so it is stronger than an order's mark.
+        /// </summary>
+        public static readonly Color SweepTelegraphColour = new Color(0.92f, 0.06f, 0.05f, 0.68f);
 
         void TelegraphCell(GridSize size, CellRef from, int facing)
         {

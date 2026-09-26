@@ -56,6 +56,29 @@ namespace Odyssey.EditorTools
                     TargetRatio, scale, butcher * scale, cleaver * scale));
             }
 
+            // The catalogue rows as the game resolves them, and the rig's hand as the figure finds it.
+            var catalogue = AssetDatabase.LoadAssetAtPath<Odyssey.Presentation.Rendering.ModuleCatalogue>(
+                "Assets/Odyssey/Presentation/ModuleCatalogue.asset");
+            if (catalogue != null)
+            {
+                foreach (string id in new[] { Odyssey.Presentation.Rendering.ModuleIds.Hostile(6),
+                             Odyssey.Presentation.Rendering.ModuleIds.HostileWeapon(6) })
+                {
+                    var row = catalogue.Find(id);
+                    r.AppendLine($"row {id}: {(row == null ? "MISSING" : row.prefab == null ? "no prefab" : row.prefab.name)}");
+                }
+            }
+            var body = AssetDatabase.LoadAssetAtPath<GameObject>(Butcher);
+            if (body != null)
+            {
+                GameObject go = Object.Instantiate(body);
+                var animator = go.GetComponent<Animator>();
+                r.AppendLine(animator == null ? "no Animator"
+                    : $"animator human {animator.isHuman}, avatar {(animator.avatar != null ? animator.avatar.name + " valid " + animator.avatar.isValid : "none")}, " +
+                      $"right hand {(animator.isHuman && animator.GetBoneTransform(HumanBodyBones.RightHand) != null ? animator.GetBoneTransform(HumanBodyBones.RightHand).name : "none")}");
+                Object.DestroyImmediate(go);
+            }
+
             Directory.CreateDirectory(Path.GetDirectoryName(ReportPath)!);
             File.WriteAllText(ReportPath, r.ToString());
             Debug.Log("[ButcherProbe]\n" + r);

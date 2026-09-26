@@ -124,7 +124,8 @@ namespace Odyssey.Presentation.World
             figure.WeaponDef = def;
             figure.IsGun = IsGunDef(def);
             figure.GunSlide = null;
-            if (def < 0 || figure.RightHand == null) return;
+            // Bare hands draw nothing; a body's own weapon (NaturalWeaponDef, below nought too) does.
+            if ((def < 0 && def != NaturalWeaponDef) || figure.RightHand == null) return;
 
             GameObject? prefab;
             if (def == NaturalWeaponDef)

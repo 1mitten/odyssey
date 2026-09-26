@@ -2725,6 +2725,19 @@ namespace Odyssey.Presentation.World
             // the head was bared, and before the skins are gathered below so it is painted too.
             if (!face.OwnPaint) ColonistAttachments.ShowOverlay(instance, face.Overlay);
 
+            // A body in its own paint is the one character its prefab switches on (design 62 §8):
+            // the Fantasy Rivals prefab carries all eleven of the pack's giants as inactive
+            // siblings, and the skins gathered below include inactive ones on purpose (a bandit's
+            // vest is switched on after them). Left in, they were measured with the butcher —
+            // a box 6.2 m wide and 4.1 m tall (ButcherSpawnTests) — so they go now.
+            if (face.OwnPaint)
+            {
+                var all = instance.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true);
+                for (int i = 0; i < all.Length; i++)
+                    if (all[i] != null && !all[i].gameObject.activeInHierarchy)
+                        UnityEngine.Object.DestroyImmediate(all[i].gameObject);
+            }
+
             // Re-skin from the bones as they are at the moment of drawing, not as they were when
             // the animation system last looked at them.
             //
@@ -2828,8 +2841,23 @@ namespace Odyssey.Presentation.World
             {
                 figure.StandingHeight = MeasureBody(figure);
                 // A body drawn as itself carries its own box too (design 62 §8): the butcher's
-                // bar, ring and cursor stand at its own height, not a colonist's.
-                if (face.OwnPaint) figure.DrawnBox = FigureBuild.DrawnBounds(figure.Skins, figure.Transform);
+                // bar, ring and cursor stand at its own height, not a colonist's. The box is read in
+                // the figure's own frame, which for an animal is metres (its scale is 1) and for the
+                // butcher is not (2.0): its sides are scaled back to metres, and its height is the
+                // baked sole to crown, not the renderers' loose volume, which read 4.4 m for a
+                // 3.6 m body (measured, ButcherSpawnTests).
+                if (face.OwnPaint)
+                {
+                    Bounds local = FigureBuild.DrawnBounds(figure.Skins, figure.Transform);
+                    Vector3 across = Vector3.Scale(local.size, face.Scale);
+                    // The loose volume is the rig's bind pose, arms out: 5.8 m across for the
+                    // butcher. A cursor wants the body, so the footprint is a square of the
+                    // narrower side, about 1.9 m, centred on it.
+                    float side = Mathf.Min(across.x, across.z);
+                    across = new Vector3(side, figure.StandingHeight, side);
+                    float up = face.Scale.y > 1e-4f ? figure.StandingHeight * 0.5f / face.Scale.y : 0f;
+                    figure.DrawnBox = new Bounds(new Vector3(0f, up, 0f), across);
+                }
                 // Where a sheathed weapon hangs, and where in the draw the hand is on the hilt:
                 // measured off this body, after its height, in the idle (design 33 §8b).
                 BindSheath(figure, face.Feminine);
