@@ -23,6 +23,17 @@ the next session learns to ignore.
 
 ## Open
 
+- **Faces and talking: do the expressions and the talking read, and at what zoom?**
+  (`claude/face-expressions`, design 59.) Debug menu (backtick) > **Faces**. Zoom right in on two
+  colonists standing near each other, select one, press **Talk**; then, with nobody selected, try
+  each expression row on the whole colony.
+  - Wrong: you can only tell who is talking by the head turning, not by the nodding; or the
+    nodding looks like a twitch.
+  - Wrong: zoomed fully in, you cannot tell Stern from Neutral on a woman. (At the zoom you
+    normally play at, nothing on a face reads: that was measured, e-15. On the men the brow band
+    hides the eyes from above even close in.)
+  - Wrong: a blink looks like a flicker, or colonists visibly blink in step.
+
 - **First Person: does the shoulder camera show a colonist's day and a fight clearly?**
   (`claude/planning-session-fok6wm`, design 57.) Select a colonist, press **First Person** on her
   card, and let her work, walk up a terrace and go through a door.
