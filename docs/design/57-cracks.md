@@ -214,3 +214,35 @@ simulation removed the thing the instant it went.
 - Material-aware cracks (stone cracks, wood splits, metal dents): one shader property.
 - The destroyed-wall mesh for a wall's last stage, if cracks alone do not sell it.
 - Dust and chips at the crumbling stage; the crash and dust on `Demolished` design 33 §13k still owes.
+
+## 9. The sound of it coming down
+
+Owner, 2026-09-26: *"On the sound of the wood wall (or other wood based items) — on breaking (or
+deconstruct) — play this audio, and for mining when the rock has collapsed … process them as necessary
+and blend it into the environment."* Two recordings, `floraphonic-wood-smash-3` and
+`dragon-studio-boulder-impact`.
+
+- **Heard by watching, not told.** The simulation removes the thing on the tick the work finishes and
+  reports nothing but a fight's `Demolished`. `Odyssey.Hud.DemolitionWatch` tracks every cell with
+  work on it — a mining order, a deconstruct order, a struck building's hit points — and **writes down
+  what stood there the first time it sees it** (building def and stuff, floor def and stuff). When the
+  cell stops being listed it is watched for 45 frames: rock no longer solid is a collapse; the building
+  or floor written down, gone, is a demolition. Cancelled, repaired or left part-done, the cell is as it
+  was and the watch lets go in silence. The same evidence as the break's watch (§7), so the sound and
+  the shudder start together. In the Hud assembly behind `IDemolitionCells`, which the render mirror
+  implements as it stands, so the fast tier tests it (`DemolitionWatchTests`, 6).
+- **What sounds:** rock under a mining order, whatever the rock — `break-rock`; anything built of
+  **wood** (`NaturalContent.StuffWood`), a building or a floor, broken or taken apart — `break-wood`.
+  **Stone, concrete and steel come down silent** until they are given sounds: one line in
+  `DemolitionWatch.SoundFor`. A wooden building destroyed from whole in one blow was never struck, so
+  it is never tracked and is silent; the combat log's `Demolished` event is the seam if that matters.
+- **The processing**, `tools/audio/bake_demolition.sh` (the reasoning is in its header): both masters
+  are brick-walled over full scale, so −12 dB in float first; head cut to the onset; high-passed (60 /
+  35 Hz) and low-passed (9 / 5.5 kHz) — air, and rounding the clipped tops; **blended into the
+  environment** with the gunshot's outdoor space, a synthesised diffuse tail and a 140 ms slapback, at
+  −11 dB; three takes each at 0.94 / 1.00 / 1.06 speed with their own tails; tails cut to the break's
+  1.6 s; **−19 LUFS max momentary**, 5 dB over the pick (−24) that leads up to a collapse and level
+  with the melee thud. Imported unnormalised.
+- **In the mix:** Effects bus, placed at the cell's centre, full inside 20 m and gone past 200 (the
+  pick's 20 / 210), ±12 % volume and ±5 % pitch on top of the takes, a 0.1 s cooldown so a gallery
+  finishing on one tick is one collapse, priority 110 (among the blows, under the gunshot).

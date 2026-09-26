@@ -13926,3 +13926,22 @@ shading of our own for 1.6 s, which the shudder is there to hide.
 the instancing keep-alive material that `EveryKeptShaderAlsoHasAnInstancingKeepAliveMaterial`
 requires of every entry, so that test would have failed. Both crack shaders have one now. No tier
 was run on this round, at the owner's word; the Hud half builds clean with `dotnet build`.
+
+## 2026-09-26 — Cracks: the sound of it coming down
+
+The owner supplied two Pixabay recordings — a wood smash and a boulder impact — for wood broken or
+taken apart and for a mined face collapsing, "processed as necessary and blended into the
+environment". Design 57 §9. Both masters measured brick-walled over full scale (+2.5 and +3.3 dBFS
+in the float decode, the boulder at full-scale RMS for a third of a second), so the bake is the
+gunshot's: −12 dB in float first, band-limited, the synthesised outdoor space and slapback, three
+takes at three speeds with their own tails, levelled on loudness into a limiter. The level was set
+against what leads up to it, measured rather than guessed: the pick is −24 LUFS, the melee thud −18.5,
+so a collapse at −19 is the payoff of the strokes without shouting over a fight.
+
+**When to play it was the design question.** The simulation says nothing when a wall is taken apart
+or a face mined out. The break's watch (§7) only sees cracked cells, and a deconstruct never cracks,
+so the sounds have their own watch over every cell with work on it — mining orders, deconstruct
+orders, struck buildings — which writes down what stood there on first sight and listens for it to
+go. Written down on first sight, because the snapshot's views can run a publish ahead of the mirror:
+the same lesson the break taught an hour earlier. Unity-free behind a five-method interface the render
+mirror already satisfied word for word, so the fast tier tests it.

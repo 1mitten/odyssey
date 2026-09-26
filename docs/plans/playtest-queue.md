@@ -33,6 +33,10 @@ the next session learns to ignore.
     brightness at the split; a piece looks hollow; the pieces hang in the air or never sink.
   - Mine a rock face from start to finish. Wrong: six steps is still too few (or too many to tell
     apart); the rock looks painted rather than cracked; mining it out is not satisfying.
+  - Listen as the face collapses, and as a wood wall is broken or deconstructed (design 57 §9).
+    Wrong: the sound is late or early against the shudder; it sits on top of the world like a
+    sound effect rather than in the meadow (too dry, or too loud against the pick); a cancelled
+    order or a repaired wall makes the sound.
   - Cancel a half-mined face, then order it again. Wrong: the cracks vanish on the cancel, or the
     miner starts from nothing.
   - Press H for walls down on a cracked wall. Wrong: the stump is not cracked, or the full-height
