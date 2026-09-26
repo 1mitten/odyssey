@@ -135,7 +135,7 @@ namespace Odyssey.Tests.Presentation
                 Assume.That(director.Enabled, Is.True, "the animal rows alone make the director able to draw");
 
                 WorldSnapshot frame = Frame(Standing(1, 1, 2, 2), Standing(2, 2, 4, 2), Standing(3, 9, 6, 2),
-                    Standing(4, 4, 8, 2));
+                    Standing(4, Odyssey.Hud.PawnKindLabels.CulvertFrogKind, 8, 2));
                 director.Sync(frame, 0, new SliceSettings(), 0f, 1, 0.016f);
 
                 Assert.That(director.HasFigureFor(1), Is.True, "the hog is drawn as a figure");
