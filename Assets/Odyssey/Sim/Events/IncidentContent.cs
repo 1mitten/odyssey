@@ -57,7 +57,7 @@ namespace Odyssey.Sim.Events
         /// <summary>The <see cref="IncidentWorker.Name"/> of the class that fires this.</summary>
         public string worker = string.Empty;
 
-        // ---- gates, read by the storyteller (design 59 §3a) ---------------------------------
+        // ---- gates, read by the storyteller (design 68 §3a) ---------------------------------
 
         /// <summary>The first colony day this may fire on, counted from 0.</summary>
         public int earliestDay;
@@ -75,7 +75,7 @@ namespace Odyssey.Sim.Events
         public int maxFires;
 
         /// <summary>
-        /// Whether this adds a colonist (design 59 §3c): its weight is then multiplied by the
+        /// Whether this adds a colonist (design 68 §3c): its weight is then multiplied by the
         /// storyteller's population intent, so joiners come when the colony is small. False for every
         /// incident until the joiner (ST7).
         /// </summary>

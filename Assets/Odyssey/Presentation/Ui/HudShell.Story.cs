@@ -7,7 +7,7 @@ using UnityEngine.UIElements;
 namespace Odyssey.Presentation.Ui
 {
     /// <summary>
-    /// The New game page's Story block (design 59 §12, Claude Design's mockups 25a–25c, 25h): the
+    /// The New game page's Story block (design 68 §12, Claude Design's mockups 25a–25c, 25h): the
     /// three storytellers as cards, the difficulty ladder, and the Custom block, in the right-hand
     /// column the skills cap left empty. The page stays one step.
     ///

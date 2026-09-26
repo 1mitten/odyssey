@@ -5,12 +5,12 @@ using System.Collections.Generic;
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// The storytellers and difficulty rungs the interface offers (design 59, Claude Design's
+    /// The storytellers and difficulty rungs the interface offers (design 68, Claude Design's
     /// mockups 25a–25h).
     ///
     /// <para><b>Interface content.</b> The names, blurbs and portraits are the registry's
     /// (<c>ui.storyteller.*</c>, <c>ui.difficulty.*</c>); the emblems and the rhythm strips are
-    /// here because they are drawings, not words. The rung values are design 59 §6's and are
+    /// here because they are drawings, not words. The rung values are design 68 §6's and are
     /// written <b>only here</b>: a press sends the four lever values themselves
     /// (<see cref="StoryDirector.DifficultyIntent"/>), so the simulation stores numbers and never
     /// needs a copy of the ladder. The storytellers' pacing is the simulation's Defs
@@ -117,7 +117,7 @@ namespace Odyssey.Hud
             public string Label => Registry.Label(Key);
         }
 
-        /// <summary>Design 59 §6. Custom's values are only where it starts; the player moves them.</summary>
+        /// <summary>Design 68 §6. Custom's values are only where it starts; the player moves them.</summary>
         public static readonly IReadOnlyList<Rung> Rungs = new[]
         {
             new Rung("ui.difficulty.peaceful", 10, false, 0, 100),
@@ -188,7 +188,7 @@ namespace Odyssey.Hud
     }
 
     /// <summary>
-    /// Everything the player has chosen about the story: who tells it and how hard (design 59 §7).
+    /// Everything the player has chosen about the story: who tells it and how hard (design 68 §7).
     ///
     /// <para><b>A value, so the New game page and the Settings rows share one rule</b> for what a
     /// press does. Picking a rung other than Custom sets all four levers to that rung's values;
@@ -207,7 +207,7 @@ namespace Odyssey.Hud
         public readonly int GraceHundredths;
 
         /// <summary>No storyteller: what a loaded save has until the storyteller is saved (design
-        /// 59 §7, the old-save rule).</summary>
+        /// 68 §7, the old-save rule).</summary>
         public const int None = -1;
 
         public StoryChoice(int teller, int rung, int threat, bool bigThreats, int adaptation, int grace)

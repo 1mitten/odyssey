@@ -10,7 +10,7 @@ using static Odyssey.Tests.Sim.CombatFixture;
 namespace Odyssey.Tests.Sim.Events
 {
     /// <summary>
-    /// Tension and difficulty (design 59 §5, §6): a colonist lost eases the next threats, a raider
+    /// Tension and difficulty (design 68 §5, §6): a colonist lost eases the next threats, a raider
     /// lost does not; a quiet day gives some back; the difficulty's adaptation scales both; a change
     /// of storyteller keeps it; and a save keeps all of it.
     /// </summary>

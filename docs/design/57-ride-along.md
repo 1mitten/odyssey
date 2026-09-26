@@ -180,8 +180,9 @@ something that does not exist is worse than a gap.
   60–160 m up. Measure it in `FrameTimeTests` at 4K on Standard and Huge, riding and not riding. Do
   not guess a far plane: the fog is only 97 % at 900 m, so a nearer plane would cut the land in front
   of the sky.
-- **Owed: the key.** A rebindable First Person key, unbound by default. It was left out so this unit
-  would not move `SettingsLayout.KeyColumns` without a Unity run.
+- ~~**Owed: the key.**~~ **Done by design 61 (2026-09-26):** `HotkeyAction.FirstPerson`, on Z,
+  beside Draft in Settings > Keys, and the same key leaves the ride. The card's button became a
+  toggle in the header, live only with exactly one colonist selected.
 - **Owed: the look.** Is 3.2 m the right first stop? Does the eye stop read with her head gone? And
   the grass-clearance mask's 0.375 m texels at a metre.
 - **Later:** drafted orders from the view; a gaze target for a melee fight; riding with an animal or

@@ -952,7 +952,7 @@ namespace Odyssey.Presentation.Ui
             _clockWeather.pickingMode = PickingMode.Position;
             line.Add(_clockWeather);
 
-            // How hard the storyteller is pressing (design 59 §5a, mockup 25g): a 16 px glyph after
+            // How hard the storyteller is pressing (design 68 §5a, mockup 25g): a 16 px glyph after
             // the weather's, on the same line. The date gave up its season to make the room (the
             // line measured about 297 px against the 247 the panel holds), so the gauge adds no
             // second line to a strip whose height budget a test holds. Not drawn at all without a
@@ -1150,7 +1150,7 @@ namespace Odyssey.Presentation.Ui
             HudText.Set(_clockTime, $"{GameClock.HourOfDay(tick):00}:00", HudTextRole.Clock);
 
             // Day and month only: the season moved to the weather's tooltip and the date's own, to
-            // make room for the tension gauge (design 59 §12).
+            // make room for the tension gauge (design 68 §12).
             HudText.Set(_clockDate, GameClock.DateLine(tick), HudTextRole.Body);
             _clockDate.tooltip = GameClock.FullDate(tick);
 
@@ -1182,7 +1182,7 @@ namespace Odyssey.Presentation.Ui
                 _clockWeather.tooltip = GameClock.WeatherTip(word, tick);
             }
 
-            // The storyteller as the simulation publishes it (design 59 §7): the Settings rows and
+            // The storyteller as the simulation publishes it (design 68 §7): the Settings rows and
             // the gauge read the director, and the director reads this. Sync raises its own
             // events, so a band that moved repaints the gauge through RefreshTensionGauge.
             StoryDirector? story = _directors?.Story;
@@ -1202,7 +1202,7 @@ namespace Odyssey.Presentation.Ui
         /// <summary>
         /// The gauge: shown only with a storyteller and a band, painted in the band's columns, and
         /// its two-line tooltip. The band is the simulation's, or the debug menu's preview while
-        /// one is set (design 59 §12).
+        /// one is set (design 68 §12).
         /// </summary>
         void RefreshTensionGauge()
         {
@@ -1322,7 +1322,7 @@ namespace Odyssey.Presentation.Ui
             if (_bulletins.Arrived > 0)
                 _boot.Audio?.PlayAlert(Audio.BulletinChime.For(_bulletins.ArrivedRaid, _bulletins.ArrivedFavourability));
 
-            // A big threat stops the clock, unless the player said not to (design 59 §2, ruling 9).
+            // A big threat stops the clock, unless the player said not to (design 68 §2, ruling 9).
             // Only a running world is paused: a pause request on a paused world is the resume
             // toggle (SpeedControl), and would start the clock the raid should have stopped. The
             // pause remembers the speed it stopped, so the next Space resumes at it.

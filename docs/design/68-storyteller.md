@@ -1,4 +1,4 @@
-# 59 — The storyteller
+# 68 — The storyteller
 
 **Written 2026-09-26**, from the owner's request and a five-round interview the same day. Branch
 `claude/sweet-cerf-wzfxgs`. **Designed, nothing built.** Interview:
@@ -9,7 +9,7 @@ and `a-11-storyteller-pacing.md` (the numbers). Plan: `docs/plans/storyteller.md
 > this. https://rimworldwiki.com/wiki/AI_Storytellers - we'll invite our own story tellers later and
 > refine it for us, refine, explore and plan."* — the owner, 2026-09-26
 
-Numbered 59 because the ride-along mode (57) and cracks (58) both reached `main` the same day; written as 58 and renumbered on the merge. 51 and 54 are held by
+Numbered 68. Written as 58, renumbered 59 when ride-along (57) and cracks (58) reached `main`, and 68 on the second merge (2026-09-26), when world generation had taken 59 on `main` and open branches held 60–67. 51 and 54 are held by
 open PRs.
 
 ## 1. What a storyteller is

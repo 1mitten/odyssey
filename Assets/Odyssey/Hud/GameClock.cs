@@ -33,7 +33,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// The clock's date, "Day 12 · Larkspur": the day and the month, and <b>not the season</b>
-        /// (design 59 §12, mockup 25g). With the season the longest date measured about 150 px and
+        /// (design 68 §12, mockup 25g). With the season the longest date measured about 150 px and
         /// the line about 297 against the 247 the 271-wide panel holds, so the tension gauge could
         /// not join it without a second line. The season lives in the weather glyph's tooltip and
         /// in the date's own (<see cref="FullDate"/>).

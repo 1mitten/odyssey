@@ -10,7 +10,7 @@ using static Odyssey.Tests.Sim.CombatFixture;
 namespace Odyssey.Tests.Sim.Events
 {
     /// <summary>
-    /// Colony strength (design 59 §4): people and weapons only. Each input raises it; the things
+    /// Colony strength (design 68 §4): people and weapons only. Each input raises it; the things
     /// the owner ruled out — buildings, sandbags, animals, weapons in a stockpile — leave it where it
     /// was; a downed colonist counts nothing; and the storyteller remembers a peak that outlives an
     /// hour of disarming.

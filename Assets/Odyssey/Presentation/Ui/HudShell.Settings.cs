@@ -55,7 +55,7 @@ namespace Odyssey.Presentation.Ui
         readonly Dictionary<SelectionStyle, Label> _selectionRungs = new();
         readonly Dictionary<bool, Label> _wakeRungs = new();
 
-        // The Gameplay tab's Story and Pausing sections (design 59 §12, mockups 25d-25f).
+        // The Gameplay tab's Story and Pausing sections (design 68 §12, mockups 25d-25f).
         readonly Dictionary<int, Label> _storytellerRungs = new();
         SwitchView _pauseSwitch = null!;
         RowView _storytellerRow = null!;

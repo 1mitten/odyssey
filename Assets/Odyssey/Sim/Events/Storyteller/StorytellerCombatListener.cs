@@ -4,7 +4,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Sim.Events
 {
     /// <summary>
-    /// Tells the storyteller when a colonist dies or is downed (design 59 §5), so the tension can
+    /// Tells the storyteller when a colonist dies or is downed (design 68 §5), so the tension can
     /// ease after a disaster. Asks for the storyteller at the moment of the loss rather than holding
     /// it, because the listeners are registered while the world is being composed. Writes only the
     /// storyteller's own numbers: a listener may not touch the pawn list (<see cref="ICombatListener"/>).

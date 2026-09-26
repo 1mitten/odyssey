@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 namespace Odyssey.Presentation.Ui
 {
     /// <summary>
-    /// The tension gauge on the clock's line (design 59 §5a, mockup 25g): four columns on a
+    /// The tension gauge on the clock's line (design 68 §5a, mockup 25g): four columns on a
     /// 16 x 16 box, the band's own number of them standing full and the rest as stubs.
     ///
     /// <para>Painted from <see cref="TensionModel"/>'s columns rather than from its path string:

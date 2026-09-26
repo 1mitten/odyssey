@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The storytellers (design 59 §3): who decides when things happen to the colony. Order is
+  The storytellers (design 68 §3): who decides when things happen to the colony. Order is
   StorytellerContent.Order and StorytellerHandle: Jacob, Trent, Kano. The names and blurbs are the
   registry's (ui.storyteller.*); these are the pacing.
 
   EVERY NUMBER HERE IS INVENTED, then tuned by the harness (StorytellerPacerTests, which prints the
-  table) against the owner's targets (design 59 §2 ruling 13): about 3 big threats a 24-day season
+  table) against the owner's targets (design 68 §2 ruling 13): about 3 big threats a 24-day season
   for the rhythm, about half that for the calm, the same mean as the rhythm for the chaos but
   lumpier, and good or neutral events about every 5-6 days. Units:
     graceDays          days from the colony's start before the first big threat; difficulty

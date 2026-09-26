@@ -162,7 +162,7 @@ namespace Odyssey.Presentation.Ui
         Label _clockTemp = null!;
         HudGlyph? _clockWeather;
 
-        /// <summary>The tension gauge beside the weather (design 59 §12), and its tooltip, which
+        /// <summary>The tension gauge beside the weather (design 68 §12), and its tooltip, which
         /// is rebuilt only when what it says moves.</summary>
         TensionGauge? _clockTension;
         readonly TensionTip _tensionTip = new TensionTip();
@@ -661,6 +661,8 @@ namespace Odyssey.Presentation.Ui
             }
             Detach();
             if (_topRamp != null) DestroyImmediate(_topRamp);
+            // The World map (design 59 §9a): tens of megabytes, and HideAndDontSave outlives the scene.
+            ReleaseWorldMap(immediate: true);
             if (_bottomRamp != null) DestroyImmediate(_bottomRamp);
             if (_panelCopy != null) DestroyImmediate(_panelCopy);
         }

@@ -384,7 +384,7 @@ namespace Odyssey.Hud
         public const string WakeUpKey = "ui.settings.wake";
 
         /// <summary>The registry key naming the pause-on-big-threats switch, and the key it is
-        /// stored under (design 59 §12). A machine preference: it is how this player likes to be
+        /// stored under (design 68 §12). A machine preference: it is how this player likes to be
         /// told, not a fact about a colony, so it is live on the title screen too.</summary>
         public const string PauseOnBigThreatsKey = "ui.settings.pausebigthreats";
 
@@ -1101,7 +1101,7 @@ namespace Odyssey.Hud
         public static readonly bool[] WakeUpRungs = { true, false };
 
         /// <summary>
-        /// Whether the clock stops when a raid or other big threat arrives (design 59 §2, ruling
+        /// Whether the clock stops when a raid or other big threat arrives (design 68 §2, ruling
         /// 9). On unless the player turned it off: a player running at speed 3 who first hears a
         /// raid as a horn has lost the seconds the horn was for.
         /// </summary>

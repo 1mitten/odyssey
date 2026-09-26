@@ -9,10 +9,10 @@ using Odyssey.Sim.Events;
 namespace Odyssey.Tests.Sim.Events
 {
     /// <summary>
-    /// The tuning harness (design 59 §9): the pure pacer run for a year on many seeds per
+    /// The tuning harness (design 68 §9): the pure pacer run for a year on many seeds per
     /// storyteller, against an oracle that answers the way today's content does — a big threat and
     /// a good event can always fire, a small threat and an arrival never can. It asserts the owner's
-    /// targets (design 59 §2 ruling 13) and prints the table the numbers are tuned from.
+    /// targets (design 68 §2 ruling 13) and prints the table the numbers are tuned from.
     /// </summary>
     public class StorytellerPacerTests
     {

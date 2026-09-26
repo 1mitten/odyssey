@@ -16,7 +16,7 @@ namespace Odyssey.Sim.Events
     /// </summary>
     public sealed class RaidParams
     {
-        // ---- the size, when the caller leaves it to the incident (design 59 §4b) --------------
+        // ---- the size, when the caller leaves it to the incident (design 68 §4b) --------------
 
         /// <summary>
         /// Raiders per raider's worth of colony strength, per mille: how many of a mix's average
@@ -77,7 +77,7 @@ namespace Odyssey.Sim.Events
     {
         /// <summary>
         /// <c>clamp(strength x ramp x scale x raidersPerStrength / raiderPower, minSize, maxAutoSize)</c>,
-        /// rounded (design 59 §4b). The owner's rule of 2026-09-26: the colony's fighting strength,
+        /// rounded (design 68 §4b). The owner's rule of 2026-09-26: the colony's fighting strength,
         /// not its wealth and not its headcount, is what a raid is sized against. Until then this was
         /// headcount and days; design 55 §9 said a value measure would replace it and nothing else,
         /// and strength did.
@@ -263,7 +263,7 @@ namespace Odyssey.Sim.Events
 
         /// <summary>
         /// How many a raid of this incident would bring: the caller's size, or its own at 0 — the
-        /// colony's strength against the mix's average raider (design 59 §4b). With a storyteller
+        /// colony's strength against the mix's average raider (design 68 §4b). With a storyteller
         /// chosen the strength is the one it remembers and the scale its own (difficulty, tension,
         /// a bag's draw); without one it is the strength now at 1000. <b>A debug Auto raid and a
         /// storyteller's raid are one sum</b>, which is why both come through here.

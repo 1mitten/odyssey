@@ -49,7 +49,7 @@ namespace Odyssey.Hud
         public const string WeatherTabKey = "ui.debug.tab.weather";
         public const string SpawnPawnKey = "ui.debug.spawnpawn";
 
-        /// <summary>The tension gauge's preview on the Events tab (design 59 §12): a band and a
+        /// <summary>The tension gauge's preview on the Events tab (design 68 §12): a band and a
         /// cause to look at until the storyteller drives the gauge.</summary>
         public const string TensionKey = "ui.debug.tension";
         public const string TensionCauseKey = "ui.debug.tensioncause";

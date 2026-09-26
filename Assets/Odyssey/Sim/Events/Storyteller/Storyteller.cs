@@ -6,7 +6,7 @@ using Odyssey.Sim.Saving;
 
 namespace Odyssey.Sim.Events
 {
-    /// <summary>The storyteller's own random streams (design 59 §8), apart from every other system's.</summary>
+    /// <summary>The storyteller's own random streams (design 68 §8), apart from every other system's.</summary>
     public static class StorytellerPurpose
     {
         /// <summary>The hourly check: every generator's draws and every pick. SHA-256's 29th round constant.</summary>
@@ -20,7 +20,7 @@ namespace Odyssey.Sim.Events
     }
 
     /// <summary>
-    /// The storyteller (design 59): the colony's pacer, its choice of storyteller and difficulty,
+    /// The storyteller (design 68): the colony's pacer, its choice of storyteller and difficulty,
     /// its tension and the strength it remembers. One system, checked once a game hour.
     ///
     /// <para><b>Nothing while none is chosen.</b> A world with no storyteller — every golden, every
@@ -60,7 +60,7 @@ namespace Odyssey.Sim.Events
         TensionCauseKind _cause = TensionCauseKind.None;
         int _causeTick;
 
-        /// <summary>The strength the raid budget reads: the highest recent, decaying (design 59 §4c).</summary>
+        /// <summary>The strength the raid budget reads: the highest recent, decaying (design 68 §4c).</summary>
         int _strengthPeak;
 
         /// <summary>A bag's draw for the fire in hand, read by the raid it sizes; 1000 otherwise.</summary>
@@ -117,7 +117,7 @@ namespace Odyssey.Sim.Events
         // ------------------------------------------------------------------ firing
 
         /// <summary>
-        /// The pacer's question, answered from the incidents (design 59 §3a): every incident of the
+        /// The pacer's question, answered from the incidents (design 68 §3a): every incident of the
         /// category that is fireable, passes its gates and can fire now, picked by weight; then fired
         /// through the one door. Nothing fireable loses the roll.
         /// </summary>
@@ -182,7 +182,7 @@ namespace Odyssey.Sim.Events
             return true;
         }
 
-        /// <summary>Population intent (design 59 §3c): the storyteller's curve at this headcount.</summary>
+        /// <summary>Population intent (design 68 §3c): the storyteller's curve at this headcount.</summary>
         public int PopulationIntent(int colonists)
         {
             if (_storyteller < 0) return 1000;
@@ -192,7 +192,7 @@ namespace Odyssey.Sim.Events
         }
 
         /// <summary>
-        /// What a raid fired now is scaled by, per mille (design 59 §4b): the difficulty's threat
+        /// What a raid fired now is scaled by, per mille (design 68 §4b): the difficulty's threat
         /// scale, the tension, and a bag's draw. 1000 with no storyteller, so a debug raid on a world
         /// without one is sized by strength alone.
         /// </summary>
@@ -242,7 +242,7 @@ namespace Odyssey.Sim.Events
             _graceHundredths = grace;
 
             // A new stretch moves the first big threat only while it is still to come; once the
-            // grace has passed it is not given again (design 59 §7).
+            // grace has passed it is not given again (design 68 §7).
             int tick = _ctx.World?.CurrentTick ?? _ctx.CurrentTick;
             if (graceMoved && _storyteller >= 0 && tick < _graceEnd) ReArm(tick);
             return IntentRejection.None;
@@ -261,7 +261,7 @@ namespace Odyssey.Sim.Events
         /// <summary>
         /// How fast the remembered strength lets go, per mille an hour: about a tenth a day, so
         /// stowing the guns before a raid buys nothing for days and a real loss still shows within
-        /// a week (design 59 §4c). INVENTED.
+        /// a week (design 68 §4c). INVENTED.
         /// </summary>
         public const int PeakDecayPerMillePerHour = 4;
 
@@ -277,14 +277,14 @@ namespace Odyssey.Sim.Events
         // ------------------------------------------------------------------ tension (ST3)
 
         /// <summary>What a colonist's death and a colonist downed take off the tension, at Normal
-        /// and in a colony of five or fewer (design 59 §5). INVENTED.</summary>
+        /// and in a colony of five or fewer (design 68 §5). INVENTED.</summary>
         public const int DeathDrop = 250, DownDrop = 60;
 
         /// <summary>What a quiet day gives back, below and at or above the starting 1000.</summary>
         public const int QuietBelow = 25, QuietAbove = 10;
 
         /// <summary>
-        /// A colonist died or was downed (design 59 §5): the tension drops, by less in a bigger colony
+        /// A colonist died or was downed (design 68 §5): the tension drops, by less in a bigger colony
         /// and by the difficulty's adaptation strength, and the cause is written down for the gauge's
         /// tooltip. <b>Colonists only</b> — a raider going down eases nothing. Called by
         /// <see cref="StorytellerCombatListener"/> inside the fight's tick; it writes this system's
@@ -326,7 +326,7 @@ namespace Odyssey.Sim.Events
             }
         }
 
-        /// <summary>The tension's band (design 59 §5a).</summary>
+        /// <summary>The tension's band (design 68 §5a).</summary>
         public static int BandOf(int tension) =>
             tension < 600 ? 0 : tension < 850 ? 1 : tension < 1100 ? 2 : tension < 1300 ? 3 : 4;
 
@@ -379,7 +379,7 @@ namespace Odyssey.Sim.Events
             _pacer.Save(writer);
         }
 
-        /// <summary>A save from before the storyteller has no section and loads with none (design 59 §7).</summary>
+        /// <summary>A save from before the storyteller has no section and loads with none (design 68 §7).</summary>
         public void Load(SaveReader reader)
         {
             int version = reader.ReadInt();

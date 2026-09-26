@@ -210,7 +210,7 @@ namespace Odyssey.Sim.Pawns
         public Events.Incidents? Incidents { get; set; }
 
         /// <summary>
-        /// The storyteller (design 59), when the world has one. Null in a bare pawn fixture; with no
+        /// The storyteller (design 68), when the world has one. Null in a bare pawn fixture; with no
         /// storyteller chosen it is present and idle. A raid reads its scale from here.
         /// </summary>
         public Events.Storyteller? Storyteller { get; set; }

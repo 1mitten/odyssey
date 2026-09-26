@@ -4,7 +4,7 @@ using Odyssey.Sim.Defs;
 namespace Odyssey.Sim.Events
 {
     /// <summary>
-    /// The storytellers, read from a loaded <see cref="DefDatabase"/> (design 59 §3).
+    /// The storytellers, read from a loaded <see cref="DefDatabase"/> (design 68 §3).
     ///
     /// <para><b><see cref="Order"/> is the contract</b>, as <c>IncidentContent.Order</c> is: position
     /// in it is the index the intent carries and the save keeps, and <c>StorytellerHandle</c> in the

@@ -2,7 +2,7 @@
 
 **2026-09-26.** The prompt below goes to Claude Design verbatim, with the attachments listed at the
 end. The decisions behind it are in `docs/research/storyteller-interview.md` (owner, 2026-09-26,
-every recommendation taken) and `docs/design/59-storyteller.md`. What comes back is built as ST5
+every recommendation taken) and `docs/design/68-storyteller.md`. What comes back is built as ST5
 (the setup page and Settings) and ST6 (the gauge) in `docs/plans/storyteller.md`, and its
 measurements become constants in code.
 
@@ -271,7 +271,7 @@ jump on a big threat behind a setting, default on; presets plus Custom.
 
 **Claude Design answered on 2026-09-26 with a written specification** (mockups 25a–25h). The
 owner pasted it into the session with the storytellers' names: Jacob, Trent and Kano. It was
-built the same day on `claude/sweet-cerf-wzfxgs`. Design 59 §12 carries every constant and the
+built the same day on `claude/sweet-cerf-wzfxgs`. Design 68 §12 carries every constant and the
 departures: the name-pool swaps, the page's own width deciding compact, and the compact page
 dropping the Custom note.
 

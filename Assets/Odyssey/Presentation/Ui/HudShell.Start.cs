@@ -34,7 +34,7 @@ namespace Odyssey.Presentation.Ui
         /// (U40) — rolling a candidate needs <c>Odyssey.Sim</c>, which <c>Odyssey.Hud</c> cannot
         /// reference.
         /// </summary>
-        readonly MenuDirector _menu = new MenuDirector(new SeedField(), new ColonistSelect(RollCandidate));
+        readonly MenuDirector _menu = MakeMenu();
 
         /// <summary>
         /// The start screen's own director, which the shell owns rather than the session does —
@@ -50,7 +50,6 @@ namespace Odyssey.Presentation.Ui
         // The setup page: the board across the top, the people below it. Full-viewport, not a
         // panel — `docs/design/19-world-setup.md` §1 says why.
         VisualElement _setupPage = null!;
-        TextField _seedBox = null!;
         TextField _colonyBox = null!;
         Label _sizeLabel = null!;
         VisualElement _startCommit = null!;
@@ -219,6 +218,12 @@ namespace Odyssey.Presentation.Ui
             _setupPage.RegisterCallback<GeometryChangedEvent>(OnSetupGeometry);
             _hud.Add(_setupPage);
             RefreshStory();
+
+            // The planet, between New game and the setup page (design 59 §9).
+            _worldPage = BuildWorldPage();
+            _hud.Add(_worldPage);
+            _menu.World!.PlanetChanged += OnPlanetChanged;
+            _menu.World.Changed += RefreshWorldSelection;
 
             _menu.Changed += RefreshSetupPage;
             _menu.ShowingChanged += RefreshStartScreen;
@@ -480,12 +485,13 @@ namespace Odyssey.Presentation.Ui
 
             board.Add(Captioned(SeedField.ColonyKey, _colonyBox = Field("colony", 32,
                 text => _menu.TypeColonyName(text))));
-            board.Add(Captioned(SeedField.SeedKey, _seedBox = Field("seed", SeedEntry.MaxDigits,
-                text => _menu.Seed.Type(text))));
 
-            var reroll = SeedRow(SeedField.RerollKey, () => _menu.Seed.Reroll());
-            reroll.AddToClassList("setup__inline");
-            board.Add(reroll);
+            // The site this page was reached from, read-only (design 59 §9): the seed and its reroll
+            // moved to the World screen, where they make the planet, and Back returns there.
+            _setupSiteLine = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "setup__sizevalue");
+            VisualElement site = Captioned("ui.world.site", _setupSiteLine);
+            site.style.width = 340; // "Meadow, Mountainous, 53 N, 24 layers" is wider than a name box
+            board.Add(site);
 
             // One control that cycles rather than a row each: there are few sizes and a player
             // picking one is cycling, not navigating.
@@ -760,7 +766,7 @@ namespace Odyssey.Presentation.Ui
 
             screen.Add(_colonistDetail);
 
-            // The Story block, in the column the skills cap left empty (design 59 §12, 25a).
+            // The Story block, in the column the skills cap left empty (design 68 §12, 25a).
             screen.Add(BuildStoryBlock());
             return screen;
         }
@@ -912,11 +918,13 @@ namespace Odyssey.Presentation.Ui
 
             HudText.Set(_sizeLabel, MapSizes.At(_menu.Size).Label, HudTextRole.Row);
             RefreshStory();
+            RefreshSetupSiteLine();
         }
 
         void RefreshSeed()
         {
-            if (_seedBox.value != _menu.Seed.Text) _seedBox.SetValueWithoutNotify(_menu.Seed.Text);
+            if (_worldSeedBox.value != _menu.Seed.Text) _worldSeedBox.SetValueWithoutNotify(_menu.Seed.Text);
+            RefreshWorldNext();
 
             // Drawn faint and inert rather than hidden: a Start that disappears while you are
             // mid-edit reads as a broken screen. MenuDirector.Start refuses as well — this is the
@@ -1054,6 +1062,8 @@ namespace Odyssey.Presentation.Ui
             // which read as the game being open behind a dialog it was not open behind.
             bool playing = live != null;
             _worldUi.style.display = playing ? DisplayStyle.Flex : DisplayStyle.None;
+            // The planet, its texture and its buffer belong to the menu and go with it (design 59 §4e).
+            if (playing) ReleaseWorldMap();
             // A ride belongs to the colony it was begun in (design 57 §5).
             ResetRideUi();
             _backdrop.style.display = playing ? DisplayStyle.None : DisplayStyle.Flex;
@@ -1090,6 +1100,17 @@ namespace Odyssey.Presentation.Ui
         {
             // The setup page is not a screen of the panel; it stands in its place, full viewport,
             // and the panel goes away entirely while it is up.
+            // The World screen stands in the panel's place the same way (design 59 §9).
+            bool world = _menu.Showing && _menu.Screen == MenuScreen.World;
+            _worldPage.style.display = world ? DisplayStyle.Flex : DisplayStyle.None;
+            if (world)
+            {
+                _setupPage.style.display = DisplayStyle.None;
+                _startScreen.ShowScrimOnly();
+                RefreshWorldPage();
+                return;
+            }
+
             bool setup = _menu.Showing && _menu.Screen == MenuScreen.NewGame;
             _setupPage.style.display = setup ? DisplayStyle.Flex : DisplayStyle.None;
             if (setup)
@@ -1259,7 +1280,7 @@ namespace Odyssey.Presentation.Ui
             _menu.ShowSaves(rows);
         }
 
-        /// <summary>Where the storyteller's presses go (design 59 §7): the open world's queue.</summary>
+        /// <summary>Where the storyteller's presses go (design 68 §7): the open world's queue.</summary>
         void SubmitStoryIntent(Intent intent) => _boot?.World?.Intents.Submit(intent);
 
         /// <summary>
@@ -1282,8 +1303,10 @@ namespace Odyssey.Presentation.Ui
             BeginWake(() =>
             {
                 MapSizes.Choice size = MapSizes.At(choice.Size);
+                // With a site the seed is the world's, and the bootstrap derives the board's from it
+                // and the tile, and deepens a mountainous board (design 59 §5, §8).
                 _boot!.BuildSession(choice.Seed, null, choice.Colonists, choice.Name,
-                    new GridSize(size.X, size.Z, size.Y));
+                    new GridSize(size.X, size.Z, size.Y), choice.Site, choice.Seed);
 
                 // After the build, because a name belongs to a colonist and there were none until
                 // the line above. The seeds go with the names so the bootstrap can check it is
@@ -1291,7 +1314,7 @@ namespace Odyssey.Presentation.Ui
                 _boot.NameColonists(choice.Names, choice.Colonists);
 
                 // The storyteller and difficulty chosen on the page, submitted as the colony's
-                // first two intents (design 59 §7). They drain on the first tick, which is also
+                // first two intents (design 68 §7). They drain on the first tick, which is also
                 // the tick the storyteller records as the colony's start.
                 _boot.Directors?.Story.Begin(choice.Story);
             });

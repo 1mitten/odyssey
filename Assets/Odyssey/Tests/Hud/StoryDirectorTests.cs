@@ -7,7 +7,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// The storyteller's interface as a read of the simulation (design 59 §7, §12): a press sends
+    /// The storyteller's interface as a read of the simulation (design 68 §7, §12): a press sends
     /// the intent the simulation's handler reads, the view decides what is shown, a refused press
     /// goes back, and the gauge follows the view unless the debug menu is previewing a band.
     /// </summary>

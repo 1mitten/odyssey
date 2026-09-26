@@ -1801,7 +1801,7 @@ namespace Odyssey.Sim.Contracts
         /// <summary>The sky this frame (design 43 §5), or <see cref="WeatherView.None"/> with no weather system.</summary>
         public WeatherView Weather { get; private set; } = WeatherView.None;
 
-        /// <summary>The storyteller and its tension (design 59 §7), or <see cref="StorytellerView.None"/>.</summary>
+        /// <summary>The storyteller and its tension (design 68 §7), or <see cref="StorytellerView.None"/>.</summary>
         public StorytellerView Storyteller { get; private set; } = StorytellerView.None;
 
         /// <summary>

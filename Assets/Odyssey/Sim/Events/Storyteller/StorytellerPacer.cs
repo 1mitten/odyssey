@@ -6,7 +6,7 @@ using Odyssey.Sim.Saving;
 namespace Odyssey.Sim.Events
 {
     /// <summary>
-    /// What the pacer asks of the world when a generator comes due (design 59 §3a): fire one incident
+    /// What the pacer asks of the world when a generator comes due (design 68 §3a): fire one incident
     /// of this category, if anything in it can fire. The live storyteller answers from the incident
     /// gates and the ledger; the tuning harness answers from a table. <b>A category with nothing
     /// fireable loses its roll</b> — it is never passed on — so adding an incident to one category
@@ -23,7 +23,7 @@ namespace Odyssey.Sim.Events
     }
 
     /// <summary>
-    /// The storyteller's clock (design 59 §3): when each generator is next due, and each cycle's
+    /// The storyteller's clock (design 68 §3): when each generator is next due, and each cycle's
     /// planned fires. <b>Pure</b>: it touches no world, so the live system and the fast-tier
     /// harness drive the same code, and the thing tuned is the thing shipped.
     ///

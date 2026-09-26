@@ -49,6 +49,11 @@ namespace Odyssey.Presentation.Bootstrap
         /// §24), framed on the water nearest the colony at 32, 70 and 140 m.</summary>
         public const string ShoreArgument = "-odyssey-bench-shore";
 
+        /// <summary>With <see cref="Argument"/>: the clouds (design 63 §8) — the colony camera, where
+        /// they must submit nothing, and an eye on the board looking at the horizon through the ride
+        /// camera's lens, on, off and on again, with a picture of the eye's view beside the log.</summary>
+        public const string CloudsArgument = "-odyssey-bench-clouds";
+
         /// <summary>
         /// With <see cref="Argument"/>: the first-use hitch tour of design 38 §25 instead of any
         /// timing arms. The world runs; the tour does, a few seconds apart, the first of each thing
@@ -193,6 +198,13 @@ namespace Odyssey.Presentation.Bootstrap
             _table.AppendLine("|---|---|---|---|---|" + PassRule());
 
             ChunkRenderer renderer = _boot.Renderer!;
+            if (Has(CloudsArgument))
+            {
+                yield return CloudArms();
+                Log("[Bench] table:\n" + _table);
+                Quit("[Bench] done");
+                yield break;
+            }
             if (Has(ShoreArgument))
             {
                 yield return ShoreArms();
@@ -391,6 +403,47 @@ namespace Odyssey.Presentation.Bootstrap
                     () => { WaterShore.Enabled = false; _boot.Model!.Remesh(); },
                     () => { WaterShore.Enabled = true; _boot.Model!.Remesh(); });
             }
+        }
+
+        /// <summary>
+        /// The clouds (design 63 §8). The rig is stopped for the eye so it cannot put the camera
+        /// back, and handed back after; the eye is two metres over the board's top at its middle.
+        /// </summary>
+        IEnumerator CloudArms()
+        {
+            Odyssey.Presentation.World.CloudDirector? clouds = _boot.Clouds;
+            Log($"[Bench] clouds: {(clouds != null && clouds.Available ? "the art resolved" : "NO CLOUD ART in this player")}");
+            if (clouds == null || !clouds.Available || _boot.cameraRig == null) yield break;
+
+            yield return Arm("clouds on, colony camera", null, null);
+            Log($"[Bench] clouds, colony camera: {clouds.LastDrawCalls} calls, seen {clouds.LastVisible}");
+            yield return Arm("clouds off, colony camera", () => clouds.Enabled = false, () => clouds.Enabled = true);
+
+            Camera camera = _boot.cameraRig.Camera;
+            float fieldOfView = camera.fieldOfView;
+            _boot.cameraRig.enabled = false;
+            camera.fieldOfView = Odyssey.Hud.RideCamera.FieldOfView;
+            camera.transform.SetPositionAndRotation(
+                new Vector3(_boot.sizeX * CellMetrics.SizeXZ * 0.5f, _boot.layers * CellMetrics.SizeY + 2f,
+                    _boot.sizeZ * CellMetrics.SizeXZ * 0.5f),
+                Quaternion.Euler(4f, 30f, 0f));
+
+            yield return Arm("clouds on, eye at the horizon", null, null);
+            Log($"[Bench] clouds, eye: {clouds.LastDrawCalls} calls, seen {clouds.LastVisible}");
+            // Beside the -logFile, absolute, for CaptureMidWake's reason.
+            string? logDir = string.IsNullOrEmpty(Application.consoleLogPath)
+                ? null : System.IO.Path.GetDirectoryName(Application.consoleLogPath);
+            string path = System.IO.Path.Combine(
+                string.IsNullOrEmpty(logDir) ? Application.persistentDataPath : logDir!, "clouds-eye.png");
+            ScreenCapture.CaptureScreenshot(path);
+            yield return null;
+            yield return null;
+            Log($"[Bench] clouds: captured {path}");
+            yield return Arm("clouds off, eye at the horizon", () => clouds.Enabled = false, () => clouds.Enabled = true);
+            yield return Arm("clouds on, eye at the horizon (drift control)", null, null);
+
+            camera.fieldOfView = fieldOfView;
+            _boot.cameraRig.enabled = true;
         }
 
         // ------------------------------------------------------------------ the hitch tour

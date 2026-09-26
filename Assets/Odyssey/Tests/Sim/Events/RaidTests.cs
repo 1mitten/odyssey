@@ -271,7 +271,7 @@ namespace Odyssey.Tests.Sim.Events
         // ---- the size, the mix, the ceiling ---------------------------------------------------
 
         /// <summary>
-        /// The size is strength against the raider (design 59 §4b): as many of the mix's average
+        /// The size is strength against the raider (design 68 §4b): as many of the mix's average
         /// raider as the colony's fighting power buys, times the day ramp, clamped.
         /// </summary>
         [TestCase(3, 0, 1000, 2)]

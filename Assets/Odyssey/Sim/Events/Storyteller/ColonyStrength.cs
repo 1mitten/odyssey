@@ -5,7 +5,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Sim.Events
 {
     /// <summary>
-    /// What the colony can fight with (design 59 §4): the threat budget reads this, never wealth.
+    /// What the colony can fight with (design 68 §4): the threat budget reads this, never wealth.
     ///
     /// <para><b>People and weapons only</b> (owner, 2026-09-26). Each standing colonist's power is
     /// <c>health x weapon x skill</c>; buildings, sandbags, walls, turrets, animals, prisoners and
@@ -18,7 +18,7 @@ namespace Odyssey.Sim.Events
     /// </summary>
     public static class ColonyStrength
     {
-        /// <summary>The skill factor: x0.6 at level 0 to x1.4 at level 20 (INVENTED, design 59 §4a).</summary>
+        /// <summary>The skill factor: x0.6 at level 0 to x1.4 at level 20 (INVENTED, design 68 §4a).</summary>
         public static int SkillFactorPerMille(int level) => 600 + 40 * Math.Max(0, Math.Min(20, level));
 
         /// <summary>

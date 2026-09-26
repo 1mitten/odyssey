@@ -1,15 +1,15 @@
 # The storyteller — the plan
 
-The design is `docs/design/59-storyteller.md`, and the interview is
+The design is `docs/design/68-storyteller.md`, and the interview is
 `docs/research/storyteller-interview.md` (2026-09-26). ST0 is documents only, on
 `claude/sweet-cerf-wzfxgs`. **Approved 2026-09-26** (owner: *"start"*), and ST1–ST4 were built
 together on that same branch at the owner's choice, one commit per unit, rather than on
-`claude/storyteller-*` branches of their own. **ST1–ST4 are built** (design 59 §13), and so is the
+`claude/storyteller-*` branches of their own. **ST1–ST4 are built** (design 68 §13), and so is the
 interface's read of them (the intents half of ST5 and the view half of ST6).
 
 | Unit | What | Save / hash | Gate |
 |---|---|---|---|
-| **ST0** | The interview, `a-11-storyteller-pacing.md`, design 59, this plan, and notes in designs 23 §8, 55 §9/§14 and 03 §11 | — | docs only |
+| **ST0** | The interview, `a-11-storyteller-pacing.md`, design 68, this plan, and notes in designs 23 §8, 55 §9/§14 and 03 §11 | — | docs only |
 | **ST1** | The kit and the system (below) | new `odyssey.storyteller`, hashed only while set | fast tier; goldens untouched; the tuning harness |
 | **ST2** | Colony strength and the remembered peak; `RaidBudget.AutoSize` from strength | derived, except the peak, which goes in ST1's section | fast tier; Long tier re-baselined |
 | **ST3** | Tension | ST1's section | fast tier |
@@ -18,7 +18,7 @@ interface's read of them (the intents half of ST5 and the view half of ST6).
 | **ST6** | The tension gauge, pause and jump, the old-save toast, a debug readout | none | Hud tier; `HudLayoutTests`; Unity owed |
 | **ST7** | *Someone joins*: an Arrival incident; population intent goes live | per design 23's recipe | fast tier; content checks |
 
-**2026-09-26: the interface halves of ST5 and ST6 are built** ahead of the simulation (design 59
+**2026-09-26: the interface halves of ST5 and ST6 are built** ahead of the simulation (design 68
 §12), from Claude Design's mockups 25a–25h:
 - the New game Story block;
 - the Settings Story and Pausing sections;
@@ -28,7 +28,7 @@ interface's read of them (the intents half of ST5 and the view half of ST6).
 The choice lives in `StoryDirector` on the interface side and the gauge's band is a debug preview.
 What ST5 and ST6 still owed then, and where it stands:
 - **ST5**: the intents, and the saved choice replacing `StoryDirector`'s own. **Done with ST1**
-  (design 59 §13f).
+  (design 68 §13f).
 - **ST6**: `StorytellerView` driving the gauge in place of the preview (**done**, §13f; the preview
   now overrides it while set), the old-save toast (**done**, `ui.toast.nostoryteller`), and
   `BulletinView.Category` so the pause is on every big threat rather than only raids (**owed**;
@@ -52,7 +52,7 @@ What ST5 and ST6 still owed then, and where it stands:
   - `IntentKind.SetStoryteller`, appended last.
   - `ColonyRequest.Storyteller`, default −1.
 - **Content:**
-  - `Defs/Core/Events/Storytellers.xml` with the three Defs (design 59 §3b).
+  - `Defs/Core/Events/Storytellers.xml` with the three Defs (design 68 §3b).
   - `Incident_Raid.minRefireDays` 4 → 2.
   - A `populationGain` flag on `IncidentDef`, false everywhere.
 - **Wiring:**
@@ -69,13 +69,13 @@ What ST5 and ST6 still owed then, and where it stands:
     ThreatSmall is added.
   - Population intent multiplies a stub `populationGain` incident's weight and nothing else.
   - **The goldens do not move** (the default is −1).
-  - The tuning harness (design 59 §9) prints its table.
+  - The tuning harness (design 68 §9) prints its table.
 - **Risk.** Firing from the world phase rather than the intent phase: the raid schedules its
   arrivals from `Tick + 1`. One test fires the same raid from both and compares.
 
 ## ST2 — strength
 
-- **`ColonyStrength.Of(PawnContext)`** and `RaiderStrength.Of(kind, mix)`, as design 59 §4a. The
+- **`ColonyStrength.Of(PawnContext)`** and `RaiderStrength.Of(kind, mix)`, as design 68 §4a. The
   inputs are `Vitals.Of`, `IWeaponRules.ArmamentOf`, `WeaponQuality.DamagePerMille` and
   `AccuracyPerMille`, and `Pawn.SkillLevel` (Melee 5, Shooting 8).
 - **The remembered peak** is updated in the hourly check.
@@ -102,7 +102,7 @@ What ST5 and ST6 still owed then, and where it stands:
 
 ## ST4 — difficulty
 
-- **`DifficultyDef`**, six rungs (design 59 §6), plus Custom as a sentinel with four saved values.
+- **`DifficultyDef`**, six rungs (design 68 §6), plus Custom as a sentinel with four saved values.
 - **`DifficultyHandle`**, and the intents `SetDifficulty` and `SetDifficultyValue`.
 - **Tests:**
   - "Big threats off" gives none in 72 days.
@@ -166,7 +166,7 @@ What ST5 and ST6 still owed then, and where it stands:
 - **`StorytellerSoakTests`** (Long tier, with ST1–ST3): 72 days per storyteller at Normal. It
   prints the per-season table beside the harness's.
   **Built** as one real season after grace per storyteller rather than 72 days, so the Long tier
-  stays about four minutes; the table is in design 59 §13e.
+  stays about four minutes; the table is in design 68 §13e.
 - **Register the system in `TickBenchmarkTests`' busy arm.** It should cost nothing between hourly
   checks, and the number says so. **Owed.**
 

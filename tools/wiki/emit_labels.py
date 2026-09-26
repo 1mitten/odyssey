@@ -35,8 +35,15 @@ NAMES_OUT = os.path.join("Assets", "Odyssey", "Hud", "ColonistNames.g.cs")
 # generated file does not carry seven hundred tooltip seeds nothing draws: a research project's
 # description is the body of the Research tab's detail pane (docs/design/34-research-tab.md), and
 # writing it in C# would be the second copy the registry exists to prevent. A storyteller's blurb is
-# the body of its card on the New game page (docs/design/59-storyteller.md) for the same reason.
-DESCRIBED = ("ui.research.project", "ui.storyteller")
+# the body of its card on the New game page (docs/design/68-storyteller.md) for the same reason.
+# The rest are the namespaces the Almanac has entries in: an entry's one line in the index is its
+# key's description (AlmanacCatalogue.Keyed), so the wiki and the Almanac say the same sentence and
+# correcting one corrects both.
+DESCRIBED = (
+    "ui.research.project", "ui.storyteller", "ui.world",
+    "ui.terrain", "ui.res", "ui.item", "ui.arch.tool", "ui.overlay", "ui.pawn", "ui.skill",
+    "ui.work", "ui.need", "ui.combat", "ui.health", "ui.weather", "ui.alert", "ui.bulletin",
+)
 
 
 def load_labels():

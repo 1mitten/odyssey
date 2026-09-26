@@ -6,7 +6,7 @@ using Odyssey.Hud;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// The storyteller's interface (design 59 §12, Claude Design's mockups 25a–25h): the catalogue,
+    /// The storyteller's interface (design 68 §12, Claude Design's mockups 25a–25h): the catalogue,
     /// the choice and its one rule for what a press does, the tension gauge, the pause switch, the
     /// clock's date and the Gameplay tab's fit. What the Presentation tier draws from these is the
     /// PlayMode tier's; everything a model can answer is here.

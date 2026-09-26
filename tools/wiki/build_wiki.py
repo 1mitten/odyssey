@@ -74,11 +74,13 @@ SECTIONS = [
      "Who decides when things happen to the colony, how hard the threats hit, and the tension gauge "
      "that shows how hard the storyteller is pressing. A storyteller's description is the blurb on "
      "its New game card: the screen reads this column. Nothing reads the choice until the "
-     "storyteller itself is built (design 59)."),
+     "storyteller itself is built (design 68)."),
     ("world", "World and interface", ["ui.terrain", "ui.weather", "ui.overlay", "ui.layer",
-                                      "ui.tab", "ui.speed", "ui.settings", "ui.inventory.hud"],
+                                      "ui.tab", "ui.speed", "ui.settings", "ui.inventory.hud",
+                                      "ui.biome", "ui.hills", "ui.world"],
      "Weather, the data overlays, the layer controls and the rest of the interface furniture. The "
-     "six layer visibility modes are decided: see ADR 0006."),
+     "six layer visibility modes are decided: see ADR 0006. The planet's biomes and terrain are "
+     "proposals for veto (design 59): only Meadow can be settled until more art arrives."),
 ]
 NS_TITLES = {
     "ui.terrain": "Terrain",
@@ -99,6 +101,7 @@ NS_TITLES = {
     "ui.research.status": "Project states", "ui.research.hud": "The Research tab's words",
     "ui.inventory.hud": "The Inventory tab's words",
     "ui.storyteller": "Storytellers", "ui.difficulty": "Difficulty", "ui.tension": "Tension",
+    "ui.biome": "Biomes", "ui.hills": "Terrain on the planet", "ui.world": "The World screen's words",
 }
 SHEET_NAMES = {
     "01": "raw materials", "02": "food", "03": "camp and crafting", "04": "manufactured",

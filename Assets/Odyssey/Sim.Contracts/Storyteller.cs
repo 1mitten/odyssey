@@ -2,7 +2,7 @@
 namespace Odyssey.Sim.Contracts
 {
     /// <summary>
-    /// Storyteller indices (design 59), as <see cref="Intent"/> and <see cref="StorytellerView"/>
+    /// Storyteller indices (design 68), as <see cref="Intent"/> and <see cref="StorytellerView"/>
     /// carry them. The order is <c>StorytellerContent.Order</c> in the simulation and
     /// <c>StoryCatalogue.Tellers</c> in the interface, and a test on each side holds its list to
     /// this table.
@@ -10,7 +10,7 @@ namespace Odyssey.Sim.Contracts
     public static class StorytellerHandle
     {
         /// <summary>No storyteller: nothing fires but the debug menu. A save from before the
-        /// storyteller loads with this (design 59 §7).</summary>
+        /// storyteller loads with this (design 68 §7).</summary>
         public const int None = -1;
 
         /// <summary>The llama who keeps the calendar: threats on a cycle you can learn.</summary>
@@ -25,7 +25,7 @@ namespace Odyssey.Sim.Contracts
         public const int Count = 3;
     }
 
-    /// <summary>What last moved the tension (design 59 §5). The interface's <c>TensionCause</c> is
+    /// <summary>What last moved the tension (design 68 §5). The interface's <c>TensionCause</c> is
     /// the same four, in the same order.</summary>
     public enum TensionCauseKind
     {
@@ -36,7 +36,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// The storyteller as the interface reads it (design 59 §5a, §7): who, how hard, and the
+    /// The storyteller as the interface reads it (design 68 §5a, §7): who, how hard, and the
     /// tension's band and last cause. <b>No tension number</b>: the band is decided here, in the
     /// simulation, and the interface draws it (owner, 2026-09-26: bands and a cause, not the
     /// multiplier).

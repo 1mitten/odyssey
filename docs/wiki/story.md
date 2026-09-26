@@ -1,6 +1,6 @@
 # Storytellers and difficulty
 
-Who decides when things happen to the colony, how hard the threats hit, and the tension gauge that shows how hard the storyteller is pressing. A storyteller's description is the blurb on its New game card: the screen reads this column. Nothing reads the choice until the storyteller itself is built (design 59).
+Who decides when things happen to the colony, how hard the threats hit, and the tension gauge that shows how hard the storyteller is pressing. A storyteller's description is the blurb on its New game card: the screen reads this column. Nothing reads the choice until the storyteller itself is built (design 68).
 
 35 entries, 35 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 

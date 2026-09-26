@@ -917,6 +917,52 @@ namespace Odyssey.Hud
         /// </summary>
         public const int InspectHeaderNarrow = 38;
         public const int InspectHeaderGap = 6;
+
+        // ---- the header's actions (design 61, mockup 24c)
+
+        /// <summary>
+        /// One toggle's column — its tile over its label. The mockup's 52.
+        /// </summary>
+        public const int InspectToggleWidth = 52;
+
+        /// <summary>The toggle's label line under the tile: 12 px text on a 16 px line.</summary>
+        public const int InspectToggleLabel = 16;
+
+        /// <summary>Tile to label. The mockup's 5, less the pixel the tile gave up (see <see cref="InspectToggleTile"/>).</summary>
+        public const int InspectToggleGap = 4;
+
+        /// <summary>
+        /// The toggle's square tile: <b>40, not the mockup's 44</b>, and derived rather than written.
+        /// The mockup's header is 88 (a 64 px portrait in 12 px of padding); this pane's is
+        /// <see cref="InspectHeader"/>, the 60 px portrait with the panel's own padding round it. A
+        /// 44 px tile, its gap and its label would stand 65 high in a 60 px header and push the tab
+        /// strip down, which the brief forbids ("don't change the rest of the pane"). So the column
+        /// is fitted to the header, and <c>HudLayoutTests</c> holds the sum.
+        /// </summary>
+        public const int InspectToggleTile = InspectHeader - InspectToggleGap - InspectToggleLabel;
+
+        /// <summary>The toggle's icon, centred in the tile. The mockup's 24, kept: at 40 it still has 8 either side.</summary>
+        public const int InspectToggleIcon = 24;
+
+        /// <summary>The hotkey cap's inset from the tile's bottom-right corner.</summary>
+        public const int InspectCapInset = 2;
+
+        /// <summary>
+        /// Between the header's columns: the text to the first toggle, and one toggle to the next.
+        /// The portrait-to-name gap stays the 9 it was, which is the rest of the pane.
+        /// </summary>
+        public const int InspectActionGap = 12;
+
+        /// <summary>Close and Info, each square.</summary>
+        public const int InspectStackButton = 26;
+
+        /// <summary>The Close/Info stack's own margin, on top of <see cref="InspectActionGap"/>.</summary>
+        public const int InspectStackMargin = 3;
+
+        /// <summary>The i on the Info button, and the cross on Close.</summary>
+        public const int InspectInfoIcon = 16;
+
+        public const int InspectCloseIcon = 10;
         public const int InspectTabs = 26;
         public const int InspectTabGap = 9;
 
@@ -1066,7 +1112,7 @@ namespace Odyssey.Hud
         public const int SetupSkillsGap = 24;
 
         // ------------------------------------------------------------------ the Story block
-        // Claude Design's mockups 25a-25c (design 59 §12). The New game page is three columns:
+        // Claude Design's mockups 25a-25c (design 68 §12). The New game page is three columns:
         // the candidates, the chosen one's skills, and the Story block in the space the skills cap
         // left empty. Every length here is pinned against Hud.uss by HudStyleSheetTests.
 

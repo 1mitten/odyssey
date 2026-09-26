@@ -49,6 +49,16 @@ namespace Odyssey.Hud
         /// already had.</para>
         /// </summary>
         Settings,
+
+        /// <summary>
+        /// The planet (design 59 §9): the seed, the map and the site the colony lands on, between
+        /// the root's New game and the setup page. Present only when a <see cref="WorldChoice"/> was
+        /// handed in; without one, New game goes straight to the setup page as it always did.
+        ///
+        /// <para>Last in the list rather than beside <see cref="NewGame"/>, so no screen already
+        /// named by number moves.</para>
+        /// </summary>
+        World,
     }
 
     /// <summary>
@@ -88,13 +98,20 @@ namespace Odyssey.Hud
         public readonly int Size;
 
         /// <summary>
-        /// Who tells the colony's story and how hard (design 59). Handed to the session's
+        /// Who tells the colony's story and how hard (design 68). Handed to the session's
         /// <see cref="StoryDirector"/>, which submits it as the colony's first two intents.
         /// </summary>
         public readonly StoryChoice Story;
 
+        /// <summary>
+        /// The planet tile the colony lands on (design 59), or null when the flow had no World
+        /// screen. With a site, <see cref="Seed"/> is the <b>world's</b> seed and the board's own is
+        /// derived from it and the tile (<c>SiteRules.BoardSeed</c>).
+        /// </summary>
+        public readonly SiteTile? Site;
+
         public NewGameChoice(uint seed, uint[]? colonists, string? name, int size,
-            string?[]? names = null, StoryChoice? story = null)
+            string?[]? names = null, SiteTile? site = null, StoryChoice? story = null)
         {
             Seed = seed;
             Colonists = colonists;
@@ -102,6 +119,7 @@ namespace Odyssey.Hud
             Name = name ?? string.Empty;
             Size = size;
             Story = story ?? StoryChoice.Default;
+            Site = site;
         }
     }
 
@@ -322,11 +340,22 @@ namespace Odyssey.Hud
         /// <summary>The seam a test drives: the seed's randomness handed in.</summary>
         public MenuDirector(SeedField seed) : this(seed, null) { }
 
-        public MenuDirector(SeedField seed, ColonistSelect? colonists)
+        public MenuDirector(SeedField seed, ColonistSelect? colonists) : this(seed, colonists, null) { }
+
+        public MenuDirector(SeedField seed, ColonistSelect? colonists, WorldChoice? world)
         {
             Seed = seed ?? throw new ArgumentNullException(nameof(seed));
             Colonists = colonists;
+            World = world;
         }
+
+        /// <summary>
+        /// The World screen's model (design 59 §9), or null for a flow with no planet — every rig and
+        /// test written before it, which keep going straight from New game to the setup page.
+        /// Optional for the reason <see cref="Colonists"/> is: it needs the simulation's generator,
+        /// which the presenter hands in.
+        /// </summary>
+        public WorldChoice? World { get; }
 
         /// <summary>The root screen's rows, top to bottom. One place, shared with the settings
         /// panel, so the two surfaces cannot drift (<see cref="SessionCommands"/>).</summary>
@@ -435,6 +464,14 @@ namespace Odyssey.Hud
         {
             if (Screen == MenuScreen.Root) return false;
 
+            // One level at a time (design 59 §9): the setup page backs out to the planet it was
+            // reached from, with the seed, the site and the three people all kept.
+            if (Screen == MenuScreen.NewGame && World != null)
+            {
+                GoTo(MenuScreen.World);
+                return true;
+            }
+
             bool leavingSettings = Screen == MenuScreen.Settings;
 
             GoTo(MenuScreen.Root);
@@ -506,10 +543,26 @@ namespace Odyssey.Hud
         {
             if (!Showing || Screen != MenuScreen.NewGame) return false;
             if (!Seed.Usable) return false;
+            // With a planet, only a site a colony can land on — the rule the World screen's Next
+            // keeps, kept again here because a rule kept only by whoever draws it is not kept.
+            if (World != null && !World.CanGoNext) return false;
 
             StartRequested?.Invoke(
                 new NewGameChoice(Seed.Seed, Colonists?.ChosenSeeds(), ColonyName, Size,
-                    Colonists?.ChosenNames(), Story));
+                    Colonists?.ChosenNames(), World?.Site, Story));
+            return true;
+        }
+
+        /// <summary>
+        /// Press Next on the World screen: on to the setup page with the site picked (design 59 §9).
+        /// False anywhere else, and on a site a colony cannot land on — which the page draws disabled
+        /// and this refuses as well.
+        /// </summary>
+        public bool NextFromWorld()
+        {
+            if (!Showing || Screen != MenuScreen.World || World == null) return false;
+            if (!World.CanGoNext) return false;
+            GoTo(MenuScreen.NewGame);
             return true;
         }
 
@@ -545,7 +598,7 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// The storyteller and difficulty the page is offering (design 59 §12): Jacob at Normal
+        /// The storyteller and difficulty the page is offering (design 68 §12): Jacob at Normal
         /// until the player picks. Kept across visits to the page, unlike the seed and the people,
         /// because it is a preference about how to play rather than a draw.
         /// </summary>
@@ -578,7 +631,9 @@ namespace Odyssey.Hud
                 // holding the game somebody decided against.
                 Seed.Draw();
                 Colonists?.Deal(SeedEntry.Draw);
-                GoTo(MenuScreen.NewGame);
+                // With a planet, the seed makes it (the World model hears the draw) and the player
+                // picks a site first; without one, straight to the setup page as before.
+                GoTo(World != null ? MenuScreen.World : MenuScreen.NewGame);
             }
             else if (key == SessionCommands.LoadKey) SavesRequested?.Invoke();
             else if (key == SessionCommands.QuitKey) QuitRequested?.Invoke();

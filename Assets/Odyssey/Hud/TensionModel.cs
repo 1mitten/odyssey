@@ -3,7 +3,7 @@ using System.Globalization;
 
 namespace Odyssey.Hud
 {
-    /// <summary>What last moved the tension gauge (design 59 §5).</summary>
+    /// <summary>What last moved the tension gauge (design 68 §5).</summary>
     public enum TensionCause
     {
         /// <summary>Nothing yet: a colony that has lost nobody and has not yet had a quiet day counted.</summary>
@@ -14,7 +14,7 @@ namespace Odyssey.Hud
     }
 
     /// <summary>
-    /// The tension gauge on the clock (design 59 §5a, Claude Design's mockup 25g): five bands, told
+    /// The tension gauge on the clock (design 68 §5a, Claude Design's mockup 25g): five bands, told
     /// apart by how many of four columns are filled and only secondly by their hue.
     ///
     /// <para><b>No number and no forecast, ever.</b> The band and the last cause are all a player

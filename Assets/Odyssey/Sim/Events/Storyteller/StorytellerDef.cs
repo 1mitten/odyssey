@@ -4,7 +4,7 @@ using Odyssey.Sim.Defs;
 
 namespace Odyssey.Sim.Events
 {
-    /// <summary>The three shapes a storyteller is built from (design 59 §3). <c>scheduled</c> stays reserved.</summary>
+    /// <summary>The three shapes a storyteller is built from (design 68 §3). <c>scheduled</c> stays reserved.</summary>
     public enum GeneratorKind
     {
         /// <summary>On-days and off-days; in each on-phase, a few fires of its category a minimum apart.</summary>
@@ -25,7 +25,7 @@ namespace Odyssey.Sim.Events
     }
 
     /// <summary>
-    /// One generator of a storyteller (design 59 §3): a nested block of a <see cref="StorytellerDef"/>,
+    /// One generator of a storyteller (design 68 §3): a nested block of a <see cref="StorytellerDef"/>,
     /// the <c>&lt;raid&gt;</c> block's precedent. Times are in whole game hours or days, because the
     /// storyteller checks once a game hour.
     /// </summary>
@@ -65,7 +65,7 @@ namespace Odyssey.Sim.Events
     }
 
     /// <summary>
-    /// A storyteller (design 59 §3): a grace before the first big threat, the generators that pace
+    /// A storyteller (design 68 §3): a grace before the first big threat, the generators that pace
     /// it, and the curve population intent reads. The name and the blurb are the registry's
     /// (<c>labelKey</c>), so "inviting our own storytellers" is a Def and a registry row.
     /// </summary>
@@ -80,7 +80,7 @@ namespace Odyssey.Sim.Events
         public List<GeneratorDef> generators = new List<GeneratorDef>();
 
         /// <summary>
-        /// Population intent (design 59 §3c), per mille by colonist count; the last entry holds for
+        /// Population intent (design 68 §3c), per mille by colonist count; the last entry holds for
         /// every count past the table. Multiplies the weight of any incident marked
         /// <c>populationGain</c>, of which there are none until the joiner (ST7).
         /// </summary>

@@ -10,7 +10,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Tests.Sim.Events
 {
     /// <summary>
-    /// The storyteller in a real headless colony (design 59 §9): one season after grace per
+    /// The storyteller in a real headless colony (design 68 §9): one season after grace per
     /// storyteller, raids and drops really landing, the invariants held every game hour, and the
     /// big threats counted from the ledger and printed beside what the harness predicts. If the two
     /// disagree, a gate or <c>CanFireNow</c> is refusing fires the harness assumed possible — the

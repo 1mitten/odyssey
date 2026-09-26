@@ -86,7 +86,7 @@ namespace Odyssey.Sim.Defs
         /// </summary>
         public static Events.IncidentContent Incidents() => Events.IncidentContent.FromDefs(Core, Pawns());
 
-        /// <summary>The storytellers (design 59), in <c>StorytellerHandle</c> order.</summary>
+        /// <summary>The storytellers (design 68), in <c>StorytellerHandle</c> order.</summary>
         public static Events.StorytellerContent Storytellers() => Events.StorytellerContent.FromDefs(Core);
 
         /// <summary>

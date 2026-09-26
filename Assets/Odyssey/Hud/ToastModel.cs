@@ -137,7 +137,7 @@ namespace Odyssey.Hud
         /// </summary>
         public const string LevelPlaceholder = "{level}";
 
-        /// <summary>The key a loaded colony with no storyteller is told under (design 59 §7).</summary>
+        /// <summary>The key a loaded colony with no storyteller is told under (design 68 §7).</summary>
         public const string NoStorytellerKey = "ui.toast.nostoryteller";
 
         /// <summary>Every key this stack can put on screen, for the registry test.</summary>

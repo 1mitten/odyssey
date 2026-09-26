@@ -5,7 +5,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// The open colony's storyteller and difficulty, and the tension gauge (design 59 §7, §12).
+    /// The open colony's storyteller and difficulty, and the tension gauge (design 68 §7, §12).
     ///
     /// <para><b>A read of the simulation's <see cref="StorytellerView"/>, and a writer of
     /// intents.</b> The choice is colony state since ST1: saved, hashed and changed only by
@@ -62,7 +62,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// A new colony with the choice from its New game page: both intents are submitted, since
-        /// the simulation starts every colony with none (design 59 §7), and the choice is shown
+        /// the simulation starts every colony with none (design 68 §7), and the choice is shown
         /// until the view has it.
         /// </summary>
         public void Begin(StoryChoice choice)
@@ -109,7 +109,7 @@ namespace Odyssey.Hud
                 (TensionCause)(int)view.Cause, view.CauseDays);
 
             // Said once per loaded colony, on the first sync that can know: an old save has no
-            // storyteller and nothing will happen to it until one is chosen (design 59 §7).
+            // storyteller and nothing will happen to it until one is chosen (design 68 §7).
             if (_noticeOwed)
             {
                 _noticeOwed = false;

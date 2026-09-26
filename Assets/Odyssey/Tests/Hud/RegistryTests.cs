@@ -420,7 +420,7 @@ namespace Odyssey.Tests.Hud
             // (design 23 §5), which is this test's own criterion for a namespace.
             "ui.bulletin.",
             // A storyteller is named on the New game page and in Settings, and a tension band on
-            // the clock's gauge and its tooltip (design 59 §12). Not ui.difficulty: its rungs are
+            // the clock's gauge and its tooltip (design 68 §12). Not ui.difficulty: its rungs are
             // Normal, Easy and Custom, ordinary words the graphics presets also use.
             "ui.storyteller.", "ui.tension.",
         };

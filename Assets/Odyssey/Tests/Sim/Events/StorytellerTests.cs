@@ -9,7 +9,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Tests.Sim.Events
 {
     /// <summary>
-    /// The storyteller in a live colony (design 59 §7–§8): nothing while none is chosen, the choice
+    /// The storyteller in a live colony (design 68 §7–§8): nothing while none is chosen, the choice
     /// and its view, determinism and a save mid-season, the gates, and the two intents. The pacing
     /// itself is <see cref="StorytellerPacerTests"/>'s, on the pure pacer.
     /// </summary>
