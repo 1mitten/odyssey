@@ -4534,6 +4534,7 @@ namespace Odyssey.Presentation.Rendering
             Skirt.Dispose();
             _materials.Dispose();
             DisposeSeeThrough();
+            DisposeCracks();
             Clearance.Dispose();
             _indirect?.Dispose();
             _highlightBatch?.Dispose();

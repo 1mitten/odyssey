@@ -37,7 +37,9 @@ namespace Odyssey.Presentation.World
     /// resolves one; this class turns each id into a <see cref="ModuleLibrary"/> index exactly
     /// once, at construction, so the mesher deals only in integers.
     /// </summary>
-    public sealed class WorldRenderModel
+    // IDemolitionCells: the five questions the demolition sounds ask are already this class's own
+    // (design 58 §9), so the mirror answers them as it stands.
+    public sealed class WorldRenderModel : Odyssey.Hud.IDemolitionCells
     {
         readonly ushort[] _terrain;
         readonly ushort[] _floor;
@@ -1562,6 +1564,7 @@ namespace Odyssey.Presentation.World
             {
                 int index = Size.Index(x, z, y);
                 ushort was = _edifice[index];
+                ushort wasStuff = _edificeStuff[index];
                 CopyCell(grid, edifices, index);
 
                 // A tree that was standing and is not any more: felled, or taken by a collapse.
@@ -1570,6 +1573,13 @@ namespace Odyssey.Presentation.World
                 // has no trees falling in it.
                 if (NaturalContent.IsTree(was) && _edifice[index] != was && _felled.Count < MaxFelledPending)
                     _felled.Add(new FelledTree(index, was));
+                // Any other building gone, with what it was made of — which nothing else can say
+                // once it has left the mirror. For the demolition sounds (design 58 §9): a wall
+                // broken from whole in one blow was never struck before, so this is the only
+                // record of its stuff.
+                else if (was != 0 && !NaturalContent.IsTree(was) && _edifice[index] != was
+                         && _removed.Count < MaxFelledPending)
+                    _removed.Add(new RemovedEdifice(index, was, wasStuff));
             }
         }
 
@@ -1611,6 +1621,28 @@ namespace Odyssey.Presentation.World
         {
             into.AddRange(_felled);
             _felled.Clear();
+        }
+
+        /// <summary>A building other than a tree that has just left the mirror, and its stuff.</summary>
+        public readonly struct RemovedEdifice
+        {
+            public readonly int Cell;
+            public readonly ushort Def;
+            public readonly ushort Stuff;
+            public RemovedEdifice(int cell, ushort def, ushort stuff) { Cell = cell; Def = def; Stuff = stuff; }
+        }
+
+        readonly List<RemovedEdifice> _removed = new List<RemovedEdifice>();
+
+        /// <summary>
+        /// Hand over the buildings removed since the last call, oldest first, and forget them.
+        /// Capped as the felled trees are (<see cref="MaxFelledPending"/>), so a list nobody reads
+        /// cannot grow.
+        /// </summary>
+        public void DrainRemoved(List<RemovedEdifice> into)
+        {
+            into.AddRange(_removed);
+            _removed.Clear();
         }
 
         /// <summary>The module a tree of this species is drawn from, before its variant is picked.</summary>

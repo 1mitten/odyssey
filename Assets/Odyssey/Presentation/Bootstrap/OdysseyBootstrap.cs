@@ -1044,6 +1044,8 @@ namespace Odyssey.Presentation.Bootstrap
                        "the fallback only; every colonist is dealt from their own roll seed"));
 
             Lap("colony ready");
+            // Per session, so no cell of the last world is watched against this one's mirror.
+            _demolitions = new DemolitionWatch(NaturalContent.StuffWood);
             _renderer = new ChunkRenderer(_model)
             {
                 CastShadows = castShadows,
@@ -1709,6 +1711,8 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             DrawStandingOrders(_world.Views.Current);
+            DrawCracks(_world.Views.Current);
+            HearDemolitions(_world.Views.Current);
             DrawZones(_world.Views.Current);
             DrawBuildingSites(_world.Views.Current);
             DrawToolPreview();
@@ -2012,9 +2016,59 @@ namespace Odyssey.Presentation.Bootstrap
                 // in mining", and marking the wall's top face is what mining already does to rock.
                 _renderer.DrawCellMark(cell, tint);
 
-                if (orders[i].Progress > 0)
+                // A face being mined is drawn cracked instead (design 58, owner 2026-09-26: the
+                // cracks replace the pale slab). The slab stays for a build without the shader.
+                bool cracked = kind == DesignationKind.Mine && _renderer.CracksAvailable;
+                if (orders[i].Progress > 0 && !cracked)
                     _renderer.DrawCellCut(cell, orders[i].Progress / 255f, CutColour);
             }
+        }
+
+        DemolitionWatch? _demolitions;
+        readonly List<Demolished> _demolished = new List<Demolished>();
+        readonly List<WorldRenderModel.RemovedEdifice> _removedEdifices = new List<WorldRenderModel.RemovedEdifice>();
+
+        /// <summary>
+        /// Something coming down, heard (design 58 §9): wood broken or taken apart, a mined face
+        /// collapsing. <see cref="DemolitionWatch"/> says which cells went this frame — on the same
+        /// evidence the break (§7) is drawn on, so the sound and the shudder start together — and
+        /// each is played from the middle of its cell.
+        /// </summary>
+        void HearDemolitions(WorldSnapshot snapshot)
+        {
+            if (_demolitions == null || _model == null) return;
+            // What left the mirror this frame and what it was made of, for a building broken in
+            // one blow, which nothing else remembers.
+            _removedEdifices.Clear();
+            _model.DrainRemoved(_removedEdifices);
+            for (int i = 0; i < _removedEdifices.Count; i++)
+                _demolitions.NoteRemoved(_removedEdifices[i].Cell, _removedEdifices[i].Stuff);
+            if (_demolitions.Step(snapshot, _model, _demolished) == 0 || _audio == null) return;
+            for (int i = 0; i < _demolished.Count; i++)
+            {
+                CellRef cell = _model.Size.FromIndex(_demolished[i].CellIndex);
+                string id = _demolished[i].Kind == Demolition.Rock ? SoundIds.BreakRock : SoundIds.BreakWood;
+                _audio.PlayOneShot(id, CellMetrics.Centre(cell.X, cell.Z, cell.Y));
+            }
+        }
+
+        readonly System.Collections.Generic.List<CrackedCell> _crackedCells =
+            new System.Collections.Generic.List<CrackedCell>();
+
+        /// <summary>
+        /// Struck walls and rock being mined, drawn broken (design 58): <c>CrackModel</c> says which
+        /// cells and how badly, the renderer draws each cell's own meshes over themselves in the
+        /// crack shader. Called every frame, whether or not anything is cracked, so a cell that
+        /// came down or was ordered again gives its scratch batch back. Filtered to the band a
+        /// click can reach, as the orders are: anything drawn solid, never a ghost.
+        /// </summary>
+        void DrawCracks(WorldSnapshot snapshot)
+        {
+            if (_renderer == null || cameraRig == null) return;
+            int lowest = System.Math.Max(0, cameraRig.LowestSelectableLayer);
+            int highest = cameraRig.HighestSelectableLayer;
+            CrackModel.Gather(snapshot, _crackedCells, lowest, highest);
+            _renderer.DrawCracks(_crackedCells);
         }
 
         /// <summary>The colour a growing zone's whole-tile cover is drawn in — a dark worked-soil
@@ -4552,6 +4606,7 @@ namespace Odyssey.Presentation.Bootstrap
             _floaterView = null;
             _colonistMaterials = null;
             _renderer = null;
+            _demolitions = null;
             _actorMaterial = null;
             _model = null;
             _colony = null;
