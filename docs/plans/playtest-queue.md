@@ -23,24 +23,16 @@ the next session learns to ignore.
 
 ## Open
 
-- **Do the cracks read, and does a wall or face break apart?** (`claude/sat-wall-damage-levels-5eq8cn`,
-  design 57; second round after the first look, §1a.)
-  - Build a wall, draft two colonists and right-click it, and stop them (undraft) as its bar passes
-    three quarters, a half and a quarter. The debug menu has no way to hurt a building yet. Wrong:
-    the cracks still read as shapes or a pattern rather than damage spreading from one spot; a
-    stage change you cannot see at play zoom; lines that shimmer or vanish as you zoom out.
-  - Let them finish the wall. Wrong: it vanishes whole; the pieces pop to a different colour or
-    brightness at the split; a piece looks hollow; the pieces hang in the air or never sink.
-  - Mine a rock face from start to finish. Wrong: six steps is still too few (or too many to tell
-    apart); the rock looks painted rather than cracked; mining it out is not satisfying.
-  - Listen as the face collapses, and as a wood wall is broken or deconstructed (design 57 §9).
-    Wrong: the sound is late or early against the shudder; it sits on top of the world like a
-    sound effect rather than in the meadow (too dry, or too loud against the pick); a cancelled
-    order or a repaired wall makes the sound.
-  - Cancel a half-mined face, then order it again. Wrong: the cracks vanish on the cancel, or the
-    miner starts from nothing.
-  - Press H for walls down on a cracked wall. Wrong: the stump is not cracked, or the full-height
-    wall's cracks float in the air.
+- **Do the frogs read as frogs, and are they where the water is?** (`claude/frog`, design 30 §8.)
+  New game on the meadow and look along a stream or a pond: there should be groups of three to five
+  bright emerald, red-eyed frogs on the banks (about 0.9 m long since the owner's first ask), and none
+  in dry fields. Watch one move: it should crouch, leap about 1.3 m, land and sit, rather than
+  glide, and when several in a group hop at once they should go different ways. Open Debug → Spawn → **Spawn culvert frog** away from
+  water and watch it hop back to the nearest bank. Make it rain (Debug) and see the frogs stay out
+  while the hogs go under the trees. Wrong answers: a frog that slides along the ground between
+  hops or lurches backwards at the start of one; frogs far from water; a frog too small to find from
+  your normal camera height; a green that still sinks into the grass; or frogs you would rather see swimming, which
+  is a cost stated in §8b.
 
 - **Polish batch: trees, drops, the fire, the roster, the pane, the fade** (`claude/polish-batch`,
   designs 20 §14, 23 §11, 31 §20, 25 §10, 14 §10–§11, 38 §27).
@@ -1384,6 +1376,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-26 | **Cracks, the break and the demolition sounds, two rounds** (PR {PR}, `docs/design/57-cracks.md`): walls and mined rock cracking, the break into quarters, rock's six levels, the wood smash and the boulder impact | working — owner, after the second round and the sounds: *"happy to get ready to merge into main"* | the first look moved three things (cracks from an impact point, six rock levels, the break, §1a); the sounds' one-blow gap was closed (§9). Ready to merge |
 | 2026-09-25 | **Ambient birds** (PR #230, `docs/design/50-ambient-birds.md`): rooks and a buzzard, their size at every zoom, perching, the scatter, the rookery, the weather | working — owner: *"superb - if this is performant - get it ready to be merged in"* | measured, then ready to merge: `FrameSection.Birds` 0.018–0.032 ms, and the frame at 640 x 480 and 4K is inside its own noise with the birds on (design 50 §8a) |
 | 2026-09-25 | **Ranged combat, three rounds** (PR #225, `docs/design/47-ranged-combat.md` §10a–§12): the aim, the shot, the tracer, the sound, then accuracy from a height, weapon quality and the reach rule | working — owner, first play: *"it's really decent and everything seemed to work well"*; after the reach rule: *"great job - just played a big battle"* | the first play raised the accuracy, sent a miss past its target into the ground and landed a hit on the body wherever it stands (§10a); asked for weapon quality (§11) and the reach rule (§12), both built and played in the big battle. Ready to merge. The frame with gunfire (P4) is still unmeasured |
 | 2026-09-25 | **The home area, the hearth and the Assign tab** (PR #214, `docs/design/43-home-area.md`), after the review's five fixes | working — owner: *"it all works get ready to merge in"* | none; ready to merge. The house over the hearth, which the frame test logged hidden, is covered by "it all works" |

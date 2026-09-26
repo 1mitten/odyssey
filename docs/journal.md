@@ -13814,6 +13814,54 @@ brightest, and the wings are drawn to the full zoom at night, a little larger, w
 carried a far night. The research had argued the spectacle into a separate light because the wing
 could not safely cross bloom's threshold; the owner's answer was that the wing was the spectacle all
 along, and the ceiling that argument was about still holds (design 52 §5a).
+
+## 2026-09-25 — The culvert frog: an animal placed by the water
+
+The owner handed over a third Quaternius model, a frog, and asked for it animated, frog-like, and
+living by the streams, ponds and lakes. Design 30 §8 holds the decisions; this is the why.
+
+**The habitat is the new thing, not the frog.** Everything a frog shares with the hog — the mind,
+the save, the hash, the ramp-only hop — was already there. What was not was an animal placed by
+something other than trees or rock, so the bank became a habitat (`WaterBank.Near`, its one owner)
+and, unlike the other two, a tether: a species can say it keeps within so many cells of water, and
+the animal mind holds every leg to it and walks a stray back. It is the first rule in the mind that
+reads the terrain, and it is paid only by frogs that are off their bank.
+
+**Adding a kind moved every other kind's numbers.** A wildlife table divides one target by weight,
+so a third entry would have made the hogs and rats rarer without anyone asking. The density went up
+by exactly the frogs' share (15 → 21) so the old two stay as common as they were.
+
+**It does not swim, on purpose.** A swimming animal is a sixth traverse mode, and every mode is a
+flood on every nav rebuild; the frog sits at the water's edge instead, and that is the owner's call
+to reverse with its cost stated.
+
+**The hop took two measurements.** The first probe of the clip found lift-off and landing at 0.35
+and 0.78 of the Jump and no travel in it, which is what the hop pacing is built from: the drawn
+position holds still on the ground and covers the whole hop in the air, because a looping jump on
+an even pace is a frog on a travelator. The second probe, under the real director, found the jump
+**not looping** — the importer loops clips named Idle, Walk and Run, and the frog's gait is called
+Jump — so the frog took one hop and slid on its last frame. `AnimalImport.Hops` is the fix, and the
+same probe then read a hop every 52 frames: 23 moving, 29 still.
+
+**The catalogue rebuild stripped the colonists' swatches again**, exactly as `docs/lessons.md`
+warns; the frog row was spliced into the committed asset instead, and the diff is the row alone.
+
+## 2026-09-26 — The frog, bigger, commoner and a colour of its own
+
+The owner's first ask before playing: just over double the size, more of them, and a green that
+is not the grass's. ×0.24 (2.2 times), weight 4 in groups of 3–5 with the density raised by the
+frogs' share, and the embedded green remapped to a jade material of our own. Two consequences
+worth writing down. **A bigger frog on the same hop is a shuffling frog**, so its pace went up
+with its size and the hop is a body and a half again. **And "more" stopped at the ceiling**: 24
+is the figure budget's, not the wildlife's, so it was left alone and the played board's 22 pawns
+sit under it. Design 30 §8c-bis.
+
+**Later the same day: greener, and apart.** The jade read as teal, so the hue came back to an
+emerald. And a group's frogs hopped the same way because they were seeded together, thought on the
+same ticks and stood on a bank that ran one way; each new hop now prefers a heading 60 degrees
+from every neighbour already hopping. The control mattered: without the rule 28 % of such hops
+matched a neighbour, with it 6.5 %, and the test's bound sits between them. Design 30 §8e.
+
 ## 2026-09-25 — Raids: a band that stalks, then strikes
 
 The owner asked for a raid: 1 to 200 hostiles from a random edge, a few hours of wandering at the

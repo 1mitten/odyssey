@@ -28,6 +28,7 @@ namespace Odyssey.Hud
         public static string Food => Registry.Label("ui.res.category.food");
         public static string Hog => Registry.Label("ui.pawn.hog");
         public static string Rat => Registry.Label("ui.pawn.rat");
+        public static string Frog => Registry.Label("ui.pawn.frog");
         public static string Wandering => Registry.Label("ui.status.wandering");
         public static string Resting => Registry.Label("ui.status.resting");
     }
@@ -898,7 +899,7 @@ namespace Odyssey.Hud
                             ("Ramps only", "A hog goes up and down a terrace step where a bank is drawn, and nowhere else."),
                             ("No swimming", "Streams and ponds are walls to it; the census keeps it off water when it lands.")
                         }),
-                    new[] { (AlmanacKeys.Rat, "the other animal on the board"), ("Pine", "the woodland it is seeded beside"), (AlmanacKeys.Ladder, "the one climb it never takes") }
+                    new[] { (AlmanacKeys.Rat, "another animal on the board"), ("Pine", "the woodland it is seeded beside"), (AlmanacKeys.Ladder, "the one climb it never takes") }
                 ),
                 new AlmanacEntry(
                     AlmanacKeys.Rat, "Fauna", "The rat of the ruin: ducts, caverns, and anything it can climb", "Fauna", "Vermin", false, "#8c7d75",
@@ -918,7 +919,27 @@ namespace Odyssey.Hud
                             ("Climber", "Ladders and hops are open to it; water is not."),
                             ("Alone", "Lands and arrives one at a time, by rock.")
                         }),
-                    new[] { (AlmanacKeys.Hog, "the other animal on the board"), (AlmanacKeys.Ladder, "a climb it takes and a hog does not"), (AlmanacKeys.Stone, "the rock it is seeded beside") }
+                    new[] { (AlmanacKeys.Hog, "another animal on the board"), (AlmanacKeys.Ladder, "a climb it takes and a hog does not"), (AlmanacKeys.Stone, "the rock it is seeded beside") }
+                ),
+                new AlmanacEntry(
+                    AlmanacKeys.Frog, "Fauna", "A big frog of the banks: streams, ponds and lakes, and never far from them", "Fauna", "Wild", false, "#5a8a3a",
+                    new AlmanacIcon("fauna_culvert_frog", "#5a8a3a", "M5 15c0-4 3-7 7-7s7 3 7 7H5z M8 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M16 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M4 18l3-3 M20 18l-3-3"),
+                    "The culvert frog lives where the water does, on the banks of the meadow's streams, ponds and lakes, in threes to fives. It hops rather than walks, keeps within a few cells of the water whatever it is doing, and stays out in the rain when everything else goes for cover. It will not swim; it sits at the edge instead.",
+                    "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
+                    new[] {
+                        ("Pace", "A colonist's walk, in hops of about 1.3 m"), ("Lives", "On the banks of water, in threes to fives"),
+                        ("Day", "Out by day, rests three times longer at night"), ("Leg", "Within 4 cells, then a rest of 3 to 12 s"),
+                        ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
+                        ("Body", "0.9 m long, a bright jade green"), ("Tame", "Not yet")
+                    },
+                    new AlmanacBody("simple", "BEHAVIOUR",
+                        "A frog takes short legs along its bank and sits between them. Put one down away from water and it heads for the nearest bank it can reach; with none nearby it wanders like anything else. New frogs walk in only where the water meets the edge of the board.",
+                        effects: new[] {
+                            ("Bank", "Every leg ends within three cells of water."),
+                            ("Rain", "Stays out in it; the hogs and rats go for cover."),
+                            ("No swimming", "It sits at the water's edge; streams and ponds are walls to it.")
+                        }),
+                    new[] { (AlmanacKeys.Hog, "another animal on the board"), (AlmanacKeys.Rat, "another animal on the board"), ("Shallow Water", "the water it keeps beside") }
                 )
             }));
 
