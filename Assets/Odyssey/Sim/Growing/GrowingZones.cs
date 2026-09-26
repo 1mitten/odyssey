@@ -133,6 +133,8 @@ namespace Odyssey.Sim.Growing
         public bool SiteAllows(int index, PlantDef plant)
         {
             if (!_grid.IsWalkable(index)) return false;
+            // Walkable, and inside a chamber nobody has opened: rock to the player (design 62 §6).
+            if (_grid.IsUnseen(index)) return false;
             // Wadeable water is walkable, which is exactly why it is asked apart: a paddy is not
             // a carrot bed, and IsWalkable alone would paint one onto a stream. Water stands in
             // its own cell — the one a pawn wades in — so this reads the cell itself, while the

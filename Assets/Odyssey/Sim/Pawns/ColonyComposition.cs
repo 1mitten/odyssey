@@ -176,6 +176,9 @@ namespace Odyssey.Sim.Pawns
                 // The world itself, first: it is what everything below reads, and it ticks
                 // nothing, so nothing else would ever have put it in the hash (OQ-50).
                 .AddHashable(pawns.Cells)
+                // The chambers nobody has opened (design 62 §6), hashed only while one is: a
+                // board with no caverns hashes as it did before the fog.
+                .AddHashable(pawns.Cells.Unseen)
                 // What stands on the board, beside what the board is made of. `CellGrid` hashes
                 // `Edifice[cell]`, which is only an index into this list — so without this line a
                 // wooden wall and a stone wall in the same cell hash identically. Measured, not

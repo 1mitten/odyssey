@@ -61,7 +61,15 @@ namespace Odyssey.Sim.World
             int cell = world.Views.QueryCell;
             if (cell < 0 || cell >= _grid.Terrain.Length) return;
 
-            ushort terrain = _grid.Terrain[cell];
+            // **What the colony has seen, never what is there** (design 62 §6). An ore seam nobody
+            // has exposed or prospected is described as rock, with rock's work and rock's price
+            // to cross, and so is a cell inside a chamber nobody has opened — which is described
+            // as solid rock through and through: its support, its warmth and its room are read as
+            // rock's below. Until DM5 this published the true terrain and work of both, so a click
+            // on plain-looking rock named the iron in it (design 62 §3, "Leak").
+            ushort terrain = _grid.SeenTerrain(cell);
+            bool unseen = _grid.IsUnseen(cell);
+            bool solid = _grid.IsSolidTerrain(cell) || unseen;
 
             byte edifice = 0;
             byte quality = 0;
@@ -91,7 +99,7 @@ namespace Odyssey.Sim.World
             // Zero means "cannot be crossed": impassable water, or a cell with nothing to stand
             // on. Everything else is firm by default and slower only where worldgen says so.
             ushort cost = 0;
-            if (!_grid.IsImpassableTerrain(cell) && (_grid.IsSolidTerrain(cell) || _grid.HasFloor(cell)))
+            if (!_grid.IsImpassableTerrain(cell) && (solid || _grid.HasFloor(cell)))
                 cost = (ushort)(1000 + _costByClass[_grid.IsUndergrowth(cell)
                     ? NaturalContent.CostClassBush : NaturalContent.CostClassOf(terrain)] * 10);
 
@@ -113,7 +121,7 @@ namespace Odyssey.Sim.World
                 // cell made the pane silent over every field.
                 int zoneCell = cell;
                 if (_zones.ZonePlantAt(zoneCell) < 0
-                    && _grid.IsSolidTerrain(cell)
+                    && solid
                     && cell + _grid.Size.LayerStride < _grid.Terrain.Length)
                     zoneCell += _grid.Size.LayerStride;
 
@@ -195,7 +203,8 @@ namespace Odyssey.Sim.World
                 if (onlyDef >= 0) storedDef = (byte)onlyDef;
             }
 
-            bool isIndoors = _enclosure?.IsIndoors(cell) ?? false;
+            // A sealed chamber is a room to the enclosure solve; rock is in none.
+            bool isIndoors = !unseen && (_enclosure?.IsIndoors(cell) ?? false);
 
             // The tile's own answer to "how warm is it here": its room's air where it is in a
             // room, the outdoor curve where it is not, plus the radiance of any heat source near
@@ -218,18 +227,36 @@ namespace Odyssey.Sim.World
             //
             // No thermal system, nothing to say — the field's own silence, not a reading of 0 °C.
             int warmthCell = cell;
-            if (_grid.IsSolidTerrain(cell) && cell + _grid.Size.LayerStride < _grid.Terrain.Length)
+            if (solid && cell + _grid.Size.LayerStride < _grid.Terrain.Length)
                 warmthCell += _grid.Size.LayerStride;
 
-            int ambientTempC = _temperature?.CellTemp(warmthCell, world.CurrentTick) ?? int.MinValue;
+            // The cell over rock is rock or chamber, and rock is in no room, so it reads the
+            // outdoor curve; a chamber's own air would read its room's, and give it away.
+            int ambientTempC = _temperature == null ? int.MinValue
+                : _grid.IsUnseen(warmthCell) ? _temperature.OutdoorTempC(world.CurrentTick)
+                : _temperature.CellTemp(warmthCell, world.CurrentTick);
 
             writer.AddCellDetail(new CellDetail(
-                cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,
+                cell, (byte)terrain, edifice, floorStuff, unseen ? SupportAsRock(cell) : _grid.Support[cell],
+                cost, workToClear,
                 quality, owner, zonePlant, cropGrowth, zoneYield, isIndoors,
                 storageZone, storagePriority, storageCells, storageOrdinal,
                 storeKind, storedStacks, storeSlots, storedDef, storedUnits,
                 storeKind == CellDetail.StoreNone ? -1 : storeCell,
                 ambientTempC));
+        }
+
+        /// <summary>
+        /// The support a cell inside an unseen chamber would read if it were the rock it is
+        /// drawn as: the support of the solid ground its column stands on, down through the
+        /// chamber — which is what rock resting on that ground carries.
+        /// </summary>
+        byte SupportAsRock(int cell)
+        {
+            int stride = _grid.Size.LayerStride;
+            int at = cell;
+            while (at >= 0 && _grid.IsUnseen(at)) at -= stride;
+            return at >= 0 ? _grid.Support[at] : _grid.Support[cell];
         }
     }
 }

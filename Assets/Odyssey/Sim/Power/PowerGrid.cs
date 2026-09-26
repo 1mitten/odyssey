@@ -130,7 +130,8 @@ namespace Odyssey.Sim.Power
         public bool AllowsLine(int index)
         {
             if ((uint)index >= (uint)_size.CellCount) return false;
-            if (_grid.IsSolidTerrain(index)) return false;
+            // An unseen chamber is rock to the player (design 62 §6), and rock takes no line.
+            if (_grid.LooksSolid(index)) return false;
             ushort terrain = _grid.Terrain[index];
             if (NaturalContent.IsWater(terrain)) return false;
             // Rubble, as for a wall: a heap is cleared before anything is laid through it.

@@ -527,6 +527,10 @@ namespace Odyssey.Sim.Construction
         {
             if ((uint)index >= (uint)_grid.Size.CellCount) return false;
 
+            // A chamber nobody has opened is rock to the player (design 62 §6), and rock takes
+            // neither a building nor a line: accepting one here would outline the cavern.
+            if (_grid.IsUnseen(index)) return false;
+
             // A line answers to the power grid's rule alone — it may go where a wall stands, which
             // every line below would refuse (design 32 §3).
             if (ConstructionContent.BuildingAt(building).conduit)
