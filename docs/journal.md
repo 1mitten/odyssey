@@ -13873,3 +13873,36 @@ temperature: the weather's share of the outdoor curve is written by the weather 
 and saved nowhere, so a loaded world stood in its build's sky until the next boundary. That is on
 `main` for every save, and was fixed here because the raid test cannot pass without it. The lesson
 is in `docs/bug-patterns.md`: a value one system writes into another is derived state no section owns.
+
+## 2026-09-26 — Prisoners designed: a bed that makes a room, and two owners before any feature
+
+The owner asked for a prisoner system "similar-ish to RimWorld's but improved", with beds assignable
+as prison beds that make a room a prison. Ground, interview (four rounds, sixteen questions) and
+research were run in one session; design 58 and `docs/plans/prisoners.md` came out of it, and no
+code was written.
+
+**The ground found more reserved than built.** The registry already names a prisoner, capture,
+arrest, recruit, the escape alert and the Warden column; the Social skill is drawn and not
+simulated; the packs carry prisoner bodies. What does not exist is any notion that a pawn's side
+can change: faction is a property of the *kind*, and the kind's setter says nothing may change it.
+The design keeps that promise — a sparse custody override and one static owner of sides,
+`Allegiance`, rather than turning a bandit's kind into a colonist's — because rewriting the kind
+could not express an arrested colonist and would throw away the home faction ransom will need.
+
+**The ground also found the fault the feature would have multiplied.** Four near-copies of "own
+bed, else nearest unowned" choose beds, and a fifth in the owner picker, which offers hogs and
+bandits as owners; `TryClaimForSleeper` counts every pawn as wanting a bed. Adding "unless it is a
+prison bed" to five places is bug-patterns P1 by construction, so the first unit is `BedRules` and
+nothing prisoner-shaped at all.
+
+**The owner's answers leaned towards the reference's complaints.** A visible bar instead of a
+hidden recruit roll; escape risk shown with its reasons and scaled by 1/√n — the reference's own
+later slave rebellion made the same correction for headcount; prisoners who cannot open doors and
+escapees who must bash one, so that door material and an airlock matter where the reference's
+players report they do not. A right-click on a downed enemy, which today executes it, becomes a
+menu. The research could not read the reference's pages (the proxy refused all four), so its
+numbers are marked low confidence and ours are proposals for the first play.
+
+**One refinement over the design pass:** it would have spent the pawn hash word's last two free
+bits on `Joined` and `Dressed`. Those are hashed through the prison section instead, and bits 30–31
+stay free for whatever needs a per-pawn flag next.
