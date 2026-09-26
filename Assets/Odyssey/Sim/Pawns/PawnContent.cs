@@ -189,6 +189,7 @@ namespace Odyssey.Sim.Pawns
         public const int Forage = JobHandle.Forage;
         public const int Cook = JobHandle.Cook;
         public const int AttackRanged = JobHandle.AttackRanged;
+        public const int Prospect = JobHandle.Prospect;
         public const int Count = JobHandle.Count;
     }
 
@@ -316,6 +317,22 @@ namespace Odyssey.Sim.Pawns
         /// where a full working day lands, which is the relationship the cap exists to have.
         /// </summary>
         public int experiencePerWorkTick;
+
+        /// <summary>
+        /// How far a job that reads the rock sees, at no skill: the radius in cells, taken as a
+        /// square in X and Z, that a prospect reveals round the face it was worked at (design 62
+        /// §7). Nought for every job that reveals nothing, which is all of them but one.
+        /// </summary>
+        public int revealRadius;
+
+        /// <summary>
+        /// The levels of the skill this job trains (<see cref="trainsSkill"/>) at which
+        /// <see cref="revealRadius"/> grows by one cell, ascending: one entry a band, so a
+        /// prospector past the second entry sees two cells further than a novice. <b>The one table
+        /// of it</b> — the driver counts the entries a level has passed and holds no numbers of its
+        /// own (<c>ProspectJobDriver.RadiusFor</c>).
+        /// </summary>
+        public int[] revealRadiusBands = System.Array.Empty<int>();
     }
 
     /// <summary>
@@ -1590,7 +1607,9 @@ namespace Odyssey.Sim.Pawns
                 // The kitchen (design 48 §5).
                 "Job_Cook",
                 // The ranged attack (design 47 §2d).
-                "Job_AttackRanged");
+                "Job_AttackRanged",
+                // Reading the rock round an exposed face (design 62 §7).
+                "Job_Prospect");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",

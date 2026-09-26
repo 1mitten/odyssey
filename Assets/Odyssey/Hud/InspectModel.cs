@@ -1638,10 +1638,11 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// The verb for an order standing on the selected cell. The numbers are
-        /// <c>DesignationKind</c>'s — Mine 1, Deconstruct 2, Fell 3 — restated here because the
-        /// enum lives in the simulation and <c>OrderView.Kind</c> carries only its value. Fell
-        /// reads as chopping, the game's own word for it since the palette stopped saying
-        /// "Harvest".
+        /// <c>DesignationKind</c>'s — Mine 1, Deconstruct 2, Fell 3, Harvest 4, Prospect 5 —
+        /// restated here because the enum lives in the simulation and <c>OrderView.Kind</c>
+        /// carries only its value. Fell reads as chopping, the game's own word for it since the
+        /// palette stopped saying "Harvest". A prospect reads in the colonist's own word for the
+        /// job (<see cref="ProspectingKey"/>), lowered, as a Mine order's Dig and Mine do.
         /// </summary>
         static string OrderVerb(byte kind) => kind switch
         {
@@ -1649,8 +1650,13 @@ namespace Odyssey.Hud
             2 => "deconstructing",
             3 => "chopping",
             4 => "picking",
+            5 => Registry.Label(ProspectingKey).ToLowerInvariant(),
             _ => "working",
         };
+
+        /// <summary>The activity a prospector's line reads (design 62 §7), which is also the
+        /// verb the tile pane gives a Prospect order.</summary>
+        public const string ProspectingKey = "ui.status.prospecting";
 
         /// <summary>
         /// Fill the Skills tab from the frame.

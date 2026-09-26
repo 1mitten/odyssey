@@ -111,7 +111,15 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int AttackRanged = 27;
 
-        public const int Count = 28;
+        /// <summary>
+        /// Tap an exposed rock face and read the rock round it (design 62 §7): the Prospect order,
+        /// worked as mining. Every rock-like cell within a few cells of the face becomes known, so
+        /// its ore glows. 28, after the ranged attack; above <c>JobSystem.HashedAlways</c>, so its
+        /// counters reach the hash only once one has run.
+        /// </summary>
+        public const int Prospect = 28;
+
+        public const int Count = 29;
     }
 
     /// <summary>

@@ -332,7 +332,11 @@ namespace Odyssey.Tests.Sim
         // Deep mining (design 62 §5c, DM3): four items appended at 18 to 21 (copper ore, gold ore,
         // gems, Emberquartz), and orePerCell left the tuning — what a seam yields is its own row
         // in Ores.xml now, not one number for every ore. Taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 10466712034139107795UL;
+        // 2026-09-26, prospecting (design 62 §7, DM6): Job_Prospect appended at 28 (workTicks 140,
+        // Mining at 55 a tick, revealRadius 3 and bands 6/12/18), and JobDef gained revealRadius and
+        // revealRadiusBands, nought and empty on every other job. Taken from a freshly loaded pack.
+        // Both merged, 2026-09-26: re-taken from the merged pack.
+        const ulong ContentFingerprint = 818070778475891789UL;
 
 
         [Test]

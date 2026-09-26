@@ -138,7 +138,9 @@ namespace Odyssey.Tests.Sim
                 // Cook sits after growing and before cutting (design 48 §5): a hungry colony cooks
                 // before it fells.
                 "Rescue", "Doctor", "Deliver", "Build", "LayConduit", "Deconstruct", "RemoveConduit",
-                "Forage", "Harvest", "Sow", "Cook", "Fell", "Mine", "Refuel", "Haul",
+                // Prospect (design 62 §7) is mining work and sorts by name after Mine: a colonist
+                // with both in reach cuts before she looks.
+                "Forage", "Harvest", "Sow", "Cook", "Fell", "Mine", "Prospect", "Refuel", "Haul",
             }));
         }
 

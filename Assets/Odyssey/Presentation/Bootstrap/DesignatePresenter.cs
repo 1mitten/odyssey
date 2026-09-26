@@ -408,6 +408,7 @@ namespace Odyssey.Presentation.Bootstrap
             int a = tool == DesignateTool.Mine ? (int)DesignationKind.Mine
                   : tool == DesignateTool.Fell ? (int)DesignationKind.Fell
                   : tool == DesignateTool.Harvest ? (int)DesignationKind.Harvest
+                  : tool == DesignateTool.Prospect ? (int)DesignationKind.Prospect
                   : tool == DesignateTool.Deconstruct ? (int)DesignationKind.Deconstruct
                   : 0;
 

@@ -393,6 +393,16 @@ namespace Odyssey.Presentation.Ui
                     Polyline(painter, true, p(10.5f, 6), p(17, 11.5f));
                     return;
 
+                // Prospect (design 62 §7): a hand lens held over a chip of rock — looking at the
+                // stone, where Mine's pick cuts it. The lens and its handle, and the chip under it.
+                case HudGlyphKind.ToolProspect:
+                    Circle(painter, p(10, 9.5f), 5.5f * scale);
+                    Polyline(painter, true, p(14, 13.5f), p(19.5f, 19));
+                    Polyline(painter, false, p(3.5f, 20), p(6, 16.5f), p(10.5f, 17), p(12, 20));
+                    painter.ClosePath();
+                    painter.Stroke();
+                    return;
+
                 // Deconstruct: a pick over rubble.
                 case HudGlyphKind.ToolDeconstruct:
                     Polyline(painter, true, p(6, 15), p(15, 5));
@@ -562,6 +572,7 @@ namespace Odyssey.Presentation.Ui
             { PaletteTools.Fell, HudGlyphKind.ToolFell },
             { PaletteTools.Harvest, HudGlyphKind.ToolHarvest },
             { PaletteTools.Mine, HudGlyphKind.ToolMine },
+            { PaletteTools.Prospect, HudGlyphKind.ToolProspect },
             { PaletteTools.Deconstruct, HudGlyphKind.ToolDeconstruct },
             { PaletteTools.Cancel, HudGlyphKind.ToolCancel },
             { PaletteTools.GrowZone, HudGlyphKind.ToolGrowZone },

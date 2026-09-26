@@ -426,6 +426,21 @@ namespace Odyssey.Tests.Hud
             Assert.That(Rows(ordered), Does.StartWith("digging=45% done"));
         }
 
+        /// <summary>
+        /// A Prospect order (design 62 §7, kind 5) reads in the prospector's own word, taken from
+        /// the registry and lowered as Dig and Mine are — never a literal of its own.
+        /// </summary>
+        [Test]
+        public void AProspectOrderReadsProspecting()
+        {
+            InspectModel ordered = Looking(FrameWith(
+                Detail(terrain: TerrainHandle.Rock, workToClear: 700),
+                new OrderView(Size.Index(At), 5, 0)));
+            Assert.That(Rows(ordered), Does.StartWith(
+                Registry.Label(InspectModel.ProspectingKey).ToLowerInvariant() + "=0% done"));
+            Assert.That(Registry.Label(InspectModel.ProspectingKey), Is.EqualTo("Prospecting"));
+        }
+
         [Test]
         public void ABuiltFloorIsTitledByItsMaterial()
         {

@@ -91,6 +91,7 @@ ui.pawn.corpse,07,,,skull,high,mapped
 ui.status.hauling,08,,,duffel bag,low,mapped
 ui.status.building,06,,,hammer and tools tile,med,shared
 ui.status.mining,05,,,pickaxe,high,shared
+ui.status.prospecting,-,,,"a hand lens held to a rock face",-,gap
 ui.status.felling,-,,,"an axe swung at a trunk",-,gap
 ui.status.sleeping,08,,,mattress,high,shared
 ui.status.eating,02,,,bowl of cooked food,high,shared
@@ -210,6 +211,7 @@ ui.arch.tool.allowed,08,,,folded map,med,shared
 ui.arch.tool.dumping,08,,,plastic rubbish bag,low,mapped
 ui.arch.tool.kennel,06,,,paw print tile,high,shared
 ui.arch.tool.mine,05,,,pickaxe,high,shared
+ui.arch.tool.prospect,-,,,"a hand lens over a chip of rock. Drawn as a HudGlyph on the palette tile",-,gap
 ui.arch.tool.deconstruct,01,,,wrench,med,shared
 ui.arch.tool.salvage,05,,,powered drill,med,shared
 ui.arch.tool.haulurgent,08,,,duffel bag,low,shared

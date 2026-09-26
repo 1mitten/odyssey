@@ -93,6 +93,14 @@ namespace Odyssey.Hud
         /// is refused by the simulation cell by cell.
         /// </summary>
         Harvest = 9,
+
+        /// <summary>
+        /// Read the rock round an exposed face (design 62 §7). A verb applied to what is already
+        /// in a cell, like <see cref="Mine"/>; a face nobody has cut, soft ground and bedrock are
+        /// refused by the simulation cell by cell. Armed from the palette's Structure row, not the
+        /// strip (<c>PaletteTools.Prospect</c>).
+        /// </summary>
+        Prospect = 10,
     }
 
     /// <summary>

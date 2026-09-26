@@ -150,6 +150,16 @@ namespace Odyssey.Hud
         public const string Sandbag = "ui.arch.tool.sandbag";
 
         public const string Mine = "ui.arch.tool.mine";
+
+        /// <summary>
+        /// Read the rock round an exposed face (design 62 §7). <b>Filed under Structure, not
+        /// pinned beside Mine</b>: an eighth button on the strip pushes the views strip under the
+        /// command bar at 1280 x 720 on a 32-layer board (<c>HudLayoutTests</c>), and the strip's
+        /// ceiling of seven was raised for Harvest with the note that it is the one to move. It
+        /// sits with the stair and the ladder, the other things a player reaches for when going
+        /// down. See <see cref="CategoryOrders"/>.
+        /// </summary>
+        public const string Prospect = "ui.arch.tool.prospect";
         public const string Fell = "ui.arch.tool.fell";
 
         /// <summary>Pick a ripe berry bush (design 45 §6). The key predates the order, as the
@@ -202,7 +212,9 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly (string key, string[] tools)[] Categories =
         {
-            ("ui.arch.category.structure", new[] { Wall, Paving, Door, Stair, Ladder, Slab, "ui.arch.tool.reclaim" }),
+            // Prospect (design 62 §7) is the one order here, beside the stair and the ladder: the
+            // things a player reaches for going down. Eight fills the Rail grid's two rows of four.
+            ("ui.arch.category.structure", new[] { Wall, Paving, Door, Stair, Ladder, Slab, "ui.arch.tool.reclaim", Prospect }),
             ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", Galley, "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
             ("ui.arch.category.furniture", new[] { Bed, Shelf, Campfire, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp" }),
             // Power (design 32): the line and its undoing, then what makes power and what spends
@@ -316,6 +328,41 @@ namespace Odyssey.Hud
         public static string OrderWord(string key) => Registry.Label(key);
 
         /// <summary>
+        /// The orders that live in a palette category rather than on the strip, with the tool each
+        /// arms: taking power lines up (design 32 §2a, in Power) and prospecting (design 62 §7, in
+        /// Structure). <b>One table</b>, because two things ask the same question of it — which
+        /// order the armed banner names (<c>BuildPaletteModel.ArmedOrder</c>) and which colour it
+        /// wears (<see cref="HudTheme.ArmedOrderHue"/>) — and each had Unwire written into it by
+        /// hand until a second order arrived.
+        /// </summary>
+        public static readonly (string Key, DesignateTool Tool)[] CategoryOrders =
+        {
+            (Unwire, DesignateTool.RemoveConduit),
+            (Prospect, DesignateTool.Prospect),
+        };
+
+        /// <summary>The category order a held tool is, or empty.</summary>
+        public static string CategoryOrderKey(DesignateTool tool)
+        {
+            for (int i = 0; i < CategoryOrders.Length; i++)
+                if (CategoryOrders[i].Tool == tool) return CategoryOrders[i].Key;
+            return string.Empty;
+        }
+
+        /// <summary>The tool a category order's key arms, or false for any other key.</summary>
+        public static bool TryCategoryOrderTool(string key, out DesignateTool tool)
+        {
+            for (int i = 0; i < CategoryOrders.Length; i++)
+            {
+                if (CategoryOrders[i].Key != key) continue;
+                tool = CategoryOrders[i].Tool;
+                return true;
+            }
+            tool = DesignateTool.None;
+            return false;
+        }
+
+        /// <summary>
         /// The tools that actually do something. Anything absent is drawn disabled, which is most
         /// of the palette until the thing behind a key exists.
         /// </summary>
@@ -392,6 +439,7 @@ namespace Odyssey.Hud
                 d => d.ArmBuild(BuildingHandle.Sandbags),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Sandbags),
             new PaletteTool(Mine, Toggle(DesignateTool.Mine), Holding(DesignateTool.Mine)),
+            new PaletteTool(Prospect, Toggle(DesignateTool.Prospect), Holding(DesignateTool.Prospect)),
             new PaletteTool(Fell, Toggle(DesignateTool.Fell), Holding(DesignateTool.Fell)),
             new PaletteTool(Harvest, Toggle(DesignateTool.Harvest), Holding(DesignateTool.Harvest)),
             new PaletteTool(Cancel, Toggle(DesignateTool.Cancel), Holding(DesignateTool.Cancel)),

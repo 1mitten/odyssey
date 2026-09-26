@@ -75,6 +75,16 @@ namespace Odyssey.Hud
         public static readonly HudColour Forage = new HudColour(0xc0, 0x4f, 0x8a);
 
         /// <summary>
+        /// Prospecting (design 62 §7): an amethyst violet, the colour of a thing found in rock, on
+        /// its palette tile, the armed banner, the drag cursor and the mark on the face. Given over
+        /// the same faces as <see cref="Mine"/>, so it keeps well away from Mine's blue
+        /// (130 channel-points) and from the build accent's cyan (133), and it is no ore glow's
+        /// cyan either: a prospect order and the seam it turns up can sit side by side on one
+        /// face. Far from the berry's red-violet too (179), the other violet on the strip.
+        /// </summary>
+        public static readonly HudColour Prospect = new HudColour(0x9b, 0x7f, 0xe8);
+
+        /// <summary>
         /// A drafted colonist's hue (design 33 §2g): the marker over its head, the line to where it
         /// has been sent and the bracket on the cell. <b>A deep, dark red</b> — the owner's call
         /// after the first draft playtest (2026-09-23: <i>"make the cursor a deeper dark red but
@@ -134,6 +144,7 @@ namespace Odyssey.Hud
             DesignateTool.Fell => HudTheme.Good,
             DesignateTool.Harvest => Forage,
             DesignateTool.Mine => Mine,
+            DesignateTool.Prospect => Prospect,
             DesignateTool.Deconstruct => HudTheme.Warn,
             DesignateTool.Cancel => HudTheme.Bad,
             // The growing zone, on the olive its own Build category already wears. It comes
@@ -163,7 +174,7 @@ namespace Odyssey.Hud
         /// byte <c>OrderView.Kind</c> carries.
         ///
         /// <para>The numbers are <c>DesignationKind</c>'s — Mine 1, Deconstruct 2, Fell 3,
-        /// Harvest 4 — restated here for the reason <see cref="InspectModel"/> already restates them: the enum
+        /// Harvest 4, Prospect 5 — restated here for the reason <see cref="InspectModel"/> already restates them: the enum
         /// lives in <c>Odyssey.Sim</c>, which this assembly does not reference, and the snapshot
         /// carries the value rather than the type. Anything else is a build order.</para>
         /// </summary>
@@ -173,6 +184,7 @@ namespace Odyssey.Hud
             2 => DesignateTool.Deconstruct,
             3 => DesignateTool.Fell,
             4 => DesignateTool.Harvest,
+            5 => DesignateTool.Prospect,
             _ => DesignateTool.Build,
         };
 
