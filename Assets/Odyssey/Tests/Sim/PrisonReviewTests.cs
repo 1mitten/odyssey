@@ -9,7 +9,7 @@ using static Odyssey.Tests.Sim.PrisonFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The second review of the prisoner line (design 59 §16), one test per fault it found, each
+    /// The second review of the prisoner line (design 60 §16), one test per fault it found, each
     /// failing on the code before its fix.
     /// </summary>
     public class PrisonReviewTests

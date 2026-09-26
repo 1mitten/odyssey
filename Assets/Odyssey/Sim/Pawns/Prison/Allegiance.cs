@@ -5,7 +5,7 @@ using Odyssey.Sim.Pathing;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// <b>The one owner of whose side a pawn is on</b> (design 59 §4b).
+    /// <b>The one owner of whose side a pawn is on</b> (design 60 §4b).
     ///
     /// <para>Before prisoners a side was a property of the kind: a bandit was hostile because its
     /// kind said so, and nothing saved or changed it. A prisoner is a bandit who is no longer
@@ -42,7 +42,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// How she walks between jobs. A prisoner or escapee walks as a bandit does, which cannot
-        /// open a door but can pass one held open (design 59 §6): that is the whole of what holds a
+        /// open a door but can pass one held open (design 60 §6): that is the whole of what holds a
         /// cell. A pawn let go walks as a colonist does, out through the doors. Anybody else walks
         /// as her kind does — and a recruit as a colonist, whatever her kind, because she opens the
         /// colony's doors now.
@@ -50,7 +50,7 @@ namespace Odyssey.Sim.Pawns
         public static TraverseMode ModeOf(Pawn pawn)
         {
             if (IsPrisoner(pawn)) return TraverseMode.Bandit;
-            // Let go (design 59 §10): the warden opened the door, and every door between her and
+            // Let go (design 60 §10): the warden opened the door, and every door between her and
             // the edge is open to her on her way out.
             if (pawn.Custody == PawnCustody.Released) return TraverseMode.Colonist;
             if (pawn.Prison != null && pawn.Prison.Joined) return TraverseMode.Colonist;

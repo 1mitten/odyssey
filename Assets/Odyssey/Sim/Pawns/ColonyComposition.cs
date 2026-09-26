@@ -60,7 +60,8 @@ namespace Odyssey.Sim.Pawns
         /// </remarks>
         public static SimWorldBuilder AddColony(this SimWorldBuilder builder, PawnContext pawns,
             DesignationGrid designations, SupportSystem support, NavGraph nav,
-            List<PlacedEdifice> edifices, out ConstructionGrid construction, JobSystem? jobs = null)
+            List<PlacedEdifice> edifices, out ConstructionGrid construction, JobSystem? jobs = null,
+            Worldgen.ClimateDef? climate = null, int wetPerMille = 1000)
         {
             // pawns.Cells, not a grid of its own: the context already carries the one cell grid the
             // colony is about, and taking a second would be an invitation to hand in two.
@@ -124,7 +125,7 @@ namespace Odyssey.Sim.Pawns
             pawns.Doors = doors;
             var enclosure = new World.EnclosureGrid(pawns.Cells, edifices);
             pawns.Enclosure = enclosure;
-            // What every bed is for (design 59 §5b): the prison bed and the cell it makes. Built
+            // What every bed is for (design 60 §5b): the prison bed and the cell it makes. Built
             // here, where the rooms it reads and the grid whose owners it sweeps both are.
             var purposes = new BedPurposes(pawns.Cells, edifices) { Enclosure = enclosure };
             pawns.BedPurposes = purposes;
@@ -133,11 +134,16 @@ namespace Odyssey.Sim.Pawns
             // construction it reads sources through. Built here for the same argument as every
             // other seam on the context: an optional one is how a caller forgets it, and a
             // colony that forgot it would be a colony where nothing is ever cold.
-            var temperature = new Temperature.TemperatureSystem(pawns, edifices, Worldgen.WorldContent.Climate);
+            // The climate is the site's when the colony stands on a planet (design 59 §7) and the
+            // content's temperate curve otherwise. Defaulted here, unlike the grids above, because
+            // the default *is* the correct answer for every caller without a planet — a test that
+            // forgets it gets exactly the world it had before sites existed.
+            var temperature = new Temperature.TemperatureSystem(pawns, edifices,
+                climate ?? Worldgen.WorldContent.Climate);
             pawns.Temperature = temperature;
             // The sky (design 43), which writes the outdoor curve's weather term before the thermal
             // pass reads it: Order 35 against temperature's 50.
-            var weather = new Weather.WeatherSystem(pawns, Worldgen.WorldContent.Weathers);
+            var weather = new Weather.WeatherSystem(pawns, Worldgen.WorldContent.Weathers, wetPerMille);
             pawns.Weather = weather;
             // And where it reaches: the one shelter rule (design 43 §6), read by pace, growth and
             // the animals. Derived, so it is neither saved nor hashed and needs no schedule slot.
@@ -287,13 +293,13 @@ namespace Odyssey.Sim.Pawns
                 .AddIntentHandler(IntentKind.SetPawnArea, pipeline.HandleSetPawnArea)
                 .AddIntentHandler(IntentKind.DebugHealth, pawns.Pawns.HandleDebugHealth)
                 .AddIntentHandler(IntentKind.OrderTend, pipeline.HandleOrderTend)
-                // Custody (design 59 §4), on the pipeline because taking a pawn ends her job.
+                // Custody (design 60 §4), on the pipeline because taking a pawn ends her job.
                 .AddIntentHandler(IntentKind.DebugImprison, pipeline.HandleDebugImprison)
                 .AddIntentHandler(IntentKind.SetCaptureMark, pipeline.HandleSetCaptureMark)
                 .AddIntentHandler(IntentKind.OrderCapture, pipeline.HandleOrderCapture)
                 .AddIntentHandler(IntentKind.SetPrisonMode, pipeline.HandleSetPrisonMode)
                 .AddIntentHandler(IntentKind.OrderArrest, pipeline.HandleOrderArrest)
-                // What a bed is for (design 59 §5b), on the grid that owns who owns a bed.
+                // What a bed is for (design 60 §5b), on the grid that owns who owns a bed.
                 .AddIntentHandler(IntentKind.SetBedPurpose, construction.HandleSetBedPurpose)
                 // The Work tab's one command (design 27). It belongs to the registry because a
                 // priority is a field on a pawn and the registry is the one owner of those; the

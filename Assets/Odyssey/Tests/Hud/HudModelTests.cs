@@ -562,7 +562,7 @@ namespace Odyssey.Tests.Hud
                     "ui.skill.cooking",
                     // And since the ranged line's (design 47 §3a).
                     "ui.skill.shooting",
-                    // And since the prisoner line's (design 59 §8).
+                    // And since the prisoner line's (design 60 §8).
                     "ui.skill.social",
                 }),
                 "the live rows are the simulation's own skills, each under its own name");

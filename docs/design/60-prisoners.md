@@ -1,4 +1,4 @@
-# 59 — Prisoners
+# 60 — Prisoners
 
 **Written 2026-09-26**, from the owner's request and a four-round interview the same day.
 Branch `claude/prisoner-bed-assignment-98afc0`. Plan: `docs/plans/prisoners.md`. Interview:
@@ -9,7 +9,7 @@ Branch `claude/prisoner-bed-assignment-98afc0`. Plan: `docs/plans/prisoners.md`.
 > together."* — the owner, 2026-09-26
 
 **Status: built (P1–P12), reviewed twice, merged with `main` and not yet played** (§15, §16).
-**Renumbered 58 → 59 on 2026-09-26**: `main` took 58 for cracks first. Every number below is a
+**Renumbered 58 → 59 → 60 on 2026-09-26**: `main` took 58 for cracks and then 59 for world generation first, and world generation took save format 11, so this line's is **12** (§16). Every number below is a
 proposal the owner confirms at the first play (§8, §9, §10).
 
 ## 1. What a prisoner is
@@ -466,7 +466,7 @@ not needed** (§15a: the facts are rows on her pane, named by row, not by regist
 
 | What | How | Moves goldens? |
 |---|---|---|
-| Social skill | **Format 10 → 11**, `BackfillSkills` (idempotent, draws in skill order so the first nine rolls are unchanged) | **Yes — P3, once** |
+| Social skill | **Format 10 → 11, 12 as merged** (world generation took 11 on `main`), `BackfillSkills` (idempotent, draws in skill order so the first nine rolls are unchanged) | **Yes — P3, once** |
 | Warden work type | Priorities array grows by one | **Yes — same bake, P3** |
 | `TryClaimForSleeper` counting only colonists (P1) | Behaviour | Possibly, on boards with animals. Measured in P1; if it moves them, it lands in P3's bake |
 | `Pawn.Custody` | Pawn word bits 28–29, zero while Free | No |
@@ -590,7 +590,7 @@ which is a guard against a case no board here can build. No golden moved.
 The branch was merged with `main` first (wake, frog, First Person, cracks): sixteen conflicts, all
 two appends at one place. The colonist pane's commands became Draft, the response, **Arrest, then
 First Person last**, as First Person's own comment asks. Design 58 was `main`'s by then, so this
-document is **59**. The played-board golden was re-baked and measured with `GoldenColonyProbe`: equal
+document is **60** (59 on the first merge; world generation took it on the second). The played-board golden was re-baked and measured with `GoldenColonyProbe`: equal
 to `main` in every number, and different from this branch only by `main`'s seven frogs.
 
 Three independent passes then read the simulation, the interface, and whether the tests and docs

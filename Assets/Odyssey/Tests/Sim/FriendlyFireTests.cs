@@ -197,7 +197,7 @@ namespace Odyssey.Tests.Sim
         {
             PawnContent content = ContentPack.Pawns();
             for (int i = 0; i < content.Thoughts.Length; i++)
-                // And being held (design 59 §6): renewed while she is in the cell, so it lasts as
+                // And being held (design 60 §6): renewed while she is in the cell, so it lasts as
                 // long as the cell does. No golden holds a prisoner, so none eats it.
                 Assert.That(content.Thoughts[i].renewsOnRepeat,
                     Is.EqualTo(i == ThoughtIndex.AttackedByColonist || i == ThoughtIndex.Imprisoned),

@@ -158,9 +158,9 @@
   </SkillDef>
 
   <!--
-    Social (design 59 section 8): the warden's level is the recruitment gain's S, 400 + 120 a
+    Social (design 60 section 8): the warden's level is the recruitment gain's S, 400 + 120 a
     level in thousandths, and every chat trains it. Appended with the prisoner line; a colonist
-    from a save older than format 11 is dealt it once on load.
+    from a save older than format 12 is dealt it once on load.
   -->
   <SkillDef ParentName="SkillBase">
     <defName>Skill_Social</defName>

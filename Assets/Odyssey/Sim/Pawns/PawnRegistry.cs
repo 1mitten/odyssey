@@ -484,7 +484,7 @@ namespace Odyssey.Sim.Pawns
             new Cooking.CookJobDriver(),
             // The ranged attack (design 47 §2d), JobHandle 27, after the kitchen's.
             new AttackRangedJobDriver(),
-            // The prisoner line (design 59 §7), JobHandle 28 to 35.
+            // The prisoner line (design 60 §7), JobHandle 28 to 35.
             new CaptureJobDriver(),
             new FeedPrisonerJobDriver(),
             new ChatJobDriver(),
@@ -509,10 +509,11 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public void BackfillSkills(int formatVersion)
         {
-            // Format 11 (design 59 §8) dealt Social the same way. One guard serves both: the deal
-            // skips every skill already holding experience, so a file at 10 gets only Social and a
-            // file below it Shooting and Social, each from the stream a new colonist would use.
-            if (formatVersion >= 11) return;
+            // Format 12 (design 60 §8) dealt Social the same way. One guard serves both: the deal
+            // skips every skill already holding experience, so a file at 10 or 11 gets only Social
+            // and a file below 10 Shooting and Social, each from the stream a new colonist would
+            // use. 11 is world generation's (design 59), which carried no Social.
+            if (formatVersion >= 12) return;
             for (int i = 0; i < _pawns.Count; i++)
                 if (_pawns[i].IsPerson) _pawns[i].RollStartingSkills();
         }
@@ -535,9 +536,9 @@ namespace Odyssey.Sim.Pawns
         public void Contribute(SimWorld world, SnapshotWriter writer)
         {
             GridSize size = world.Size;
-            // What every prisoner's rows share, found once for this publish (design 59 §16 #7).
+            // What every prisoner's rows share, found once for this publish (design 60 §16 #7).
             var prison = new PrisonAspects.Shared();
-            // Whether a prison bed stands free, for the pane's Arrest (design 59 §16 H2): a walk over
+            // Whether a prison bed stands free, for the pane's Arrest (design 60 §16 H2): a walk over
             // the beds only while one is marked, so a colony with no prison pays one flag.
             if (_ctx.BedPurposes != null && _ctx.BedPurposes.Any)
                 writer.SetPrisonBedFree(CaptureRules.AnyFreePrisonBed(_ctx));
@@ -637,7 +638,7 @@ namespace Odyssey.Sim.Pawns
                     seated,
                     // A jump falling short lands a layer below the bank it left (design 46 §6).
                     pawn.JumpLanding >= 0 && pawn.JumpLanding / size.LayerStride != pawn.Cell / size.LayerStride,
-                    // Held, and dressed for it (design 59 §4b, §11d): reports of saved state.
+                    // Held, and dressed for it (design 60 §4b, §11d): reports of saved state.
                     pawn.Custody,
                     pawn.Custody != PawnCustody.Free && pawn.Prison != null && pawn.Prison.Dressed));
 
@@ -673,7 +674,7 @@ namespace Odyssey.Sim.Pawns
                 // comes. Asked only of the downed, so a colony nobody has hurt pays one flag.
                 if (pawn.Downed && RescueRules.NeedsRescue(pawn, _ctx) && RescueRules.BedFor(pawn, pawn, _ctx) < 0)
                     writer.AddPawnAspect(pawn.Id, CombatAspects.RescueNoBed, 1);
-                // The prison's (design 59 §11): a capture mark, a pawn waiting for a prison bed
+                // The prison's (design 60 §11): a capture mark, a pawn waiting for a prison bed
                 // with none free, and a held prisoner's pane. Asked of custody as well as the
                 // record: a freshly taken prisoner's record is empty, and a load drops an empty one
                 // (review 2026-09-26). Nothing for a pawn nobody means to hold.

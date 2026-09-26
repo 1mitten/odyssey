@@ -122,7 +122,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Ate food raw: carrots from the pile, or worse.</summary>
         public const int AteRaw = 10;
 
-        // The prisoner line (design 59 §10, §6), appended.
+        // The prisoner line (design 60 §10, §6), appended.
 
         /// <summary>Held by the colony: felt by a prisoner, refreshed while she is held.</summary>
         public const int Imprisoned = 11;
@@ -372,7 +372,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Working the bills at a galley or a campfire (design 48 §5).</summary>
         public const int Cooking = WorkHandle.Cooking;
 
-        /// <summary>Feeding, talking to and bringing in prisoners (design 59 §7).</summary>
+        /// <summary>Feeding, talking to and bringing in prisoners (design 60 §7).</summary>
         public const int Warden = WorkHandle.Warden;
 
         public const int Count = WorkHandle.Count;
@@ -428,9 +428,9 @@ namespace Odyssey.Sim.Pawns
         public const int Shooting = 8;
 
         /// <summary>
-        /// Talking people round (design 59 §8): the warden's level is the recruitment gain's
+        /// Talking people round (design 60 §8): the warden's level is the recruitment gain's
         /// <c>S</c>, and every chat trains it. Claimed by the prisoner line's contracts step; a
-        /// colonist from a save older than format 11 is dealt it once on load
+        /// colonist from a save older than format 12 is dealt it once on load
         /// (<see cref="PawnRegistry.BackfillSkills"/>).
         /// </summary>
         public const int Social = 9;
@@ -1581,7 +1581,7 @@ namespace Odyssey.Sim.Pawns
                 "Thought_AttackedByColonist", "Thought_ColonistDied",
                 // The kitchen (design 48 §4): what each food is thought of.
                 "Thought_AteRation", "Thought_AteBurnt", "Thought_AteRaw",
-                // The prisoner line (design 59 §6, §10).
+                // The prisoner line (design 60 §6, §10).
                 "Thought_Imprisoned", "Thought_ColonistArrested", "Thought_WasArrested");
             content.Jobs = ByName<JobDef>(defs,
                 "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine",
@@ -1605,7 +1605,7 @@ namespace Odyssey.Sim.Pawns
                 "Job_Cook",
                 // The ranged attack (design 47 §2d).
                 "Job_AttackRanged",
-                // The prisoner line (design 59 §7), claimed together by its contracts step.
+                // The prisoner line (design 60 §7), claimed together by its contracts step.
                 "Job_Capture", "Job_FeedPrisoner", "Job_Chat", "Job_Escort", "Job_GoToCell",
                 "Job_Escape", "Job_LeaveFree", "Job_Arrest");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
@@ -1618,7 +1618,7 @@ namespace Odyssey.Sim.Pawns
                 "Work_Doctor",
                 // The kitchen (design 48 §5).
                 "Work_Cooking",
-                // The prisoner line (design 59 §7).
+                // The prisoner line (design 60 §7).
                 "Work_Warden");
             content.Skills = ByName<SkillDef>(defs,
                 "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction",
@@ -1631,7 +1631,7 @@ namespace Odyssey.Sim.Pawns
                 "Skill_Cooking",
                 // Appended with the ranged line (design 47 §3a).
                 "Skill_Shooting",
-                // Appended with the prisoner line (design 59 §8).
+                // Appended with the prisoner line (design 60 §8).
                 "Skill_Social");
             content.Items = ByName<ItemDef>(defs,
                 "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal",

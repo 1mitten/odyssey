@@ -1,11 +1,11 @@
 # Prisoners — the plan
 
-- **Design:** `docs/design/59-prisoners.md`.
+- **Design:** `docs/design/60-prisoners.md`.
 - **Interview:** `docs/research/prisoner-interview.md`.
 - **Reference:** `docs/research/a-20-prisoners.md`.
 - **Branch:** `claude/prisoner-bed-assignment-98afc0` for P0. Each later unit was to get a
   short-lived `claude/*` branch and a PR, in unit order; **as built, all twelve landed on P0's branch**
-  and were reviewed together (design 59 §15d, §16).
+  and were reviewed together (design 60 §15d, §16).
 
 **Phase gate.** P0 is documents only. **No unit below P0 starts until the owner approves this
 plan.**
@@ -18,14 +18,14 @@ plan.**
 
 | Unit | What | Gate | Player sees |
 |---|---|---|---|
-| **P0** | Research a-20, the interview, design 59, this plan | docs only | — |
+| **P0** | Research a-20, the interview, design 60, this plan | docs only | — |
 | **P1** | **One bed rule.** `BedRules.CanUse / MayOwn / CountsForBeds`. The four choosers (`TrySleep`, `Medical.BedFor`, `RescueRules.BedFor`, `TryClaimForSleeper`), `AssignOwnerAt` and the owner picker all route through it | fast tier; Unity (picker) | The bed picker stops offering hogs and bandits |
 | **P2** | **Custody and `Allegiance`.** `Pawn.Custody` (hash bits 28–29), `Allegiance` as the one owner, `PrisonRecord` + `odyssey.prison`, `PawnView.Custody`, the outfit owner reading custody, a debug *Imprison* row | fast tier; goldens untouched | A debug prisoner is ignored by raiders and leaves the roster |
 | **P3** | **Contracts and the one golden bake.** Social (`SkillIndex` 9, format 10 → 11, `BackfillSkills`), `WorkHandle.Warden` 8, job handles 28–35, thoughts, `PrisonPurpose` constants, fingerprints | fast + Long; goldens re-baked **once**, measured with `GoldenColonyProbe` | Social on the skill pane |
 | **P4** | **Bed purpose and cells.** `odyssey.bedpurpose`, `SetBedPurpose` (normalises the room), `EnclosureGrid.Generation`, `PrisonCells`, eviction, the bed-pane toggle, the first registry keys | fast tier; content gates; Unity | Mark a bed Prisoner and its room follows |
 | **P5** | **The prisoner mind.** `PrisonerTree` (needs, shackled, cell wander), Bandit mode, colonist healing and recovery, no breaks | fast + Long | A prisoner walks the cell and sleeps in its bed |
 | **P6** | **Capture.** `Capture` driver and emergency giver, the menu (Capture / Finish off), the capture mark, the doctor treating prisoners, leaving the band, the jumpsuit, the Warden column live, *No prison bed* | fast; Unity; content gates | Downed raiders carried to cells, in orange |
-| **P7** | **Feeding.** `FeedPrisoner`. Food in a cell is **not hauled out and not eaten by colonists** (design 59 §14) | fast + Long | Wardens bring meals |
+| **P7** | **Feeding.** `FeedPrisoner`. Food in a cell is **not hauled out and not eaten by colonists** (design 60 §14) | fast + Long | Wardens bring meals |
 | **P8** | **Recruitment.** `Chat`, `Recruitment.Factors`, the prisoner tab (modes, bar, ETA, blockers), joining, the bulletin | fast; Unity | A prisoner can be won over |
 | **P9** | **Escape.** `EscapeRisk.PerDay`, the hourly roll, `EscapeTree` (door bashing), the cycling alert, recapture | fast + Long | Breakouts, and why |
 | **P10** | **Release and Exile**, `Escort`, `LeaveFree`, the arrested colonist's return, the Ransom seam | fast | Letting people go |
@@ -49,7 +49,7 @@ plan.**
 - The hash is unchanged while every pawn is Free.
 - `odyssey.prison` round-trips.
 - A save without the section loads with nobody in custody.
-- `AllegianceConsumerTests`: one assertion per row of design 59 §4b's table.
+- `AllegianceConsumerTests`: one assertion per row of design 60 §4b's table.
 - `Kind` is never written outside the loader (a grep test, in the shape of `RegistryTests`).
 
 ### P3
@@ -96,7 +96,7 @@ plan.**
 
 ### P8
 
-- The gain table of design 59 §8 reproduced exactly.
+- The gain table of design 60 §8 reproduced exactly.
 - The ETA equals the chats actually taken.
 - The blockers name each factor.
 - A recruit has passions and skills, Colonist traverse, `Issued`, a released bed, priorities of 3,
@@ -129,7 +129,7 @@ plan.**
 
 ## As built (2026-09-26)
 
-All twelve units are in (design 59 §15). Of the bullets above, two are **not** covered by a test
+All twelve units are in (design 60 §15). Of the bullets above, two are **not** covered by a test
 yet, and say so rather than being quietly dropped:
 
 - *A resisting arrest ends in downs, never deaths* — the escapee is hostile and the fight's own rule
@@ -147,4 +147,4 @@ In unit order:
 - The Unity EditMode and PlayMode tiers for P1, P4, P6 and P8, because the fast tier compiles
   neither Presentation nor Editor.
 - A play after P6 and after P9, following the handover tables.
-- The confirmation of every proposed number in design 59 §8–§10.
+- The confirmation of every proposed number in design 60 §8–§10.

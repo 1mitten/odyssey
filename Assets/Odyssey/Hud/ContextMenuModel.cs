@@ -182,14 +182,14 @@ namespace Odyssey.Hud
         /// <summary>The Tend row's verb (design 43 §11): "Tend", "Treat this patient".</summary>
         public const string TendKey = "ui.command.tend";
 
-        /// <summary>The two rows on a downed enemy (design 59 §7): bring her in, or kill her.</summary>
+        /// <summary>The two rows on a downed enemy (design 60 §7): bring her in, or kill her.</summary>
         public const string CaptureKey = "ui.command.capture", FinishOffKey = "ui.command.finishoff";
 
         /// <summary>Why Finish off is dim: nobody selected is drafted, and only the drafted fight.</summary>
         public const string NeedsDraftKey = "ui.menu.needsdraft";
 
         /// <summary>
-        /// Capture, then Finish off, on a downed person who is not ours (design 59 §7, the owner's
+        /// Capture, then Finish off, on a downed person who is not ours (design 60 §7, the owner's
         /// ruling of 2026-09-26: "Menu: Capture / Finish off"). The right-click that used to kill a
         /// downed bandit outright opens this instead, so nothing happens by accident.
         ///
@@ -206,7 +206,7 @@ namespace Odyssey.Hud
             if (!under.IsValid || !snapshot.TryGetPawn(under, out PawnView target)) return;
             if (!target.IsPerson || !target.IsDowned || target.IsColonist) return;
             if (!target.IsHostile && target.Custody != PawnCustody.Prisoner) return;
-            // A prisoner only when she is to be brought back (design 59 §16 H3): one lying in her
+            // A prisoner only when she is to be brought back (design 60 §16 H3): one lying in her
             // own prison bed was offered a Capture the simulation refused in silence, and a
             // drafted right-click on her cell opened the menu instead of moving there.
             if (target.Custody == PawnCustody.Prisoner && !snapshot.TryGetPawnAspect(under, PrisonAspectNames.StrayKey, out _))
@@ -274,14 +274,14 @@ namespace Odyssey.Hud
             into.Add(new ContextMenuRow(TendKey, label, enabled: true, string.Empty, order));
         }
 
-        /// <summary>The verb on a colonist's Arrest row (design 59 §10).</summary>
+        /// <summary>The verb on a colonist's Arrest row (design 60 §10).</summary>
         public const string ArrestKey = "ui.command.arrest";
 
         /// <summary>
-        /// <b>Arrest</b>, on a colonist under the pointer who is on her feet (design 59 §10, owner's
+        /// <b>Arrest</b>, on a colonist under the pointer who is on her feet (design 60 §10, owner's
         /// ruling 2026-09-26 at the second review): a row here rather than a button in her pane's
         /// header, which with Draft, the response and First Person left 17 px for her name
-        /// (design 59 §16 H1). <b>Only while nobody selected is drafted</b>, so a drafted
+        /// (design 60 §16 H1). <b>Only while nobody selected is drafted</b>, so a drafted
         /// right-click that touches a colonist is still a move (design 33 §2f). The first standing
         /// colonist of the selection other than her is sent; with none, the nearest who can reach
         /// her (<c>A = 0</c>). Dim with its reason when the simulation would refuse it
@@ -317,7 +317,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// Why an arrest of <paramref name="target"/> would be refused, in the menu's words, or null
-        /// when it would be sent (design 59 §16 H2). Read off what the simulation publishes — her
+        /// when it would be sent (design 60 §16 H2). Read off what the simulation publishes — her
         /// state, the colony's, whether a prison bed stands free — the three refusals a player can
         /// see coming. The simulation still decides; this only stops the press doing nothing.
         /// </summary>

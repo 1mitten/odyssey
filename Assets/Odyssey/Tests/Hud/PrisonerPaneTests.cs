@@ -7,7 +7,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// A prisoner's pane (design 59 §11b): her mode, how willing she is, and in Recruit mode how
+    /// A prisoner's pane (design 60 §11b): her mode, how willing she is, and in Recruit mode how
     /// long until she joins and what is slowing it — every number read from the aspects the
     /// simulation's own arithmetic published, and the mode row the control that moves it on.
     /// </summary>
@@ -52,7 +52,7 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// Design 59 §16 H5. On Hold, with nobody having talked to her, willingness is a 0% that
+        /// Design 60 §16 H5. On Hold, with nobody having talked to her, willingness is a 0% that
         /// cannot move and is not shown; once a warden has made a start it stays on the pane.
         /// </summary>
         [Test]
@@ -63,7 +63,7 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// Design 59 §16 H6. A pawn released or exiled and walking off the board is not held: the
+        /// Design 60 §16 H6. A pawn released or exiled and walking off the board is not held: the
         /// word under her name said Prisoner while the row under it said she was leaving free.
         /// </summary>
         [Test]
@@ -109,7 +109,7 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The four modes are offered to be chosen directly, never cycled through (design 59 §16
+        /// The four modes are offered to be chosen directly, never cycled through (design 60 §16
         /// H4): no press passes through Release or Exile on its way somewhere else. Never Ransom.
         /// </summary>
         [Test]
@@ -147,7 +147,7 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// Arrest is not a button on anybody's pane (design 59 §16 H1): a fourth labelled one left
+        /// Arrest is not a button on anybody's pane (design 60 §16 H1): a fourth labelled one left
         /// her name 17 px. It is a right-click row (<c>ArrestMenuTests</c>).
         /// </summary>
         [Test]

@@ -9,7 +9,7 @@ using static Odyssey.Tests.Sim.CombatFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// Capture (design 59 §7): a person marked and downed is carried to a prison bed by whoever has
+    /// Capture (design 60 §7): a person marked and downed is carried to a prison bed by whoever has
     /// Warden work, and on the lay she is taken — in custody, the bed hers, dressed for the cell. No
     /// free prison bed means nothing moves and the reason is published. A raider taken stays on her
     /// band's roll counted as lost, which is what she already was lying downed. The doctor treats a
@@ -70,7 +70,7 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// <b>Taken is disarmed</b> (design 59 §7; review 2026-09-26). A downed raider keeps her
+        /// <b>Taken is disarmed</b> (design 60 §7; review 2026-09-26). A downed raider keeps her
         /// weapon by design, so a capture that did not take it would give a prisoner a machete to
         /// break out with.
         /// </summary>

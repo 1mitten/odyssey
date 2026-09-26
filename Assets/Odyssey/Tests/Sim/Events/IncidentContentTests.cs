@@ -43,7 +43,7 @@ namespace Odyssey.Tests.Sim.Events
         // Raid, the first Def with a per-worker block (<raid>), gates earliestDay 3 and
         // minRefireDays 4 (invented). No golden moved: no golden fires an incident.
         //
-        // 2026-09-26, prisoners (design 59 §8-§10): Incident_Recruited, Incident_PrisonerEscaped,
+        // 2026-09-26, prisoners (design 60 §8-§10): Incident_Recruited, Incident_PrisonerEscaped,
         // Incident_Surrendered and Incident_Arrested appended at 6 to 9, all Recorded — written
         // down when a prisoner joins, gets away, gives up or is taken, never fired.
         const ulong ContentFingerprint = 9985608285918444475UL;

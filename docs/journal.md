@@ -13958,6 +13958,106 @@ Written in a container with no Unity: the model and its setting are proven in th
 engine half is uncompiled and owes both Unity tiers, a player build and the hitch tour's mid-wake
 picture before it merges (design 56 §11).
 
+
+## 2026-09-26 — World generation: a planet the board is chosen from
+
+The owner asked for RimWorld-style world generation, *"simple for now with seams"*. Documents only
+today: interview, research `a-13`, design 59, the Claude Design brief and the plan. No code.
+
+**The exploration made the seam smaller than the request sounded.** There was no world layer at all,
+but nearly every knob a world tile would turn already existed as a field on `NaturalMapGenDef`:
+relief, trees, water, rock, wildlife. The two things hard-wired globally were the climate
+(`WorldContent.Climate`, whose own comment said "one Def per map type") and the weather's season
+weights. So the seam is a site record handed to `ColonyWorld.DefFor` and `ColonyComposition`, and
+**the rule that makes it safe is that a request with no site builds exactly today's board**. The
+goldens, every test world and every save before format 11 take that path, and design 59 §11 asserts
+it field for field rather than trusting it.
+
+**Three decisions worth keeping.**
+- **The save stores the tile's fields, not just the world seed and a tile index.** Rebuilding the
+  tile from the seed would let a retune of the planet generator change a saved colony's climate
+  without anyone touching its save. That is the same reason `SaveRecipe` carries barren and wooded.
+- **One reference latitude (53°, 9 °C mean, 1,000 mm) reproduces `Climate_Temperate` exactly.** So
+  the curve is scaled round what has already been played and tuned, not replaced.
+- **The seasons are the planet's, with no hemisphere flip.** Wash, Glare and Rime are named, keyed
+  in the weather table and promised by the almanac. A southern Glare that froze would contradict
+  all three.
+
+**Two things the arithmetic corrected in the first draft.**
+- The settleable meadow band (3–17 °C) sits between about 39° and 61°. Its seasonality runs from
+  ×0.78 to ×1.13, not up to ×1.5, so **between two meadows the mean moves more than the swing
+  does**.
+- The biome names were first drafted as the reference's own labels and were replaced with ours
+  (Pinewood, Frost barrens, Dust flats, Wildwood).
+
+**The research could not read a single page.** The proxy refused every fetch over two capped passes,
+so `a-13` is built from search extracts, with recalled items marked. Nothing in design 59 depends on
+an unconfirmed number: every constant is ours, to be tuned and measured.
+
+**Nor could the fast tier run.** The container's network policy refuses the .NET installer
+(`dot.net`), so the one generated C# change (the registry gaining its `ui.biome`, `ui.hills` and
+`ui.world` rows) waits on CI.
+
+## 2026-09-26 — World generation built: a planet, a site, and the board it makes
+
+The owner approved design 59 and pasted Claude Design's specification for the World screen. It
+disagreed with the design three times, and the owner ruled:
+- **the specification's six biomes**
+- **our hill names**, because its five were the reference's own labels
+- **region names and zoom built now**
+
+The whole line went in the same day, as six commits on `claude/sharp-euler-a6xtci`.
+
+**The seam held its one rule.** A request with no site builds exactly today's board, climate and
+weather:
+- asserted field for field against `PlayedMap`
+- a Rolling site equal to it too
+- the Long tier's goldens untouched
+
+A site shapes the board through `SiteBoard`. Relief is set; outcrops and caverns are *scaled from
+the preset*, so a bare board stays bare. The site's climate comes through `SiteClimate`, a new Def
+that never writes through the shared one. The reference site (53°, 9 °C, 1,000 mm) is
+`Climate_Temperate` to the centi-degree. The rules both the colony and the World screen need live
+once, in `Sim.Contracts.SiteRules`, because the interface cannot call the simulation:
+- seasonality by latitude
+- the board seed of a tile
+- a mountainous board's 24 layers
+
+**The planet is 2.1 ms.** It is integer passes on separate streams, with the sea and the hills cut
+by rank so every world has the same shares. A wrapped lattice gives the east–west seam in integers;
+a test holds plain noise's seam at the join against it. Every world has a settleable tile: held over
+1,000 seeds, and 300 in the default tier.
+
+**The painter was fifteen times too slow and is now inside its budget.**
+- The first version took 447 ms at 2× in Debug, picking each pixel by cube rounding into a float
+  buffer.
+- A scanline nearest-centre fill cut it to 215.
+- One pass with the finish written as an affine map per pixel, stamped hill marks and a reused
+  buffer cut it to 115 in Debug and 58 in Release.
+- Tabulating the sheen and vignette cut it to 87 in Debug and **31 in Release**.
+
+The player build compiles Release. The Unity figure is owed.
+
+**Three faults found on the way, none shipped:**
+- **The header change broke two ranged-combat tests.** They relabelled saves by poking the version
+  field. `SaveFixtures.AsFormat` now does it properly.
+- **The type-setting rule rejected the specification's label styling.** The spec wanted tracking and
+  a bold weight in the stylesheet, which `TheSheetSetsNoTypeAtAll` forbids. The labels take their
+  roles instead, recorded as departures in §9a.
+- **A name clash would have broken the Unity build.** A method named `DashedOutline` in `HudShell`
+  would have shadowed the type of that name and broken `HudShell.Settings.cs`'s `new DashedOutline()`.
+  Only a compile would have caught it, and there is no Unity in the container, so it was found by
+  grepping for every new member name across the partials.
+
+**The mountains cost memory, not frames.** Twenty-four layers is +48 %: 110 MiB for a Huge
+mountainous board against 74.5. The first reading said the deeper board was smaller, which was the
+first arm paying for the process (lessons).
+
+**Owed:**
+- Both Unity tiers and a player build. The World page has never been compiled.
+- The owner's first look (playtest queue).
+- A ruling on whether 110 MiB is too much for a Huge mountainous board.
+
 ## 2026-09-26 — Riding along with a colonist
 
 The owner asked for a first-person mode opened from the colonist card, *"locked until esc"*, to see
@@ -14140,6 +14240,63 @@ unchanged; 3 × 17.0 / 30.9 ≈ 1.65 here, a 2.12 ms budget), and an unknown mac
 3. The label goes on after the fix is merged, or every PR branched from the old `main` could fail
 on whichever runner picked it up.
 
+## 2026-09-26 — World generation reviewed and merged with `main`: a seam on the date line, dead poles, and a test that typed into the wrong page
+
+Reviewed on `claude/busy-meitner-zkrhtu` (branched from `claude/sharp-euler-a6xtci`), with `main`
+merged in first: 38 commits, the conflicts all append-only. **`main` had taken design 57 (First
+Person) and 58 (cracks) meanwhile, so world generation is design 59**. As with the ride when the wake
+took 56, only the lines this branch wrote were renumbered, 128 of them. The save format is still
+11, because `main` is at 10.
+
+Three reviews ran in parallel: the Sim seam, the engine-free models, and the Presentation code acting
+as the compiler, since no tier here compiles it. **The seam held.** A probe built Flat to
+Mountainous on three world seeds, saved, loaded and ran on 1,500 ticks: the ground layer was
+11/10/9/16 and the hash was identical on both copies. The Presentation reading found **no compile
+errors**. What it did find:
+
+- **The date line drew as a dark valley.** The vignette and the diagonal sheen were baked into the
+  one texture, and the page lays three copies side by side for the wrap. So every zoom past 1× showed
+  the texture's darkest edges meeting: 115 and 105 against 255 in the middle, on a white planet. The
+  finish is by row alone now (design 59 §9a); a column paints the same whichever copy it is in.
+- **The pole notches were painted and dead.** The painter clamps the nearest row to the first or
+  last, so the zig-zag above and below the pole hexes is painted as those tiles. `TileAt` said −1
+  there: 1 % of the map, along both edges. The pick clamps the same way now. A new test walks every
+  pixel at 1× and 2× and holds the painter's own copy of the hex arithmetic to the pick's.
+- **`StartScreenTests.TheWorldIsBuiltFromTheSeedInTheBox` would have failed every run.** It typed
+  4242 into the World page's seed box while the setup page was showing, then asserted the board was
+  built on 4242. With a site, the board is built on `BoardSeed(4242, tile)`. Its sibling typed
+  "twelve" into the same hidden box and checked Start on a page a bad seed can no longer reach. Both
+  now type on the World page, where a player types.
+- **A ten-megabyte texture per shell** was made `HideAndDontSave` and never destroyed. That is one
+  per PlayMode test that presses New game.
+- **The map keys fired while typing a seed.** The event's target is the field's inner text element,
+  not the `TextField`, so 0, − and Enter reached the map. The page now asks
+  `HotkeyDirector.Typing`, the one owner of "a field has the keyboard".
+- **Smaller fixes:**
+  - every hover rebuilt the site panel's twenty labels;
+  - the overlay could divide by a fit of 0 before the first layout;
+  - the texture is whole pixels but was stretched to the fractional map size;
+  - 2.25× read "2.2x", because `Math.Round` rounds a half to even;
+  - a `HudTheme` doc comment had come off `ZonesHue` onto the map inks;
+  - the hill ink had two owners;
+  - `WorldLayout`'s frame constants were read by nothing, though the class said a test held them.
+    `HudStyleSheetTests` holds twenty-four of them to the sheet now.
+- **The Sim side had one wrong number.** A Hilly board had Rolling's 3 caverns rather than §5's 4,
+  because ×1.333 of 3 truncates to 3. The order test asserted `>=`. The scale rounds now, and
+  `EachBandIsTheTablesNumbers` pins the table. `BoardSeed` could deal 0, which §8 promised it never
+  would.
+
+**Recorded, not changed, for the owner** (design 59 §7): `annualMeanC` is the season curve's
+anchor, not the year's mean. The base offsets average +3.8 °C, so a colony lives its year up to
++4.3 °C warmer than its tile's stated temperature, while the biome bands are cut on the stated one.
+Changing it breaks the reference site's equality with `Climate_Temperate`.
+
+**Still owed:**
+- both Unity tiers and a player build; nothing on this branch has been compiled by Unity;
+- the paint's Mono figure;
+- a seed box that repaints on every usable keystroke (31 ms Release);
+- whether the arrows step the selection or move focus into the seed box, which only a keyboard can
+  say.
 ### 2026-09-26 — the inspect header: two toggles, and the response leaves it
 
 Claude Design's mockup 24c replaced the colonist header's four checkbox buttons with two large
@@ -14166,11 +14323,29 @@ the Assign tab's column holds it for every colonist at once.
 
 The owner played it the same day: *"it's great - happy to get this resolved and get it ready for a
 merge"*. Nothing moved, so Z for First Person and the 40 px tile stand.
+
+## 2026-09-26 — the World screen's first look: four times the planet
+
+The owner's first look at the World screen asked for four things: the site name level with the foot of
+its swatch, temperatures in red, amber and green, a planet "at least 4x" and "more random", and a bigger
+"World". Then, mid-change: *"make sure it's disposed and garbage collected once off the screen"*.
+
+- **The planet is 128 x 64** (design 59 §4e). Same features at twice the resolution (`featureScale`),
+  finer coasts from five elevation octaves, a domain warp to break the value noise's lattice, and a sea
+  share that moves 35–55 % with the seed. Generation went 2 → 12 ms.
+- **The paint was the cost that mattered**: measured on the real size in one run, 332 ms at 2x against
+  203 at 1.5x (Debug), once per seed. 1.5x, mipmapped, because at the fit the texture is drawn at a third
+  of its size.
+- **The misalignment was the line box again**: a self-sized label is about twice its point size tall,
+  so caption plus name was 55 px centred on a 44 px swatch. Fixed boxes now (§4f).
+- **Nothing outlives the menu**: `ReleaseWorldMap` destroys the texture, drops the buffer, the names and
+  the planet and pauses the ease timer when a colony goes live. Before this the texture and its buffer
+  sat in memory for the whole game, and the ease timer fired every 16 ms under it.
 ## 2026-09-26 — Prisoners designed: a bed that makes a room, and two owners before any feature
 
 The owner asked for a prisoner system "similar-ish to RimWorld's but improved", with beds assignable
 as prison beds that make a room a prison. Ground, interview (four rounds, sixteen questions) and
-research were run in one session; design 59 and `docs/plans/prisoners.md` came out of it, and no
+research were run in one session; design 60 and `docs/plans/prisoners.md` came out of it, and no
 code was written.
 
 **The ground found more reserved than built.** The registry already names a prisoner, capture,
@@ -14204,7 +14379,7 @@ stay free for whatever needs a per-pawn flag next.
 The plan was approved and every unit went in the same day, tests first, on the fast tier. Four
 things are worth keeping.
 
-**The design's arrest gesture would have broken a fixed decision.** Design 59 put Arrest on a
+**The design's arrest gesture would have broken a fixed decision.** Design 60 put Arrest on a
 right-click over a standing colonist with a drafted colonist selected. Three Hud tests failed on
 the first build, and they were right to: a colonist's hit box covers the cell behind her at the
 play camera, and design 33's review found every drafted order just behind the squad doing nothing
@@ -14236,7 +14411,7 @@ jumpsuit are Presentation code the fast tier never sees.
 ## 2026-09-26 — The prisoner line reviewed: ten faults, and what the first build's tests could not see
 
 A high-effort review of the whole branch returned ten findings, reviewed and unverified. Each was
-checked in the code before any fix; **all ten were real**. Design 59 §15d tables them.
+checked in the code before any fix; **all ten were real**. Design 60 §15d tables them.
 
 **The worst was one the tests were built to catch and did not.** `CustodyTests` already
 round-tripped a prisoner through a save and compared hashes, but it set every field of the record
@@ -14294,7 +14469,7 @@ first try and the test failed for that, not for the fault, which the trace showe
 
 **Unity found one more.** `PrisonBedTests` had never been compiled by Unity, and Unity's older NUnit
 takes only a string for `Does.Not.Contain`. EditMode on the merge: 4,612 / 4,574 / 1 failed, the
-`WeaponSheathGapTests` bat that fails on `main` too. Design 59 §16 tables all of it.
+`WeaponSheathGapTests` bat that fails on `main` too. Design 60 §16 tables all of it.
 
 **Then the header, measured rather than argued.** `DockedTabGeometryTests.TheLongestNameStillClearsTheColonistsButtons`
 laid the colonist pane out at 1920 × 1080: Draft, Fight back, Arrest, First Person, Almanac and Close

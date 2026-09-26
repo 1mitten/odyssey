@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// <b>A badly hurt raider giving up</b> (design 59 §10; Going Medieval's way in, a-20 §4). The
+    /// <b>A badly hurt raider giving up</b> (design 60 §10; Going Medieval's way in, a-20 §4). The
     /// blow that leaves a standing hostile under three-tenths of her hit points rolls once — only
     /// that blow, so a raider is not asked again on every hit — and she yields a quarter of the
     /// time, half when her band is withdrawing or nobody of hers stands near. <b>Only when there

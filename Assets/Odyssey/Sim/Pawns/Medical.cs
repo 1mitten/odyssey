@@ -47,7 +47,7 @@ namespace Odyssey.Sim.Pawns
         /// she is below the doctor's cap and outside the cooldown.
         /// </summary>
         public static bool NeedsTreatment(Pawn pawn, PawnContext ctx) =>
-            // A held prisoner too (design 59 §4b): a captured raider is bleeding, and the colony
+            // A held prisoner too (design 60 §4b): a captured raider is bleeding, and the colony
             // that brought her in is the only one that can stop it.
             pawn.HealsAsAColonist && pawn.CarriedBy == 0
             && (IsBleeding(pawn) || (Below(pawn, ctx.Content.Combat.treatCapPerMille) && Heals(pawn, ctx)));

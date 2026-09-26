@@ -1127,7 +1127,7 @@ namespace Odyssey.Sim.Construction
             if (def.edifice == CoreContent.EdificeBed)
             {
                 _items.AddBed(cell);
-                // Raised inside a cell: a prison bed, and marked so it stays one (design 59 §5b).
+                // Raised inside a cell: a prison bed, and marked so it stays one (design 60 §5b).
                 Purposes?.Raised(cell);
             }
             // Cover that is crossed but never stood on (design 53 §5): the crossing's price.
@@ -1796,7 +1796,7 @@ namespace Odyssey.Sim.Construction
             if (pawnId != 0)
             {
                 // Only somebody who sleeps from this bed's pool may be given it: never a hog or a
-                // bandit, and never a colonist a prison bed (design 59 §5a, `BedRule`).
+                // bandit, and never a colonist a prison bed (design 60 §5a, `BedRule`).
                 Pawns.Pawn? owner = _pawns.Get(new PawnId(pawnId));
                 if (owner == null || !BedRule.MayOwn(BedRules.UserOf(owner), BedPurposeAt(index)))
                     return IntentRejection.NotPermitted;
@@ -1919,17 +1919,17 @@ namespace Odyssey.Sim.Construction
         }
 
         /// <summary>
-        /// What the bed at this cell is for (design 59 §5b), asked of <see cref="Purposes"/>, the
+        /// What the bed at this cell is for (design 60 §5b), asked of <see cref="Purposes"/>, the
         /// one owner. A cell with no bed, and every bed in a fixture with no purposes, answers
         /// <see cref="BedPurpose.Colony"/>.
         /// </summary>
         public BedPurpose BedPurposeAt(int cell) => Purposes?.PurposeAt(cell) ?? BedPurpose.Colony;
 
-        /// <summary>What every bed is for (design 59 §5b). Set by the composition root.</summary>
+        /// <summary>What every bed is for (design 60 §5b). Set by the composition root.</summary>
         public Pawns.BedPurposes? Purposes { get; set; }
 
         /// <summary>
-        /// <c>SetBedPurpose(cell, A = purpose)</c> (design 59 §5b): mark the bed at the cell and its
+        /// <c>SetBedPurpose(cell, A = purpose)</c> (design 60 §5b): mark the bed at the cell and its
         /// room for prisoners, or unmark them. Here because this class is the one owner of who owns a
         /// bed, and a bed that changes purpose loses an owner of the wrong kind in the same breath.
         /// </summary>
@@ -1946,7 +1946,7 @@ namespace Odyssey.Sim.Construction
         bool _sweptNone, _everMarked;
 
         /// <summary>
-        /// Clear every owner who may not own her bed any more (design 59 §5b): a colonist whose bed
+        /// Clear every owner who may not own her bed any more (design 60 §5b): a colonist whose bed
         /// became a prison bed — marked, or its room merged into a cell — and a prisoner whose bed
         /// stopped being one. Raises <see cref="BedOwnershipChanged"/>, so the job system wakes a
         /// sleeper in a bed that is no longer hers. Costs one comparison unless the purposes or the
@@ -1955,7 +1955,7 @@ namespace Odyssey.Sim.Construction
         public void SweepBedPurposes()
         {
             if (Purposes == null) return;
-            // **A load is not a change** (design 59 §16 #1). What the sweep last saw is not saved,
+            // **A load is not a change** (design 60 §16 #1). What the sweep last saw is not saved,
             // so the first sweep after a load used to find the key moved and raise
             // BedOwnershipChanged, waking a sleeper the twin that never saved left asleep. Owners
             // were stripped before the save, so priming from what was loaded is what that twin
@@ -2026,7 +2026,7 @@ namespace Odyssey.Sim.Construction
             // Everyone else who sleeps from the same pool and has no bed of their own. Only the
             // same pool: a hog, a bandit or a prisoner wants none of the colony's beds, and until
             // 2026-09-26 every pawn on the board was counted here, so a colony with wildlife
-            // kept its beds shared for ever (design 59 §5a).
+            // kept its beds shared for ever (design 60 §5a).
             int bedlessOthers = 0;
             var all = _pawns.All;
             for (int i = 0; i < all.Count; i++)

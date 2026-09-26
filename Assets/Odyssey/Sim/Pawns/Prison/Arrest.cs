@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// <b>Arresting one of the colony's own</b> (design 59 §10; owner's ruling 8). Any colonist, at
+    /// <b>Arresting one of the colony's own</b> (design 60 §10; owner's ruling 8). Any colonist, at
     /// any time, by another's hand. At the touch she may resist — more likely the unhappier she is —
     /// and a colonist who resists is an escapee: she runs, and is brought down and carried in like
     /// any other. One who comes quietly is given a prison bed and walks there herself. <b>Either
@@ -33,7 +33,7 @@ namespace Odyssey.Sim.Pawns
         public static void Contact(Pawn arrester, Pawn target, PawnContext ctx)
         {
             if (!CanBeArrested(target) || ctx.Combat == null) return;
-            // The bed is asked again at the touch (design 59 §16 #4). It was asked only when the
+            // The bed is asked again at the touch (design 60 §16 #4). It was asked only when the
             // order was given, and a capture that filled the last one on the way left her a
             // prisoner with no bed, loose in the colony: nothing else ever gives her one.
             if (CaptureRules.BedFor(target, arrester, ctx) < 0) return;

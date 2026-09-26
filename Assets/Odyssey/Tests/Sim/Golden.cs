@@ -495,7 +495,7 @@ namespace Odyssey.Tests.Sim
         /// twenty-eighth job and the pistol the eighteenth item. <b>Measured</b> the same way; the
         /// merge commit says what the probe found.</para>
         ///
-        /// <para><b>All six moved on 2026-09-26, by the prisoner line's contracts step (design 59
+        /// <para><b>All six moved on 2026-09-26, by the prisoner line's contracts step (design 60
         /// P3): the hash seeing more, and no colony doing anything different.</b> Every person
         /// carries a tenth skill, passion and daily-gain slot (Social, dealt after the other nine
         /// from the same stream) and a ninth work priority (<c>Work_Warden</c>), and the job system
@@ -600,7 +600,7 @@ namespace Odyssey.Tests.Sim
             // Merged with raids (design 55), 2026-09-26: the gunman keeps kind 4 and the frog moves
             // to 5, and a pawn's kind is hashed. GoldenColonyProbe on the frog branch (fca2ef08) and
             // on the merge is identical on all three boards, so only the number moved.
-            // Merged with prisoners (design 59), 2026-09-26: the branch's P3 bake and main's frog both
+            // Merged with prisoners (design 60), 2026-09-26: the branch's P3 bake and main's frog both
             // moved this one. GoldenColonyProbe on the merge is identical to main (081302f9..cb9b3391) in
             // every number, and differs from the prisoner branch only by main's seven frogs: the hash
             // sees the prisoner fields, no colonist did anything different.

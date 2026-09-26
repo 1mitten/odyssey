@@ -183,7 +183,7 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// Design 59 §16 H8. Arrested, she is still on the board but no longer one of ours, and a
+        /// Design 60 §16 H8. Arrested, she is still on the board but no longer one of ours, and a
         /// ride starts only on a colonist: it ends as it does when she goes, after the same hold.
         /// </summary>
         [Test]

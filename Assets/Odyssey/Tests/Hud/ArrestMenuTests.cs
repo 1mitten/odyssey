@@ -8,7 +8,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// Arrest as a right-click row on a colonist (design 59 §10, §16 H1–H2; the owner's ruling at
+    /// Arrest as a right-click row on a colonist (design 60 §10, §16 H1–H2; the owner's ruling at
     /// the second review): offered while nobody selected is drafted, so a drafted right-click is
     /// still a move; the first standing colonist selected is sent, or the nearest; dim with its
     /// reason when the simulation would refuse it.
@@ -71,7 +71,7 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// Design 59 §16 H2: the refusals a player can see coming make the row dim, with the reason,
+        /// Design 60 §16 H2: the refusals a player can see coming make the row dim, with the reason,
         /// rather than a press that does nothing.
         /// </summary>
         [TestCase("nobed")]

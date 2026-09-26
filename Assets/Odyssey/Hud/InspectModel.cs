@@ -189,13 +189,13 @@ namespace Odyssey.Hud
         /// <summary>The corpse's registry key: its badge, and the first word of its title.</summary>
         public const string CorpseKey = "ui.pawn.corpse";
 
-        /// <summary>A held pawn's word under her name (design 59 §11b).</summary>
+        /// <summary>A held pawn's word under her name (design 60 §11b).</summary>
         public const string PrisonerKey = "ui.pawn.prisoner";
 
-        /// <summary>The word under the name of a pawn let go and walking off the board (design 59 §16 H6).</summary>
+        /// <summary>The word under the name of a pawn let go and walking off the board (design 60 §16 H6).</summary>
         public const string ReleasedKey = "ui.pawn.released";
 
-        // ---- the prisoner's rows (design 59 §11b) ---------------------------------------------
+        // ---- the prisoner's rows (design 60 §11b) ---------------------------------------------
 
         /// <summary>The row that says what the colony means to do with her, and opens the choice of <see cref="OfferedModes"/> when pressed.</summary>
         public const string PrisonModeRow = "mode";
@@ -212,7 +212,7 @@ namespace Odyssey.Hud
         /// <summary>Present while her bed is a shackle bed.</summary>
         public const string ShackledRow = "shackled";
 
-        /// <summary>Her chance of breaking out in a day, as a percentage (design 59 §9a).</summary>
+        /// <summary>Her chance of breaking out in a day, as a percentage (design 60 §9a).</summary>
         public const string EscapeRow = "escape risk";
 
         /// <summary>What is raising or lowering her escape risk, in words.</summary>
@@ -228,11 +228,11 @@ namespace Odyssey.Hud
         public PrisonMode PrisonerMode { get; private set; }
 
         /// <summary>
-        /// The modes a press on the mode row offers, in order, each chosen directly (design 59 §16
+        /// The modes a press on the mode row offers, in order, each chosen directly (design 60 §16
         /// H4). It used to cycle Hold, Recruit, Release, Exile, so going back from Recruit to Hold
         /// passed through Release and Exile while the game ran — and a warden could be sent on
         /// either in between, which for an arrested colonist sent into exile is for good. Ransom is
-        /// a seam (design 59 §13) and is never offered.
+        /// a seam (design 60 §13) and is never offered.
         /// </summary>
         public static readonly PrisonMode[] OfferedModes =
         {
@@ -354,7 +354,7 @@ namespace Odyssey.Hud
         public bool IsHostile;
 
         /// <summary>
-        /// The selected pawn is held by the colony (design 59 §4b): neither ours nor an enemy. Its
+        /// The selected pawn is held by the colony (design 60 §4b): neither ours nor an enemy. Its
         /// pane is a bandit's shape — face, name, activity, where — under the word "Prisoner".
         /// Set from the view on every refresh.
         /// </summary>
@@ -785,7 +785,7 @@ namespace Odyssey.Hud
                     {
                         // A bandit's job is a person's job — fighting, mostly — in a person's words,
                         // under the kind's word where the name would otherwise leave you guessing.
-                        // Let go, she is not held (design 59 §16 H6): the word said Prisoner while the
+                        // Let go, she is not held (design 60 §16 H6): the word said Prisoner while the
                         // row under it said she was leaving free.
                         Subtitle = pawn.Custody == PawnCustody.Released ? Registry.Label(ReleasedKey)
                             : IsPrisoner ? Registry.Label(PrisonerKey) : HostileKindWord(pawn.Kind);
@@ -1230,10 +1230,10 @@ namespace Odyssey.Hud
 
         bool _bedUnderPane;
 
-        /// <summary>The bed under the pane is for prisoners (design 59 §5b): what a press on its purpose row reverses.</summary>
+        /// <summary>The bed under the pane is for prisoners (design 60 §5b): what a press on its purpose row reverses.</summary>
         public bool BedForPrisoners { get; private set; }
 
-        /// <summary>The row that says what a bed is for, and toggles it when pressed (design 59 §11a).</summary>
+        /// <summary>The row that says what a bed is for, and toggles it when pressed (design 60 §11a).</summary>
         public const string BedPurposeRow = "for prisoners";
 
         /// <summary>
@@ -1508,7 +1508,7 @@ namespace Odyssey.Hud
                     ? ColonistNames.Of(snapshot, new PawnId(detail.EdificeOwner))
                     : "Assign…");
 
-                // What the bed is for (design 59 §5b, §11a), the pane's second press on a bed:
+                // What the bed is for (design 60 §5b, §11a), the pane's second press on a bed:
                 // marking one bed marks every bed in its room, and a bed with no room around it
                 // holds its prisoner shackled, which the value says rather than leaving it to be
                 // found out.
@@ -1715,7 +1715,7 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// A held prisoner's facts, one row each, in the tile's rows (design 59 §11b): the mode, how
+        /// A held prisoner's facts, one row each, in the tile's rows (design 60 §11b): the mode, how
         /// willing she is, and in Recruit mode how long until she joins and what is slowing it.
         /// Every number is a published aspect the simulation's own arithmetic wrote, so the pane
         /// cannot say one thing while the chat does another. Rewritten only when a number moves.
@@ -1725,7 +1725,7 @@ namespace Odyssey.Hud
             bool escaping = custody == PawnCustody.Escaping;
             if (custody == PawnCustody.Released)
             {
-                // Let go and walking off the board (design 59 §10): nothing to set.
+                // Let go and walking off the board (design 60 §10): nothing to set.
                 _cellRowsFor = -1;
                 _prisonRowsFor = default;
                 Row(0, LeavingRow, "walking off the board");
@@ -1761,13 +1761,13 @@ namespace Odyssey.Hud
             int n = 0;
             if (escaping)
             {
-                // Out of her cell: nothing to set until she is brought back down (design 59 §9c).
+                // Out of her cell: nothing to set until she is brought back down (design 60 §9c).
                 Row(n++, EscapingRow, "breaking out", HudTheme.Bad);
                 while (CellRows.Count > n) CellRows.RemoveAt(CellRows.Count - 1);
                 return;
             }
             Row(n++, PrisonModeRow, Registry.Label(PrisonModeKey(mode)));
-            // In Recruit mode, or once a warden has made a start (design 59 §16 H5): a Hold
+            // In Recruit mode, or once a warden has made a start (design 60 §16 H5): a Hold
             // prisoner nobody has talked to showed a 0% that could never move. A change of mode
             // keeps her willingness, so one put back on Hold still shows what was won.
             if (mode == PrisonMode.Recruit || willing > 0) Row(n++, WillingRow, (willing / 10) + "%");
@@ -1999,7 +1999,7 @@ namespace Odyssey.Hud
                 Enabled = !Tombstoned,
                 Reason = "Take direct control: right-click to move. Press again to give back to the work list",
             });
-            // Arrest is not in the header (design 59 §16 H1, the owner's ruling): it is a row in the
+            // Arrest is not in the header (design 60 §16 H1, the owner's ruling): it is a row in the
             // right-click menu on her while nobody selected is drafted (ContextMenuModel.OfferArrest).
             // First Person (design 57), after the one that commands her: this one only watches.
             Commands.Add(new InspectCommand

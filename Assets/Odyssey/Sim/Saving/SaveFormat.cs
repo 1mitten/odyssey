@@ -157,8 +157,19 @@ namespace Odyssey.Sim.Saving
         /// here.</summary>
         public readonly bool Wooded;
 
+        /// <summary>The planet's seed (design 59 §8), meaningful only with a <see cref="Site"/>.</summary>
+        public readonly uint WorldSeed;
+
+        /// <summary>
+        /// The planet tile the board was built on, whole (format 11, design 59 §8), or null for a
+        /// board with no world — which is every file before 11. <b>The tile is stored, not rebuilt
+        /// from <see cref="WorldSeed"/></b>, so retuning the planet generator can never change a
+        /// saved colony's climate or hills: the same argument <see cref="Barren"/> makes.
+        /// </summary>
+        public readonly SiteTile? Site;
+
         public SaveRecipe(MapType map, string scenario, string colonyName, int day,
-            bool barren = false, bool wooded = false)
+            bool barren = false, bool wooded = false, uint worldSeed = 0, SiteTile? site = null)
         {
             Map = map;
             Scenario = scenario ?? string.Empty;
@@ -166,6 +177,8 @@ namespace Odyssey.Sim.Saving
             Day = day;
             Barren = barren;
             Wooded = wooded;
+            WorldSeed = worldSeed;
+            Site = site;
         }
 
         /// <summary>
@@ -271,12 +284,19 @@ namespace Odyssey.Sim.Saving
         /// idempotent. <b>Do not tidy the guard away</b>: without the version it would re-deal
         /// Shooting on every load of a colonist who has never fired.</para>
         ///
-        /// <para>11 (design 59, prisoners): <b>no layout changed</b>, for 10's reason — the tenth
+        /// <para>11 (design 59, world generation): the <b>header</b> grew the planet site — a flag,
+        /// then the world seed and the tile's fields, the biome by Def name. A file at 10 or below
+        /// reads back no site and rebuilds the board it always did. Nothing in a section moved.</para>
+        ///
+        /// <para>12 (design 60, prisoners): <b>no layout changed</b>, for 10's reason — the tenth
         /// skill, Social, reads from a nine-skill file as nought, and the same guard deals it once
-        /// to a colonist from a file below 11 (<c>BackfillSkills</c>). Custody and the prison's
-        /// records went into sections of their own, which needed no bump.</para>
+        /// to a colonist from a file below 12 (<c>BackfillSkills</c>). Custody and the prison's
+        /// records went into sections of their own, which needed no bump. Written as 11 on its
+        /// branch and moved on the merge, because world generation had taken 11 on `main`: a
+        /// file at 11 carries a site and no Social, so it is the site's reader and the skill's
+        /// deal both.</para>
         /// </remarks>
-        public const int CurrentFormatVersion = 11;
+        public const int CurrentFormatVersion = 12;
 
         public static void Save(SimWorld world, Stream stream, IReadOnlyList<ISaveable> components,
             SaveRecipe? recipe = null)
@@ -299,6 +319,7 @@ namespace Odyssey.Sim.Saving
             binary.Write(effective.Day);
             binary.Write(effective.Barren);
             binary.Write(effective.Wooded);
+            WriteSite(binary, effective);
 
             binary.Write(components.Count);
             for (int i = 0; i < components.Count; i++)
@@ -457,10 +478,51 @@ namespace Odyssey.Sim.Saving
                 int day = binary.ReadInt32();
                 bool barren = version >= 3 && binary.ReadBoolean();
                 bool wooded = version >= 3 && binary.ReadBoolean();
-                recipe = new SaveRecipe(map, scenario, colony, day, barren, wooded);
+                uint worldSeed = 0;
+                SiteTile? site = null;
+                if (version >= 11) site = ReadSite(binary, out worldSeed);
+                recipe = new SaveRecipe(map, scenario, colony, day, barren, wooded, worldSeed, site);
             }
 
             return new SaveHeader(version, seed, size, tick, recipe);
+        }
+
+        /// <summary>The site, after the board flags (format 11): a flag, and the tile when there is one.</summary>
+        static void WriteSite(BinaryWriter binary, SaveRecipe recipe)
+        {
+            binary.Write(recipe.Site.HasValue);
+            if (!(recipe.Site is SiteTile site)) return;
+            binary.Write(recipe.WorldSeed);
+            binary.Write(site.TileIndex);
+            binary.Write(site.Column);
+            binary.Write(site.Row);
+            WriteHeaderString(binary, site.BiomeDefName);
+            binary.Write((int)site.Hills);
+            binary.Write(site.LatitudePerMille);
+            binary.Write(site.MeanTempC);
+            binary.Write(site.RainfallMm);
+            binary.Write(site.ElevationM);
+            binary.Write(site.RuinPerMille);
+            binary.Write(site.Coastal);
+        }
+
+        static SiteTile? ReadSite(BinaryReader binary, out uint worldSeed)
+        {
+            worldSeed = 0;
+            if (!binary.ReadBoolean()) return null;
+            worldSeed = binary.ReadUInt32();
+            int index = binary.ReadInt32();
+            int column = binary.ReadInt32();
+            int row = binary.ReadInt32();
+            string biome = ReadHeaderString(binary);
+            var hills = (HillBand)binary.ReadInt32();
+            int latitude = binary.ReadInt32();
+            int mean = binary.ReadInt32();
+            int rain = binary.ReadInt32();
+            int elevation = binary.ReadInt32();
+            int ruin = binary.ReadInt32();
+            bool coastal = binary.ReadBoolean();
+            return new SiteTile(index, column, row, biome, hills, latitude, mean, rain, elevation, ruin, coastal);
         }
 
         static void WriteHeaderString(BinaryWriter binary, string value)

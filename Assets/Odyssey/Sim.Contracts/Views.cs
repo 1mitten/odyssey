@@ -332,14 +332,14 @@ namespace Odyssey.Sim.Contracts
         public readonly PawnFlags Flags;
 
         /// <summary>
-        /// Whether the colony holds this pawn (design 59 §4). A byte beside <see cref="Flags"/>
+        /// Whether the colony holds this pawn (design 60 §4). A byte beside <see cref="Flags"/>
         /// rather than a bit in it, because that byte is full and belongs to the fight. Derived each
         /// publish from the pawn's saved custody, so neither saved nor hashed here.
         /// </summary>
         public readonly PawnCustody Custody;
 
         /// <summary>
-        /// Wearing the prison jumpsuit (design 59 §11d): she has been laid in a prison bed and is
+        /// Wearing the prison jumpsuit (design 60 §11d): she has been laid in a prison bed and is
         /// not free again. Read by the one outfit owner, <c>PawnOutfits</c>, and by nothing else.
         /// </summary>
         public readonly bool Dressed;
@@ -352,7 +352,7 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>
         /// One of ours: a person who is not hostile and nobody's prisoner. The roster, the Work tab
-        /// and the draft. A prisoner is neither ours nor an enemy (design 59 §4b).
+        /// and the draft. A prisoner is neither ours nor an enemy (design 60 §4b).
         /// </summary>
         public bool IsColonist =>
             (Flags & (PawnFlags.Person | PawnFlags.Hostile)) == PawnFlags.Person && Custody == PawnCustody.Free;
@@ -1646,7 +1646,7 @@ namespace Odyssey.Sim.Contracts
         public readonly int AmbientTempC;
 
         /// <summary>
-        /// What the bed standing here is for (design 59 §5b): <see cref="BedForColony"/> — every
+        /// What the bed standing here is for (design 60 §5b): <see cref="BedForColony"/> — every
         /// cell with no bed says the same — <see cref="BedForPrisoners"/>, or
         /// <see cref="BedShackles"/> for a prison bed with no room around it.
         /// </summary>
@@ -1843,7 +1843,7 @@ namespace Odyssey.Sim.Contracts
         public int HearthCell { get; private set; } = -1;
 
         /// <summary>
-        /// Whether any prison bed stands free for a new prisoner (design 59 §16 H2): what an arrest
+        /// Whether any prison bed stands free for a new prisoner (design 60 §16 H2): what an arrest
         /// is refused for when there is none, so the pane can say so rather than the press doing
         /// nothing. False on a board with no prison bed; worked out only when one is marked.
         /// </summary>

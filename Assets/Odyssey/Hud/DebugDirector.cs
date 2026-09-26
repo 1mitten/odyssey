@@ -295,7 +295,7 @@ namespace Odyssey.Hud
         public const string HurtKey = "ui.debug.hurt", HealKey = "ui.debug.heal", KillKey = "ui.debug.kill",
             GiveMedkitsKey = "ui.debug.givemedkits";
 
-        /// <summary>Custody's two rows (design 59 §4): take the person nearest the camera, or free the nearest prisoner.</summary>
+        /// <summary>Custody's two rows (design 60 §4): take the person nearest the camera, or free the nearest prisoner.</summary>
         public const string ImprisonKey = "ui.debug.imprison", FreePrisonerKey = "ui.debug.freeprisoner",
             BreakOutKey = "ui.debug.breakout";
 

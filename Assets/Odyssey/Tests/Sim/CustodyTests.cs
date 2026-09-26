@@ -12,9 +12,9 @@ using Odyssey.Sim.Worldgen;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// Custody and the one owner of sides (design 59 §4). A pawn's kind never changes; custody is
+    /// Custody and the one owner of sides (design 60 §4). A pawn's kind never changes; custody is
     /// the override, and <see cref="Allegiance"/> turns it into every answer about sides. These
-    /// tests hold one row each of design 59 §4b's consumer table, the save and the hash, and the
+    /// tests hold one row each of design 60 §4b's consumer table, the save and the hash, and the
     /// published view the interface draws from.
     /// </summary>
     public class CustodyTests
@@ -327,7 +327,7 @@ namespace Odyssey.Tests.Sim
         // ---- the kind is never rewritten -------------------------------------------------------------
 
         /// <summary>
-        /// <b>Nothing but the loader writes a pawn's kind</b> (design 59 §4a). A recruit is a
+        /// <b>Nothing but the loader writes a pawn's kind</b> (design 60 §4a). A recruit is a
         /// bandit whose side reads Colony; a system that rewrote her kind instead would lose the
         /// arrested colonist and the home faction ransom needs. Read from source, because what it
         /// forbids leaves no trace a runtime test could catch until it had already happened.

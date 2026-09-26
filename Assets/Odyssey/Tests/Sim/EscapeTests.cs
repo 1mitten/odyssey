@@ -10,7 +10,7 @@ using static Odyssey.Tests.Sim.PrisonFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// Escape (design 59 §9): a visible risk from conditions, divided by the square root of how
+    /// Escape (design 60 §9): a visible risk from conditions, divided by the square root of how
     /// many are held, rolled once a game hour against exactly the number the pane shows. An
     /// escapee breaks her cell door with her fists, runs for the edge and is gone; brought down on
     /// the way, she is a prisoner again.
@@ -104,7 +104,7 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// <b>A breakout can cascade without a cascade rule</b> (design 59 §9c): a broken door opens
+        /// <b>A breakout can cascade without a cascade rule</b> (design 60 §9c): a broken door opens
         /// the room, the room's bed has no walls round it any more, and every cellmate's risk
         /// doubles on the shackles' factor. Nothing in the escape code says so; it falls out of
         /// the bed purpose being derived from the room.

@@ -175,7 +175,7 @@ namespace Odyssey.Hud
             if (!Riding) return;
             float dt = Math.Max(0f, realSeconds);
 
-            // Still one of ours, not merely still on the board (design 59 §16 H8): a ride starts only
+            // Still one of ours, not merely still on the board (design 60 §16 H8): a ride starts only
             // on a colonist, and an arrest or a break-out left the camera on a prisoner. She is lost
             // to the ride as she would be to the board, and it ends the same way.
             if (snapshot.TryGetPawn(Pawn, out PawnView her) && her.IsColonist)

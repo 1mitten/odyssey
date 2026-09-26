@@ -199,7 +199,7 @@ namespace Odyssey.Sim.Pawns
             _ctx.Sync(world);
             _hostilityKnown = false;
             // A bed that changed purpose, or a room that merged into a cell, loses an owner of the
-            // wrong kind first (design 59 §5b), so the sweep below wakes whoever is lying in it.
+            // wrong kind first (design 60 §5b), so the sweep below wakes whoever is lying in it.
             _ctx.Construction?.SweepBedPurposes();
             GetOutOfTheWrongBed(world.CurrentTick);
             TickCustody(world.CurrentTick);
@@ -274,7 +274,7 @@ namespace Odyssey.Sim.Pawns
 
                 int bed = pawn.CurrentJob.TargetCell;
                 int owner = sites.BedOwnerAt(bed);
-                // Still the right kind of bed for her (design 59 §5a): a bed turned into a prison
+                // Still the right kind of bed for her (design 60 §5a): a bed turned into a prison
                 // bed under a sleeping colonist wakes her like a bed given away does. A target
                 // that is no bed at all (the ground, a fireside) answers as a colony bed nobody
                 // owns, so it passes exactly as it did.
@@ -517,7 +517,7 @@ namespace Odyssey.Sim.Pawns
             // that returned false for a person would be a node every colonist evaluated on
             // every think, and the animal's whole mind is one node anyway.
             // A hostile person consults the hostile tree (design 33 §5), for the same reason, and a
-            // prisoner the prisoner's (design 59 §6) — custody first, because an escapee is hostile
+            // prisoner the prisoner's (design 60 §6) — custody first, because an escapee is hostile
             // but is not a raider.
             ThinkNode[] tree = !pawn.IsPerson ? AnimalTree
                 : pawn.Custody != PawnCustody.Free ? PrisonerTrees.For(pawn.Custody)
@@ -764,7 +764,7 @@ namespace Odyssey.Sim.Pawns
                 // this scan is not optional once a shelf accepts food.
                 int at = ctx.WhereIs(item);
                 if (at < 0) continue;
-                // A prisoner's meal is hers (design 59 §14): food in a cell is not a colonist's.
+                // A prisoner's meal is hers (design 60 §14): food in a cell is not a colonist's.
                 if (PrisonCells.Holds(ctx, at)) continue;
 
                 int distance = ctx.Distance(pawn.Cell, at);
@@ -826,7 +826,7 @@ namespace Odyssey.Sim.Pawns
 
                 // A bed that is somebody's is theirs and nobody else checks in: no colonist
                 // sleeps in another's bed, which is the whole of what ownership is (design 20
-                // §7), and nobody sleeps in the wrong kind of bed (design 59 §5a). The
+                // §7), and nobody sleeps in the wrong kind of bed (design 60 §5a). The
                 // scenario's own spots answer 0 — nobody's, as they always were.
                 if (!BedRules.CanUse(pawn, cell, ctx)) continue;
                 int owner = BedRules.OwnerAt(ctx, cell);
@@ -1893,7 +1893,7 @@ namespace Odyssey.Sim.Pawns
                 // it.
                 int at = ctx.WhereIs(item);
                 if (at < 0) continue;
-                // Food in a prison cell stays there (design 59 §14): a hauler carrying a prisoner's
+                // Food in a prison cell stays there (design 60 §14): a hauler carrying a prisoner's
                 // meal back out through the door is the warden's work undone.
                 if (ctx.Content.Items[item.DefIndex].nutrition > 0 && PrisonCells.Holds(ctx, at)) continue;
                 if (!ctx.Content.Items[item.DefIndex].haulable) continue;

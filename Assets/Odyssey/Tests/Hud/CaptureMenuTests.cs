@@ -8,7 +8,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// The right-click on a downed enemy (design 59 §7, the owner's ruling): a menu of Capture then
+    /// The right-click on a downed enemy (design 60 §7, the owner's ruling): a menu of Capture then
     /// Finish off, where it used to be an instant attack that killed. Nothing is sent until a row is
     /// chosen; Capture sends the primary colonist, drafted or not; Finish off is the old attack, dim
     /// with its reason when nobody selected is drafted; a downed prisoner is offered Capture alone.
@@ -93,7 +93,7 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// Design 59 §16 H3. A prisoner lying in her own prison bed is not to be carried anywhere:
+        /// Design 60 §16 H3. A prisoner lying in her own prison bed is not to be carried anywhere:
         /// the simulation refused the Capture the menu offered, in silence, and a drafted
         /// right-click on her cell opened the menu instead of moving there.
         /// </summary>

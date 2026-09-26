@@ -511,10 +511,10 @@ namespace Odyssey.Presentation.Ui
             /// <summary>Whether the pickable row is an order's action — cancel, take up, keep (design 32 §14).</summary>
             public bool IsOrderAction;
 
-            /// <summary>Whether the pickable row says what a bed is for, and a press toggles it (design 59 §11a).</summary>
+            /// <summary>Whether the pickable row says what a bed is for, and a press toggles it (design 60 §11a).</summary>
             public bool IsBedPurpose;
 
-            /// <summary>Whether the pickable row is a prisoner's mode, and a press moves it on (design 59 §11b).</summary>
+            /// <summary>Whether the pickable row is a prisoner's mode, and a press moves it on (design 60 §11b).</summary>
             public bool IsPrisonMode;
 
             /// <summary>The tint last applied to the value, so a redraw does not restyle on every frame.</summary>
@@ -662,6 +662,8 @@ namespace Odyssey.Presentation.Ui
             }
             Detach();
             if (_topRamp != null) DestroyImmediate(_topRamp);
+            // The World map (design 59 §9a): tens of megabytes, and HideAndDontSave outlives the scene.
+            ReleaseWorldMap(immediate: true);
             if (_bottomRamp != null) DestroyImmediate(_bottomRamp);
             if (_panelCopy != null) DestroyImmediate(_panelCopy);
         }

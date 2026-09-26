@@ -111,32 +111,32 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int AttackRanged = 27;
 
-        // The prisoner line (design 59 §7), claimed together by its contracts step (P3) so every
+        // The prisoner line (design 60 §7), claimed together by its contracts step (P3) so every
         // table a save depends on is extended once. Above JobSystem.HashedAlways, so their counters
         // reach the hash only once one has run and their registration moved no golden.
 
-        /// <summary>Carry a downed pawn to a free prison bed, or a strayed prisoner back to one (design 59 §7).</summary>
+        /// <summary>Carry a downed pawn to a free prison bed, or a strayed prisoner back to one (design 60 §7).</summary>
         public const int Capture = 28;
 
-        /// <summary>Carry a meal to a prisoner: into her cell, or to her bed if she is shackled (design 59 §7).</summary>
+        /// <summary>Carry a meal to a prisoner: into her cell, or to her bed if she is shackled (design 60 §7).</summary>
         public const int FeedPrisoner = 29;
 
-        /// <summary>A warden talks to a prisoner in <c>Recruit</c> mode; the willingness bar fills (design 59 §8).</summary>
+        /// <summary>A warden talks to a prisoner in <c>Recruit</c> mode; the willingness bar fills (design 60 §8).</summary>
         public const int Chat = 30;
 
-        /// <summary>A warden walks a released prisoner out of her cell (design 59 §7).</summary>
+        /// <summary>A warden walks a released prisoner out of her cell (design 60 §7).</summary>
         public const int Escort = 31;
 
-        /// <summary>A pawn walks herself to a prison bed: a raider who has surrendered (design 59 §10).</summary>
+        /// <summary>A pawn walks herself to a prison bed: a raider who has surrendered (design 60 §10).</summary>
         public const int GoToCell = 32;
 
-        /// <summary>A prisoner breaking out: bash the door, run for the edge (design 59 §9c).</summary>
+        /// <summary>A prisoner breaking out: bash the door, run for the edge (design 60 §9c).</summary>
         public const int Escape = 33;
 
-        /// <summary>A pawn let go walks off the board (design 59 §6).</summary>
+        /// <summary>A pawn let go walks off the board (design 60 §6).</summary>
         public const int LeaveFree = 34;
 
-        /// <summary>Walk to a standing colonist and take her into custody (design 59 §10).</summary>
+        /// <summary>Walk to a standing colonist and take her into custody (design 60 §10).</summary>
         public const int Arrest = 35;
 
         public const int Count = 36;
@@ -199,7 +199,7 @@ namespace Odyssey.Sim.Contracts
         public const int Cooking = 7;
 
         /// <summary>
-        /// Feeding, talking to and bringing in prisoners (design 59 §7): the ui.work.warden column.
+        /// Feeding, talking to and bringing in prisoners (design 60 §7): the ui.work.warden column.
         /// Claimed by the prisoner line's contracts step; scanned after the doctor.
         /// </summary>
         public const int Warden = 8;
@@ -421,18 +421,18 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A band of hostiles walks in from one edge, gathers, probes, and assaults (design 55).</summary>
         public const int Raid = 5;
 
-        // The prison's four (design 59), written down by the world and never fired, as theft is.
+        // The prison's four (design 60), written down by the world and never fired, as theft is.
 
-        /// <summary>A prisoner was talked round and joined the colony (design 59 §8).</summary>
+        /// <summary>A prisoner was talked round and joined the colony (design 60 §8).</summary>
         public const int Recruited = 6;
 
-        /// <summary>A prisoner broke out and got off the board (design 59 §9).</summary>
+        /// <summary>A prisoner broke out and got off the board (design 60 §9).</summary>
         public const int PrisonerEscaped = 7;
 
-        /// <summary>A badly hurt raider gave up and walked to a cell (design 59 §10).</summary>
+        /// <summary>A badly hurt raider gave up and walked to a cell (design 60 §10).</summary>
         public const int Surrendered = 8;
 
-        /// <summary>A colonist was arrested (design 59 §10).</summary>
+        /// <summary>A colonist was arrested (design 60 §10).</summary>
         public const int Arrested = 9;
 
         public const int Count = 10;

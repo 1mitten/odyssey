@@ -3,7 +3,7 @@
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// The warden's first duty (design 59 §7): carry the nearest downed pawn the colony means to
+    /// The warden's first duty (design 60 §7): carry the nearest downed pawn the colony means to
     /// hold — a person marked for capture, or a prisoner lying anywhere but a prison bed — to her
     /// own prison bed, else the nearest free one. An <b>emergency</b> giver, because a captured
     /// raider is usually bleeding: it scans ahead of every ordinary giver at the same priority.

@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// <b>Taking a pawn into custody, and what that means</b> (design 59 §4). Every way in —
+    /// <b>Taking a pawn into custody, and what that means</b> (design 60 §4). Every way in —
     /// capture, surrender, arrest and the debug menu's row — ends here, so they cannot disagree:
     /// <list type="bullet">
     /// <item>a draft ends — a prisoner is nobody's to command;</item>
@@ -32,7 +32,7 @@ namespace Odyssey.Sim.Pawns
             if (!CanTake(pawn)) return false;
             bool wasColonist = pawn.IsColonist;
             pawn.Drafted = false;
-            // Disarmed, whichever way she came in (design 59 §7; review 2026-09-26): a downed raider
+            // Disarmed, whichever way she came in (design 60 §7; review 2026-09-26): a downed raider
             // keeps her weapon by design, and a prisoner still holding it would draw it the hour she
             // broke out.
             WeaponHand.PutDown(pawn, ctx, pawn.Cell);

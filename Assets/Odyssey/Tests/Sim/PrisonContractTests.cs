@@ -12,7 +12,7 @@ using Odyssey.Sim.Worldgen;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The prisoner line's contracts step (design 59 P3): the Social skill and its backfill, the
+    /// The prisoner line's contracts step (design 60 P3): the Social skill and its backfill, the
     /// Warden work type, the eight job handles and the prison's random streams. Each table is a
     /// save contract, so what these hold is that it was extended and nothing else moved.
     /// </summary>
@@ -61,10 +61,11 @@ namespace Odyssey.Tests.Sim
             pawn.Skills[SkillIndex.Social] = 0;
             int[] withoutSocial = (int[])pawn.Skills.Clone();
 
-            colony.Pawns.Pawns.BackfillSkills(11);
-            Assert.That(pawn.Skills, Is.EqualTo(withoutSocial), "a file at 11 is left alone");
+            colony.Pawns.Pawns.BackfillSkills(12);
+            Assert.That(pawn.Skills, Is.EqualTo(withoutSocial), "a file at 12 is left alone");
 
-            colony.Pawns.Pawns.BackfillSkills(10);
+            // 11 is world generation's (design 59), which carried a site and no Social: it is dealt.
+            colony.Pawns.Pawns.BackfillSkills(11);
             Assert.That(pawn.Skills, Is.EqualTo(dealt), "the same level a new colonist of her seed is dealt, and the rest untouched");
 
             colony.Pawns.Pawns.BackfillSkills(10);
@@ -121,7 +122,7 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// The simulation's half of the prison aspects' agreement (design 59 §16);
+        /// The simulation's half of the prison aspects' agreement (design 60 §16);
         /// <c>PrisonAspectNamesTests</c> holds the interface's copy to the same literals.
         /// </summary>
         [Test]

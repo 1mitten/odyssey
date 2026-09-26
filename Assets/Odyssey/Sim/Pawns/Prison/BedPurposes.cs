@@ -9,7 +9,7 @@ using Odyssey.Sim.Worldgen;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// <b>What every bed is for</b> (design 59 §5b): the one owner of the prison bed.
+    /// <b>What every bed is for</b> (design 60 §5b): the one owner of the prison bed.
     ///
     /// <para><b>What is saved is what the player marked</b>, as the head cells of the beds that
     /// were marked, and nothing else — no <c>PlacedEdifice</c> field, because
@@ -82,7 +82,7 @@ namespace Odyssey.Sim.Pawns
             return room != 0 && CellRooms().Contains(room) ? BedPurpose.Prison : BedPurpose.Colony;
         }
 
-        /// <summary>A prison bed with no room around it: its prisoner is shackled to it (design 59 §5b).</summary>
+        /// <summary>A prison bed with no room around it: its prisoner is shackled to it (design 60 §5b).</summary>
         public bool IsShackled(int cell)
         {
             int head = BedHeadAt(cell);
@@ -222,7 +222,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Set by <see cref="Load"/> until the owner sweep has looked once (design 59 §16 #1): the
+        /// Set by <see cref="Load"/> until the owner sweep has looked once (design 60 §16 #1): the
         /// marks it read back are the ones the sweep had already acted on before the save, so the
         /// sweep primes its memory from them rather than taking them for a change.
         /// </summary>

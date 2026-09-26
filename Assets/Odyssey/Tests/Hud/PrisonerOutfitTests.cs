@@ -6,7 +6,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// Which outfit a pawn wears once custody exists (design 59 §11d): the one owner,
+    /// Which outfit a pawn wears once custody exists (design 60 §11d): the one owner,
     /// <see cref="PawnOutfits"/>, asks custody first. A prisoner laid in her cell wears the jumpsuit,
     /// escaping or not; a recruit is not hostile, so she wears the colony's suit with no rule of
     /// her own; a bandit at large is dressed as a bandit, as before.

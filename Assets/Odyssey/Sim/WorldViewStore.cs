@@ -110,7 +110,7 @@ namespace Odyssey.Sim
         /// <summary>Say where the hearth is. See <see cref="WorldSnapshot.HearthCell"/>.</summary>
         public void SetHearthCell(int cell) => _target.SetHearthCell(cell);
 
-        /// <summary>Whether a prison bed stands free (design 59 §16 H2).</summary>
+        /// <summary>Whether a prison bed stands free (design 60 §16 H2).</summary>
         public void SetPrisonBedFree(bool free) => _target.SetPrisonBedFree(free);
 
         /// <summary>Say which working-out of the home this frame's rows are. See <see cref="WorldSnapshot.HomeVersion"/>.</summary>

@@ -191,7 +191,7 @@ namespace Odyssey.Hud
         {
             ColonistAppearance person = Of(seed, pawnId, pools, gender, age);
 
-            // The prison jumpsuit (design 59 §11d): the issued suit's cut in the prison's colours,
+            // The prison jumpsuit (design 60 §11d): the issued suit's cut in the prison's colours,
             // the face, hair and beard the person was dealt. No headgear — a prisoner is known by
             // her clothes and her face, not a helmet.
             if (outfit == PawnOutfit.Prisoner)
@@ -406,7 +406,7 @@ namespace Odyssey.Hud
         public static readonly Rgb24 UniformTrim = Rgb24.FromHex(0xA8B2C2);
 
         /// <summary>
-        /// The prison jumpsuit (design 59 §11d): a burnt orange, a proposal the owner confirms at
+        /// The prison jumpsuit (design 60 §11d): a burnt orange, a proposal the owner confirms at
         /// the first look. Chosen to be told from the colony's white and the gang's red at a glance,
         /// by every eye: it sits apart from both in lightness as well as hue.
         /// </summary>

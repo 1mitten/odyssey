@@ -49,7 +49,7 @@ namespace Odyssey.Hud
         {
             if (under.IsValid && snapshot.TryGetPawn(under, out PawnView target))
             {
-                // A downed enemy is not an instant attack any more (design 59 §7, owner's ruling):
+                // A downed enemy is not an instant attack any more (design 60 §7, owner's ruling):
                 // the context menu offers Capture and Finish off, so nobody is killed by accident.
                 if (target.IsPerson && target.IsHostile && target.IsDowned) return false;
 

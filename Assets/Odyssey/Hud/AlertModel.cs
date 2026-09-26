@@ -160,12 +160,12 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// Somebody the colony means to hold is lying downed with no free prison bed to be carried
-        /// to (design 59 §7): a capture waiting, or a prisoner brought down outside her cell. Read off
+        /// to (design 60 §7): a capture waiting, or a prisoner brought down outside her cell. Read off
         /// the simulation's <c>odyssey.pawn.prison.nobed</c>; one row a pawn, a click goes to her.
         /// </summary>
         public const string NoPrisonBedKey = "ui.alert.noprisonbed";
 
-        /// <summary>A prisoner is breaking out (design 59 §9c): Danger, one row an escapee, a click goes to her.</summary>
+        /// <summary>A prisoner is breaking out (design 60 §9c): Danger, one row an escapee, a click goes to her.</summary>
         public const string PrisonerEscapeKey = "ui.alert.prisonerescape";
 
         /// <summary>
@@ -336,7 +336,7 @@ namespace Odyssey.Hud
             {
                 PawnView pawn = pawns[i];
                 // Not a colonist's alert, so before the colonists-only gate: the pawn waiting for a
-                // prison bed is a bandit, or a prisoner (design 59 §7).
+                // prison bed is a bandit, or a prisoner (design 60 §7).
                 if (!pawn.IsColonist && snapshot.TryGetPawnAspect(pawn.Id, PrisonAspectNames.NoBedKey, out _))
                 {
                     noPrisonBed++;
@@ -611,7 +611,7 @@ namespace Odyssey.Hud
                     pawn: pawn.Id));
             }
 
-            // A prisoner breaking out (design 59 §9c): Danger, a row each, a click goes to her.
+            // A prisoner breaking out (design 60 §9c): Danger, a row each, a click goes to her.
             for (int i = 0; i < pawns.Length && escaping > 0; i++)
             {
                 PawnView pawn = pawns[i];
@@ -627,7 +627,7 @@ namespace Odyssey.Hud
                     pawn: pawn.Id));
             }
 
-            // Down, meant to be held, and no prison bed free (design 59 §7): Warning, because she is
+            // Down, meant to be held, and no prison bed free (design 60 §7): Warning, because she is
             // not dying of it, and a click goes to her.
             for (int i = 0; i < pawns.Length && noPrisonBed > 0; i++)
             {

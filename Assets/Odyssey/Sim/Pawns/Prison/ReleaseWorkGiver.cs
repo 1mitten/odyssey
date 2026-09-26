@@ -5,7 +5,7 @@ namespace Odyssey.Sim.Pawns
 {
     /// <summary>
     /// A warden goes to the nearest prisoner the player has chosen to release or exile and lets her
-    /// go (design 59 §10). Named to sort after feeding and talking by the name tiebreak: letting
+    /// go (design 60 §10). Named to sort after feeding and talking by the name tiebreak: letting
     /// somebody go keeps, and a hungry prisoner does not.
     /// </summary>
     public sealed class ReleaseWorkGiver : WorkGiver

@@ -91,6 +91,8 @@ namespace Odyssey.SaveProbe
                 Map = header.Recipe.Map,
                 Barren = header.Recipe.Barren,
                 Wooded = header.Recipe.Wooded,
+                Site = header.Recipe.Site,
+                WorldSeed = header.Recipe.WorldSeed,
                 Name = header.Recipe.ColonyName,
                 Scenario = ScenarioByName(header.Recipe.Scenario),
             });

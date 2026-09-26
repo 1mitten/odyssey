@@ -446,7 +446,7 @@ namespace Odyssey.Sim.Events
 
         /// <summary>Members on the board and not down.</summary>
         /// <summary>
-        /// A member still fighting: standing and nobody's prisoner (design 59 §4b). A member the
+        /// A member still fighting: standing and nobody's prisoner (design 60 §4b). A member the
         /// colony has taken stays on the band's roll and counts as lost, which is what she already
         /// was while she lay downed, so taking her changes neither when the band breaks nor when it
         /// is done with.

@@ -55,7 +55,7 @@ namespace Odyssey.Sim.Pawns
         /// — and that she could be carried to. A walk over the beds, asked once per order or scan.
         ///
         /// <para><paramref name="asUser"/> asks from a pool other than her own: the capture asks as a
-        /// prisoner for a raider who is not one until she is laid down (design 59 §7). One chooser
+        /// prisoner for a raider who is not one until she is laid down (design 60 §7). One chooser
         /// for both carries, so a fix to either is a fix to both (review 2026-09-26).</para>
         /// </summary>
         public static int BedFor(Pawn patient, Pawn claimant, PawnContext ctx, BedUser? asUser = null)

@@ -329,7 +329,7 @@ namespace Odyssey.Tests.Sim
         // The frog merged with cover, 2026-09-26: re-taken from the merged pack.
         // The frog merged with raids, 2026-09-26: the gunman keeps kind 4 and the frog moves to 5;
         // re-taken from the merged pack.
-        // 2026-09-26, prisoners (design 59 P3, the contracts step): Skill_Social, Work_Warden
+        // 2026-09-26, prisoners (design 60 P3, the contracts step): Skill_Social, Work_Warden
         // (order 8), Job_Capture to Job_Arrest (drivers 28 to 35) and Thought_Imprisoned,
         // Thought_ColonistArrested and Thought_WasArrested appended.
         // Merged with main (the frog), 2026-09-26: re-taken from the merged pack.

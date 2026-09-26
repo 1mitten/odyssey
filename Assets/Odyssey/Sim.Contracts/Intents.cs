@@ -366,7 +366,7 @@ namespace Odyssey.Sim.Contracts
         QueryShot,
 
         /// <summary>
-        /// Debug-menu-only (design 59 §4): take a person into the colony's custody, or set one
+        /// Debug-menu-only (design 60 §4): take a person into the colony's custody, or set one
         /// free. <c>A</c> is the pawn's <c>PawnId</c> value, or nought for the person nearest
         /// <see cref="Intent.Cell"/>; <c>B</c> is 0 to take, 1 to free. Handler:
         /// <c>JobSystem.HandleDebugImprison</c>. Appended, so no recorded intent renumbers.
@@ -374,7 +374,7 @@ namespace Odyssey.Sim.Contracts
         DebugImprison,
 
         /// <summary>
-        /// Say what the bed in <see cref="Intent.Cell"/> is for (design 59 §5b): <c>A</c> 1 marks it
+        /// Say what the bed in <see cref="Intent.Cell"/> is for (design 60 §5b): <c>A</c> 1 marks it
         /// and every bed in its room for prisoners, 0 unmarks them. A bed in no room marked for
         /// prisoners holds its prisoner shackled. An owner of the wrong kind loses the bed at once.
         /// Handler: <c>ConstructionGrid.HandleSetBedPurpose</c>. Appended.
@@ -382,7 +382,7 @@ namespace Odyssey.Sim.Contracts
         SetBedPurpose,
 
         /// <summary>
-        /// Ask a warden to bring a person in (design 59 §7): <c>A</c> is her <c>PawnId</c> value,
+        /// Ask a warden to bring a person in (design 60 §7): <c>A</c> is her <c>PawnId</c> value,
         /// <c>B</c> 1 to mark her for capture and 0 to clear it. The warden's emergency giver carries
         /// her to a prison bed once she is down. Handler: <c>JobSystem.HandleSetCaptureMark</c>.
         /// </summary>
@@ -390,20 +390,20 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>
         /// Send one colonist (<c>A</c>), drafted or not, to carry a downed person (<c>B</c>) to a prison
-        /// bed now, marking her for capture first (design 59 §7). The right-click menu's Capture.
+        /// bed now, marking her for capture first (design 60 §7). The right-click menu's Capture.
         /// Handler: <c>JobSystem.HandleOrderCapture</c>.
         /// </summary>
         OrderCapture,
 
         /// <summary>
-        /// Say what the colony means to do with a prisoner (design 59 §8, §13): <c>A</c> is her
+        /// Say what the colony means to do with a prisoner (design 60 §8, §13): <c>A</c> is her
         /// <c>PawnId</c> value and <c>B</c> a <see cref="PrisonMode"/>. Ransom is refused until
         /// factions exist. Handler: <c>JobSystem.HandleSetPrisonMode</c>. Appended.
         /// </summary>
         SetPrisonMode,
 
         /// <summary>
-        /// Arrest a colonist (design 59 §10): <c>A</c> is the arresting colonist's <c>PawnId</c>
+        /// Arrest a colonist (design 60 §10): <c>A</c> is the arresting colonist's <c>PawnId</c>
         /// value, or nought for the nearest who can reach her, and <c>B</c> the colonist to be taken. Refused with no free prison bed. Handler:
         /// <c>JobSystem.HandleOrderArrest</c>. Appended.
         /// </summary>
@@ -537,15 +537,15 @@ namespace Odyssey.Sim.Contracts
             IntentKind.EditBill => true,
             // A view question, like QueryCell: the readout answers paused as well as running.
             IntentKind.QueryShot => true,
-            // What a bed is for (design 59 §5b): a setting on a bed's pane, which is a thing opened
+            // What a bed is for (design 60 §5b): a setting on a bed's pane, which is a thing opened
             // while paused, and a row that read "yes" while no colonist had heard would be the slab
             // fault again.
             IntentKind.SetBedPurpose => true,
-            // Capture (design 59 §7): a setting and an order over a pawn, both given paused as the
+            // Capture (design 60 §7): a setting and an order over a pawn, both given paused as the
             // fight's orders are.
             IntentKind.SetCaptureMark => true,
             IntentKind.OrderCapture => true,
-            // A prisoner's mode (design 59 §8): a setting on her pane, given paused.
+            // A prisoner's mode (design 60 §8): a setting on her pane, given paused.
             IntentKind.SetPrisonMode => true,
             // An arrest is an order over a pawn, given paused as the fight's orders are.
             IntentKind.OrderArrest => true,

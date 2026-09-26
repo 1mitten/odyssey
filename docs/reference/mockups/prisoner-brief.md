@@ -2,7 +2,7 @@
 
 **2026-09-26.** The prompt below goes to Claude Design verbatim, with the attachments listed at the
 end. The decisions behind it are the owner's (`docs/research/prisoner-interview.md`) and
-`docs/design/59-prisoners.md`. §15 of that design is what is built now. The rules underneath are
+`docs/design/60-prisoners.md`. §15 of that design is what is built now. The rules underneath are
 **built and tested**. The interface is a first pass: rows on the pane and a toggle row on the bed,
 made to prove the rules rather than to be looked at. What comes back replaces that first pass, and
 its measurements become constants in code (`InspectModel`, `HudShell.Inspect`).

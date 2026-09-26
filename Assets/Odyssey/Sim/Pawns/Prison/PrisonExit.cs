@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// <b>A held pawn leaving the board</b> (design 59 §9c, §10): an escapee reaching the edge, or a
+    /// <b>A held pawn leaving the board</b> (design 60 §9c, §10): an escapee reaching the edge, or a
     /// prisoner released or exiled walking off it. One owner of what goes with her, so the two ways
     /// out cannot disagree: her weapon leaves with her (a disarmed prisoner has none), her prison bed
     /// goes back, a raid band is told she is gone, the ledger is told if there is anything to tell,

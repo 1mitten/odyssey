@@ -27,7 +27,7 @@ namespace Odyssey.Sim.Pawns
         public readonly byte Facing;
 
         /// <summary>
-        /// She had joined the colony (design 59 §16 #5): her kind is a raider's but her side was
+        /// She had joined the colony (design 60 §16 #5): her kind is a raider's but her side was
         /// ours, and the corpse is drawn and named as the side she died on. Asked of
         /// <see cref="Allegiance"/> at the death, never of the kind.
         /// </summary>
@@ -173,7 +173,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// The facing's word also carries <see cref="Corpse.Joined"/>, above the three bits a heading
-        /// uses (design 59 §16 #5). The facing was always written as a whole int, so a save from
+        /// uses (design 60 §16 #5). The facing was always written as a whole int, so a save from
         /// before reads unchanged, and a corpse that had not joined saves and hashes as it did —
         /// no format bump, no golden moved.
         /// </summary>

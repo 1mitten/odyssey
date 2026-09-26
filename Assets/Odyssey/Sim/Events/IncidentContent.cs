@@ -115,7 +115,7 @@ namespace Odyssey.Sim.Events
             "Incident_MedicalDrop",
             // A band of hostiles from one edge (design 55), appended.
             "Incident_Raid",
-            // The prison's (design 59), recorded by the world and never fired.
+            // The prison's (design 60), recorded by the world and never fired.
             "Incident_Recruited",
             "Incident_PrisonerEscaped",
             "Incident_Surrendered",

@@ -7,7 +7,7 @@ using Odyssey.Sim.Worldgen;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The one bed rule (design 59 §5a): <see cref="BedRule"/> in the contracts, answered from a
+    /// The one bed rule (design 60 §5a): <see cref="BedRule"/> in the contracts, answered from a
     /// live pawn by <see cref="BedRules"/> and from a published view by <see cref="BedRule.UserOf"/>.
     /// Every chooser asks it, so these tests hold the rule itself, the two faults it closed — the
     /// owner picker's gift going to a hog, and wildlife keeping the colony's beds shared — and the

@@ -3,7 +3,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// What the prison publishes about a pawn (design 59 §11), as sparse pawn aspects: a pawn the
+    /// What the prison publishes about a pawn (design 60 §11), as sparse pawn aspects: a pawn the
     /// colony has nothing to say about publishes none. The interface reads the same names from
     /// <c>Odyssey.Hud.PrisonAspectNames</c>, which cannot see this assembly.
     /// </summary>
@@ -30,7 +30,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>1 while her bed is a shackle bed.</summary>
         public const string ShackledName = "odyssey.pawn.prison.shackled";
 
-        /// <summary>Her chance of breaking out in a day, in parts per million (design 59 §9a).</summary>
+        /// <summary>Her chance of breaking out in a day, in parts per million (design 60 §9a).</summary>
         public const string EscapeName = "odyssey.pawn.prison.escape";
 
         /// <summary>Why her escape risk is what it is: <see cref="EscapeReasons"/> as a number.</summary>
@@ -38,7 +38,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// Present on a downed prisoner out of her prison bed, who is to be carried back to it: the
-        /// one case Capture is offered on somebody already held (design 59 §16 H3). Asked of
+        /// one case Capture is offered on somebody already held (design 60 §16 H3). Asked of
         /// <see cref="CaptureRules.WantsCapture"/>, so the menu and the order cannot disagree.
         /// </summary>
         public const string StrayName = "odyssey.pawn.prison.stray";
@@ -55,7 +55,7 @@ namespace Odyssey.Sim.Pawns
         public static readonly AspectKey Shackled = AspectKey.Of(ShackledName);
 
         /// <summary>
-        /// What every prisoner's rows share within one publish (design 59 §16 #7): how many the
+        /// What every prisoner's rows share within one publish (design 60 §16 #7): how many the
         /// colony holds and who its best warden is. Each walks every pawn, and each was asked again
         /// for every prisoner — fifty prisoners among four hundred pawns was some 80,000 steps a
         /// publish. Found on first need and kept for the rest of the publish; start one per publish.
@@ -92,14 +92,14 @@ namespace Odyssey.Sim.Pawns
             if (pawn.Prison != null && pawn.Prison.CaptureMark) writer.AddPawnAspect(pawn.Id, CaptureMark, 1);
             if (pawn.Custody == PawnCustody.Prisoner)
             {
-                // The prisoner's pane (design 59 §11b), every number from the owner that runs it.
+                // The prisoner's pane (design 60 §11b), every number from the owner that runs it.
                 // Asked of custody, never of the record: a freshly taken prisoner's record is empty,
                 // and a load drops an empty one.
                 PrisonMode mode = pawn.Prison?.Mode ?? PrisonMode.Hold;
                 writer.AddPawnAspect(pawn.Id, Mode, (int)mode);
                 writer.AddPawnAspect(pawn.Id, Willing, (pawn.Prison?.Willingness ?? 0) / 1_000);
                 if (PrisonerTrees.IsShackled(pawn, ctx)) writer.AddPawnAspect(pawn.Id, Shackled, 1);
-                // The risk the hourly roll uses, from the same call (design 59 §9b).
+                // The risk the hourly roll uses, from the same call (design 60 §9b).
                 EscapeOdds odds = EscapeRisk.Odds(pawn, ctx, shared.Held(ctx));
                 writer.AddPawnAspect(pawn.Id, Escape, odds.PerDayPpm);
                 writer.AddPawnAspect(pawn.Id, EscapeWhy, (int)odds.Reasons);

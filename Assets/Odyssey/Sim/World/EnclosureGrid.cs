@@ -80,7 +80,7 @@ namespace Odyssey.Sim.World
 
         /// <summary>
         /// Moves every time a solve changes which room any cell is in. Not saved and not hashed: a
-        /// counter for caches built over the rooms (the prison's cells, design 59 §5b) to know when
+        /// counter for caches built over the rooms (the prison's cells, design 60 §5b) to know when
         /// to look again, so they never re-walk the rooms on a query.
         /// </summary>
         public int Generation
@@ -319,7 +319,7 @@ namespace Odyssey.Sim.World
                     if (x == 0 || x == sizeX - 1 || z == 0 || z == sizeZ - 1)
                         touchesMapEdge = true;
 
-                    // **Flagged, never cut short** (design 59 §15d). The fill used to break here,
+                    // **Flagged, never cut short** (design 60 §15d). The fill used to break here,
                     // leaving every cell it had queued marked visited and unprocessed — so a later
                     // fill that reached one treated it as a wall, and a room whose doorway opened on
                     // to a big outdoor region scanned first came out enclosed. A broken cell door

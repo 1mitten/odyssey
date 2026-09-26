@@ -12,7 +12,7 @@ using Odyssey.Sim.Worldgen;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The prison bed and the cell it makes (design 59 §5b): what is saved is what the player
+    /// The prison bed and the cell it makes (design 60 §5b): what is saved is what the player
     /// marked, what a bed is for is derived from its room, and a prison bed with no room holds
     /// its prisoner shackled. The rooms are the real enclosure grid over a hand-built board, the
     /// way the temperature tests build theirs, so what is tested is the rule and not a stand-in.

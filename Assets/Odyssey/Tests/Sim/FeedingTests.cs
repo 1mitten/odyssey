@@ -9,7 +9,7 @@ using static Odyssey.Tests.Sim.PrisonFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// Feeding the held (design 59 §7, §14): a warden carries one portion to a hungry prisoner who
+    /// Feeding the held (design 60 §7, §14): a warden carries one portion to a hungry prisoner who
     /// cannot feed herself — shackled, down, or in a cell with nothing in it — and feeds her there.
     /// A prisoner with food in her cell is left to eat it. Food lying in a cell is hers: no colonist
     /// eats it and no hauler carries it back out.

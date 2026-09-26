@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// Why a prisoner's escape risk is what it is, as bits (design 59 §9a). Published as one number
+    /// Why a prisoner's escape risk is what it is, as bits (design 60 §9a). Published as one number
     /// so the prisoner's pane can say it in words. Some raise it and some lower it.
     /// </summary>
     [System.Flags]
@@ -52,7 +52,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// <b>The one owner of how likely a prisoner is to break out</b> (design 59 §9). The hourly roll
+    /// <b>The one owner of how likely a prisoner is to break out</b> (design 60 §9). The hourly roll
     /// and the pane's readout both call <see cref="Odds"/>, so the risk a player reads is the risk
     /// rolled — the reference's hidden break chance, made visible and given its reasons.
     ///
@@ -79,7 +79,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// <see cref="Odds(Pawn, PawnContext)"/> with the colony's prisoner count already in hand: the
-        /// publish counts it once for every prisoner on the board (design 59 §16 #7), not once each.
+        /// publish counts it once for every prisoner on the board (design 60 §16 #7), not once each.
         /// </summary>
         public static EscapeOdds Odds(Pawn pawn, PawnContext ctx, int held)
         {
@@ -111,7 +111,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// The hourly roll (design 59 §9b): true when she breaks out this hour. One draw on the
+        /// The hourly roll (design 60 §9b): true when she breaks out this hour. One draw on the
         /// escape stream keyed by her id, against exactly the threshold <see cref="Odds"/> publishes.
         /// </summary>
         public static bool Rolls(Pawn pawn, PawnContext ctx, int tick)

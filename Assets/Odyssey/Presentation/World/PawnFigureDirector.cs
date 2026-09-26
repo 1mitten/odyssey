@@ -2535,7 +2535,7 @@ namespace Odyssey.Presentation.World
             if (_byPawn.TryGetValue(pawn.Value, out Figure? existing))
             {
                 // Her outfit moves while she is drawn: taken, dressed for her cell, recruited, let
-                // go (design 59 §11d; review 2026-09-26). The same face is repainted in place; a
+                // go (design 60 §11d; review 2026-09-26). The same face is repainted in place; a
                 // different one needs its own figure, so this one is parked and a new one leased.
                 PawnOutfit outfit = PawnOutfits.For(view);
                 if (existing.Outfit == outfit) return existing;

@@ -18,7 +18,7 @@ room. We need to create some systems here that could help bring this together, �
 and clarify details with me."*
 
 **Read next:**
-- `docs/design/59-prisoners.md`, the design these answers decide;
+- `docs/design/60-prisoners.md`, the design these answers decide;
 - `docs/research/a-20-prisoners.md`, how the reference and the genre do it;
 - `docs/plans/prisoners.md`.
 
@@ -93,4 +93,4 @@ These are tuning proposals, and **the owner confirms or corrects them at the fir
 - the surrender chance;
 - the arrest resistance.
 
-They are in `docs/design/59-prisoners.md` §8–§10, with the days-to-recruit table the recruitment numbers imply.
+They are in `docs/design/60-prisoners.md` §8–§10, with the days-to-recruit table the recruitment numbers imply.

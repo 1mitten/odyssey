@@ -114,7 +114,7 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
-        /// The colonist pane's header (design 59 §16 H1): the longest given name in the pool must
+        /// The colonist pane's header (design 60 §16 H1): the longest given name in the pool must
         /// clear the buttons. Design 57 §6 took a fourth labelled button out because it "would have
         /// run her name under the buttons"; the prisoner line put one back (Arrest) and this test,
         /// measuring at 1920 x 1080, found 17 px left where the name needs about 70. Arrest is a

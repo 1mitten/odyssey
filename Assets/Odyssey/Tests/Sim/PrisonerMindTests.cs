@@ -9,7 +9,7 @@ using static Odyssey.Tests.Sim.PrisonFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The held prisoner's mind (design 59 §6): she walks her cell and never leaves it through a
+    /// The held prisoner's mind (design 60 §6): she walks her cell and never leaves it through a
     /// closed door, sleeps in her own prison bed, eats what is in her cell, stays on a shackle bed,
     /// heals in bed like a colonist, and has no mental breaks — low mood is the escape risk's.
     /// The cell is built the way a player would build one: a ring of walls with a door, and a roof.

@@ -346,7 +346,7 @@
   </JobDef>
 
   <!--
-    The prisoner line (design 59 section 7), claimed together by its contracts step (P3), 28 to
+    The prisoner line (design 60 section 7), claimed together by its contracts step (P3), 28 to
     35, so that no two units append a job and both call it the same number. Each driver was
     written by its own unit (P5 to P12).
 

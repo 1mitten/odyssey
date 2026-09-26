@@ -137,7 +137,7 @@ namespace Odyssey.Tests.Hud
             // Work_Rescue, whose giver answers no until C4 fills it.
             // Seven since medical supplies (design 37): Doctor's column went live with Work_Doctor.
             // Eight since the kitchen (design 48): Cooking's column went live with Work_Cooking.
-            // Nine since the prisoner line (design 59 §7): Warden's went live with Work_Warden.
+            // Nine since the prisoner line (design 60 §7): Warden's went live with Work_Warden.
             Assert.That(WorkCatalogue.LiveCount, Is.EqualTo(9),
                 "Construction, Chopping, Mining, Hauling, Growing, Rescue, Doctor, Cooking and Warden are what WorkTypes.xml runs.");
 

@@ -5,7 +5,7 @@ using Odyssey.Hud;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// The interface's half of the prison aspects' agreement (design 59 §16): the names and bits
+    /// The interface's half of the prison aspects' agreement (design 60 §16): the names and bits
     /// <see cref="PrisonAspectNames"/> copies, held to the literals the simulation publishes.
     /// <c>PrisonContractTests.TheAspectNamesAreSpelledAsTheInterfaceReadsThem</c> holds the other
     /// side, so neither copy can move without failing one of the two — the pattern

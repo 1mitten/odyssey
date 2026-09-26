@@ -217,11 +217,11 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// Whose side this pawn is on (design 33 §3): its kind's, unless it has joined the colony
-        /// (design 59 §4). Asked of <see cref="Allegiance"/>, the one owner of sides.
+        /// (design 60 §4). Asked of <see cref="Allegiance"/>, the one owner of sides.
         /// </summary>
         public Faction Faction => Allegiance.FactionOf(this);
 
-        /// <summary>Fights the colony on sight: a bandit at large, or a prisoner breaking out (design 59 §4b).</summary>
+        /// <summary>Fights the colony on sight: a bandit at large, or a prisoner breaking out (design 60 §4b).</summary>
         public bool IsHostile => Allegiance.IsHostile(this);
 
         /// <summary>
@@ -230,18 +230,18 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public bool IsColonist => Allegiance.IsColonist(this);
 
-        /// <summary>Held by the colony, or breaking out of it (design 59 §4).</summary>
+        /// <summary>Held by the colony, or breaking out of it (design 60 §4).</summary>
         public bool IsPrisoner => Allegiance.IsPrisoner(this);
 
         /// <summary>
-        /// Whether the colony holds this pawn (design 59 §4a). Saved in <c>PrisonSection</c> and
+        /// Whether the colony holds this pawn (design 60 §4a). Saved in <c>PrisonSection</c> and
         /// hashed in bits 28–29 of the pawn's word, nought while free, so a colony that never
         /// takes a prisoner saves and hashes as it did before. Set by the prison's handlers only.
         /// </summary>
         public PawnCustody Custody { get; internal set; }
 
         /// <summary>
-        /// What the colony remembers about this pawn as a prisoner, or null for nothing (design 59
+        /// What the colony remembers about this pawn as a prisoner, or null for nothing (design 60
         /// §4a). Sparse; see <see cref="PrisonRecord"/>. Hashed with the pawn while it exists.
         /// </summary>
         public PrisonRecord? Prison { get; internal set; }
@@ -253,14 +253,14 @@ namespace Odyssey.Sim.Pawns
         /// raider with a pantry (design 33 §5); and <b>a downed pawn's needs pause</b>, the C2
         /// default the owner did not object to.
         ///
-        /// <para>A held prisoner's do too (design 59 §4b, §6): she gets hungry and tired in her
+        /// <para>A held prisoner's do too (design 60 §4b, §6): she gets hungry and tired in her
         /// cell like anyone. An escapee's and a pawn walking off do not — they are leaving.</para>
         /// </summary>
         public virtual bool NeedsTick => (IsColonist || Custody == PawnCustody.Prisoner) && !Downed;
 
         /// <summary>
         /// Heals and gets up as a colonist does — in a bed, and only when whole — rather than as a
-        /// hostile, which never heals (design 59 §4b). A held prisoner is somebody the colony is
+        /// hostile, which never heals (design 60 §4b). A held prisoner is somebody the colony is
         /// keeping alive; a bandit who could not heal would lie on her prison bed for ever.
         /// </summary>
         public bool HealsAsAColonist => IsColonist || Custody == PawnCustody.Prisoner;
@@ -705,7 +705,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Is the pawn eligible to break at all? A sleeping pawn never is.</summary>
         public virtual bool CanMentalBreak() =>
-            // Never a prisoner (design 59, ruling 12): her low mood is the escape risk's.
+            // Never a prisoner (design 60, ruling 12): her low mood is the escape risk's.
             Custody == PawnCustody.Free && !Asleep && !IsBroken && Mood < Content.Mood.breakThreshold;
 
         /// <summary>
@@ -1190,7 +1190,7 @@ namespace Odyssey.Sim.Pawns
             // is bit 23, the second of the two left free: walked only while it has anything on it,
             // so a colony nobody has hurt hashes as before health.
             // The area (design 43 §4a) is bit 27, nought at the default, for the same reason.
-            // Custody (design 59 §4a) is bits 28 and 29, nought while free; the prison record is
+            // Custody (design 60 §4a) is bits 28 and 29, nought while free; the prison record is
             // walked only while there is one. Bits 30 and 31 are left free.
             bool combat = HasCombatState;
             bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;
