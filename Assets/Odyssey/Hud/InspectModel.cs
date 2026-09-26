@@ -821,7 +821,7 @@ namespace Odyssey.Hud
                 }
 
                 AddColonistTabs();
-                AddColonistCommands(!Tombstoned && OrderModel.IsDrafted(snapshot, Pawn), ResponseModel.Of(snapshot, Pawn));
+                AddColonistCommands(!Tombstoned && OrderModel.IsDrafted(snapshot, Pawn));
                 RefreshSkills(snapshot);
                 return;
             }
@@ -1957,70 +1957,56 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// The draft's key names, one per face of the one button (design 33 §2f). Public so the
-        /// shell that draws the button can tell it is the one that does something.
+        /// The Draft toggle's key (design 33 §2f). Public so the shell that draws the header can tell
+        /// which toggle a command is.
         /// </summary>
-        public const string DraftKey = "ui.command.draft", UndraftKey = "ui.command.undraft";
+        public const string DraftKey = "ui.command.draft";
+
+        /// <summary>
+        /// What the Draft toggle reads while it is on (design 61 §2): the status the colonist is in,
+        /// not the verb, because an on toggle names its state.
+        /// </summary>
+        public const string DraftedKey = "ui.status.drafted";
 
         /// <summary>
         /// First Person (design 57): the view locked behind her shoulder until Escape. Public for the
-        /// same reason as the draft's keys: the shell that draws the button has to know it is live.
+        /// same reason as the draft's key: the shell that draws the header has to know which it is.
         /// </summary>
         public const string RideKey = "ui.command.ride";
 
-        /// <summary>Whether the colonist on the pane is drafted: which face the Draft button shows.</summary>
+        /// <summary>Whether the colonist on the pane is drafted.</summary>
         public bool Drafted { get; private set; }
 
         /// <summary>
-        /// The colonist's response to danger (<see cref="ResponseModel"/>, design 33 §18e): which
-        /// face the response button shows. A colonist gone from the frame reads as the default,
-        /// with the button off.
+        /// The header's two toggles (design 61, mockup 24c): Draft, then First Person. Whether each
+        /// is on, mixed or live depends on the whole selection, which this model does not hold, so
+        /// the shell asks <see cref="OrderModel.DraftFaceOf"/> and
+        /// <see cref="HudDirectors.TryFirstPersonSubject"/> for the face; what is here is which
+        /// toggles a subject has at all, and that a colonist who has gone has none live.
+        ///
+        /// <para><b>Four buttons became two.</b> Prioritise went with First Person (design 57 §6).
+        /// The response (Fight back, Defend, Flee) left with this header: it is a standing setting,
+        /// not an action, and the Assign tab's Response column already holds it for every colonist
+        /// at once (design 43 §6). The dead Inspect placeholder, which the shell had been skipping
+        /// by its label, went with it.</para>
         /// </summary>
-        public int Response { get; private set; }
-
-        void AddColonistCommands(bool drafted, int response)
+        void AddColonistCommands(bool drafted)
         {
             Drafted = drafted;
-            Response = response;
             Commands.Add(new InspectCommand
             {
-                IconKey = "ui.command.inspect", Label = "Inspect",
-                Enabled = false, Reason = "the record view arrives with the log (M6)",
-            });
-            // Prioritise stood here, dimmed, promising "job priorities arrive with the work grid
-            // (M7)". The work grid has arrived and holds the priorities; a forced "do this next" is
-            // the right-click menu's. Taken out when First Person needed its room (design 57 §6), on
-            // the rule the store's dead Rename went by: an affordance for something that does not
-            // exist is worse than a gap.
-            // Live since the draft (design 33 §2f). One button with two faces, as the reference
-            // has it: it says what pressing it will do, and a tombstoned colonist has nothing to
-            // command.
-            string key = drafted ? UndraftKey : DraftKey;
-            Commands.Add(new InspectCommand
-            {
-                IconKey = key, Label = Registry.Label(key),
+                IconKey = DraftKey, Label = Registry.Label(DraftKey),
                 Enabled = !Tombstoned,
-                Reason = drafted ? "give back to the work list (T)" : "take direct control: right-click to move (T)",
+                Reason = "Take direct control: right-click to move. Press again to give back to the work list",
             });
-            // Her response to danger (design 33 §18e), beside Draft. A setting rather than an
-            // action, so the face is the response she has, and a press moves it round the three.
-            string respond = ResponseModel.KeyOf(response);
-            Commands.Add(new InspectCommand
-            {
-                IconKey = respond, Label = Registry.Label(respond),
-                Enabled = !Tombstoned,
-                Reason = ResponseModel.Describe(response),
-            });
-            // Arrest is not here (design 59 §16 H1, the owner's ruling): a fourth labelled button
-            // left 17 px for her name. It is a row in the right-click menu on her while nobody
-            // selected is drafted (ContextMenuModel.OfferArrest).
-            // First Person (design 57), after the two that command her: this one only watches. Last,
-            // so the response keeps its place beside Draft.
+            // Arrest is not in the header (design 59 §16 H1, the owner's ruling): it is a row in the
+            // right-click menu on her while nobody selected is drafted (ContextMenuModel.OfferArrest).
+            // First Person (design 57), after the one that commands her: this one only watches.
             Commands.Add(new InspectCommand
             {
                 IconKey = RideKey, Label = Registry.Label(RideKey),
                 Enabled = !Tombstoned,
-                Reason = "watch from behind her shoulder; the wheel goes in to her eyes, Esc leaves",
+                Reason = "Watch from behind her shoulder; the wheel goes in to her eyes, Esc leaves",
             });
         }
 

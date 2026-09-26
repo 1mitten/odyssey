@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
@@ -141,32 +142,30 @@ namespace Odyssey.Tests.PlayMode
 
                 VisualElement inspect = doc!.rootVisualElement.Q("inspect");
                 VisualElement titles = inspect.Q(className: "inspect__titles");
-                VisualElement actions = inspect.Q(className: "inspect__actions");
                 var title = inspect.Q<Label>(className: "inspect__title");
                 var meta = inspect.Q<Label>(className: "inspect__meta");
-                Assume.That(titles != null && actions != null && title != null && meta != null, "the header's parts");
+                Assume.That(titles != null && title != null && meta != null, "the header's parts");
+
+                // Whatever stands after the name block in the header — the toggles, then Close over
+                // Info (design 61) — is what the name line runs into.
+                VisualElement header = titles!.parent;
+                int at = header.IndexOf(titles);
+                Assume.That(at + 1, Is.LessThan(header.childCount), "nothing after the name block");
+                float rightEdge = header[at + 1].worldBound.xMin;
 
                 string longest = "";
                 foreach (string name in ColonistNamePool.Names) if (name.Length > longest.Length) longest = name;
                 float nameWidth = title!.MeasureTextSize(longest, 0, VisualElement.MeasureMode.Undefined, 0, VisualElement.MeasureMode.Undefined).x;
                 float metaWidth = meta!.MeasureTextSize(meta.text, 0, VisualElement.MeasureMode.Undefined, 0, VisualElement.MeasureMode.Undefined).x;
                 float needed = nameWidth + meta.resolvedStyle.marginLeft + metaWidth;
-                float room = actions!.worldBound.xMin - titles!.worldBound.xMin;
-                int buttons = actions.childCount;
+                float room = rightEdge - titles.worldBound.xMin;
                 var parts = new System.Text.StringBuilder();
-                for (int i = 0; i < actions.childCount; i++)
-                {
-                    VisualElement c = actions[i];
-                    string what = c.tooltip ?? c.name;
-                    if (what.Length > 18) what = what.Substring(0, 18);
-                    parts.Append($" [{what}: {c.worldBound.width:0} + {c.resolvedStyle.marginLeft:0}]");
-                }
-                Debug.Log($"[Header] the controls:{parts}; the pane {inspect.worldBound.width:0} wide, the titles start {titles!.worldBound.xMin - inspect.worldBound.xMin:0} in");
-                Debug.Log($"[Header] {buttons} controls in the actions ({actions.worldBound.width:0} wide); room for the name line " +
-                          $"{room:0}, the longest name '{longest}' and '{meta.text}' need {needed:0}; margin {room - needed:0}");
-                Debug.Log($"[Header] the name alone needs {nameWidth:0}; the word after it is short by {System.Math.Max(0f, needed - room):0}");
+                for (int i = at + 1; i < header.childCount; i++)
+                    parts.Append($" [{header[i].GetClasses().FirstOrDefault() ?? header[i].name}: {header[i].worldBound.width:0}]");
+                Debug.Log($"[Header] after the name:{parts}; room for the name line {room:0}; '{longest}' needs {nameWidth:0}, " +
+                          $"with '{meta.text}' {needed:0}; margin {room - needed:0}");
                 Assert.That(nameWidth, Is.LessThanOrEqualTo(room),
-                    $"'{longest}' needs {nameWidth:0} and the buttons leave {room:0}: her name runs under them");
+                    $"'{longest}' needs {nameWidth:0} and the header leaves {room:0}: her name runs under its controls");
             }
             finally
             {

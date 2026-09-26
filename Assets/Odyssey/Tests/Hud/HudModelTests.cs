@@ -440,13 +440,12 @@ namespace Odyssey.Tests.Hud
                 "33 §5); Gear, Thoughts, Social and Log are visible with reasons");
             Assert.That(pane.Tabs.Single(t => t.Name == "Health").Enabled, Is.True);
 
-            Assert.That(pane.Commands, Is.Not.Empty);
-            // The draft, the response (design 33 §2f, §18e) and First Person (design 57) are the
-            // commands wired; the rest may not pretend to be. Arrest is a right-click row on her, not
-            // a fourth button (design 59 §16 H1).
-            Assert.That(pane.Commands.Where(c => c.Enabled).Select(c => c.IconKey),
-                Is.EqualTo(new[] { InspectModel.DraftKey, ResponseModel.FightBackKey, InspectModel.RideKey }),
-                "only Draft, the response and First Person (design 57) are wired, and none of the others may pretend to be");
+            // The header's two toggles (design 61, mockup 24c): Draft, then First Person, and nothing
+            // else. The response is the Assign tab's now, and the dead Inspect placeholder is gone.
+            Assert.That(pane.Commands.Select(c => c.IconKey),
+                Is.EqualTo(new[] { InspectModel.DraftKey, InspectModel.RideKey }),
+                "the header carries Draft and First Person only");
+            Assert.That(pane.Commands.All(c => c.Enabled), Is.True);
         }
 
         /// <summary>

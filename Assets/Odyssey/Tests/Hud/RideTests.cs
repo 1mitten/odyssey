@@ -30,21 +30,85 @@ namespace Odyssey.Tests.Hud
 
         // ------------------------------------------------------------------ the button
 
-        /// <summary>It is on her card, live, after Draft and the response, under the registry's name.</summary>
+        /// <summary>It is on her card, live, after Draft (design 61), under the registry's name.</summary>
         [Test]
-        public void TheCardOffersRideAlongAfterTheResponse()
+        public void TheCardOffersFirstPersonAfterDraft()
         {
             var pane = new InspectModel();
             pane.SetColonist(Ada);
             pane.Refresh(Frame());
 
             int ride = pane.Commands.FindIndex(c => c.IconKey == InspectModel.RideKey);
-            int respond = pane.Commands.FindIndex(c => ResponseModel.IsResponseKey(c.IconKey));
-            // Last, so the response keeps its place beside Draft; Arrest (design 59 §10) sits between.
-            Assert.That(ride, Is.GreaterThan(respond), "not after the response");
-            Assert.That(ride, Is.EqualTo(pane.Commands.Count - 1), "not the last command");
+            int draft = pane.Commands.FindIndex(c => c.IconKey == InspectModel.DraftKey);
+            Assert.That(ride, Is.EqualTo(draft + 1), "not after Draft");
             Assert.That(pane.Commands[ride].Enabled, Is.True);
             Assert.That(pane.Commands[ride].Label, Is.EqualTo("First Person"));
+        }
+
+        // ------------------------------------------------------------------ the toggle and its key
+
+        /// <summary>
+        /// Exactly one colonist, or nobody (design 61 §3): the toggle is live for one, grey for two,
+        /// and an animal or a bandit in the selection is passed over rather than counted.
+        /// </summary>
+        [Test]
+        public void FirstPersonIsForExactlyOneColonist()
+        {
+            WorldSnapshot frame = Frame();
+            Assert.That(HudDirectors.TryFirstPersonSubject(new[] { Ada }, frame, out PawnId who), Is.True);
+            Assert.That(who, Is.EqualTo(Ada));
+            Assert.That(HudDirectors.TryFirstPersonSubject(new[] { Hog, Ada, Raider }, frame, out who), Is.True,
+                "an animal or a bandit beside her counted as a second colonist");
+            Assert.That(who, Is.EqualTo(Ada));
+
+            WorldSnapshot two = Frame();
+            var bo = new PawnId(2);
+            two.AddPawn(new PawnView(bo, new CellRef(2, 1, 1), 800, 800, 700, JobHandle.Wait, flags: PawnFlags.Person));
+            Assert.That(HudDirectors.TryFirstPersonSubject(new[] { Ada, bo }, two, out who), Is.False, "two colonists");
+            Assert.That(who, Is.EqualTo(PawnId.None));
+            Assert.That(HudDirectors.TryFirstPersonSubject(new[] { Hog }, frame, out _), Is.False, "an animal alone");
+            Assert.That(HudDirectors.TryFirstPersonSubject(new PawnId[0], frame, out _), Is.False, "nobody");
+        }
+
+        /// <summary>
+        /// The toggle and its key go in and come back out the same way (design 61 §3): the first
+        /// press rides with the selection's one colonist, the second leaves and hands her back as
+        /// the selection, as Escape does.
+        /// </summary>
+        [Test]
+        public void TheToggleGoesInAndComesOut()
+        {
+            var directors = new HudDirectors(4, 1);
+            directors.Selection.Choose(Ada);
+            Assert.That(directors.ToggleFirstPerson(Frame()), Is.True);
+            Assert.That(directors.Ride.Riding, Is.True);
+            Assert.That(directors.Ride.Pawn, Is.EqualTo(Ada));
+
+            Assert.That(directors.ToggleFirstPerson(Frame()), Is.True);
+            Assert.That(directors.Ride.Riding, Is.False, "the second press did not leave");
+            Assert.That(directors.Selection.Pawn, Is.EqualTo(Ada), "leaving did not hand her back");
+            Assert.That(directors.Hotkeys.HeldByRide, Is.False);
+        }
+
+        /// <summary>With nobody to ride with, a press does nothing; the control is the press above.</summary>
+        [Test]
+        public void ThePressDoesNothingWithoutOneColonist()
+        {
+            var directors = new HudDirectors(4, 1);
+            Assert.That(directors.ToggleFirstPerson(Frame()), Is.False, "nobody selected");
+            directors.Selection.Choose(Hog);
+            Assert.That(directors.ToggleFirstPerson(Frame()), Is.False, "an animal");
+            Assert.That(directors.Ride.Riding, Is.False);
+        }
+
+        /// <summary>The key ships on Z, beside the cutaway's V, and is named in the registry.</summary>
+        [Test]
+        public void TheKeyIsZAndNamed()
+        {
+            var hotkeys = new HotkeyDirector();
+            Assert.That(hotkeys.Key(HotkeyAction.FirstPerson, 0), Is.EqualTo(HudKey.Z));
+            Assert.That(hotkeys.Key(HotkeyAction.CycleAbove, 0), Is.EqualTo(HudKey.V), "V stays the cutaway's");
+            Assert.That(Registry.Labels, Does.ContainKey(HotkeyDirector.KeyOf(HotkeyAction.FirstPerson)));
         }
 
         /// <summary>A colonist who has gone cannot be ridden with; the control is the live pane above.</summary>
