@@ -272,8 +272,8 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < beds.Count; i++)
             {
                 int cell = beds[i];
-                int owner = ctx.Construction != null ? ctx.Construction.BedOwnerAt(cell) : 0;
-                if (owner != 0 && owner != me) continue;
+                if (!BedRules.CanUse(pawn, cell, ctx)) continue;
+                int owner = BedRules.OwnerAt(ctx, cell);
 
                 long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;

@@ -268,10 +268,16 @@ namespace Odyssey.Sim.Pawns
                 if (pawn.CurrentJob == null) continue;
                 if (_ctx.Content.Jobs[pawn.CurrentJob.DefIndex].driver != JobIndex.Sleep) continue;
 
-                int owner = sites.BedOwnerAt(pawn.CurrentJob.TargetCell);
-                if (owner == pawn.Id.Value) continue;
+                int bed = pawn.CurrentJob.TargetCell;
+                int owner = sites.BedOwnerAt(bed);
+                // Still the right kind of bed for her (design 58 §5a): a bed turned into a prison
+                // bed under a sleeping colonist wakes her like a bed given away does. A target
+                // that is no bed at all (the ground, a fireside) answers as a colony bed nobody
+                // owns, so it passes exactly as it did.
+                bool fits = bed < 0 || BedRule.Fits(BedRules.UserOf(pawn), sites.BedPurposeAt(bed));
+                if (fits && owner == pawn.Id.Value) continue;
 
-                if (owner == 0 && !sites.PawnOwnsABed(pawn.Id.Value)) continue;
+                if (fits && owner == 0 && !sites.PawnOwnsABed(pawn.Id.Value)) continue;
 
                 EndJob(pawn, JobStatus.Failed);
                 _woken.Add(pawn);
@@ -805,9 +811,10 @@ namespace Odyssey.Sim.Pawns
 
                 // A bed that is somebody's is theirs and nobody else checks in: no colonist
                 // sleeps in another's bed, which is the whole of what ownership is (design 20
-                // §7). The scenario's own spots answer 0 — nobody's, as they always were.
-                int owner = ctx.Construction != null ? ctx.Construction.BedOwnerAt(cell) : 0;
-                if (owner != 0 && owner != me) continue;
+                // §7), and nobody sleeps in the wrong kind of bed (design 58 §5a). The
+                // scenario's own spots answer 0 — nobody's, as they always were.
+                if (!BedRules.CanUse(pawn, cell, ctx)) continue;
+                int owner = BedRules.OwnerAt(ctx, cell);
 
                 long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;

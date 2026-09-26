@@ -1212,9 +1212,14 @@ namespace Odyssey.Presentation.Ui
             // rather than a second tally being kept here and going stale.
             var sites = _boot?.Colony?.Construction;
             int here = sites != null ? sites.BedOwnerAt(_inspect.Cell) : 0;
+            BedPurpose purpose = sites != null ? sites.BedPurposeAt(_inspect.Cell) : BedPurpose.Colony;
 
             for (int i = 0; i < pawns.Length; i++)
             {
+                // Only those who sleep from this bed's pool: colonists for a colony bed. The picker
+                // listed every pawn on the board until 2026-09-26, hogs and bandits included, and
+                // the simulation would have taken the gift (design 58 §5a).
+                if (!BedRule.MayOwn(BedRule.UserOf(pawns[i]), purpose)) continue;
                 int id = pawns[i].Id.Value;
                 BedPickerMark mark =
                     id == here && here != 0 ? BedPickerMark.ThisBed

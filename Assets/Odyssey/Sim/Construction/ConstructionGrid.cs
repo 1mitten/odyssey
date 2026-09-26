@@ -1787,8 +1787,14 @@ namespace Odyssey.Sim.Construction
 
             // -1 is the interface's "release"; 0 is the record's "nobody" — the same answer.
             int pawnId = pawn < 0 ? 0 : pawn;
-            if (pawnId != 0 && _pawns.Get(new PawnId(pawnId)) == null)
-                return IntentRejection.NotPermitted;
+            if (pawnId != 0)
+            {
+                // Only somebody who sleeps from this bed's pool may be given it: never a hog or a
+                // bandit, and never a colonist a prison bed (design 58 §5a, `BedRule`).
+                Pawns.Pawn? owner = _pawns.Get(new PawnId(pawnId));
+                if (owner == null || !BedRule.MayOwn(BedRules.UserOf(owner), BedPurposeAt(index)))
+                    return IntentRejection.NotPermitted;
+            }
             if (placed.Owner == pawnId) return IntentRejection.AlreadyInThatState;
 
             // One bed per colonist, kept by the handler rather than hoped for by the interface:
@@ -1889,18 +1895,32 @@ namespace Odyssey.Sim.Construction
             return false;
         }
 
-        /// <summary>Built beds nobody owns — the shared pool anyone may sleep in.</summary>
-        public int UnownedBedCount()
+        /// <summary>Built colony beds nobody owns — the shared pool any colonist may sleep in.</summary>
+        public int UnownedBedCount() => UnownedBedCount(BedPurpose.Colony);
+
+        /// <summary>Built beds of this purpose nobody owns: the shared pool of that kind of bed.</summary>
+        public int UnownedBedCount(BedPurpose purpose)
         {
             int free = 0;
             for (int i = 0; i < _edifices.Count; i++)
             {
                 PlacedEdifice bed = _edifices[i];
-                if (bed.Def == CoreContent.EdificeBed && !bed.Removed && bed.Built && bed.Owner == 0)
+                if (bed.Def == CoreContent.EdificeBed && !bed.Removed && bed.Built && bed.Owner == 0
+                    && BedPurposeAt(bed.CellIndex) == purpose)
                     free++;
             }
             return free;
         }
+
+        /// <summary>
+        /// What the bed at this cell is for (design 58 §5b). Every bed is a colony bed until a bed
+        /// is marked for prisoners; a cell with no bed answers <see cref="BedPurpose.Colony"/>.
+        /// </summary>
+        public BedPurpose BedPurposeAt(int cell) => BedPurpose.Colony;
+
+        /// <summary><see cref="BedPurposeAt(int)"/> by cell reference, which is how the pane holds one.</summary>
+        public BedPurpose BedPurposeAt(CellRef cell) =>
+            _grid.Contains(cell.X, cell.Z, cell.Y) ? BedPurposeAt(_grid.Index(cell)) : BedPurpose.Colony;
 
         /// <summary>
         /// A colonist who has just reached a bed nobody owns takes it as her own — the "not
@@ -1922,19 +1942,26 @@ namespace Odyssey.Sim.Construction
             if (cell < 0 || cell >= _grid.Edifice.Length) return false;
             if (BedOwnerAt(cell) != 0) return false;
             if (PawnOwnsABed(pawn.Value)) return false;
+            Pawns.Pawn? sleeper = _pawns.Get(pawn);
+            if (sleeper == null) return false;
 
+            // Everyone else who sleeps from the same pool and has no bed of their own. Only the
+            // same pool: a hog, a bandit or a prisoner wants none of the colony's beds, and until
+            // 2026-09-26 every pawn on the board was counted here, so a colony with wildlife
+            // kept its beds shared for ever (design 58 §5a).
             int bedlessOthers = 0;
             var all = _pawns.All;
             for (int i = 0; i < all.Count; i++)
             {
                 Pawns.Pawn other = all[i];
                 if (other.Id.Value == pawn.Value) continue;
+                if (!BedRules.SharesPool(sleeper, other)) continue;
                 if (!PawnOwnsABed(other.Id.Value)) bedlessOthers++;
             }
 
             // One bed leaves the pool if this succeeds; what is left must still cover everyone
             // else who has none.
-            if (UnownedBedCount() - 1 < bedlessOthers) return false;
+            if (UnownedBedCount(BedPurposeAt(cell)) - 1 < bedlessOthers) return false;
 
             return AssignOwnerAt(cell, pawn.Value) == IntentRejection.None;
         }

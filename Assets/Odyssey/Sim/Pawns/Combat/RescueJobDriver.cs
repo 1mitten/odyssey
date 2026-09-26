@@ -121,8 +121,7 @@ namespace Odyssey.Sim.Pawns
         {
             int bed = Job.DestCell;
             if (!RescueRules.IsBed(ctx, bed)) return false;
-            int owner = ctx.Construction?.BedOwnerAt(bed) ?? 0;
-            if (owner != 0 && owner != patient.Id.Value) return false;
+            if (!BedRules.CanUse(patient, bed, ctx)) return false;
             return ctx.Reservations.IsReservedBy(Pawn.Id, RescueRules.BedKey(bed));
         }
 
