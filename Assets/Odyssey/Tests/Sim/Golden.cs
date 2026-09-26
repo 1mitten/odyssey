@@ -494,6 +494,16 @@ namespace Odyssey.Tests.Sim
         /// Cooking took the eighth skill, so Shooting is the ninth, <c>Job_AttackRanged</c> the
         /// twenty-eighth job and the pistol the eighteenth item. <b>Measured</b> the same way; the
         /// merge commit says what the probe found.</para>
+        ///
+        /// <para><b>All six moved on 2026-09-26, by the smelter (design 62 §9, DM8): the hash
+        /// seeing more, and no colony doing anything different.</b> Every colonist carries a ninth
+        /// work priority, Crafting, and a pawn's priorities are hashed whole, so the generated
+        /// numbers move (the array is longer before a tick runs) and the simulated ones inherit
+        /// them. <b>The control</b>: with the hash loop held to the first eight priorities, all six
+        /// committed values came back exactly, the two Long boards included. <b>Measured</b>:
+        /// <c>GoldenColonyProbe</c> on the base (3ae273c6) and on the branch is identical on all
+        /// three boards, all six census lines. The new job, the workshop section and the recipes
+        /// hash nothing in a colony that never smelts.</para>
         /// </remarks>
 
         public static readonly Case Meadow = new Case
@@ -508,8 +518,8 @@ namespace Odyssey.Tests.Sim
             // (ODYSSEY_REGOLDEN=1), on top of the weather's own re-bake: the combined job, item,
             // skill and incident tables moved the hash the same way any content append does.
             // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
-            Generated = 14881731598722590511UL,
-            Simulated = 5300718913518332604UL,
+            Generated = 3188381445307104002UL,
+            Simulated = 4599933804783229663UL,
         };
 
         /// <summary>
@@ -607,8 +617,8 @@ namespace Odyssey.Tests.Sim
             // the digit: the colony stands on grass, digs nothing in ten thousand ticks and never
             // meets the rock, so only the hash of what is under it moved. The bare meadow and the
             // city did not move: neither has ore, caverns or a column deep enough for deep stone.
-            Generated = 9420666644581579923UL,
-            Simulated = 5494399407163632571UL,
+            Generated = 3733485846656967325UL,
+            Simulated = 1760797197864492417UL,
         };
 
         /// <summary>
@@ -653,8 +663,8 @@ namespace Odyssey.Tests.Sim
             // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
             // 2026-09-25, nobody over anybody (design 31 §20): Simulated only, the wander legs
             // (74 -> 75) and where everybody stands; every other census number identical.
-            Generated = 14180088319569370523UL,
-            Simulated = 6894148259867231222UL,
+            Generated = 140347985127514384UL,
+            Simulated = 10419520029793089223UL,
         };
     }
 }
