@@ -633,11 +633,7 @@ namespace Odyssey.Sim.Worldgen.Natural
 
             ctx.SurfaceY[column] = surface;
             ctx.TopSolidY[column] = surface;
-
-            int subsoilBase = surface - ctx.Gen.subsoilDepth;
-            if (subsoilBase < 0) subsoilBase = 0;
-            ctx.SubsoilBaseY[column] = subsoilBase;
-            ctx.BedrockTopY[column] = Math.Min(ctx.Gen.bedrockLayers, subsoilBase);
+            ctx.DeriveStrata(column);
         }
     }
 

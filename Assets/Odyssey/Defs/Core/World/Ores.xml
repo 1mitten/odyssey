@@ -1,14 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Minable deposits: what each is made of, how often it is chosen against the others, and the band
-  of depths below the local surface it is found in.
+  Minable deposits: the one table of what an ore is, where it lies, what shape it grows in, how
+  often, and what a cut cell gives up (design 62 §5c). The generator draws from it, the mining job
+  reads its yield from it, and the renderer's "is this ore" asks it. There is no second copy in
+  code: NaturalContent.Ores reads this.
 
-  The depth bands are the point. Coal sits below iron and overlaps it only in the middle, so
-  digging deeper is worth doing and the two are not interchangeable. Weights are relative rather
-  than percentages: the draw sums them.
+  ORDER IS THE DRAW ORDER. WorldContent.OreOrder decides which def is which kind index, and a
+  deposit's random stream is keyed on that index, so appending a kind moves no earlier one.
 
-  <terrain> names a TerrainDef and is validated at load, so a typo is a load error naming this
-  file rather than a stratum of nothing, seeds later.
+  minDepth / maxDepth are the band: layers below the local surface. A band deeper than a column's
+  rock is clamped into the rock rather than abandoned, so a 16-layer board still carries every kind
+  (squeezed to the bottom of its rock). offBandPerMille of deposits ignore the band and are placed
+  anywhere in the column's rock, so an out-of-place find still happens.
+
+  shape: Blob (round, may cross two layers), Vein (winding, one or two wide), Seam (flat, one
+  layer), Cluster (small and round), Pocket (a few cells), Oval (one filled ellipse).
+
+  depositsPer10000Columns is how many deposits per ten thousand surface columns, rounded, scaled
+  by the board's oreAbundancePerMille (zero on the bare board). minCells / maxCells bound one
+  deposit. caveWallPerMille of deposits are hung on a cavern wall inside the band when one exists,
+  so opening a cave pays. favoursDeepStone draws the depth inside the column's deep stone where
+  the band reaches it.
+
+  yieldPerCell is what one cut cell leaves, always, never rolled; item names the ItemDef.
+
+  The numbers are design 62 §5c's, tuned against the census in NaturalOreCensusTests. INVENTED.
 -->
 <Defs>
 
@@ -16,9 +32,15 @@
     <defName>Ore_Iron</defName>
     <label>iron ore</label>
     <terrain>IronOre</terrain>
-    <weight>60</weight>
+    <item>Item_IronOre</item>
+    <shape>Vein</shape>
     <minDepth>3</minDepth>
     <maxDepth>13</maxDepth>
+    <minCells>15</minCells>
+    <maxCells>40</maxCells>
+    <depositsPer10000Columns>45</depositsPer10000Columns>
+    <yieldPerCell>15</yieldPerCell>
+    <offBandPerMille>50</offBandPerMille>
     <moduleId>odyssey.module.terrain.ironore</moduleId>
   </OreKindDef>
 
@@ -26,10 +48,84 @@
     <defName>Ore_Coal</defName>
     <label>coal seam</label>
     <terrain>CoalSeam</terrain>
-    <weight>40</weight>
+    <item>Item_Coal</item>
+    <shape>Seam</shape>
     <minDepth>7</minDepth>
-    <maxDepth>22</maxDepth>
+    <maxDepth>20</maxDepth>
+    <minCells>25</minCells>
+    <maxCells>60</maxCells>
+    <depositsPer10000Columns>35</depositsPer10000Columns>
+    <yieldPerCell>12</yieldPerCell>
+    <offBandPerMille>50</offBandPerMille>
     <moduleId>odyssey.module.terrain.coalseam</moduleId>
+  </OreKindDef>
+
+  <OreKindDef>
+    <defName>Ore_Copper</defName>
+    <label>copper ore</label>
+    <terrain>CopperOre</terrain>
+    <item>Item_CopperOre</item>
+    <shape>Blob</shape>
+    <minDepth>1</minDepth>
+    <maxDepth>8</maxDepth>
+    <minCells>10</minCells>
+    <maxCells>30</maxCells>
+    <depositsPer10000Columns>60</depositsPer10000Columns>
+    <yieldPerCell>15</yieldPerCell>
+    <offBandPerMille>50</offBandPerMille>
+    <moduleId>odyssey.module.terrain.copperore</moduleId>
+  </OreKindDef>
+
+  <OreKindDef>
+    <defName>Ore_Gold</defName>
+    <label>gold ore</label>
+    <terrain>GoldOre</terrain>
+    <item>Item_GoldOre</item>
+    <shape>Cluster</shape>
+    <minDepth>12</minDepth>
+    <maxDepth>20</maxDepth>
+    <minCells>2</minCells>
+    <maxCells>8</maxCells>
+    <depositsPer10000Columns>12</depositsPer10000Columns>
+    <yieldPerCell>6</yieldPerCell>
+    <offBandPerMille>50</offBandPerMille>
+    <caveWallPerMille>400</caveWallPerMille>
+    <favoursDeepStone>true</favoursDeepStone>
+    <moduleId>odyssey.module.terrain.goldore</moduleId>
+  </OreKindDef>
+
+  <OreKindDef>
+    <defName>Ore_Gems</defName>
+    <label>gems</label>
+    <terrain>Gems</terrain>
+    <item>Item_Gems</item>
+    <shape>Pocket</shape>
+    <minDepth>10</minDepth>
+    <maxDepth>20</maxDepth>
+    <minCells>1</minCells>
+    <maxCells>4</maxCells>
+    <depositsPer10000Columns>6</depositsPer10000Columns>
+    <yieldPerCell>2</yieldPerCell>
+    <offBandPerMille>50</offBandPerMille>
+    <caveWallPerMille>450</caveWallPerMille>
+    <moduleId>odyssey.module.terrain.gems</moduleId>
+  </OreKindDef>
+
+  <!-- The deepest find, and only there: no off-band draw. It glows once a face exposes it. -->
+  <OreKindDef>
+    <defName>Ore_Emberquartz</defName>
+    <label>Emberquartz</label>
+    <terrain>Emberquartz</terrain>
+    <item>Item_Emberquartz</item>
+    <shape>Oval</shape>
+    <minDepth>18</minDepth>
+    <maxDepth>20</maxDepth>
+    <minCells>20</minCells>
+    <maxCells>40</maxCells>
+    <depositsPer10000Columns>2</depositsPer10000Columns>
+    <yieldPerCell>20</yieldPerCell>
+    <offBandPerMille>0</offBandPerMille>
+    <moduleId>odyssey.module.terrain.emberquartz</moduleId>
   </OreKindDef>
 
 </Defs>

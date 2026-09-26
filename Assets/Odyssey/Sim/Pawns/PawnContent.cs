@@ -655,6 +655,10 @@ namespace Odyssey.Sim.Pawns
         public const int VegetableMeal = ItemHandle.VegetableMeal;
         public const int BurntMeal = ItemHandle.BurntMeal;
         public const int Pistol = ItemHandle.Pistol;
+        public const int CopperOre = ItemHandle.CopperOre;
+        public const int GoldOre = ItemHandle.GoldOre;
+        public const int Gems = ItemHandle.Gems;
+        public const int Emberquartz = ItemHandle.Emberquartz;
         public const int Count = ItemHandle.Count;
     }
 
@@ -1241,10 +1245,21 @@ namespace Odyssey.Sim.Pawns
         public int standDownTicks = 120;
         public int stonePerRock = 8;
         public int stoneChanceOneIn = 1;
-        public int orePerCell = 15;
         public int liftTicks = 48;
         public int liftGraspTicks = 24;
         public int draftQuietTicks = 10_000;
+    }
+
+    /// <summary>
+    /// What one cut cell of an ore kind leaves (design 62 §5c): the ore table's row, with its item
+    /// named in <c>Ores.xml</c> turned into a handle here, where the item table is.
+    /// </summary>
+    public readonly struct OreYield
+    {
+        public readonly ushort Terrain;
+        public readonly int Item;
+        public readonly int Count;
+        public OreYield(ushort terrain, int item, int count) { Terrain = terrain; Item = item; Count = count; }
     }
 
     /// <summary>
@@ -1444,8 +1459,11 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public int StoneChanceOneIn = 1;
 
-        /// <summary>Ore a seam cell leaves. Always, never rolled. ASSUMED.</summary>
-        public int OrePerCell = 15;
+        /// <summary>
+        /// What a cut cell of each ore kind leaves, in <c>WorldContent.OreOrder</c>: the item handle
+        /// and the count, resolved from <c>Ores.xml</c> (design 62 §5c). Always, never rolled.
+        /// </summary>
+        public OreYield[] OreYields = System.Array.Empty<OreYield>();
 
         public int ThinkLoopWindowTicks = 60;
 
@@ -1609,7 +1627,14 @@ namespace Odyssey.Sim.Pawns
                 // The kitchen (design 48 §4), appended: the two meals and the burnt one.
                 "Item_CookedMeal", "Item_VegetableMeal", "Item_BurntMeal",
                 // The pistol (design 47), the first ranged weapon.
-                "Item_Pistol");
+                "Item_Pistol",
+                // Deep mining's finds (design 62 §5c), appended after the pistol.
+                "Item_CopperOre", "Item_GoldOre", "Item_Gems", "Item_Emberquartz");
+            var ores = Worldgen.WorldContent.OresFromDefs(defs);
+            content.OreYields = new OreYield[ores.Length];
+            for (int o = 0; o < ores.Length; o++)
+                content.OreYields[o] = new OreYield(ores[o].Terrain,
+                    ItemNamed(content, ores[o].Item, Worldgen.WorldContent.OreOrder[o]), ores[o].YieldPerCell);
             content.Recipes = ByName<RecipeDef>(defs, "Recipe_Meal");
             for (int r = 0; r < content.Recipes.Length; r++)
             {
@@ -1720,7 +1745,6 @@ namespace Odyssey.Sim.Pawns
             content.StandDownTicks = tuning.standDownTicks;
             content.StonePerRock = tuning.stonePerRock;
             content.StoneChanceOneIn = tuning.stoneChanceOneIn;
-            content.OrePerCell = tuning.orePerCell;
             content.LiftTicks = tuning.liftTicks;
             content.LiftGraspTicks = tuning.liftGraspTicks;
             content.DraftQuietTicks = tuning.draftQuietTicks;

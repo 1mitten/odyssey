@@ -90,15 +90,22 @@ namespace Odyssey.Tests.Sim
         /// four edifice ids where there were two — and the undergrowth pass placed bushes, each an
         /// edifice with its own flag bit. Every <c>dry</c> number moved; <b>every <c>barren</c> number
         /// is the one this table already held</b>, measured, because the bare board grows neither.</para>
+        ///
+        /// <para><b>Re-based a fourth time on 2026-09-26, by deep mining (design 62 §5, DM3).</b> The
+        /// ore table became six kinds placed by band and shape, the caverns became round chambers
+        /// of hundreds of cells with pillars, and deep stone lies under the 20-layer board's highest
+        /// terraces. Every <c>dry</c> number moved; <b>every <c>barren</c> number is unchanged</b>,
+        /// measured, because the bare board has no ore, no caverns and no column deep enough for
+        /// deep stone.</para>
         /// </remarks>
         static readonly (GridSize size, uint seed, ulong dry, ulong barren)[] BeforeWater =
         {
-            (new GridSize(64, 64, 20), 1u, 0x94bd80785a5dcce0UL, 0x5ba75a6d28bea325UL),
-            (new GridSize(64, 64, 20), 7u, 0x73d4b2ce2a816929UL, 0x5ba75a6d28bea325UL),
-            (new GridSize(64, 64, 20), 42u, 0xbcf541841cc12611UL, 0x5ba75a6d28bea325UL),
-            (new GridSize(120, 120, 16), 1u, 0x72bd1d555391b46dUL, 0xc0dc37cc3b1edd25UL),
-            (new GridSize(120, 120, 16), 7u, 0x8b6673f0bdffec70UL, 0xc0dc37cc3b1edd25UL),
-            (new GridSize(120, 120, 16), 42u, 0xf1fa23293f14341bUL, 0xc0dc37cc3b1edd25UL),
+            (new GridSize(64, 64, 20), 1u, 0x771764597b79b76eUL, 0x5ba75a6d28bea325UL),
+            (new GridSize(64, 64, 20), 7u, 0xd71fce8d81c73658UL, 0x5ba75a6d28bea325UL),
+            (new GridSize(64, 64, 20), 42u, 0xaa3d6dbd00434b6bUL, 0x5ba75a6d28bea325UL),
+            (new GridSize(120, 120, 16), 1u, 0x328eed4dd533ae50UL, 0xc0dc37cc3b1edd25UL),
+            (new GridSize(120, 120, 16), 7u, 0x327088a3fa58ff76UL, 0xc0dc37cc3b1edd25UL),
+            (new GridSize(120, 120, 16), 42u, 0x09080328e1d6d595UL, 0xc0dc37cc3b1edd25UL),
         };
 
         [Test]

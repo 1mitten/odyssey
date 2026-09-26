@@ -279,7 +279,21 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Pistol = 17;
 
-        public const int Count = 18;
+        // Deep mining's finds (design 62 §5c), 18 to 21, appended after the pistol.
+
+        /// <summary>Copper ore: the commonest shallow find. For the smelter (DM8).</summary>
+        public const int CopperOre = 18;
+
+        /// <summary>Gold ore: small, deep clusters. Stored; its use is recorded, not built.</summary>
+        public const int GoldOre = 19;
+
+        /// <summary>Gems: a few cells at a time, often on a cave wall. Stored.</summary>
+        public const int Gems = 20;
+
+        /// <summary>Emberquartz: the deepest find, one oval cluster at a time. Stored.</summary>
+        public const int Emberquartz = 21;
+
+        public const int Count = 22;
     }
 
     /// <summary>
@@ -425,7 +439,14 @@ namespace Odyssey.Sim.Contracts
         public const int DeepWater = 19;
         public const int Marsh = 20;
 
-        public const int Count = 21;
+        /// <summary>Deep mining (design 62 §5), appended after marsh.</summary>
+        public const int DeepStone = 21;
+        public const int CopperOre = 22;
+        public const int GoldOre = 23;
+        public const int Gems = 24;
+        public const int Emberquartz = 25;
+
+        public const int Count = 26;
     }
 
     /// <summary>

@@ -799,8 +799,12 @@ namespace Odyssey.Hud
             { "ui.res.fabric", HudCategory.Organic },
             { "ui.res.scrap", HudCategory.Metal },
             { "ui.res.ironore", HudCategory.Metal },
+            { "ui.res.copperore", HudCategory.Metal },
+            { "ui.res.goldore", HudCategory.Metal },
             { "ui.res.stone", HudCategory.Mineral },
             { "ui.res.coal", HudCategory.Mineral },
+            { "ui.res.gems", HudCategory.Mineral },
+            { "ui.res.emberquartz", HudCategory.Mineral },
             { "ui.res.medkit", HudCategory.Medical },
 
             // command bar

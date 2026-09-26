@@ -108,18 +108,25 @@ namespace Odyssey.Tests.Sim
             Assert.That(seedsWithCoal, Is.EqualTo(5), "coal failed to generate on a played board");
         }
 
+        /// <summary>
+        /// The common metals are the shallow finds and the precious ones the reason to keep going
+        /// down (design 62 §5c): copper and iron together far outweigh gold, gems and Emberquartz.
+        /// It used to be "iron outweighs coal", which the deep bands retired — coal is a broad
+        /// seam in its own band now, and outweighs iron by design.
+        /// </summary>
         [Test]
-        public void IronOutweighsCoal()
+        public void TheCommonFindsOutweighThePreciousOnes()
         {
-            // Iron is the shallow find and coal is the reason to keep digging, so the board must
-            // carry more of the first than the second. This is the depth banding working, not a
-            // tuning preference: coal's band only overlaps the bottom of the rock.
             var (_, outcome, _) = PlayedBoard();
             var report = outcome.Natural!.Report;
+            int Cells(string ore) => report.OreCellsByKind[System.Array.IndexOf(Odyssey.Sim.Worldgen.WorldContent.OreOrder, ore)];
 
-            Assert.That(report.OreCellsByKind[0], Is.GreaterThan(0), "no iron on the board");
-            Assert.That(report.OreCellsByKind[0], Is.GreaterThan(report.OreCellsByKind[1]),
-                "coal is no rarer than iron, so digging deeper buys nothing");
+            int common = Cells("Ore_Iron") + Cells("Ore_Copper");
+            int precious = Cells("Ore_Gold") + Cells("Ore_Gems") + Cells("Ore_Emberquartz");
+            Assert.That(Cells("Ore_Iron"), Is.GreaterThan(0), "no iron on the board");
+            Assert.That(precious, Is.GreaterThan(0), "nothing precious on the board");
+            Assert.That(common, Is.GreaterThan(precious * 5),
+                "the precious finds are not rare, so digging deeper buys nothing special");
         }
 
         [Test]

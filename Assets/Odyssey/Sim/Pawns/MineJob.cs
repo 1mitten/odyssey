@@ -459,25 +459,23 @@ namespace Odyssey.Sim.Pawns
         /// happened to roll dice earlier in the same tick, which is a determinism leak that
         /// surfaces as a save-and-resume divergence days later.</para>
         ///
+        /// <para>What a seam gives up is the ore table's (<c>Ores.xml</c>, design 62 §5c): the item
+        /// and the count are read off its row, so a new ore is one row there and nothing here.
+        /// Deep stone yields stone exactly as rock does.</para>
+        ///
         /// <para>Subsoil, grass, earth and sand leave nothing. They are dug through, not mined.</para>
         /// </summary>
         public static bool Yield(PawnContext ctx, int cell, ushort terrain, out int item, out int count)
         {
-            if (terrain == NaturalContent.TerrainIronOre)
+            int kind = NaturalContent.OreKindOf(terrain);
+            if (kind >= 0 && kind < ctx.Content.OreYields.Length)
             {
-                item = ItemIndex.IronOre;
-                count = ctx.Content.OrePerCell;
+                item = ctx.Content.OreYields[kind].Item;
+                count = ctx.Content.OreYields[kind].Count;
                 return true;
             }
 
-            if (terrain == NaturalContent.TerrainCoalSeam)
-            {
-                item = ItemIndex.Coal;
-                count = ctx.Content.OrePerCell;
-                return true;
-            }
-
-            if (terrain == NaturalContent.TerrainRock)
+            if (NaturalContent.IsRockLike(terrain))
             {
                 var rng = DeterministicRandom.ForTick(ctx.Seed, cell, PawnPurpose.StoneYield);
                 if (rng.NextInt(ctx.Content.StoneChanceOneIn) == 0)

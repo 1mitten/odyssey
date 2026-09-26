@@ -94,7 +94,10 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(new[] { 14, 15, 16 }));
             // The pistol at 17, after the kitchen's meals (design 47).
             Assert.That(ItemHandle.Pistol, Is.EqualTo(17));
-            Assert.That(ItemHandle.Count, Is.EqualTo(18));
+            // Deep mining's four finds at 18 to 21, after the pistol (design 62 §5c).
+            Assert.That(new[] { ItemHandle.CopperOre, ItemHandle.GoldOre, ItemHandle.Gems, ItemHandle.Emberquartz },
+                Is.EqualTo(new[] { 18, 19, 20, 21 }));
+            Assert.That(ItemHandle.Count, Is.EqualTo(22));
             Assert.That(WorkHandle.Rescue, Is.EqualTo(5));
             Assert.That(WorkHandle.Doctor, Is.EqualTo(6));
             // 8 since the kitchen appended Work_Cooking at 7 (design 48).
@@ -148,7 +151,9 @@ namespace Odyssey.Tests.Sim
                   // The kitchen (design 48), after the wild foods.
                   "Item_CookedMeal", "Item_VegetableMeal", "Item_BurntMeal",
                   // The pistol (design 47), after the kitchen.
-                  "Item_Pistol" }));
+                  "Item_Pistol",
+                  // Deep mining's finds (design 62 §5c), after the pistol.
+                  "Item_CopperOre", "Item_GoldOre", "Item_Gems", "Item_Emberquartz" }));
             Assert.That(content.Items[ItemIndex.Pistol].weapon!.ranged, Is.Not.Null, "the pistol is a gun");
             Assert.That(content.Items[ItemIndex.Machete].weapon!.ranged, Is.Null, "a machete is not");
             Assert.That(content.Kinds[PawnKindIndex.Bandit].defName, Is.EqualTo("PawnKind_Bandit"));

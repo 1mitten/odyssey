@@ -16,7 +16,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// for edifice ids (<see cref="FirstEdifice"/>) and stuffs (<see cref="StuffWood"/>).
     ///
     /// **What is left here is the constants, and only the constants** (OQ-16, OQ-49).
-    /// <c>Defs/Core/World/Terrain.xml</c> declares all twenty-one kinds,
+    /// <c>Defs/Core/World/Terrain.xml</c> declares all twenty-six kinds,
     /// <see cref="WorldContent.TerrainOrder"/> is the list that decides which name is which index,
     /// and <see cref="WorldContent.Table"/> is what the running game reads. The in-code tables
     /// that used to mirror the XML are gone. A constant below is a compile-time handle — it is in
@@ -84,11 +84,46 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// </summary>
         public const ushort TerrainMarsh = (ushort)(FirstTerrain + 10);
 
-        /// <summary>One past the last natural index. Sizes any table that must span both sets.</summary>
-        public const int TerrainCount = FirstTerrain + 11;
+        // ---- deep mining (design 62 §5) ---------------------------------------------------
+        //
+        // Appended after marsh, so no index a save or a hash already carries moved.
 
-        /// <summary>Stone, shared with the city generator. Ore is grown inside this and nothing else.</summary>
+        /// <summary>
+        /// The rock below about fourteen layers under the local surface (design 62 §5b): the same
+        /// stone as <see cref="TerrainRock"/> at twice the work, and yields stone as rock does.
+        /// Rock-like (<see cref="IsRockLike"/>): ore grows in it and caverns are carved from it.
+        /// </summary>
+        public const ushort TerrainDeepStone = (ushort)(FirstTerrain + 11);
+
+        public const ushort TerrainCopperOre = (ushort)(FirstTerrain + 12);
+        public const ushort TerrainGoldOre = (ushort)(FirstTerrain + 13);
+        public const ushort TerrainGems = (ushort)(FirstTerrain + 14);
+
+        /// <summary>The deepest find, in bands 18 to 20 only. It glows once discovered.</summary>
+        public const ushort TerrainEmberquartz = (ushort)(FirstTerrain + 15);
+
+        /// <summary>One past the last natural index. Sizes any table that must span both sets.</summary>
+        public const int TerrainCount = FirstTerrain + 16;
+
+        /// <summary>Stone, shared with the city generator. Ore is grown inside this and deep stone and nothing else.</summary>
         public const ushort TerrainRock = CoreContent.TerrainRock;
+
+        /// <summary>
+        /// <b>The one rock-like test</b> (design 62 §5): plain rock or deep stone — the country rock
+        /// an ore deposit replaces and a cavern is carved from, and what a loose stone lies beside.
+        /// Not ore (a deposit never grows over another) and not bedrock (never cut).
+        ///
+        /// <para>There used to be three <c>== TerrainRock</c> tests in the generator alone, and a
+        /// fourth kind of stone would have been missed by every one of them.</para>
+        /// </summary>
+        public static bool IsRockLike(ushort terrain) =>
+            terrain == TerrainRock || terrain == TerrainDeepStone;
+
+        /// <summary>
+        /// Stone a pick cuts for something: rock-like or ore. What a scenario means by "an outcrop",
+        /// and (with bedrock) what is drawn as a lump rather than a cube.
+        /// </summary>
+        public static bool IsStone(ushort terrain) => IsRockLike(terrain) || IsOre(terrain);
 
         public const ushort TerrainAir = CoreContent.TerrainAir;
 
@@ -240,6 +275,11 @@ namespace Odyssey.Sim.Worldgen.Natural
         public const string ModuleShallowWater = Prefix + "terrain.shallowwater";
         public const string ModuleDeepWater = Prefix + "terrain.deepwater";
         public const string ModuleMarsh = Prefix + "terrain.marsh";
+        public const string ModuleDeepStone = Prefix + "terrain.deepstone";
+        public const string ModuleCopperOre = Prefix + "terrain.copperore";
+        public const string ModuleGoldOre = Prefix + "terrain.goldore";
+        public const string ModuleGems = Prefix + "terrain.gems";
+        public const string ModuleEmberquartz = Prefix + "terrain.emberquartz";
         public const string ModuleTreeConifer = Prefix + "tree.conifer";
         public const string ModuleTreeBroadleaf = Prefix + "tree.broadleaf";
 
@@ -257,6 +297,11 @@ namespace Odyssey.Sim.Worldgen.Natural
             ModuleShallowWater,
             ModuleDeepWater,
             ModuleMarsh,
+            ModuleDeepStone,
+            ModuleCopperOre,
+            ModuleGoldOre,
+            ModuleGems,
+            ModuleEmberquartz,
             ModuleTreeConifer,
             ModuleTreeBroadleaf,
         };
@@ -280,6 +325,11 @@ namespace Odyssey.Sim.Worldgen.Natural
                 case TerrainShallowWater: return ModuleShallowWater;
                 case TerrainDeepWater: return ModuleDeepWater;
                 case TerrainMarsh: return ModuleMarsh;
+                case TerrainDeepStone: return ModuleDeepStone;
+                case TerrainCopperOre: return ModuleCopperOre;
+                case TerrainGoldOre: return ModuleGoldOre;
+                case TerrainGems: return ModuleGems;
+                case TerrainEmberquartz: return ModuleEmberquartz;
                 case CoreContent.TerrainRock: return ModuleRock;
                 default: return null;
             }
@@ -346,8 +396,40 @@ namespace Odyssey.Sim.Worldgen.Natural
             terrain == TerrainPackedGravel || terrain == TerrainSand ||
             terrain == TerrainMarsh;
 
-        public static bool IsOre(ushort terrain) =>
-            terrain == TerrainIronOre || terrain == TerrainCoalSeam;
+        /// <summary>
+        /// Is this terrain an ore — one of the kinds in <c>Ores.xml</c>? Read off the ore table,
+        /// which is the one owner of what an ore is, through a table built once per load; a new
+        /// ore is one XML row and is hidden until discovered, cut for its yield and drawn as stone
+        /// without anything here being edited.
+        /// </summary>
+        public static bool IsOre(ushort terrain)
+        {
+            int[] kinds = _oreKindByTerrain ?? BuildOreKindByTerrain();
+            return terrain < kinds.Length && kinds[terrain] >= 0;
+        }
+
+        /// <summary>The ore kind a terrain is, as an index into <see cref="Ores"/>, or -1.</summary>
+        public static int OreKindOf(ushort terrain)
+        {
+            int[] kinds = _oreKindByTerrain ?? BuildOreKindByTerrain();
+            return terrain < kinds.Length ? kinds[terrain] : -1;
+        }
+
+        static int[]? _oreKindByTerrain;
+
+        static int[] BuildOreKindByTerrain()
+        {
+            var kinds = new int[TerrainCount];
+            for (int i = 0; i < kinds.Length; i++) kinds[i] = -1;
+            OreKind[] ores = WorldContent.Ores;
+            for (int k = 0; k < ores.Length; k++)
+                if (ores[k].Terrain < kinds.Length) kinds[ores[k].Terrain] = k;
+            _oreKindByTerrain = kinds;
+            return kinds;
+        }
+
+        /// <summary>Drop the terrain-to-ore table with the ore table it was built from.</summary>
+        internal static void ForgetOres() => _oreKindByTerrain = null;
 
         /// <summary>Either depth of water. The bed beneath it is ground and answers false.</summary>
         public static bool IsWater(ushort terrain) =>
@@ -444,47 +526,56 @@ namespace Odyssey.Sim.Worldgen.Natural
         // ---- ore kinds ---------------------------------------------------------------------
 
         /// <summary>
-        /// One minable deposit kind: what it is made of, how often it is chosen, and the band of
-        /// depths below the local surface it is found in. Depth weighting is the whole point —
-        /// coal sits below iron, so digging deeper is worth doing and the two are not
-        /// interchangeable.
+        /// One minable deposit kind as the generator and the yield read it, resolved from an
+        /// <see cref="OreKindDef"/> (design 62 §5c). Everything about an ore is in <c>Ores.xml</c>;
+        /// this is that row with its terrain turned into an index.
         /// </summary>
         public readonly struct OreKind
         {
             public readonly ushort Terrain;
-            public readonly int Weight;
+            /// <summary>The ItemDef's name. Its handle is resolved where the item table lives (<c>PawnContent.OreYields</c>).</summary>
+            public readonly string Item;
+            public readonly OreShape Shape;
             public readonly int MinDepth;
             public readonly int MaxDepth;
+            public readonly int MinCells;
+            public readonly int MaxCells;
+            public readonly int DepositsPer10000Columns;
+            public readonly int YieldPerCell;
+            public readonly int OffBandPerMille;
+            public readonly int CaveWallPerMille;
+            public readonly bool FavoursDeepStone;
             public readonly string ModuleId;
 
-            public OreKind(ushort terrain, int weight, int minDepth, int maxDepth, string moduleId)
+            public OreKind(ushort terrain, string item, OreShape shape, int minDepth, int maxDepth,
+                           int minCells, int maxCells, int depositsPer10000Columns, int yieldPerCell,
+                           int offBandPerMille, int caveWallPerMille, bool favoursDeepStone, string moduleId)
             {
                 Terrain = terrain;
-                Weight = weight;
+                Item = item;
+                Shape = shape;
                 MinDepth = minDepth;
                 MaxDepth = maxDepth;
+                MinCells = minCells;
+                MaxCells = maxCells;
+                DepositsPer10000Columns = depositsPer10000Columns;
+                YieldPerCell = yieldPerCell;
+                OffBandPerMille = offBandPerMille;
+                CaveWallPerMille = caveWallPerMille;
+                FavoursDeepStone = favoursDeepStone;
                 ModuleId = moduleId;
             }
         }
 
-        static readonly OreKind[] OreTable =
-        {
-            new OreKind(TerrainIronOre, 60, 3, 13, ModuleIronOre),
-            new OreKind(TerrainCoalSeam, 40, 7, 22, ModuleCoalSeam),
-        };
+        /// <summary>
+        /// The ore kinds, in <c>WorldContent.OreOrder</c>. Index order is part of the determinism
+        /// contract. <b>Read from <c>Ores.xml</c></b>: this class used to hold a second copy of the
+        /// table in code, and a test compared the two.
+        /// </summary>
+        public static IReadOnlyList<OreKind> Ores => WorldContent.Ores;
 
-        /// <summary>The ore kinds, in a fixed order. Index order is part of the determinism contract.</summary>
-        public static IReadOnlyList<OreKind> Ores => OreTable;
+        public static int OreKindCount => WorldContent.Ores.Length;
 
-        public static int OreKindCount => OreTable.Length;
-
-        public static OreKind OreAt(int kind) => OreTable[kind];
-
-        public static int TotalOreWeight()
-        {
-            int total = 0;
-            for (int i = 0; i < OreTable.Length; i++) total += OreTable[i].Weight;
-            return total;
-        }
+        public static OreKind OreAt(int kind) => WorldContent.Ores[kind];
     }
 }

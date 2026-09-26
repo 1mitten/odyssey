@@ -41,6 +41,8 @@ namespace Odyssey.Hud
             "ui.res.meal", "ui.res.meal.veg", "ui.res.meal.burnt",
             // The pistol (design 47), ItemHandle 17, after the kitchen's meals.
             "ui.item.pistol",
+            // Deep mining's finds (design 62 §5c), ItemHandle 18 to 21, after the pistol.
+            "ui.res.copperore", "ui.res.goldore", "ui.res.gems", "ui.res.emberquartz",
         };
 
         public static string IconKey(int def) =>

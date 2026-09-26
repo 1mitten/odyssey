@@ -59,10 +59,7 @@ namespace Odyssey.Sim.Worldgen.Natural
                 ctx.SurfaceY[column] = y;
                 ctx.TopSolidY[column] = y;
 
-                int subsoilBase = y - gen.subsoilDepth;
-                if (subsoilBase < 0) subsoilBase = 0;
-                ctx.SubsoilBaseY[column] = subsoilBase;
-                ctx.BedrockTopY[column] = Math.Min(gen.bedrockLayers, subsoilBase);
+                ctx.DeriveStrata(column);
 
                 if (y < min) min = y;
                 if (y > max) max = y;
@@ -76,7 +73,8 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// <summary>
     /// Pass 3 — strata.
     ///
-    /// Bedrock at the bottom, rock above it, a band of subsoil, then the soil surface, then air.
+    /// Bedrock at the bottom, deep stone above it where the column is deep enough (design 62 §5b),
+    /// rock above that, a band of subsoil, then the soil surface, then air.
     /// Everything below the surface is solid: a wilderness map has no voids until a colonist digs
     /// one, which is what makes the support rule trivially satisfied at tick zero.
     ///
@@ -105,8 +103,9 @@ namespace Odyssey.Sim.Worldgen.Natural
             var surfaceY = ctx.SurfaceY;
             var subsoilBaseY = ctx.SubsoilBaseY;
             var bedrockTopY = ctx.BedrockTopY;
+            var deepStoneTopY = ctx.DeepStoneTopY;
 
-            int air = 0, solid = 0, subsoilCells = 0, rockCells = 0, bedrockCells = 0;
+            int air = 0, solid = 0, subsoilCells = 0, rockCells = 0, deepStoneCells = 0, bedrockCells = 0;
 
             for (int y = 0; y < size.SizeY; y++)
             for (int z = 0; z < size.SizeZ; z++)
@@ -144,6 +143,12 @@ namespace Odyssey.Sim.Worldgen.Natural
                         bedrockCells++;
                         solid++;
                     }
+                    else if (y < deepStoneTopY[column])
+                    {
+                        material = NaturalContent.TerrainDeepStone;
+                        deepStoneCells++;
+                        solid++;
+                    }
                     else
                     {
                         material = NaturalContent.TerrainRock;
@@ -170,6 +175,7 @@ namespace Odyssey.Sim.Worldgen.Natural
             report.SolidCells = solid;
             report.SubsoilCells = subsoilCells;
             report.RockCells = rockCells;
+            report.DeepStoneCells = deepStoneCells;
             report.BedrockCells = bedrockCells;
             report.GrassCells = ctx.Columns;   // the cover pass converts some of these
         }
