@@ -48,6 +48,17 @@ namespace Odyssey.Tests.PlayMode
             for (int i = 0; i < n; i++) yield return null;
         }
 
+        /// <summary>
+        /// How long a loop waits for the passage, in <b>real seconds</b>, never in frames. The
+        /// passage is timed in real seconds, and a batch run with nothing but the menu on screen
+        /// and no frame cap draws a frame in well under a millisecond: 600 frames were over before
+        /// a 0.2 s close had run, and all four of these tests failed on the runner with the passage
+        /// still in <see cref="WakePhase.Closing"/> (2026-09-26).
+        /// </summary>
+        const float PassageSeconds = 15f;
+
+        static float Deadline() => Time.realtimeSinceStartup + PassageSeconds;
+
         static bool AnythingLeftBehind(SliceCameraRig rig, out string what)
         {
             var left = new List<string>();
@@ -78,7 +89,8 @@ namespace Odyssey.Tests.PlayMode
                 var phases = new List<WakePhase>();
                 bool sawDream = false, sawMuffle = false, sawSettle = false, tickMoved = false;
                 int? heldTick = null;
-                for (int frame = 0; frame < 600 && (shell.Wake.Active || phases.Count == 0); frame++)
+                float deadline = Deadline();
+                while (Time.realtimeSinceStartup < deadline && (shell.Wake.Active || phases.Count == 0))
                 {
                     yield return null;
                     WakePhase phase = shell.Wake.Phase;
@@ -146,7 +158,8 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(shell.EnterWorld(() => boot.LoadSession(path)), Is.False, "a second press started a second load");
 
                 bool coveredAfterBuild = false, heldInDream = false;
-                for (int frame = 0; frame < 600 && shell.Wake.Active; frame++)
+                float deadline = Deadline();
+                while (Time.realtimeSinceStartup < deadline && shell.Wake.Active)
                 {
                     yield return null;
                     if (boot.HasSession && shell.Wake.Phase == WakePhase.Covered)
@@ -182,7 +195,8 @@ namespace Odyssey.Tests.PlayMode
                 yield return Frames(8);
                 shell.Menu.Start();
 
-                for (int frame = 0; frame < 600 && shell.Wake.Phase != WakePhase.Waking; frame++) yield return null;
+                float deadline = Deadline();
+                while (Time.realtimeSinceStartup < deadline && shell.Wake.Phase != WakePhase.Waking) yield return null;
                 Assert.That(shell.Wake.Phase, Is.EqualTo(WakePhase.Waking));
                 yield return Frames(5);
                 Assert.That(boot.ClockHeld, Is.True);
@@ -220,7 +234,8 @@ namespace Odyssey.Tests.PlayMode
                 shell.Menu.Start();
 
                 bool anyDream = false, anyHold = false;
-                for (int frame = 0; frame < 600 && shell.Wake.Active; frame++)
+                float deadline = Deadline();
+                while (Time.realtimeSinceStartup < deadline && shell.Wake.Active)
                 {
                     yield return null;
                     anyDream |= GameObject.Find("WakeVolume") != null || rig.GetComponent<AudioLowPassFilter>() != null
