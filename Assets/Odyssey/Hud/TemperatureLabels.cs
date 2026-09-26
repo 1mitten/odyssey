@@ -4,7 +4,7 @@ namespace Odyssey.Hud
 {
     /// <summary>
     /// How the interface writes a temperature — the one owner of the form, beside
-    /// <see cref="HudTheme.Temperature"/> which owns the colour.
+    /// <see cref="StatInks.Temperature"/> which owns the colour.
     ///
     /// <para><b>Written because it was written twice.</b> The pane's tile row and the clock's
     /// outdoor reading each had their own copy of "centi-degrees to one signed decimal with the

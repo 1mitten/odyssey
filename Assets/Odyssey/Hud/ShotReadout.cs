@@ -49,6 +49,15 @@ namespace Odyssey.Hud
             return Builder.ToString();
         }
 
+        /// <summary>
+        /// The line's colour: the chance to hit on <see cref="StatInks.HitChance"/> (design 59). A
+        /// shot out of range or out of sight has no chance, and reads as the bottom of the scale.
+        /// </summary>
+        public static HudColour Ink(in ShotReportView report) =>
+            !report.InRange || !report.InSight
+                ? StatInks.Ink(0)
+                : StatInks.Ink(StatInks.HitChance, report.TotalPerMille);
+
         /// <summary>Per mille to a whole per cent, rounded to the nearest.</summary>
         public static int Percent(int perMille) => (perMille + 5) / 10;
 

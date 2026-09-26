@@ -279,7 +279,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.HealthPerMille, Is.EqualTo(372));
             Assert.That(Row(pane, "ui.combat.condition"), Is.EqualTo(Registry.Label("ui.combat.hurt")));
             Assert.That(Row(pane, "ui.combat.weapon"), Is.EqualTo(Registry.Label("ui.item.machete")));
-            Assert.That(pane.HealthInk, Is.EqualTo(CombatFeedbackModel.HealthBad));
+            Assert.That(pane.HealthInk, Is.EqualTo(StatInks.Ink(StatInks.Health, 372, StatPalette.World)));
         }
 
         [Test]

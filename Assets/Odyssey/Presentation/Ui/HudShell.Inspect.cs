@@ -336,6 +336,7 @@ namespace Odyssey.Presentation.Ui
             {
                 _statePace = _inspect.Pace;
                 HudText.Set(_inspectPace, _inspect.Pace, HudTextRole.Meta);
+                _inspectPace.style.color = HudTokens.Convert(_inspect.PaceInk);
                 _inspectPace.tooltip = _inspect.PaceTip;
             }
             _inspectPace.style.display = _inspect.ShowsColonistBody && _inspect.Pace.Length > 0

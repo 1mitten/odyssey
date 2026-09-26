@@ -61,9 +61,8 @@ namespace Odyssey.Tests.Hud
         {
             RosterCard card = Card(Board(hp));
 
-            HudColour expected = band == "good" ? CombatFeedbackModel.HealthGood
-                : band == "warn" ? CombatFeedbackModel.HealthWarn
-                : CombatFeedbackModel.HealthBad;
+            // The ink is the table's (design 59); the band names the side of the ramp it falls on.
+            HudColour expected = StatInks.Ink(StatInks.Health, perMille, StatPalette.World);
             Assert.That(card.Health, Is.EqualTo(perMille));
             Assert.That(card.HealthInk, Is.EqualTo(expected), $"{hp} of {Pool} should be in the {band} band");
             Assert.That(card.Downed, Is.False);
@@ -158,7 +157,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(roster.Cards.Count, Is.EqualTo(3));
             Assert.That(roster.Cards[0].Health, Is.EqualTo(1000));
             Assert.That(roster.Cards[1].Health, Is.EqualTo(450));
-            Assert.That(roster.Cards[1].HealthInk, Is.EqualTo(CombatFeedbackModel.HealthWarn));
+            Assert.That(roster.Cards[1].HealthInk, Is.EqualTo(StatInks.Ink(StatInks.Health, 450, StatPalette.World)));
             Assert.That(roster.Cards[2].Health, Is.EqualTo(0));
             Assert.That(roster.Cards[2].Downed, Is.True);
         }

@@ -81,8 +81,8 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// Every effect is at its default and says so, so the view draws it dim instead of leaving it
-        /// out and the line never reflows. The kit is a reading, never a default.
+        /// Every effect is on the line at its bare value, so the line never reflows, and each says
+        /// which figure it is so it can be judged (design 59): 0 % armour is red.
         /// </summary>
         [Test]
         public void TheBareColonistsEffectsAreTheDefaultsAndStayOnTheLine()
@@ -91,7 +91,9 @@ namespace Odyssey.Tests.Hud
             gear.Refresh(Board(), Ada);
             Assert.That(gear.Effects.Select(e => e.Label), Is.EqualTo(new[] { "Armour", "Warmth", "Rain", "Kit" }));
             Assert.That(gear.Effects.Select(e => e.Value), Is.EqualTo(new[] { "0%", "16 to 26 °C", "0%", "0 of 2" }));
-            Assert.That(gear.Effects.Select(e => e.IsDefault), Is.EqualTo(new[] { true, true, true, false }));
+            Assert.That(gear.Effects.Select(e => e.Kind), Is.EqualTo(new[]
+                { GearEffectKind.Armour, GearEffectKind.Warmth, GearEffectKind.Rain, GearEffectKind.Kit }));
+            Assert.That(GearModel.Ink(gear.Effects[0], null), Is.EqualTo(HudTheme.Bad), "no armour is red");
         }
 
         [Test]
@@ -160,7 +162,8 @@ namespace Odyssey.Tests.Hud
             Assert.That(gear.PackHint, Is.False);
 
             Assert.That(gear.Effects.Select(e => e.Value), Is.EqualTo(new[] { "24%", "4 to 26 °C", "50%", "4 of 6" }));
-            Assert.That(gear.Effects.Take(3).All(e => !e.IsDefault), Is.True);
+            Assert.That(gear.Effects[0].Armour, Is.EqualTo(24));
+            Assert.That((gear.Effects[1].WarmthLow, gear.Effects[1].WarmthHigh), Is.EqualTo((400, 2600)));
             Assert.That(gear.LoadoutName, Is.EqualTo("Doctor"));
             Assert.That(gear.HasLoadout, Is.True);
         }

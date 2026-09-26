@@ -43,6 +43,15 @@ namespace Odyssey.Hud
         Drawn,
     }
 
+    /// <summary>Which figure an effect on the Gear tab is, so it can be judged (<see cref="GearModel.Ink"/>).</summary>
+    public enum GearEffectKind
+    {
+        Armour,
+        Warmth,
+        Rain,
+        Kit,
+    }
+
     /// <summary>What a slot tile shows (design 47 §2, the specification's slot states).</summary>
     public enum GearSlotState
     {
@@ -91,6 +100,15 @@ namespace Odyssey.Hud
 
         /// <summary>Up to two effect lines for the popover: a word and a figure each; empty when it does nothing.</summary>
         public string EffectA, EffectAValue, EffectB, EffectBValue;
+
+        /// <summary>Which figure each popover line is, so the view can judge it (<see cref="GearModel.Ink"/>).</summary>
+        public GearEffectKind EffectAKind, EffectBKind;
+
+        /// <summary>
+        /// The thing's own armour, and the comfortable range she would have in it alone, in
+        /// centi-degrees — what its popover lines write, kept as numbers so they can be judged.
+        /// </summary>
+        public int Armour, WarmthLow, WarmthHigh;
     }
 
     /// <summary>What a kit tile shows.</summary>
@@ -135,14 +153,21 @@ namespace Odyssey.Hud
         public bool Real => Slot >= 0 && ItemDef >= 0;
     }
 
-    /// <summary>One figure on the effects line.</summary>
+    /// <summary>
+    /// One figure on the effects line. Every figure is always on the line, so it never reflows;
+    /// its colour is <see cref="GearModel.Ink"/>'s, from the numbers kept beside the words.
+    /// </summary>
     public struct GearEffect
     {
         public string Label;
         public string Value;
+        public GearEffectKind Kind;
 
-        /// <summary>The bare colonist's value: drawn dim rather than left out, so the line never reflows.</summary>
-        public bool IsDefault;
+        /// <summary>Armour in per cent (<see cref="GearEffectKind.Armour"/>).</summary>
+        public int Armour;
+
+        /// <summary>The comfortable range in centi-degrees (<see cref="GearEffectKind.Warmth"/>).</summary>
+        public int WarmthLow, WarmthHigh;
     }
 
     /// <summary>
@@ -197,7 +222,7 @@ namespace Odyssey.Hud
         /// (design 28, <c>Temperature.xml</c>'s comfort band). A copy the interface keeps only
         /// until worn things exist — G5 publishes the real range per colonist and this goes.
         /// </summary>
-        public const int BareComfortLow = 1600, BareComfortHigh = 2600;
+        public const int BareComfortLow = StatInks.ComfortLow, BareComfortHigh = StatInks.ComfortHigh;
 
         /// <summary>The rows, in <see cref="Order"/>. Empty for a pawn not in the frame and for an animal.</summary>
         public readonly List<GearRow> Rows = new List<GearRow>();
@@ -399,12 +424,20 @@ namespace Odyssey.Hud
             PackHint = !pack;
 
             if (rain > 100) rain = 100;
-            Effects.Add(Effect(ArmourKey, Percent(armour), armour == 0));
-            Effects.Add(Effect(WarmthKey, TemperatureLabels.Range(low, high),
-                low == BareComfortLow && high == BareComfortHigh));
-            Effects.Add(Effect(RainKey, Percent(rain), rain == 0));
-            // The kit is always drawn bright: "used of capacity" is a reading, not a default.
-            Effects.Add(Effect(KitEffectKey, KitCount(used, capacity), false));
+            Effects.Add(new GearEffect
+            {
+                Label = Registry.Label(ArmourKey), Value = Percent(armour), Kind = GearEffectKind.Armour, Armour = armour,
+            });
+            Effects.Add(new GearEffect
+            {
+                Label = Registry.Label(WarmthKey), Value = TemperatureLabels.Range(low, high),
+                Kind = GearEffectKind.Warmth, WarmthLow = low, WarmthHigh = high,
+            });
+            Effects.Add(new GearEffect { Label = Registry.Label(RainKey), Value = Percent(rain), Kind = GearEffectKind.Rain });
+            Effects.Add(new GearEffect
+            {
+                Label = Registry.Label(KitEffectKey), Value = KitCount(used, capacity), Kind = GearEffectKind.Kit,
+            });
 
             int loadout = Preview != null ? Preview.Loadout(pawn) : 0;
             HasLoadout = loadout > 0;
@@ -412,6 +445,27 @@ namespace Odyssey.Hud
 
             Version++;
         }
+
+        /// <summary>
+        /// The ink a Gear figure is drawn in (design 59; owner, 2026-09-26): armour on
+        /// <see cref="StatInks.Armour"/>, so 0 % is red; warmth by <see cref="StatInks.Comfort"/>
+        /// against <paramref name="outdoorCentiC"/>, the clock's reading, because a comfortable range
+        /// is good or bad only for the weather she walks out into; rain and the kit never judged —
+        /// rain the owner asked to stay "a neutral bright white", and the kit is a count. With no
+        /// reading (no colony) warmth is neutral too.
+        /// </summary>
+        public static HudColour Ink(GearEffectKind kind, int armour, int warmthLow, int warmthHigh, int? outdoorCentiC) =>
+            kind switch
+            {
+                GearEffectKind.Armour => StatInks.Ink(StatInks.Armour, armour),
+                GearEffectKind.Warmth when outdoorCentiC.HasValue =>
+                    StatInks.Ink(StatInks.Comfort(warmthLow, warmthHigh, outdoorCentiC.Value)),
+                _ => HudTheme.TextPrimary,
+            };
+
+        /// <summary>The ink of one figure on the effects line.</summary>
+        public static HudColour Ink(in GearEffect effect, int? outdoorCentiC) =>
+            Ink(effect.Kind, effect.Armour, effect.WarmthLow, effect.WarmthHigh, outdoorCentiC);
 
         static KitTile EmptyKit(KitTileState state, int slot) => new KitTile
         {
@@ -426,9 +480,6 @@ namespace Odyssey.Hud
                 .Replace("{capacity}", capacity.ToString(CultureInfo.InvariantCulture));
 
         static string Percent(int value) => value.ToString(CultureInfo.InvariantCulture) + "%";
-
-        static GearEffect Effect(string key, string value, bool isDefault) =>
-            new GearEffect { Label = Registry.Label(key), Value = value, IsDefault = isDefault };
 
         /// <summary>The slot's word from the registry: "Head", "Armour", "Weapon".</summary>
         public static string SlotLabel(GearSlot slot) => Registry.Label(slot switch
@@ -481,26 +532,30 @@ namespace Odyssey.Hud
             row.Preview = true;
 
             // The popover's lines: what this one thing does, largest first, at most two.
+            row.Armour = item.Armour;
+            row.WarmthLow = BareComfortLow + item.WarmthLow;
+            row.WarmthHigh = BareComfortHigh + item.WarmthHigh;
             int lines = 0;
-            if (item.Armour != 0) Line(ref row, ref lines, ArmourKey, Percent(item.Armour));
+            if (item.Armour != 0) Line(ref row, ref lines, GearEffectKind.Armour, ArmourKey, Percent(item.Armour));
             if (item.WarmthLow != 0 || item.WarmthHigh != 0)
-                Line(ref row, ref lines, WarmthKey, TemperatureLabels.Range(
-                    BareComfortLow + item.WarmthLow, BareComfortHigh + item.WarmthHigh));
-            if (item.Rain != 0) Line(ref row, ref lines, RainKey, Percent(item.Rain));
+                Line(ref row, ref lines, GearEffectKind.Warmth, WarmthKey, TemperatureLabels.Range(row.WarmthLow, row.WarmthHigh));
+            if (item.Rain != 0) Line(ref row, ref lines, GearEffectKind.Rain, RainKey, Percent(item.Rain));
             return row;
         }
 
-        static void Line(ref GearRow row, ref int lines, string key, string value)
+        static void Line(ref GearRow row, ref int lines, GearEffectKind kind, string key, string value)
         {
             if (lines == 0)
             {
                 row.EffectA = Registry.Label(key);
                 row.EffectAValue = value;
+                row.EffectAKind = kind;
             }
             else if (lines == 1)
             {
                 row.EffectB = Registry.Label(key);
                 row.EffectBValue = value;
+                row.EffectBKind = kind;
             }
             lines++;
         }

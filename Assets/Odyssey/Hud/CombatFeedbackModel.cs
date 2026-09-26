@@ -137,35 +137,25 @@ namespace Odyssey.Hud
         public static bool HostileMarker(in PawnView pawn) => pawn.IsHostile;
 
         /// <summary>
-        /// The bar's fill: green from 60 % left, amber from 40 %, red below. The thresholds are a
-        /// need bar's (<c>HudTokens.NeedBand</c>, Presentation), so the bar over a colonist and the
-        /// bars on her pane speak one scale — and the hues are the need bars' too, deepened
-        /// (<see cref="HealthGood"/>). The one owner of the bar's colour: the bar over the head and
-        /// the Health tab's fill both ask here.
+        /// The bar's fill: the share of the pool left on <see cref="StatInks.Health"/>, in the
+        /// world's deeper inks (design 59). The one owner of the bar's colour: the bar over the head,
+        /// the pane's bar, the roster card and the Health tab's pool all ask here.
         /// </summary>
         public static HudColour HealthBarColour(int hpMilli, int hpMaxMilli)
         {
             if (hpMaxMilli <= 0) return HealthBad;
             long perMille = (long)hpMilli * 1000 / hpMaxMilli;
-            return perMille >= 600 ? HealthGood : perMille >= 400 ? HealthWarn : HealthBad;
+            return StatInks.Ink(StatInks.Health, (int)perMille, StatPalette.World);
         }
 
-        // The owner, 2026-09-23 (design 33 §8a): "use a green like the one used in the colony
-        // stats - more greener - deeper colours please". Each is its stat token's hue held to a
-        // degree — HudTheme.Good 130.5°, Warn 38.1°, Bad 6.4° — with the saturation raised to
-        // about 0.7 to 0.8 and the value lowered, because the bar is drawn over a lit, sunny board
-        // through a translucent, glowing material that lifts every colour towards white, and the
-        // stat tints, chosen for a dark panel, came out pale there. HealthBarLayoutTests holds the
-        // hue, the extra saturation and the depth, so a retune stays a deeper stat colour.
+        /// <summary>The bar's green: <see cref="StatInks.WorldGood"/>, which owns the value.</summary>
+        public static HudColour HealthGood => StatInks.WorldGood;
 
-        /// <summary>The bar's green: <see cref="HudTheme.Good"/>'s hue, saturation 0.72, value 0.70.</summary>
-        public static readonly HudColour HealthGood = new HudColour(0x32, 0xb3, 0x49);
+        /// <summary>The bar's amber: <see cref="StatInks.WorldQuestionable"/>.</summary>
+        public static HudColour HealthWarn => StatInks.WorldQuestionable;
 
-        /// <summary>The bar's amber: <see cref="HudTheme.Warn"/>'s hue, saturation 0.82, value 0.85.</summary>
-        public static readonly HudColour HealthWarn = new HudColour(0xd9, 0x98, 0x27);
-
-        /// <summary>The bar's red: <see cref="HudTheme.Bad"/>'s hue, saturation 0.80, value 0.80.</summary>
-        public static readonly HudColour HealthBad = new HudColour(0xcc, 0x3a, 0x29);
+        /// <summary>The bar's red: <see cref="StatInks.WorldBad"/>.</summary>
+        public static HudColour HealthBad => StatInks.WorldBad;
 
         /// <summary>
         /// The dark plate behind the fill and the share lost: the panel's own ink, see-through

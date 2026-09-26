@@ -61,6 +61,9 @@ namespace Odyssey.Presentation.Ui
         Label? _gearLoadoutValue;
         int _gearVersionShown = int.MinValue;
 
+        /// <summary>The outdoor reading, in whole degrees, the warmth figure was last judged against.</summary>
+        int? _gearOutdoorShown;
+
         VisualElement? _gearPopover;
         GearPopoverKind _gearPopoverKind;
         GearSlot _gearPopoverSlot;
@@ -357,28 +360,52 @@ namespace Odyssey.Presentation.Ui
             if (!shown) CloseGearPopovers();
         }
 
-        /// <summary>Rewrite the tab when the model has moved. Called for a colonist in the frame.</summary>
-        void SyncGearTab()
+        /// <summary>The effects line: every figure always there, each in its judged ink (design 59).</summary>
+        void PaintGearEffects(GearModel gear, int? outdoor)
         {
-            if (_gearBody == null) return;
-            GearModel gear = _inspect.Gear;
-            if (gear.Version == _gearVersionShown) return;
-            _gearVersionShown = gear.Version;
-
-            foreach (GearSlotView view in _gearSlots) PaintSlot(view, gear.Row(view.Slot));
-            for (int i = 0; i < _gearKit.Count && i < gear.Kit.Count; i++) PaintKit(_gearKit[i], gear.Kit[i]);
-            if (_gearKitHint != null)
-                _gearKitHint.style.display = gear.PackHint ? DisplayStyle.Flex : DisplayStyle.None;
-
             for (int i = 0; i < _gearEffects.Count && i < gear.Effects.Count; i++)
             {
                 GearEffect effect = gear.Effects[i];
                 (Label name, Label value) = _gearEffects[i];
                 HudText.Set(name, effect.Label, HudTextRole.Meta);
                 HudText.Set(value, effect.Value, HudTextRole.Meta);
-                // A bare default is drawn dim rather than left out, so the line never reflows.
-                value.style.color = effect.IsDefault ? HudTokens.TextDim : HudTokens.TextPrimary;
+                value.style.color = HudTokens.Convert(GearModel.Ink(effect, outdoor));
             }
+        }
+
+        /// <summary>The clock's outdoor reading in centi-degrees, or null with no colony.</summary>
+        int? GearOutdoorC()
+        {
+            var world = _boot?.World;
+            var temperature = _boot?.Colony?.Pawns.Temperature;
+            return world == null || temperature == null ? null : temperature.OutdoorTempC(world.CurrentTick);
+        }
+
+        /// <summary>Rewrite the tab when the model has moved. Called for a colonist in the frame.</summary>
+        void SyncGearTab()
+        {
+            if (_gearBody == null) return;
+            GearModel gear = _inspect.Gear;
+            // Warmth is judged against the outdoor reading (design 59), so a change of a whole
+            // degree re-inks the line even when nothing she wears moved.
+            int? outdoor = GearOutdoorC();
+            int? outdoorWhole = outdoor / 100;
+            if (gear.Version == _gearVersionShown && outdoorWhole == _gearOutdoorShown) return;
+            bool worn = gear.Version != _gearVersionShown;
+            _gearVersionShown = gear.Version;
+            _gearOutdoorShown = outdoorWhole;
+            if (!worn)
+            {
+                PaintGearEffects(gear, outdoor);
+                return;
+            }
+
+            foreach (GearSlotView view in _gearSlots) PaintSlot(view, gear.Row(view.Slot));
+            for (int i = 0; i < _gearKit.Count && i < gear.Kit.Count; i++) PaintKit(_gearKit[i], gear.Kit[i]);
+            if (_gearKitHint != null)
+                _gearKitHint.style.display = gear.PackHint ? DisplayStyle.Flex : DisplayStyle.None;
+
+            PaintGearEffects(gear, outdoor);
 
             if (_gearLoadoutValue != null && _gearLoadoutCell != null)
             {
@@ -593,8 +620,13 @@ namespace Odyssey.Presentation.Ui
         {
             PadPopover(popover, GearLayout.ItemPopoverWidth);
             popover.Add(ItemHeader(row.IconKey, row.Name, row.Quality, row.QualityWord));
-            if (row.EffectA.Length > 0) popover.Add(EffectLine(row.EffectA, row.EffectAValue));
-            if (row.EffectB.Length > 0) popover.Add(EffectLine(row.EffectB, row.EffectBValue));
+            int? outdoor = GearOutdoorC();
+            if (row.EffectA.Length > 0)
+                popover.Add(EffectLine(row.EffectA, row.EffectAValue,
+                    GearModel.Ink(row.EffectAKind, row.Armour, row.WarmthLow, row.WarmthHigh, outdoor)));
+            if (row.EffectB.Length > 0)
+                popover.Add(EffectLine(row.EffectB, row.EffectBValue,
+                    GearModel.Ink(row.EffectBKind, row.Armour, row.WarmthLow, row.WarmthHigh, outdoor)));
             if (row.Slot == GearSlot.Weapon && row.CarryWord.Length > 0)
                 popover.Add(GearText(row.CarryWord, HudTextRole.Meta, HudTokens.TextDim));
 
@@ -619,7 +651,7 @@ namespace Odyssey.Presentation.Ui
             KitTile tile = gear.Kit[_gearPopoverKit];
             PadPopover(popover, GearLayout.ItemPopoverWidth);
             popover.Add(ItemHeader(tile.IconKey, tile.Name, 0, string.Empty));
-            popover.Add(EffectLine(Registry.Label(GearModel.KitKey), tile.CountText));
+            popover.Add(EffectLine(Registry.Label(GearModel.KitKey), tile.CountText, HudTheme.TextPrimary));
 
             PawnId pawn = _inspect.Pawn;
             if (tile.Real)
@@ -831,13 +863,13 @@ namespace Odyssey.Presentation.Ui
             return header;
         }
 
-        static VisualElement EffectLine(string label, string value)
+        static VisualElement EffectLine(string label, string value, HudColour ink)
         {
             var line = new VisualElement();
             line.style.flexDirection = FlexDirection.Row;
             line.style.marginBottom = 4;
             line.Add(GearText(label, HudTextRole.Meta, HudTokens.TextMeta));
-            Label figure = GearText(value, HudTextRole.Meta, HudTokens.TextPrimary, numeric: true);
+            Label figure = GearText(value, HudTextRole.Meta, HudTokens.Convert(ink), numeric: true);
             figure.style.marginLeft = GearLayout.EffectValueGap;
             line.Add(figure);
             return line;

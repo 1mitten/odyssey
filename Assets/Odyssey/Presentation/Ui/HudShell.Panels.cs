@@ -1153,6 +1153,9 @@ namespace Odyssey.Presentation.Ui
             HudText.Set(_clockTemp, temperature == null
                 ? string.Empty
                 : TemperatureLabels.Describe(temperature.OutdoorTempC(tick)), HudTextRole.Body);
+            // Judged on the one scale a tile's temperature and the Gear tab's warmth use (design 59).
+            if (temperature != null)
+                _clockTemp.style.color = HudTokens.Convert(StatInks.Temperature(temperature.OutdoorTempC(tick)));
 
             // The sky (design 43 §5): the kind holding the larger share, which changes once, at the
             // half of a hand-over, rather than flickering.

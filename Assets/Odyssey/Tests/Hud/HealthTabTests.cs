@@ -90,12 +90,13 @@ namespace Odyssey.Tests.Hud
             HealthTab tab = pane.Health;
             Assert.That(tab.Left[LegLeft].Mark, Is.EqualTo(HealthMark.Bleeding));
             Assert.That(tab.Left[LegLeft].Value, Is.EqualTo("37"));
-            Assert.That(tab.Left[LegLeft].Ink, Is.EqualTo(CombatFeedbackModel.HealthBad));
+            Assert.That(tab.Left[LegLeft].Ink, Is.EqualTo(StatInks.Ink(StatInks.Health, tab.Left[LegLeft].Bar, StatPalette.World)));
             Assert.That(tab.Left[1].Mark, Is.EqualTo(HealthMark.None), "the control: a bruise does not bleed");
             Assert.That(tab.Left[6].Value, Is.EqualTo("35"));
             Assert.That(tab.Right[0].Value, Is.EqualTo("72"));
             Assert.That(tab.Right[4].Value, Is.EqualTo("22"));
-            Assert.That(tab.Right[4].Ink, Is.EqualTo(CombatFeedbackModel.HealthWarn), "22 per cent lost is past the first line");
+            Assert.That(tab.Right[4].Ink, Is.EqualTo(StatInks.Ink(StatInks.BloodLoss, tab.Right[4].Bar, StatPalette.World)),
+                "22 per cent lost, on the blood-loss scale (design 59)");
             Assert.That(tab.Right[5].Value, Is.EqualTo("14h"));
             Assert.That(tab.Right[5].Mark, Is.EqualTo(HealthMark.Bleeding));
             Assert.That(tab.Right[6].Value, Is.EqualTo("0/2"));

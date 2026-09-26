@@ -125,7 +125,7 @@ namespace Odyssey.Tests.Sim
 
         /// <summary>
         /// The fire's own tile clears the band the pane draws red at, which is the whole of the
-        /// owner's ask about colour — <c>HudTheme.Temperature</c> reddens above 3,500.
+        /// owner's ask about colour — <c>StatInks.Temperature</c> is past amber towards red above 3,500.
         /// </summary>
         [Test]
         public void TheFiresOwnTileClearsTheRedBand()

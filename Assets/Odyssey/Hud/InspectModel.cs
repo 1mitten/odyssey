@@ -477,6 +477,9 @@ namespace Odyssey.Hud
         /// <summary>The factors of <see cref="Pace"/> that are not the standard walk, joined.</summary>
         public string PaceTip = string.Empty;
 
+        /// <summary><see cref="Pace"/>'s colour: <see cref="StatInks.Pace"/>.</summary>
+        public HudColour PaceInk = HudTheme.Good;
+
         // What the two pace strings were last built from. The same argument as _positionFor: they
         // are composed, and the pane refreshes fifteen times a second.
         PaceModel.Factors _paceFor;
@@ -489,6 +492,7 @@ namespace Odyssey.Hud
             _paceFor = factors;
             _paceWritten = true;
             Pace = factors.Published ? PaceModel.Line(factors) : string.Empty;
+            PaceInk = StatInks.Ink(StatInks.Pace, factors.Published ? PaceModel.PerMille(factors) : 1000);
             PaceTip = factors.Published ? PaceModel.Tooltip(factors) : string.Empty;
         }
 
@@ -1429,8 +1433,8 @@ namespace Odyssey.Hud
                     : netKnown ? PowerLabels.Colour(net.State) : (HudColour?)null;
                 Row(n++, "power", PowerLabels.Status(device, netKnown, net), tint);
                 if (device.BurnsFuel)
-                    Row(n++, "fuel", PowerLabels.Fuel(device),
-                        device.FuelMilli * 2 < device.FuelCapacityMilli ? HudTheme.Warn : (HudColour?)null);
+                    Row(n++, "fuel", PowerLabels.Fuel(device), StatInks.Ink(StatInks.Fuel,
+                        device.FuelCapacityMilli > 0 ? (int)((long)device.FuelMilli * 1000 / device.FuelCapacityMilli) : 0));
                 if (netKnown)
                     Row(n++, "net", PowerLabels.Balance(net) + " — " + PowerLabels.State(net.State),
                         PowerLabels.Colour(net.State));
@@ -1532,7 +1536,7 @@ namespace Odyssey.Hud
             // detail that was never told, which in the game never happens.
             if (detail.AmbientTempC != int.MinValue)
                 Row(n++, "temperature", TemperatureLabels.Describe(detail.AmbientTempC),
-                    HudTheme.Temperature(detail.AmbientTempC));
+                    StatInks.Temperature(detail.AmbientTempC));
 
             Row(n++, "walk speed", detail.MoveCostPerMille == 0
                 ? "cannot walk"
