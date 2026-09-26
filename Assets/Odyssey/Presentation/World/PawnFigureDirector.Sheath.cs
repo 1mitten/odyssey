@@ -63,9 +63,10 @@ namespace Odyssey.Presentation.World
 
         /// <summary>
         /// The gap kept between the body and a sheathed weapon, as a fraction of the figure's height
-        /// (about a centimetre on a 2.4 m colonist). Kept between the weapon's measured profile and
-        /// the relief of the whole idle, so the drawn gap at the nearest point comes out at one to
-        /// three centimetres whatever instant of the idle is drawn (design 33 §9c, measured).
+        /// (about a centimetre on a colonist, who measures 2.58 m in the idle). Kept between the
+        /// weapon's measured profile and the relief of the whole idle, so the drawn gap at the
+        /// nearest point comes out at one to three centimetres whatever instant of the idle is
+        /// drawn (design 33 §9c, measured).
         /// </summary>
         public const float SheathClearance = 0.004f;
 

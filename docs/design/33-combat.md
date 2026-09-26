@@ -2178,6 +2178,43 @@ tried at 11 splays and up to 13 depths. Nothing is per frame. Not measured in a 
 - The draw's hand-on-hilt sampling still aims at the hip's surface beside the joint, not at the
   fitted weapon's grip.
 
+#### 9c-bis. The height the fit is sized by (2026-09-26)
+
+`WeaponSheathGapTests` had failed on every branch since the kitchen merged (#227): the military
+build's bat stood 3.2 cm off at one instant of the idle, against 3.0. A bisect of `main`, then of
+the kitchen's own commits, put it on `80bd67af`, the cook's pan, and taking the fourth work style
+back out of `WorkStyle.All` at that commit brought 2.3 cm back.
+
+**The cause was older than the pan.** `BindWorkBones` fits one tool per style, each in its stroke's
+struck pose, and leaves the figure in the last one. The sole, the height and this relief are all
+measured straight after it, off the posed mesh. So every figure's height had been measured in the
+**hammer's** blow, which bows the spine: 2.38–2.48 m on the four test bodies. The pan's stir,
+last after it, read 2.55–2.57. The idle is **2.58–2.59 on all four**. Everything in the fit that
+is a fraction of height (the window, the cell, the clearance, how far back and forward it may
+move) had been sized off a stooped figure.
+
+**The fix is two lines and a measurement.** The figure goes back to its idle when the tool loop
+ends (`PawnFigureDirector.Tools.cs`). That alone left the bat at 3.3 cm, because the relief's cell,
+0.006 of height, was 1.55 cm, half the window the gap is held to, and a cell keeps its outermost
+point. At **0.004** (1.03 cm) the four bodies read:
+
+| Body | Bat | Crowbar | Machete | Arc blade |
+|---|---|---|---|---|
+| `SM_Gen_Chr_Street_Male_01` | 1.7 | 1.6–1.7 | 2.4 | 1.2 |
+| `SM_Gen_Chr_Street_Female_01` | 2.1 | 2.1–2.2 | 2.1–2.2 | 2.5 |
+| `Character_MilitaryMale_01` | 2.6–2.7 | 2.2 | 1.5 | 3.3–3.5 |
+| `Character_70sFemale_01` | 1.8 | 1.1–1.3 | 1.3–1.5 | 1.6 |
+
+The ordinary weapons read 1.1–2.7 cm, inside 0.8–3.0 with room at both ends. Lowering the
+clearance instead would have put the smallest gap exactly on the lower bound.
+
+**Cost.** The slowest hip measurement went from 40–42 ms to **65–69 ms** a look, two runs of each,
+alternated (the test now prints it). It is paid once per look in a session. §9c's 27 ms was taken
+before the height grew and the cast widened, and is not comparable.
+
+**Do not undo by tidying:** the `Graph.Evaluate(0f)` after the tool loop. Without it, the height
+of every colonist depends on which work style happens to be last in `WorkStyle.All`.
+
 ### 9d. The gear seam
 
 Built 2026-09-23 on `claude/combat-cards`. The owner's words: *"We'll make a entry for gear later to
