@@ -132,6 +132,7 @@ namespace Odyssey.Hud
             SpawnBanditKey, SpawnBatKey, SpawnCrowbarKey, SpawnMacheteKey, SpawnArcBladeKey,
             SpawnBanditsKey, ArmColonistsKey, SpawnPistolKey, SpawnGunmanKey, HurtKey, HealKey, KillKey, GiveMedkitsKey,
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
+            GroupVisitorsKey, SpawnTraderKey, GiveGoldKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey, GiveCarrotsKey,
             SkipDayKey, SkipMonthKey, SkipMorningKey, SkipNightKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
             JumpsFailKey,
@@ -285,8 +286,14 @@ namespace Odyssey.Hud
             GroupAnimalsKey = "ui.debug.group.animals", GroupWeaponsKey = "ui.debug.group.weapons",
             GroupItemsKey = "ui.debug.group.items";
 
+        /// <summary>The heading over the guests (design 57 §5): the trader, and later a caravan.</summary>
+        public const string GroupVisitorsKey = "ui.debug.group.visitors";
+
         public static readonly string[] SpawnGroups =
-            { GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey };
+            { GroupColonistsKey, GroupHostilesKey, GroupVisitorsKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey };
+
+        /// <summary>A trader near the camera, and a heap of gold to trade with (design 57).</summary>
+        public const string SpawnTraderKey = "ui.debug.spawntrader", GiveGoldKey = "ui.debug.givegold";
 
         /// <summary>Three bandits at once, spread over neighbouring tiles; and every unarmed colonist given a weapon.</summary>
         public const string SpawnBanditsKey = "ui.debug.spawnbandits", ArmColonistsKey = "ui.debug.armcolonists";
@@ -332,6 +339,8 @@ namespace Odyssey.Hud
                 PawnKindLabels.Bandit, GroupHostilesKey, repeat: 3),
             Pawn(SpawnGunmanKey, "Adds a gunman near the camera: a bandit with a pistol. It shoots whoever it can see",
                 PawnKindLabels.Gunman, GroupHostilesKey),
+            Pawn(SpawnTraderKey, "Adds a trader near the camera. It walks to the hearth, waits about a day, and leaves",
+                PawnKindLabels.Trader, GroupVisitorsKey),
             Pawn(SpawnHogKey, "Adds a wild midden hog near the camera. It wanders and rests, and never takes a ladder",
                 PawnKindLabels.MiddenHogKind, GroupAnimalsKey),
             Pawn(SpawnRatKey, "Adds a duct rat near the camera. It wanders and rests, and climbs anything",
@@ -352,6 +361,8 @@ namespace Odyssey.Hud
             // The kitchen (design 48 §14): something to cook, without growing a field first.
             Resource(GiveCarrotsKey, "Adds 50 carrots near the camera: raw food a cook can put in a pan",
                 ItemHandle.Carrots),
+            new SpawnRow(GiveGoldKey, "Adds 500 gold near the camera: a full stack, to buy with",
+                IntentKind.GiveResource, ItemHandle.Gold, 500, GroupItemsKey),
             new SpawnRow(GiveMedkitsKey, "Adds 10 medical supplies near the camera. A doctor uses one for every treatment",
                 IntentKind.GiveResource, ItemHandle.MedicalSupplies, 10, GroupItemsKey),
         };

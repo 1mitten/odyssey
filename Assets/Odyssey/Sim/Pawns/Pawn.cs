@@ -225,6 +225,13 @@ namespace Odyssey.Sim.Pawns
         public bool IsColonist => IsPerson && Faction == Faction.Colony;
 
         /// <summary>
+        /// A guest: a person of the <see cref="Faction.Visitor"/> faction (design 57 §5), a trader
+        /// today. Neither one of ours nor hostile, so it thinks with the visitor's mind, has no needs,
+        /// takes no work and no orders, and nobody fights it on sight.
+        /// </summary>
+        public bool IsVisitor => IsPerson && Faction == Faction.Visitor;
+
+        /// <summary>
         /// Whether the needs system ticks this pawn's needs, mood and breaks. A colonist's do; an
         /// animal's never have (design 29 §2); a hostile's do not — a bandit is debug-spawned to
         /// hunt until it is killed, and one that went looking for the colony's meals would be a

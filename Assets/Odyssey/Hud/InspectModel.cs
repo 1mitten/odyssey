@@ -169,7 +169,7 @@ namespace Odyssey.Hud
         /// its skills are not the player's to read and its health is the bar over its head), so
         /// its pane is the animal's shape — kind, activity, where.
         /// </summary>
-        public bool ShowsColonistBody => Subject == InspectSubject.Colonist && !IsAnimal && !IsHostile;
+        public bool ShowsColonistBody => Subject == InspectSubject.Colonist && !IsAnimal && !IsHostile && !IsVisitor;
 
         /// <summary>
         /// The tab strip and the fixed-height tab box are built. A colonist's, and an animal's —
@@ -177,7 +177,7 @@ namespace Odyssey.Hud
         /// rather than changed without a decision. A bandit's is not: its pane has no tabs to
         /// hold, and an empty box would be the Health tab's place with nothing in it.
         /// </summary>
-        public bool ShowsTabBox => Subject == InspectSubject.Colonist && !IsHostile;
+        public bool ShowsTabBox => Subject == InspectSubject.Colonist && !IsHostile && !IsVisitor;
 
         /// <summary>The badge the avatar slot shows when <see cref="ShowsFace"/> is false.</summary>
         public string AvatarKey =>
@@ -287,6 +287,13 @@ namespace Odyssey.Hud
         /// needs, skills, Health tab or Draft button. Set from the view's flags on every refresh.
         /// </summary>
         public bool IsHostile;
+
+        /// <summary>
+        /// The selected pawn is a guest — a trader (design 57 §5). A person, not ours and not an
+        /// enemy: its pane is the bandit's shape (a face, the name, the kind's word, what it is doing)
+        /// with no tabs, no needs and no Draft button. Set from the view's flags on every refresh.
+        /// </summary>
+        public bool IsVisitor;
 
         // Which pawn IsAnimal and IsHostile were last read for. A pawn that leaves the frame keeps
         // the shape it had while it was in it, rather than falling to a colonist's tombstone.
@@ -528,15 +535,17 @@ namespace Odyssey.Hud
             if (_corpseFor == corpse.Id) return;
             _corpseFor = corpse.Id;
 
-            bool colonist = (corpse.Flags & (PawnFlags.Person | PawnFlags.Hostile)) == PawnFlags.Person;
+            bool colonist = (corpse.Flags & (PawnFlags.Person | PawnFlags.Hostile | PawnFlags.Visitor)) == PawnFlags.Person;
             bool hostile = (corpse.Flags & PawnFlags.Hostile) != 0;
+            bool visitor = (corpse.Flags & PawnFlags.Visitor) != 0;
             CorpseKindKey = PawnKindLabels.IconKey(corpse.Kind);
             CorpseWasAnimal = (corpse.Flags & PawnFlags.Person) == 0;
             string of = !CorpseWasAnimal
                 ? ColonistNames.Of(corpse.RollSeed, corpse.Pawn)
                 : WithArticle(PawnKindLabels.Label(corpse.Kind).ToLowerInvariant());
             Title = Registry.Label(CorpseKey) + " of " + of;
-            Subtitle = colonist ? ColonistWord : hostile ? HostileKindWord(corpse.Kind) : AnimalWord;
+            Subtitle = colonist ? ColonistWord : hostile ? HostileKindWord(corpse.Kind)
+                : visitor ? VisitorKindWord(corpse.Kind) : AnimalWord;
             Job = Registry.Label(DeadKey) + " · since " + GameClock.HourOfDay(corpse.Tick).ToString("00")
                 + "h, day " + GameClock.DayOfMonth(corpse.Tick) + " of " + GameClock.MonthName(corpse.Tick);
         }
@@ -561,6 +570,12 @@ namespace Odyssey.Hud
             kind == PawnKindLabels.Bandit ? BanditWord
             : kind == PawnKindLabels.Gunman ? GunmanWord
             : HostileWord;
+
+        static readonly string VisitorWord = Registry.Label("ui.pawn.visitor").ToLowerInvariant();
+        static readonly string TraderWord = PawnKindLabels.Label(PawnKindLabels.Trader).ToLowerInvariant();
+
+        /// <summary>The word under a guest's name: "trader" for the trader (design 57 §5), else "visitor".</summary>
+        static string VisitorKindWord(int kind) => kind == PawnKindLabels.Trader ? TraderWord : VisitorWord;
 
         static string WithArticle(string noun) =>
             noun.Length > 0 && "aeiou".IndexOf(noun[0]) >= 0 ? "an " + noun : "a " + noun;
@@ -659,6 +674,7 @@ namespace Odyssey.Hud
                 {
                     IsAnimal = PawnKindLabels.IsAnimal(pawn);
                     IsHostile = pawn.IsHostile;
+                    IsVisitor = pawn.IsVisitor;
                     _shapeFor = Pawn;
                 }
                 else if (_shapeFor != Pawn)
@@ -666,9 +682,10 @@ namespace Odyssey.Hud
                     // Never seen in a frame: the colonist's tombstone, as it always was.
                     IsAnimal = false;
                     IsHostile = false;
+                    IsVisitor = false;
                 }
 
-                if (IsAnimal || IsHostile)
+                if (IsAnimal || IsHostile || IsVisitor)
                 {
                     // An animal (design 29 §8) or a bandit (design 33 §1): kind, activity,
                     // where. The colonist's tabs, commands and skills are not added, so the pane
@@ -708,7 +725,7 @@ namespace Odyssey.Hud
                     {
                         // A bandit's job is a person's job — fighting, mostly — in a person's words,
                         // under the kind's word where the name would otherwise leave you guessing.
-                        Subtitle = HostileKindWord(pawn.Kind);
+                        Subtitle = IsVisitor ? VisitorKindWord(pawn.Kind) : HostileKindWord(pawn.Kind);
                         SetJob(snapshot, pawn);
                         JobIconKey = JobLabels.IconKey(pawn.JobDef);
                     }
@@ -748,6 +765,7 @@ namespace Odyssey.Hud
             Tombstoned = false;
             IsAnimal = false;
             IsHostile = false;
+            IsVisitor = false;
 
             // A corpse (design 33 §1, §5f): "Corpse of X", what it was, when it died and where it
             // lies, with the corpse badge and no tabs or commands.

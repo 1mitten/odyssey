@@ -13,6 +13,9 @@ namespace Odyssey.Hud
     {
         Issued = 0,
         Bandit = 1,
+
+        /// <summary>A trader's travelling clothes (design 57 §5): the person as rolled, in an ochre coat.</summary>
+        Trader = 2,
     }
 
     /// <summary>
@@ -23,11 +26,13 @@ namespace Odyssey.Hud
     /// </summary>
     public static class PawnOutfits
     {
-        /// <summary>A hostile person dresses as a bandit; everybody else as the colony does.</summary>
+        /// <summary>A hostile person dresses as a bandit, a visitor as a trader; everybody else as the colony does.</summary>
         public static PawnOutfit For(PawnFlags flags) =>
             (flags & (PawnFlags.Person | PawnFlags.Hostile)) == (PawnFlags.Person | PawnFlags.Hostile)
                 ? PawnOutfit.Bandit
-                : PawnOutfit.Issued;
+                : (flags & (PawnFlags.Person | PawnFlags.Visitor)) == (PawnFlags.Person | PawnFlags.Visitor)
+                    ? PawnOutfit.Trader
+                    : PawnOutfit.Issued;
 
         public static PawnOutfit For(in PawnView pawn) => For(pawn.Flags);
 

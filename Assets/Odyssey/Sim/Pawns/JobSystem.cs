@@ -502,8 +502,13 @@ namespace Odyssey.Sim.Pawns
             // An animal consults the animal tree (design 29 §3), never the colonist's: a node
             // that returned false for a person would be a node every colonist evaluated on
             // every think, and the animal's whole mind is one node anyway.
-            // A hostile person consults the hostile tree (design 33 §5), for the same reason.
-            ThinkNode[] tree = !pawn.IsPerson ? AnimalTree : pawn.IsHostile ? HostileTree : _tree;
+            // A hostile person consults the hostile tree (design 33 §5), for the same reason, and a
+            // visitor the visitor's (design 57 §5): a guest who fell into the colonist's tree would
+            // take the colony's work.
+            ThinkNode[] tree = !pawn.IsPerson ? AnimalTree
+                : pawn.IsHostile ? HostileTree
+                : pawn.IsVisitor ? VisitorTree
+                : _tree;
             var job = pawn.JobBuffer;
             for (int i = 0; i < tree.Length; i++)
             {
@@ -535,6 +540,19 @@ namespace Odyssey.Sim.Pawns
         {
             new DownedThinkNode(), new Events.RaidThinkNode(), new HostileThinkNode(), new IdleThinkNode(),
         };
+
+        /// <summary>
+        /// A visitor's mind (design 57 §5): down, else its visit — walk to the hearth and stay about
+        /// it, or walk out by the nearest edge once it is leaving — else idle, which settles it at
+        /// the fire. No needs, no work, no draft, no self-defence: it is nobody's to order.
+        /// </summary>
+        static readonly ThinkNode[] VisitorTree =
+        {
+            new DownedThinkNode(), new Trade.VisitorThinkNode(), new IdleThinkNode(),
+        };
+
+        /// <summary>The visitor tree, in traversal order, so a test can assert it.</summary>
+        public static IReadOnlyList<ThinkNode> VisitorMind => VisitorTree;
 
         /// <summary>The animal tree, in traversal order, so a test can assert it.</summary>
         public static IReadOnlyList<ThinkNode> AnimalMind => AnimalTree;

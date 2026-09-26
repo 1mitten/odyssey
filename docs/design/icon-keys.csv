@@ -97,6 +97,7 @@ ui.pawn.rat,Duct rat,ui.pawn,AN,"Vermin from the ducts and the caverns. Climbs a
 ui.pawn.frog,Culvert frog,ui.pawn,AN,"A big frog of the banks. Keeps to the water's edge and hops"
 ui.pawn.bandit,Bandit,ui.pawn,CB,"Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing"
 ui.pawn.gunman,Gunman,ui.pawn,RD,"A bandit with a pistol, dressed as the rest. Shoots whoever it can see, and clubs whoever comes close"
+ui.pawn.trader,Trader,ui.pawn,TR,"Walks in from the edge with goods and a purse, waits by the fire for about a day, and trades"
 ui.status.hauling,Hauling,ui.status,M2,Carrying something to storage
 ui.status.building,Building,ui.status,M2,Working a frame or blueprint
 ui.status.deconstructing,Deconstructing,ui.status,M3,Taking one of our own buildings apart
@@ -594,6 +595,7 @@ ui.debug.spawnrat,Spawn duct rat,ui.debug,AN,"Adds a duct rat near the camera"
 ui.debug.spawnfrog,Spawn culvert frog,ui.debug,AN,"Adds a culvert frog near the camera"
 ui.debug.spawnbandits,Spawn 3 bandits,ui.debug,CB,"Adds three bandits near the camera, each on its own tile"
 ui.debug.spawngunman,Spawn gunman,ui.debug,RC,"Adds a gunman near the camera: a bandit with a pistol. It shoots whoever it can see"
+ui.debug.spawntrader,Spawn trader,ui.debug,TR,"Adds a trader near the camera. It walks to the hearth, waits about a day, and leaves"
 ui.debug.raid.size,Raid size,ui.debug,RD,"How many the next raid brings. Auto sizes it from the colonists standing and the days survived"
 ui.debug.raid.mix,Raid mix,ui.debug,RD,"Who the next raid is made of: bandits, gunmen, or a mix of both"
 ui.debug.raid.auto,Auto,ui.debug,RD,"The raid picks its own size: one per colonist standing, and one more every five days"
@@ -602,12 +604,14 @@ ui.debug.hurt,Hurt a colonist,ui.debug,HE,"The colonist nearest the camera takes
 ui.debug.heal,Heal a colonist,ui.debug,HE,The colonist nearest the camera is made whole and gets up
 ui.debug.kill,Kill a colonist,ui.debug,HE,"The colonist nearest the camera dies where she stands, and is mourned"
 ui.debug.givemedkits,Give medical supplies,ui.debug,HE,Adds 10 medical supplies near the camera
+ui.debug.givegold,Give gold,ui.debug,TR,"Adds 500 gold near the camera: a full stack, to buy with"
 ui.debug.jumpsfail,Jumps always fail,ui.debug,JP,"Every jump over a stream falls short into the water, so a failed jump can be watched"
 ui.debug.group.colonists,Colonists,ui.debug,CB,"The Spawn tab heading over the colonist rows"
 ui.debug.group.hostiles,Hostiles,ui.debug,CB,"The Spawn tab heading over the bandit rows"
 ui.debug.group.animals,Animals,ui.debug,CB,"The Spawn tab heading over the animal rows"
 ui.debug.group.weapons,Weapons,ui.debug,CB,"The Spawn tab heading over the weapon rows"
 ui.debug.group.items,Items,ui.debug,CB,"The Spawn tab heading over the resource grants"
+ui.debug.group.visitors,Visitors,ui.debug,TR,"The Spawn tab heading over the visitor rows"
 ui.debug.marktrace,Mark this moment,ui.debug,PT,"Writes a marker into the performance trace, so the seconds around now can be found"
 ui.debug.trace,Performance trace,ui.debug,PT,"Stops or starts the per-second performance trace this session writes"
 ui.debug.tab.weather,Weather,ui.debug,WE,"The sky set by hand: clear, overcast, three strengths of rain and a storm, drawn only"

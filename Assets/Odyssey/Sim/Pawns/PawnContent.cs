@@ -216,20 +216,25 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The frog of the banks (design 30 §8): kind 5, species 3. Appended after the gunman.</summary>
         public const int CulvertFrog = 5;
 
-        public const int Count = 6;
+        /// <summary>The trader (design 57 §5): a person of the Visitor faction, appended after the frog.</summary>
+        public const int Trader = 6;
+
+        public const int Count = 7;
     }
 
     /// <summary>
     /// Whose side a kind is on (design 33 §3): <b>hostility comes from the kind</b>, so no pawn
     /// carries a saved field for it. The colony's own people are <see cref="Colony"/>; animals are
     /// <see cref="Wild"/> until something tames one; a bandit is <see cref="Hostile"/> and fights
-    /// on sight.
+    /// on sight; a trader is a <see cref="Visitor"/> (design 57 §5): neither one of ours nor an
+    /// enemy, with a mind of its own and nobody's orders.
     /// </summary>
     public enum Faction : byte
     {
         Colony = 0,
         Wild = 1,
         Hostile = 2,
+        Visitor = 3,
     }
 
     /// <summary>
@@ -1645,7 +1650,9 @@ namespace Odyssey.Sim.Pawns
                 // The bandit with a pistol, a raid's second kind (design 55 §8), appended.
                 "PawnKind_Gunman",
                 // The frog of the banks (design 30 §8), appended after the gunman.
-                "PawnKind_CulvertFrog");
+                "PawnKind_CulvertFrog",
+                // The trader (design 57 §5), the first visitor, appended after the frog.
+                "PawnKind_Trader");
             content.Species = ByName<SpeciesDef>(defs,
                 "Species_Person", "Species_MiddenHog", "Species_DuctRat", "Species_CulvertFrog");
             content.KindSpecies = new int[content.Kinds.Length];

@@ -588,6 +588,7 @@ namespace Odyssey.Sim.Pawns
                 PawnFlags flags = PawnFlags.None;
                 if (pawn.IsPerson) flags |= PawnFlags.Person;
                 if (pawn.IsHostile) flags |= PawnFlags.Hostile;
+                if (pawn.IsVisitor) flags |= PawnFlags.Visitor;
                 if (pawn.Drafted) flags |= PawnFlags.Drafted;
                 if (pawn.Downed) flags |= PawnFlags.Downed;
                 if (pawn.StunnedAt(world.CurrentTick)) flags |= PawnFlags.Stunned;

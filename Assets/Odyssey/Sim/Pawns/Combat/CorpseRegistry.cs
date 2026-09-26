@@ -123,6 +123,7 @@ namespace Odyssey.Sim.Pawns
                 {
                     if (_content.SpeciesOf(c.Kind).person) flags |= PawnFlags.Person;
                     if (_content.KindOf(c.Kind).faction == Faction.Hostile) flags |= PawnFlags.Hostile;
+                    if (_content.KindOf(c.Kind).faction == Faction.Visitor) flags |= PawnFlags.Visitor;
                 }
                 writer.AddCorpse(new CorpseView(c.Id, new PawnId(c.Pawn), c.Kind, c.RollSeed,
                     _size.FromIndex(c.Cell), c.Tick, c.Facing, flags));

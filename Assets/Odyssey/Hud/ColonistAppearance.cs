@@ -190,6 +190,13 @@ namespace Odyssey.Hud
             uint seed, int pawnId, ColonistCastPools pools, char gender, int age, PawnOutfit outfit)
         {
             ColonistAppearance person = Of(seed, pawnId, pools, gender, age);
+
+            // A trader (design 57 §5) is the person as rolled, in travelling clothes of its own
+            // colour: no gang body and no helmet, so a face you might trade with again reads as one.
+            if (outfit == PawnOutfit.Trader)
+                return new ColonistAppearance(person.Look, person.Skin, person.Hair, TraderCoat, TraderTrim,
+                    person.HairPiece, person.BeardPiece, PawnOutfit.Trader, NoPiece);
+
             if (outfit != PawnOutfit.Bandit) return person;
 
             char sex = SexOf(gender, seed, pawnId);
@@ -442,6 +449,14 @@ namespace Odyssey.Hud
         /// golden-hour grade needs somewhere to go.
         /// </summary>
         public static readonly Rgb24 BanditTrousers = Rgb24.FromHex(0x1E1E22);
+
+        /// <summary>
+        /// A trader's coat and its trim (design 57 §5): a worn ochre over dark leather, apart from
+        /// the colony's pale issue and the gang's red. PROPOSED: judged on the board, not by a test.
+        /// </summary>
+        public static readonly Rgb24 TraderCoat = Rgb24.FromHex(0xB08A3E);
+
+        public static readonly Rgb24 TraderTrim = Rgb24.FromHex(0x4A3A2A);
 
         /// <summary>
         /// Whether body <paramref name="look"/> is one of the gang's, and the colours its far

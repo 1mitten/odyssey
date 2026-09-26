@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-63 entries, 45 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+64 entries, 46 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -20,6 +20,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Culvert frog** | `ui.pawn.frog` | A big frog of the banks. Keeps to the water's edge and hops | no art | AN |
 | **Bandit** | `ui.pawn.bandit` | Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing | no art | CB |
 | **Gunman** | `ui.pawn.gunman` | A bandit with a pistol, dressed as the rest. Shoots whoever it can see, and clubs whoever comes close | no art | RD |
+| **Trader** | `ui.pawn.trader` | Walks in from the edge with goods and a purse, waits by the fire for about a day, and trades | no art | TR |
 
 ## Needs
 

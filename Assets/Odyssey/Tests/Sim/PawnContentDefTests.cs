@@ -332,7 +332,9 @@ namespace Odyssey.Tests.Sim
         // 2026-09-26, trading (design 57 §2-§3, T1): ItemDef gained marketValue, set on every item
         // (wood 1 ... pistol 150), and Item_Gold appended at handle 18 (stack 500, category Items,
         // value 1). Taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 645312853867905911UL;
+        // 2026-09-26, trading T2 (design 57 §5): Faction.Visitor, and PawnKind_Trader appended at
+        // kind 6 (a person of the Visitor faction with a pistol and the bandit's traverse mode).
+        const ulong ContentFingerprint = 13390042206882871226UL;
 
 
         [Test]

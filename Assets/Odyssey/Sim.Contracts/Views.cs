@@ -71,7 +71,7 @@ namespace Odyssey.Sim.Contracts
     /// and hashes itself. Nothing here is saved or hashed as a byte.</para>
     /// </summary>
     [Flags]
-    public enum PawnFlags : byte
+    public enum PawnFlags : ushort
     {
         None = 0,
 
@@ -107,6 +107,13 @@ namespace Odyssey.Sim.Contracts
         /// its hit points are above nought and it gets up on its own.
         /// </summary>
         KnockedDown = 1 << 7,
+
+        /// <summary>
+        /// A guest (design 57 §5): a person of the visitor faction, a trader today. Neither one of
+        /// ours nor hostile, so it is on no roster, takes no orders and wears no uniform. The flags
+        /// widened from a byte to carry it: the eight before it were all taken.
+        /// </summary>
+        Visitor = 1 << 8,
     }
 
     /// <summary>
@@ -337,8 +344,11 @@ namespace Odyssey.Sim.Contracts
         /// <summary>An animal: the species is not a person.</summary>
         public bool IsAnimal => (Flags & PawnFlags.Person) == 0;
 
-        /// <summary>One of ours: a person who is not hostile. The roster, the Work tab and the draft.</summary>
-        public bool IsColonist => (Flags & (PawnFlags.Person | PawnFlags.Hostile)) == PawnFlags.Person;
+        /// <summary>One of ours: a person who is neither hostile nor a visitor. The roster, the Work tab and the draft.</summary>
+        public bool IsColonist => (Flags & (PawnFlags.Person | PawnFlags.Hostile | PawnFlags.Visitor)) == PawnFlags.Person;
+
+        /// <summary>A guest: a person of the visitor faction (design 57 §5), a trader today.</summary>
+        public bool IsVisitor => (Flags & (PawnFlags.Person | PawnFlags.Visitor)) == (PawnFlags.Person | PawnFlags.Visitor);
 
         public bool IsHostile => (Flags & PawnFlags.Hostile) != 0;
         public bool IsDrafted => (Flags & PawnFlags.Drafted) != 0;
