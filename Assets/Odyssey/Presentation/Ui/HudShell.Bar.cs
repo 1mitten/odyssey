@@ -155,6 +155,17 @@ namespace Odyssey.Presentation.Ui
             // works in a harness scene with no world behind the shell.
             HotkeyDirector hotkeys = Hotkeys();
 
+            // Out of First Person by the key that went in (design 61 §3). A ride holds the game's
+            // keys (HotkeyDirector.HeldByRide), so this one is read past that gate, like the ride's
+            // time keys — but never over a rebind or a text field, the two reasons that still apply.
+            if (_directors?.Ride.Riding == true)
+            {
+                if (hotkeys.Listening == null && !hotkeys.Typing
+                    && keys.WasPressedThisFrame(hotkeys, HotkeyAction.FirstPerson))
+                    ToggleFirstPerson();
+                return;
+            }
+
             // A key offered to a slot in the settings panel belongs to the rebind, not to
             // the palette it might be being bound to — and a key typed into a text field
             // belongs to the field. One question, asked by every poller.
@@ -182,6 +193,11 @@ namespace Odyssey.Presentation.Ui
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.Draft))
                 ToggleDraft();
+
+            // Into First Person (design 61 §3). Out of it is the ride's own read: while one runs the
+            // game's keys are held and this poll never gets here (SliceCameraRig.ReadRide).
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.FirstPerson))
+                ToggleFirstPerson();
         }
 
         /// <summary>
@@ -204,20 +220,9 @@ namespace Odyssey.Presentation.Ui
         // Scratch for ToggleDraft, emptied inside the call.
         readonly System.Collections.Generic.List<Intent> _draftOrders = new System.Collections.Generic.List<Intent>();
 
-        /// <summary>
-        /// The pane's response button (design 33 §18e): every selected colonist to the response
-        /// after the first one's, by <see cref="ResponseModel.Cycle"/>. Applied while paused.
-        /// </summary>
-        void CycleResponse()
-        {
-            var world = _boot?.World;
-            if (world == null || _directors == null) return;
-
-            _draftOrders.Clear();
-            ResponseModel.Cycle(_directors.Selection.Pawns, world.Views.Current, _draftOrders);
-            for (int i = 0; i < _draftOrders.Count; i++) world.Intents.Submit(_draftOrders[i]);
-            _draftOrders.Clear();
-        }
+        // The pane's response button and its CycleResponse went with the header's rebuild (design
+        // 61): the response is set on the Assign tab's Response column (design 43 §6), which
+        // cycles every colonist's from its own row.
 
         /// <summary>
         /// Fit the bar to the width it has, and put whatever does not fit into Menu.

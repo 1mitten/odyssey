@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
@@ -127,6 +128,39 @@ namespace Odyssey.Hud
             Hotkeys.HeldByRide = true;
             if (snapshot.TryGetPawn(id, out PawnView view)) Slice.SetLayer(view.Cell.Y);
             return true;
+        }
+
+        /// <summary>
+        /// Who First Person would ride with for this selection (design 61 §3): <b>the one colonist,
+        /// when exactly one is selected</b>, and nobody otherwise. With two there is no telling whose
+        /// shoulder the player meant; animals in the selection are passed over, as the draft passes
+        /// them over. The header greys the toggle whenever this is false, so the tile and the key
+        /// cannot disagree about when it works.
+        /// </summary>
+        public static bool TryFirstPersonSubject(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot, out PawnId who)
+        {
+            who = PawnId.None;
+            for (int i = 0; i < selection.Count; i++)
+            {
+                if (!OrderModel.IsColonist(snapshot, selection[i])) continue;
+                if (who != PawnId.None) { who = PawnId.None; return false; }
+                who = selection[i];
+            }
+            return who != PawnId.None;
+        }
+
+        /// <summary>
+        /// The First Person toggle and its key (design 61 §3): leave the ride if one is running,
+        /// otherwise ride with the selection's one colonist. True when a ride began or ended.
+        /// </summary>
+        public bool ToggleFirstPerson(WorldSnapshot snapshot)
+        {
+            if (Ride.Riding)
+            {
+                EndRide(snapshot);
+                return true;
+            }
+            return TryFirstPersonSubject(Selection.Pawns, snapshot, out PawnId who) && BeginRide(who, snapshot);
         }
 
         /// <summary>

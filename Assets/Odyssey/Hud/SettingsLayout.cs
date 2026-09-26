@@ -225,7 +225,7 @@ namespace Odyssey.Hud
                 new KeyGroup(ToolsGroupKey, new[]
                 {
                     HotkeyAction.ToolMine, HotkeyAction.ToolFell, HotkeyAction.ToolCancel,
-                    HotkeyAction.Draft,
+                    HotkeyAction.Draft, HotkeyAction.FirstPerson,
                 }),
             },
             new[]
