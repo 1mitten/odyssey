@@ -13958,6 +13958,63 @@ Written in a container with no Unity: the model and its setting are proven in th
 engine half is uncompiled and owes both Unity tiers, a player build and the hitch tour's mid-wake
 picture before it merges (design 56 §11).
 
+## 2026-09-26 — Riding along with a colonist
+
+The owner asked for a first-person mode opened from the colonist card, *"locked until esc"*, to see
+a colonist *"fighting with a melee, walking"* up close. The grounding changed the request's shape
+before any code: **there is no first-person arms rig in any pack we own**, and the face is part of
+the one skinned body whose ink hull goes solid black from inside. So from her eyes you see the far
+end of her own swing at most, and only a camera outside her shows her fighting. The owner took all
+four recommendations: behind the shoulder with the wheel in to the eyes, watch only, a minimal
+strip, time untouched. "Implement" came without a name, so it is **Ride along** until they say
+otherwise (design 57 §1).
+
+Three decisions are worth keeping:
+
+- **The camera is stood first in `LateUpdate`**, from her figure's last drawn feet. Placed in the
+  rig's `Update`, it would chase last frame's figure. Placed after the figures, it would be culled
+  against the frustum taken before them.
+- **The colony view is frozen, not moved.** A ride writes the transform alone, so a save mid-ride
+  records the colony view, and leaving is one instant re-apply.
+- **Doors are not solid to the spring arm**, although the picker counts them. Otherwise every
+  threshold would collapse the camera into her head.
+
+Her head is shrunk by its bone whenever the camera is within 0.6 m of her eyes. That happens at the
+eye stop, and wherever walls have squeezed the camera against her.
+
+**The card's dead Prioritise button went to make room.** It promised the work grid, which has
+shipped. A fourth labelled button would have run her unwrapping name under the buttons.
+
+**Built in a container with no .NET SDK and no Unity.** The Microsoft download host is refused by
+the network policy. So neither the fast tier nor the Presentation compile has run here, and the
+first compile of this branch is its CI run. The frame at a level view is unmeasured and owed
+(design 57 §7).
+
+### 2026-09-26 — the mode is called First Person
+
+The owner, before the first play: *"call this Mode 'First Person' Not go along with the ride"*. The
+label of `ui.command.ride` is **First Person**, in their casing, although the registry is otherwise
+sentence case. Design 57 had argued against the name because the default view is over her shoulder
+rather than from her eyes; the owner has decided, and the wheel's eye stop is still one scroll away.
+Only the label moved: the key, `RideDirector`, `RideCamera` and the design's file name keep *ride*,
+because a key is stable and renaming the internals is churn with no player-facing effect.
+
+### 2026-09-26 — merging the wake: one flag with two owners, and design 57
+
+`main` gained the wake into a world (#240, #241) while First Person waited, and both had reached for
+`HotkeyDirector.Suspended` to hold the game's keys. Git saw only two doc comments disagreeing. The
+fault under them was real: the wake sets the flag at the press of Start and holds it while the
+world is built, and building the world constructs a new `HudDirectors`, whose constructor cleared
+the flag so a colony left mid-ride would not hand the next one a dead keyboard. Merged as one flag,
+**every wake would have handed the player live keys under its curtain half way through**. The ride
+now holds its own, `HotkeyDirector.HeldByRide`, which `GameKeysLive` reads beside `Suspended`, and
+`RideTests.ANewSessionDoesNotReleaseTheWakesHold` is the assertion. It is the register's first
+pattern again: one rule with two owners, found only because the two owners met in a merge.
+
+The wake also reached `main` as design 56 first, so the ride is **design 57**
+(`docs/design/57-ride-along.md`), by the precedent cover set when the birds took 50. Only the
+lines this branch wrote were renumbered; the wake's references to 56 are its own.
+
 ## 2026-09-26 — Cracks: a struck wall and a face being mined, drawn broken
 
 The owner asked for damage levels on walls, "a general effect for cracks … after there is so many
