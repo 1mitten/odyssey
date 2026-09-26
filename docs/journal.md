@@ -13958,3 +13958,42 @@ Written in a container with no Unity: the model and its setting are proven in th
 engine half is uncompiled and owes both Unity tiers, a player build and the hitch tour's mid-wake
 picture before it merges (design 56 §11).
 
+
+## 2026-09-26 — World generation: a planet the board is chosen from
+
+The owner asked for RimWorld-style world generation, *"simple for now with seams"*. Documents only
+today: interview, research `a-13`, design 57, the Claude Design brief and the plan. No code.
+
+**The exploration made the seam smaller than the request sounded.** There was no world layer at all,
+but nearly every knob a world tile would turn already existed as a field on `NaturalMapGenDef`:
+relief, trees, water, rock, wildlife. The two things hard-wired globally were the climate
+(`WorldContent.Climate`, whose own comment said "one Def per map type") and the weather's season
+weights. So the seam is a site record handed to `ColonyWorld.DefFor` and `ColonyComposition`, and
+**the rule that makes it safe is that a request with no site builds exactly today's board**. The
+goldens, every test world and every save before format 11 take that path, and design 57 §11 asserts
+it field for field rather than trusting it.
+
+**Three decisions worth keeping.**
+- **The save stores the tile's fields, not just the world seed and a tile index.** Rebuilding the
+  tile from the seed would let a retune of the planet generator change a saved colony's climate
+  without anyone touching its save. That is the same reason `SaveRecipe` carries barren and wooded.
+- **One reference latitude (53°, 9 °C mean, 1,000 mm) reproduces `Climate_Temperate` exactly.** So
+  the curve is scaled round what has already been played and tuned, not replaced.
+- **The seasons are the planet's, with no hemisphere flip.** Wash, Glare and Rime are named, keyed
+  in the weather table and promised by the almanac. A southern Glare that froze would contradict
+  all three.
+
+**Two things the arithmetic corrected in the first draft.**
+- The settleable meadow band (3–17 °C) sits between about 39° and 61°. Its seasonality runs from
+  ×0.78 to ×1.13, not up to ×1.5, so **between two meadows the mean moves more than the swing
+  does**.
+- The biome names were first drafted as the reference's own labels and were replaced with ours
+  (Pinewood, Frost barrens, Dust flats, Wildwood).
+
+**The research could not read a single page.** The proxy refused every fetch over two capped passes,
+so `a-13` is built from search extracts, with recalled items marked. Nothing in design 57 depends on
+an unconfirmed number: every constant is ours, to be tuned and measured.
+
+**Nor could the fast tier run.** The container's network policy refuses the .NET installer
+(`dot.net`), so the one generated C# change (the registry gaining its `ui.biome`, `ui.hills` and
+`ui.world` rows) waits on CI.

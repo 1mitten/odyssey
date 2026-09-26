@@ -1,8 +1,8 @@
 # World and interface
 
-Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
+Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006. The planet's biomes and terrain are proposals for veto (design 57): only Meadow can be settled until more art arrives.
 
-137 entries, 111 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+167 entries, 141 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -180,6 +180,51 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Go moves the camera to that place and selects it. Clicking the item row itself goes to the place holding the most.** | `ui.inventory.hud.hint` | The hint under the list of places | no art | INV |
 | **Nothing is in a store yet.** | `ui.inventory.hud.empty` | The table when the colony's stores are empty | no art | INV |
 | **No item matches.** | `ui.inventory.hud.nomatch` | The table when a search finds nothing | no art | INV |
+
+## Biomes
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Sea** | `ui.biome.sea` | Open water. Nothing can be built on it | no art | WG |
+| **Icefield** | `ui.biome.icefield` | Ice all year round, at the poles. Nothing grows | no art | WG |
+| **Frost barrens** | `ui.biome.frostbarrens` | Cold, dry ground: moss, stone and wind | no art | WG |
+| **Pinewood** | `ui.biome.pinewood` | Cold woods of needle trees, and long winters | no art | WG |
+| **Moor** | `ui.biome.moor` | Cold, wet upland: heather, peat and standing water | no art | WG |
+| **Scrubland** | `ui.biome.scrubland` | Warm dry ground of thorn and low bushes | no art | WG |
+| **Meadow** | `ui.biome.meadow` | Temperate grass and woodland, streams and ponds. The ground the colony knows | no art | WG |
+| **Fen** | `ui.biome.fen` | Temperate and waterlogged: reeds, pools and soft ground | no art | WG |
+| **Dust flats** | `ui.biome.dustflats` | Hot and dry. Little grows and water is scarce | no art | WG |
+| **Wildwood** | `ui.biome.wildwood` | Hot and wet. Dense forest that grows back as fast as it is cut | no art | WG |
+
+## Terrain on the planet
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Flat** | `ui.hills.flat` | Level ground. Room to build, little stone | no art | WG |
+| **Rolling** | `ui.hills.rolling` | Gentle rises and terraces. The board every measurement was taken on | no art | WG |
+| **Hilly** | `ui.hills.hilly` | Steep terraces and more exposed rock | no art | WG |
+| **Mountainous** | `ui.hills.mountainous` | High terraces over deep rock. Twenty-four layers deep | no art | WG |
+| **Sheer** | `ui.hills.sheer` | Too steep to settle | no art | WG |
+
+## The World screen's words
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **World** | `ui.world.title` | The planet, and where on it the colony lands | no art | WG |
+| **Site** | `ui.world.site` | The tile the colony lands on | no art | WG |
+| **Random site** | `ui.world.random` | Pick another tile the colony could land on | no art | WG |
+| **Next** | `ui.world.next` | On to the colony's name, size and people | no art | WG |
+| **Legend** | `ui.world.legend` | What each colour and mark on the map means | no art | WG |
+| **Biome** | `ui.world.biome` | What grows there | no art | WG |
+| **Terrain** | `ui.world.terrain` | How hilly the ground is | no art | WG |
+| **Mean temperature** | `ui.world.temperature` | The year's average, out of doors | no art | WG |
+| **Seasons** | `ui.world.seasons` | Each season's average, out of doors | no art | WG |
+| **Rainfall** | `ui.world.rainfall` | How much rain falls in a year | no art | WG |
+| **Latitude** | `ui.world.latitude` | How far from the equator. The further out, the harder the seasons bite | no art | WG |
+| **Depth** | `ui.world.depth` | How many layers the board has, sky to bedrock | no art | WG |
+| **Not yet available** | `ui.world.unavailable` | This ground has no art yet and cannot be settled in this version | no art | WG |
+| **Open water** | `ui.world.water` | The colony cannot land on the sea | no art | WG |
+| **Too steep to settle** | `ui.world.steep` | Sheer ground: no colony could find its footing | no art | WG |
 
 ---
 

@@ -153,7 +153,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#health">Health and anatomy<b>39</b></a></li>
 <li><a href="#events">Events<b>51</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
-<li><a href="#world">World and interface<b>137</b></a></li>
+<li><a href="#world">World and interface<b>167</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>31</b></a></li>
 </ul></nav>
 <main>
@@ -162,9 +162,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>927</b><i>named entries</i></div>
+<div class="stat"><b>957</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>655</b><i>no art yet</i></div>
+<div class="stat m"><b>685</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -3072,8 +3072,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">137 entries</em></h2>
-<p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
+<h2>World and interface <em class="count">167 entries</em></h2>
+<p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006. The planet's biomes and terrain are proposals for veto (design 57): only Meadow can be settled until more art arrives.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
@@ -3928,6 +3928,198 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="ms">INV</div>
 </div>
 </div>
+<h3 class="nsh">Biomes</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.biome.sea" data-hay="sea ui.biome.sea open water. nothing can be built on it " data-gap="1">
+<div class="nm">Sea<span class="k">ui.biome.sea</span></div>
+<div class="dsc">Open water. Nothing can be built on it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.biome.icefield" data-hay="icefield ui.biome.icefield ice all year round, at the poles. nothing grows " data-gap="1">
+<div class="nm">Icefield<span class="k">ui.biome.icefield</span></div>
+<div class="dsc">Ice all year round, at the poles. Nothing grows</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.biome.frostbarrens" data-hay="frost barrens ui.biome.frostbarrens cold, dry ground: moss, stone and wind " data-gap="1">
+<div class="nm">Frost barrens<span class="k">ui.biome.frostbarrens</span></div>
+<div class="dsc">Cold, dry ground: moss, stone and wind</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.biome.pinewood" data-hay="pinewood ui.biome.pinewood cold woods of needle trees, and long winters " data-gap="1">
+<div class="nm">Pinewood<span class="k">ui.biome.pinewood</span></div>
+<div class="dsc">Cold woods of needle trees, and long winters</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.biome.moor" data-hay="moor ui.biome.moor cold, wet upland: heather, peat and standing water " data-gap="1">
+<div class="nm">Moor<span class="k">ui.biome.moor</span></div>
+<div class="dsc">Cold, wet upland: heather, peat and standing water</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.biome.scrubland" data-hay="scrubland ui.biome.scrubland warm dry ground of thorn and low bushes " data-gap="1">
+<div class="nm">Scrubland<span class="k">ui.biome.scrubland</span></div>
+<div class="dsc">Warm dry ground of thorn and low bushes</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.biome.meadow" data-hay="meadow ui.biome.meadow temperate grass and woodland, streams and ponds. the ground the colony knows " data-gap="1">
+<div class="nm">Meadow<span class="k">ui.biome.meadow</span></div>
+<div class="dsc">Temperate grass and woodland, streams and ponds. The ground the colony knows</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.biome.fen" data-hay="fen ui.biome.fen temperate and waterlogged: reeds, pools and soft ground " data-gap="1">
+<div class="nm">Fen<span class="k">ui.biome.fen</span></div>
+<div class="dsc">Temperate and waterlogged: reeds, pools and soft ground</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.biome.dustflats" data-hay="dust flats ui.biome.dustflats hot and dry. little grows and water is scarce " data-gap="1">
+<div class="nm">Dust flats<span class="k">ui.biome.dustflats</span></div>
+<div class="dsc">Hot and dry. Little grows and water is scarce</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.biome.wildwood" data-hay="wildwood ui.biome.wildwood hot and wet. dense forest that grows back as fast as it is cut " data-gap="1">
+<div class="nm">Wildwood<span class="k">ui.biome.wildwood</span></div>
+<div class="dsc">Hot and wet. Dense forest that grows back as fast as it is cut</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+</div>
+<h3 class="nsh">Terrain on the planet</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.hills.flat" data-hay="flat ui.hills.flat level ground. room to build, little stone " data-gap="1">
+<div class="nm">Flat<span class="k">ui.hills.flat</span></div>
+<div class="dsc">Level ground. Room to build, little stone</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.hills.rolling" data-hay="rolling ui.hills.rolling gentle rises and terraces. the board every measurement was taken on " data-gap="1">
+<div class="nm">Rolling<span class="k">ui.hills.rolling</span></div>
+<div class="dsc">Gentle rises and terraces. The board every measurement was taken on</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.hills.hilly" data-hay="hilly ui.hills.hilly steep terraces and more exposed rock " data-gap="1">
+<div class="nm">Hilly<span class="k">ui.hills.hilly</span></div>
+<div class="dsc">Steep terraces and more exposed rock</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.hills.mountainous" data-hay="mountainous ui.hills.mountainous high terraces over deep rock. twenty-four layers deep " data-gap="1">
+<div class="nm">Mountainous<span class="k">ui.hills.mountainous</span></div>
+<div class="dsc">High terraces over deep rock. Twenty-four layers deep</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.hills.sheer" data-hay="sheer ui.hills.sheer too steep to settle " data-gap="1">
+<div class="nm">Sheer<span class="k">ui.hills.sheer</span></div>
+<div class="dsc">Too steep to settle</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+</div>
+<h3 class="nsh">The World screen's words</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.world.title" data-hay="world ui.world.title the planet, and where on it the colony lands " data-gap="1">
+<div class="nm">World<span class="k">ui.world.title</span></div>
+<div class="dsc">The planet, and where on it the colony lands</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.site" data-hay="site ui.world.site the tile the colony lands on " data-gap="1">
+<div class="nm">Site<span class="k">ui.world.site</span></div>
+<div class="dsc">The tile the colony lands on</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.random" data-hay="random site ui.world.random pick another tile the colony could land on " data-gap="1">
+<div class="nm">Random site<span class="k">ui.world.random</span></div>
+<div class="dsc">Pick another tile the colony could land on</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.next" data-hay="next ui.world.next on to the colony's name, size and people " data-gap="1">
+<div class="nm">Next<span class="k">ui.world.next</span></div>
+<div class="dsc">On to the colony's name, size and people</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.legend" data-hay="legend ui.world.legend what each colour and mark on the map means " data-gap="1">
+<div class="nm">Legend<span class="k">ui.world.legend</span></div>
+<div class="dsc">What each colour and mark on the map means</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.biome" data-hay="biome ui.world.biome what grows there " data-gap="1">
+<div class="nm">Biome<span class="k">ui.world.biome</span></div>
+<div class="dsc">What grows there</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.terrain" data-hay="terrain ui.world.terrain how hilly the ground is " data-gap="1">
+<div class="nm">Terrain<span class="k">ui.world.terrain</span></div>
+<div class="dsc">How hilly the ground is</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.temperature" data-hay="mean temperature ui.world.temperature the year's average, out of doors " data-gap="1">
+<div class="nm">Mean temperature<span class="k">ui.world.temperature</span></div>
+<div class="dsc">The year's average, out of doors</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.seasons" data-hay="seasons ui.world.seasons each season's average, out of doors " data-gap="1">
+<div class="nm">Seasons<span class="k">ui.world.seasons</span></div>
+<div class="dsc">Each season's average, out of doors</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.rainfall" data-hay="rainfall ui.world.rainfall how much rain falls in a year " data-gap="1">
+<div class="nm">Rainfall<span class="k">ui.world.rainfall</span></div>
+<div class="dsc">How much rain falls in a year</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.latitude" data-hay="latitude ui.world.latitude how far from the equator. the further out, the harder the seasons bite " data-gap="1">
+<div class="nm">Latitude<span class="k">ui.world.latitude</span></div>
+<div class="dsc">How far from the equator. The further out, the harder the seasons bite</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.depth" data-hay="depth ui.world.depth how many layers the board has, sky to bedrock " data-gap="1">
+<div class="nm">Depth<span class="k">ui.world.depth</span></div>
+<div class="dsc">How many layers the board has, sky to bedrock</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.unavailable" data-hay="not yet available ui.world.unavailable this ground has no art yet and cannot be settled in this version " data-gap="1">
+<div class="nm">Not yet available<span class="k">ui.world.unavailable</span></div>
+<div class="dsc">This ground has no art yet and cannot be settled in this version</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.water" data-hay="open water ui.world.water the colony cannot land on the sea " data-gap="1">
+<div class="nm">Open water<span class="k">ui.world.water</span></div>
+<div class="dsc">The colony cannot land on the sea</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+<div class="row gap" id="ui.world.steep" data-hay="too steep to settle ui.world.steep sheer ground: no colony could find its footing " data-gap="1">
+<div class="nm">Too steep to settle<span class="k">ui.world.steep</span></div>
+<div class="dsc">Sheer ground: no colony could find its footing</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WG</div>
+</div>
+</div>
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="proper-nouns" data-sec="1" class="nouns">
@@ -4128,7 +4320,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 927, "gaps": 655};</script>
+<script>window.WIKI={"total": 957, "gaps": 685};</script>
 <script>
 (function(){
   var D = window.WIKI;

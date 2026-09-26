@@ -926,3 +926,33 @@ ui.assign.response,Response,ui.assign,HA,"What she does about danger. Press a ce
 ui.assign.anywhere,Anywhere,ui.assign,HA,"She takes work wherever it is"
 ui.assign.home,Home,ui.assign,HA,"She takes no work outside home, and walks home when idle. A draft overrides it"
 ui.assign.nohearth,No hearth yet,ui.assign,HA,"There is no hearth, so there is no home and Home keeps nobody in. Mark a campfire as the hearth"
+ui.biome.sea,Sea,ui.biome,WG,Open water. Nothing can be built on it
+ui.biome.icefield,Icefield,ui.biome,WG,"Ice all year round, at the poles. Nothing grows"
+ui.biome.frostbarrens,Frost barrens,ui.biome,WG,"Cold, dry ground: moss, stone and wind"
+ui.biome.pinewood,Pinewood,ui.biome,WG,"Cold woods of needle trees, and long winters"
+ui.biome.moor,Moor,ui.biome,WG,"Cold, wet upland: heather, peat and standing water"
+ui.biome.scrubland,Scrubland,ui.biome,WG,Warm dry ground of thorn and low bushes
+ui.biome.meadow,Meadow,ui.biome,WG,"Temperate grass and woodland, streams and ponds. The ground the colony knows"
+ui.biome.fen,Fen,ui.biome,WG,"Temperate and waterlogged: reeds, pools and soft ground"
+ui.biome.dustflats,Dust flats,ui.biome,WG,Hot and dry. Little grows and water is scarce
+ui.biome.wildwood,Wildwood,ui.biome,WG,Hot and wet. Dense forest that grows back as fast as it is cut
+ui.hills.flat,Flat,ui.hills,WG,"Level ground. Room to build, little stone"
+ui.hills.rolling,Rolling,ui.hills,WG,Gentle rises and terraces. The board every measurement was taken on
+ui.hills.hilly,Hilly,ui.hills,WG,Steep terraces and more exposed rock
+ui.hills.mountainous,Mountainous,ui.hills,WG,High terraces over deep rock. Twenty-four layers deep
+ui.hills.sheer,Sheer,ui.hills,WG,Too steep to settle
+ui.world.title,World,ui.world,WG,"The planet, and where on it the colony lands"
+ui.world.site,Site,ui.world,WG,The tile the colony lands on
+ui.world.random,Random site,ui.world,WG,Pick another tile the colony could land on
+ui.world.next,Next,ui.world,WG,"On to the colony's name, size and people"
+ui.world.legend,Legend,ui.world,WG,What each colour and mark on the map means
+ui.world.biome,Biome,ui.world,WG,What grows there
+ui.world.terrain,Terrain,ui.world,WG,How hilly the ground is
+ui.world.temperature,Mean temperature,ui.world,WG,"The year's average, out of doors"
+ui.world.seasons,Seasons,ui.world,WG,"Each season's average, out of doors"
+ui.world.rainfall,Rainfall,ui.world,WG,How much rain falls in a year
+ui.world.latitude,Latitude,ui.world,WG,"How far from the equator. The further out, the harder the seasons bite"
+ui.world.depth,Depth,ui.world,WG,"How many layers the board has, sky to bedrock"
+ui.world.unavailable,Not yet available,ui.world,WG,This ground has no art yet and cannot be settled in this version
+ui.world.water,Open water,ui.world,WG,The colony cannot land on the sea
+ui.world.steep,Too steep to settle,ui.world,WG,Sheer ground: no colony could find its footing
