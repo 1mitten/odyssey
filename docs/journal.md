@@ -14227,3 +14227,22 @@ box" is the per-label figure, the only quantity `docs/lessons.md` (2026-09-23) f
 unchanged; 3 × 17.0 / 30.9 ≈ 1.65 here, a 2.12 ms budget), and an unknown machine keeps the strict
 3. The label goes on after the fix is merged, or every PR branched from the old `main` could fail
 on whichever runner picked it up.
+
+## 2026-09-26 — Gear tab and kit merged with `main` again, for the playtest
+
+PR #231 had taken the kit (#238) and fallen 114 commits behind; sixteen files in conflict. **One
+was more than text**: `main`'s ride (design 57) and the Gear popovers each added a twelve-parameter
+`SettingsDirector.Escape` overload of the same signature, which does not compile. They are one
+rule now — the ride, then the right-click menu, then a Gear popover, then the old ladder — and
+`AssignModelTests` asserts a ride beats an open popover. Intents: `QueryShot` keeps its place and
+the kit's four follow it. The kit's save section goes after the raids and part-mined rock. The job
+handle did not collide (`main` stopped at 27; the kit's `TakeIntoKit` stays 28). Content
+fingerprint re-taken from the merged pack; **no golden moved**.
+
+Fast tier 1,971 + 1,364, Long 55, all green. EditMode **4,534 / 4,496 / 1 failed**, the known
+`WeaponSheathGapTests` bat on `main`; PlayMode **166 / 148 / 0 failed**. The first EditMode run
+also failed `JumpClipRowTests`, and that was the worktree rather than the branch: its `Library`
+had never imported the Base Locomotion jump clips, so the catalogue's correct GUID resolved to
+nothing. A forced reimport of `Assets/Synty/AnimationBaseLocomotion` fixed it. The same test
+passes in a worktree that imported the pack. Any worktree made before that pack arrived owes the
+same reimport, or the jump plays the walk.
