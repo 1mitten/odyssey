@@ -128,7 +128,7 @@ namespace Odyssey.Hud
         {
             PanelKey, CheatsKey, EventsKey, SpawnTabKey, SpawnPawnKey, SpawnHogKey, SpawnRatKey,
             SpawnBanditKey, SpawnBatKey, SpawnCrowbarKey, SpawnMacheteKey, SpawnArcBladeKey,
-            SpawnBanditsKey, ArmColonistsKey, SpawnPistolKey, SpawnGunmanKey, HurtKey, HealKey, KillKey, GiveMedkitsKey, ImprisonKey, FreePrisonerKey,
+            SpawnBanditsKey, ArmColonistsKey, SpawnPistolKey, SpawnGunmanKey, HurtKey, HealKey, KillKey, GiveMedkitsKey, ImprisonKey, FreePrisonerKey, BreakOutKey,
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey, GiveCarrotsKey,
             SkipDayKey, SkipMonthKey, SkipMorningKey, SkipNightKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
@@ -294,7 +294,8 @@ namespace Odyssey.Hud
             GiveMedkitsKey = "ui.debug.givemedkits";
 
         /// <summary>Custody's two rows (design 58 §4): take the person nearest the camera, or free the nearest prisoner.</summary>
-        public const string ImprisonKey = "ui.debug.imprison", FreePrisonerKey = "ui.debug.freeprisoner";
+        public const string ImprisonKey = "ui.debug.imprison", FreePrisonerKey = "ui.debug.freeprisoner",
+            BreakOutKey = "ui.debug.breakout";
 
         /// <summary>How many a resource row grants: the Cheats tab's old fifty, moved here with the rows.</summary>
         public const int GiveAmount = 50;
@@ -339,6 +340,9 @@ namespace Odyssey.Hud
             new SpawnRow(FreePrisonerKey,
                 "The prisoner nearest the camera is set free again, as if she had never been taken",
                 IntentKind.DebugImprison, 0, 1, GroupHostilesKey),
+            new SpawnRow(BreakOutKey,
+                "The prisoner nearest the camera breaks out now, rather than on the hourly roll",
+                IntentKind.DebugImprison, 0, 2, GroupHostilesKey),
             Pawn(SpawnHogKey, "Adds a wild midden hog near the camera. It wanders and rests, and never takes a ladder",
                 PawnKindLabels.MiddenHogKind, GroupAnimalsKey),
             Pawn(SpawnRatKey, "Adds a duct rat near the camera. It wanders and rests, and climbs anything",

@@ -142,7 +142,9 @@ namespace Odyssey.Tests.Sim
                 "Rescue", "Doctor", "Capture", "Deliver", "Build", "LayConduit", "Deconstruct", "RemoveConduit",
                 // FeedPrisoner is warden work and warden work is scanned last (design 58 §7): a
                 // prisoner goes hungry slowly, and the capture that brings her in is the emergency.
-                "Forage", "Harvest", "Sow", "Cook", "Fell", "Mine", "Refuel", "Haul", "FeedPrisoner",
+                // Recruit follows feeding by the name tiebreak, which is why it is not called Chat:
+                // a hungry prisoner outranks a talk that will keep for an hour.
+                "Forage", "Harvest", "Sow", "Cook", "Fell", "Mine", "Refuel", "Haul", "FeedPrisoner", "Recruit", "Release",
             }));
         }
 

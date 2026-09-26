@@ -192,6 +192,62 @@ namespace Odyssey.Hud
         /// <summary>A held pawn's word under her name (design 58 §11b).</summary>
         public const string PrisonerKey = "ui.pawn.prisoner";
 
+        // ---- the prisoner's rows (design 58 §11b) ---------------------------------------------
+
+        /// <summary>The row that says what the colony means to do with her, and cycles it when pressed.</summary>
+        public const string PrisonModeRow = "mode";
+
+        /// <summary>How far talked round, as a percentage.</summary>
+        public const string WillingRow = "willing";
+
+        /// <summary>How long until she joins, at the best warden's pace. Recruit mode only.</summary>
+        public const string JoinsInRow = "joins in";
+
+        /// <summary>What is slowing her recruitment, in words. Recruit mode only, and only when something is.</summary>
+        public const string SlowedByRow = "slowed by";
+
+        /// <summary>Present while her bed is a shackle bed.</summary>
+        public const string ShackledRow = "shackled";
+
+        /// <summary>Her chance of breaking out in a day, as a percentage (design 58 §9a).</summary>
+        public const string EscapeRow = "escape risk";
+
+        /// <summary>What is raising or lowering her escape risk, in words.</summary>
+        public const string EscapeWhyRow = "because";
+
+        /// <summary>The one row an escapee's pane carries while she is out.</summary>
+        public const string EscapingRow = "escaping";
+
+        /// <summary>What the colony means to do with the prisoner on the pane; what a press on its mode row moves on from.</summary>
+        public PrisonMode PrisonerMode { get; private set; }
+
+        /// <summary>
+        /// The mode a press on the mode row asks for: Hold, Recruit, Release, Exile and round again.
+        /// Ransom is a seam (design 58 §13) and is never offered.
+        /// </summary>
+        public static PrisonMode NextPrisonMode(PrisonMode mode) => mode switch
+        {
+            PrisonMode.Hold => PrisonMode.Recruit,
+            PrisonMode.Recruit => PrisonMode.Release,
+            PrisonMode.Release => PrisonMode.Exile,
+            _ => PrisonMode.Hold,
+        };
+
+        /// <summary>The registry key that names a mode.</summary>
+        public static string PrisonModeKey(PrisonMode mode) => mode switch
+        {
+            PrisonMode.Recruit => "ui.prisoner.recruit",
+            PrisonMode.Release => "ui.prisoner.release",
+            PrisonMode.Exile => "ui.prisoner.exile",
+            PrisonMode.Ransom => "ui.prisoner.ransom",
+            _ => "ui.prisoner.hold",
+        };
+
+        int _prisonRowsMode = -1, _prisonRowsWilling = -1, _prisonRowsHours = int.MinValue, _prisonRowsBlockers = -1;
+        int _prisonRowsEscape = -1, _prisonRowsEscapeWhy = -1;
+        bool _prisonRowsShackled, _prisonRowsEscaping;
+        PawnId _prisonRowsFor;
+
         /// <summary>Last-known values of a colonist who has left the frame, shown greyed.</summary>
         public bool Tombstoned;
 
@@ -723,6 +779,7 @@ namespace Odyssey.Hud
                         Subtitle = IsPrisoner ? Registry.Label(PrisonerKey) : HostileKindWord(pawn.Kind);
                         SetJob(snapshot, pawn);
                         JobIconKey = JobLabels.IconKey(pawn.JobDef);
+                        if (IsPrisoner) SetPrisonerRows(snapshot, pawn.Id, pawn.Custody == PawnCustody.Escaping);
                     }
                     SetPosition(pawn.Cell);
                     Layer = pawn.Cell.Y;
@@ -1645,6 +1702,126 @@ namespace Odyssey.Hud
             });
         }
 
+        /// <summary>
+        /// A held prisoner's facts, one row each, in the tile's rows (design 58 §11b): the mode, how
+        /// willing she is, and in Recruit mode how long until she joins and what is slowing it.
+        /// Every number is a published aspect the simulation's own arithmetic wrote, so the pane
+        /// cannot say one thing while the chat does another. Rewritten only when a number moves.
+        /// </summary>
+        void SetPrisonerRows(WorldSnapshot snapshot, PawnId id, bool escaping)
+        {
+            PrisonMode mode = snapshot.TryGetPawnAspect(id, PrisonAspectNames.ModeKey, out int m) ? (PrisonMode)m : PrisonMode.Hold;
+            int willing = snapshot.TryGetPawnAspect(id, PrisonAspectNames.WillingKey, out int w) ? w : 0;
+            int hours = snapshot.TryGetPawnAspect(id, PrisonAspectNames.HoursKey, out int h) ? h : -1;
+            int blockers = snapshot.TryGetPawnAspect(id, PrisonAspectNames.BlockersKey, out int b) ? b : 0;
+            bool shackled = snapshot.TryGetPawnAspect(id, PrisonAspectNames.ShackledKey, out _);
+            int escape = snapshot.TryGetPawnAspect(id, PrisonAspectNames.EscapeKey, out int e) ? e : 0;
+            int escapeWhy = snapshot.TryGetPawnAspect(id, PrisonAspectNames.EscapeWhyKey, out int y) ? y : 0;
+            PrisonerMode = mode;
+
+            // The rows share the tile's list, so the tile's own guard must not trust it next time.
+            _cellRowsFor = -1;
+            if (_prisonRowsFor == id && _prisonRowsMode == (int)mode && _prisonRowsWilling == willing
+                && _prisonRowsHours == hours && _prisonRowsBlockers == blockers && _prisonRowsShackled == shackled
+                && _prisonRowsEscape == escape && _prisonRowsEscapeWhy == escapeWhy && _prisonRowsEscaping == escaping
+                && CellRows.Count > 0 && (CellRows[0].Name == PrisonModeRow || CellRows[0].Name == EscapingRow))
+                return;
+            _prisonRowsFor = id;
+            _prisonRowsMode = (int)mode;
+            _prisonRowsWilling = willing;
+            _prisonRowsHours = hours;
+            _prisonRowsBlockers = blockers;
+            _prisonRowsShackled = shackled;
+            _prisonRowsEscape = escape;
+            _prisonRowsEscapeWhy = escapeWhy;
+            _prisonRowsEscaping = escaping;
+
+            int n = 0;
+            if (escaping)
+            {
+                // Out of her cell: nothing to set until she is brought back down (design 58 §9c).
+                Row(n++, EscapingRow, "breaking out", HudTheme.Bad);
+                while (CellRows.Count > n) CellRows.RemoveAt(CellRows.Count - 1);
+                return;
+            }
+            Row(n++, PrisonModeRow, Registry.Label(PrisonModeKey(mode)));
+            Row(n++, WillingRow, (willing / 10) + "%");
+            if (mode == PrisonMode.Recruit)
+            {
+                Row(n++, JoinsInRow, hours < 0 ? "nobody to talk to her" : Hours(hours));
+                string slowed = BlockerWords(blockers);
+                if (slowed.Length > 0) Row(n++, SlowedByRow, slowed, HudTheme.Warn);
+            }
+            if (shackled) Row(n++, ShackledRow, "yes");
+            Row(n++, EscapeRow, PerDay(escape), escape >= EscapeWarnPpm ? HudTheme.Warn : (HudColour?)null);
+            string why = ReasonWords(escapeWhy);
+            if (why.Length > 0) Row(n++, EscapeWhyRow, why);
+            while (CellRows.Count > n) CellRows.RemoveAt(CellRows.Count - 1);
+        }
+
+        /// <summary>A risk at or above this, 5 % a day, is drawn amber.</summary>
+        public const int EscapeWarnPpm = 50_000;
+
+        /// <summary>A chance a day in parts per million, as a percentage with one place: "2.1% a day".</summary>
+        public static string PerDay(int ppm)
+        {
+            int tenths = (ppm + 500) / 1_000;
+            return (tenths / 10) + "." + (tenths % 10) + "% a day";
+        }
+
+        /// <summary>The escape reasons in words, those that raise it first, joined by commas; empty for none.</summary>
+        public static string ReasonWords(int bits)
+        {
+            if (bits == 0) return string.Empty;
+            var words = new System.Text.StringBuilder();
+            void Add(int bit, string word)
+            {
+                if ((bits & bit) == 0) return;
+                if (words.Length > 0) words.Append(", ");
+                words.Append(word);
+            }
+            Add(PrisonAspectNames.Reason.Miserable, "miserable");
+            Add(PrisonAspectNames.Reason.Unhappy, "unhappy");
+            Add(PrisonAspectNames.Reason.DoorOpen, "door open");
+            Add(PrisonAspectNames.Reason.Shackled, "no walls");
+            Add(PrisonAspectNames.Reason.Unwatched, "unwatched");
+            Add(PrisonAspectNames.Reason.Unhurt, "unhurt");
+            Add(PrisonAspectNames.Reason.Content, "content");
+            Add(PrisonAspectNames.Reason.Hurt, "hurt");
+            Add(PrisonAspectNames.Reason.WellKept, "well kept");
+            return words.ToString();
+        }
+
+        /// <summary>Game hours as a reader wants them: hours under a day, days and hours past one.</summary>
+        public static string Hours(int hours)
+        {
+            if (hours <= 0) return "any moment";
+            if (hours < 24) return hours == 1 ? "1 hour" : hours + " hours";
+            int days = hours / 24, rest = hours % 24;
+            string d = days == 1 ? "1 day" : days + " days";
+            return rest == 0 ? d : d + " " + rest + " h";
+        }
+
+        /// <summary>The blocker bits in words, most fixable first, joined by commas; empty for none.</summary>
+        public static string BlockerWords(int bits)
+        {
+            if (bits == 0) return string.Empty;
+            var words = new System.Text.StringBuilder();
+            void Add(int bit, string word)
+            {
+                if ((bits & bit) == 0) return;
+                if (words.Length > 0) words.Append(", ");
+                words.Append(word);
+            }
+            Add(PrisonAspectNames.Blocker.NoWarden, "no warden");
+            Add(PrisonAspectNames.Blocker.Hungry, "hungry");
+            Add(PrisonAspectNames.Blocker.Untended, "untended");
+            Add(PrisonAspectNames.Blocker.Shackled, "shackled");
+            Add(PrisonAspectNames.Blocker.LowMood, "low mood");
+            Add(PrisonAspectNames.Blocker.LowSocial, "low Social");
+            return words.ToString();
+        }
+
         void Row(int index, string name, string value, HudColour? tint = null)
         {
             while (CellRows.Count <= index) CellRows.Add(new InspectRow());
@@ -1803,6 +1980,18 @@ namespace Odyssey.Hud
                 Enabled = !Tombstoned,
                 Reason = ResponseModel.Describe(response),
             });
+            // Arrest (design 58 §10): on her own pane rather than a right-click on her, because a
+            // right-click that touches a colonist is a move (design 33 §2f) and must stay one. The
+            // nearest colonist who can reach her is sent; with no free prison bed it is refused.
+            Commands.Add(new InspectCommand
+            {
+                IconKey = ArrestKey, Label = Registry.Label(ArrestKey),
+                Enabled = !Tombstoned,
+                Reason = "the nearest colonist takes her into custody; needs a free prison bed",
+            });
         }
+
+        /// <summary>The colonist pane's arrest command (design 58 §10).</summary>
+        public const string ArrestKey = "ui.command.arrest";
     }
 }

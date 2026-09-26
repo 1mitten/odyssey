@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pathing;
 using Odyssey.Sim.World;
 
 namespace Odyssey.Sim.Pawns
@@ -21,15 +22,23 @@ namespace Odyssey.Sim.Pawns
         /// <summary>A held prisoner: down, else her needs, else her shackles, else the cell, else wait.</summary>
         static readonly ThinkNode[] Held =
         {
-            new DownedThinkNode(), new PrisonerNeedsThinkNode(), new ShackledThinkNode(),
+            new DownedThinkNode(), new ToMyCellThinkNode(), new PrisonerNeedsThinkNode(), new ShackledThinkNode(),
             new CellWanderThinkNode(), new PrisonerWaitThinkNode(),
         };
 
-        /// <summary>A prisoner breaking out. Until the escape is written she stays put like a held one.</summary>
-        static readonly ThinkNode[] Escaping = { new DownedThinkNode(), new PrisonerWaitThinkNode() };
+        /// <summary>
+        /// A prisoner breaking out (design 58 §6, §9c): down, else strike back at whoever laid hands on
+        /// her while he is beside her, else out by any way open — a door held open included — else
+        /// break the door, else wait for one to open.
+        /// </summary>
+        static readonly ThinkNode[] Escaping =
+        {
+            new DownedThinkNode(), new FightBackThinkNode(), new EscapeRunThinkNode(), new EscapeBashThinkNode(),
+            new PrisonerWaitThinkNode(),
+        };
 
-        /// <summary>A pawn let go. Until the walk off is written she stays put like a held one.</summary>
-        static readonly ThinkNode[] Released = { new DownedThinkNode(), new PrisonerWaitThinkNode() };
+        /// <summary>A pawn let go (design 58 §10): down, else walk off the board, else wait.</summary>
+        static readonly ThinkNode[] Released = { new DownedThinkNode(), new LeaveFreeThinkNode(), new PrisonerWaitThinkNode() };
 
         /// <summary>The tree for this custody. Never asked for <see cref="PawnCustody.Free"/>.</summary>
         public static ThinkNode[] For(PawnCustody custody) => custody switch
@@ -222,6 +231,127 @@ namespace Odyssey.Sim.Pawns
                 return true;
             }
             return false;
+        }
+    }
+
+    /// <summary>
+    /// A prisoner on her feet who owns a prison bed in a cell but stands outside that cell — a
+    /// raider who surrendered, a colonist arrested, or anybody who strayed — walks herself to the
+    /// bed (design 58 §10), in a colonist's mode for the walk so the cell door lets her in. A
+    /// shackle bed is the shackles' node's; a prisoner with no bed has nowhere to go.
+    /// </summary>
+    public sealed class ToMyCellThinkNode : ThinkNode
+    {
+        public override string Name => "ToMyCell";
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            if (ctx.Enclosure == null || ctx.BedPurposes == null) return false;
+            int bed = PrisonerTrees.OwnBed(pawn, ctx);
+            if (bed < 0 || ctx.BedPurposes.IsShackled(bed)) return false;
+            int room = ctx.Enclosure.RoomAt(bed);
+            if (room == 0 || ctx.Enclosure.RoomAt(pawn.Cell) == room) return false;
+            if (!ctx.CanTravel(pawn, bed, TraverseMode.Colonist)) return false;
+            job.Reset(JobIndex.GoToCell);
+            job.TargetCell = bed;
+            job.DestCell = bed;
+            job.Mode = TraverseMode.Colonist;
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// An escapee strikes back at the one she holds a grudge against — the colonist who tried to
+    /// arrest her (design 58 §10) — while he stands beside her and the grudge lasts. Only beside
+    /// her: she is running, and does not chase him.
+    /// </summary>
+    public sealed class FightBackThinkNode : ThinkNode
+    {
+        public override string Name => "FightBack";
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            if (pawn.RetaliateAgainst == 0 || ctx.CurrentTick >= pawn.RetaliateUntilTick) return false;
+            Pawn? foe = ctx.Pawns.Get(new PawnId(pawn.RetaliateAgainst));
+            TraverseMode mode = pawn.OwnMode;
+            if (foe == null || !Melee.IsStanding(foe) || !Melee.InReach(ctx, pawn, foe, mode)) return false;
+            return AttackJob.Fill(ctx, pawn, foe, job, mode);
+        }
+    }
+
+    /// <summary>
+    /// An escapee runs for the nearest edge she can reach in her own mode (design 58 §9c) — which
+    /// cannot open a door, so while her cell is shut this declines and the door is broken instead.
+    /// </summary>
+    public sealed class EscapeRunThinkNode : ThinkNode
+    {
+        public override string Name => "EscapeRun";
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            int edge = Theft.EdgeFrom(ctx, pawn.Cell, pawn.OwnMode);
+            if (edge < 0) return false;
+            job.Reset(JobIndex.Escape);
+            job.DestCell = edge;
+            job.TargetCell = edge;
+            job.Mode = pawn.OwnMode;
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// An escapee with no way out breaks one (design 58 §9c): the nearest door of the room she is
+    /// in that she can get at, with the fight's own building attack — so how long a door holds is
+    /// its hit points against a bare fist, and <b>what a cell door is built of now matters</b>.
+    /// With no door to break (a room walled all round) she breaks the nearest colony building
+    /// between her and the way out, which is the bandit's own choice.
+    /// </summary>
+    public sealed class EscapeBashThinkNode : ThinkNode
+    {
+        public override string Name => "EscapeBash";
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            TraverseMode mode = pawn.OwnMode;
+            World.ThermalRoom? room = ctx.Enclosure == null ? null
+                : PrisonerTrees.Room(ctx, ctx.Enclosure.RoomAt(pawn.Cell));
+            if (room != null)
+            {
+                BuildingTarget best = default;
+                int bestDistance = int.MaxValue;
+                bool found = false;
+                var doors = room.Doors;
+                for (int i = 0; i < doors.Count; i++)
+                {
+                    if (!BuildingTargets.TryFind(ctx, doors[i].Cell, out BuildingTarget door)) continue;
+                    if (!BuildingTargets.CanReach(ctx, pawn, door, mode)) continue;
+                    int distance = ctx.Distance(pawn.Cell, door.Anchor);
+                    if (distance >= bestDistance) continue;
+                    best = door;
+                    bestDistance = distance;
+                    found = true;
+                }
+                if (found) return AttackJob.FillBuilding(ctx, pawn, best, job, mode);
+            }
+            return BuildingTargets.TryNearestColonyTarget(ctx, pawn, mode, out BuildingTarget any)
+                   && AttackJob.FillBuilding(ctx, pawn, any, job, mode);
+        }
+    }
+
+    /// <summary>A pawn released or exiled walks to the nearest edge she can reach, and leaves (design 58 §10).</summary>
+    public sealed class LeaveFreeThinkNode : ThinkNode
+    {
+        public override string Name => "LeaveFree";
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            int edge = Theft.EdgeFrom(ctx, pawn.Cell, pawn.OwnMode);
+            if (edge < 0) return false;
+            job.Reset(JobIndex.LeaveFree);
+            job.DestCell = edge;
+            job.TargetCell = edge;
+            job.Mode = pawn.OwnMode;
+            return true;
         }
     }
 

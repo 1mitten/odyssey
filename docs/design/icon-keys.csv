@@ -89,6 +89,11 @@ ui.pawn.colonist,Colonist,ui.pawn,M2,One of ours
 ui.pawn.visitor,Visitor,ui.pawn,M2,"Here peacefully, and watching"
 ui.pawn.hostile,Hostile,ui.pawn,M2,Will attack
 ui.pawn.prisoner,Prisoner,ui.pawn,M2,"Held, and someone must feed them"
+ui.prisoner.hold,Hold,ui.prisoner,PS,"Kept in her cell, fed and tended, and nothing more asked of her"
+ui.prisoner.recruit,Recruit,ui.prisoner,PS,"A warden talks to her every six hours until she is willing to join"
+ui.prisoner.release,Release,ui.prisoner,PS,"Walked out of the cell and let go. A colonist under arrest goes back to work"
+ui.prisoner.exile,Exile,ui.prisoner,PS,"Walked to the edge of the map and sent away for good"
+ui.prisoner.ransom,Ransom,ui.prisoner,M7,"Sold back to her own people. Needs factions, so not yet"
 ui.pawn.animal,Animal,ui.pawn,M2,Tame or wild creature
 ui.pawn.synth,Synth,ui.pawn,M2,"Machine intelligence. Not alive, not harmless"
 ui.pawn.corpse,Corpse,ui.pawn,M2,"Rots, upsets people, can be buried or worse"
@@ -406,6 +411,9 @@ ui.raid.mix.mixed,Mixed,ui.raid,RD,"Mostly bandits, with about three in ten carr
 ui.bulletin.weather,Weather,ui.bulletin,M2,The conditions have turned
 ui.bulletin.death,Death,ui.bulletin,M2,We have lost someone
 ui.bulletin.recruited,Recruited,ui.bulletin,M2,A prisoner has joined us
+ui.bulletin.escaped,Prisoner escaped,ui.bulletin,PS,A prisoner broke out and got away
+ui.bulletin.surrendered,Surrendered,ui.bulletin,PS,A badly hurt raider gave up and walked to a cell
+ui.bulletin.arrested,Arrested,ui.bulletin,PS,A colonist was taken into custody
 ui.bulletin.research,Research complete,ui.bulletin,M2,A project has finished
 ui.bulletin.quest,Opportunity,ui.bulletin,M2,An offer with a deadline
 ui.bulletin.wanderer,Wanderer,ui.bulletin,M2,Someone wants to join
@@ -611,6 +619,7 @@ ui.debug.heal,Heal a colonist,ui.debug,HE,The colonist nearest the camera is mad
 ui.debug.kill,Kill a colonist,ui.debug,HE,"The colonist nearest the camera dies where she stands, and is mourned"
 ui.debug.imprison,Imprison nearest,ui.debug,PS,"The person nearest the camera who is not held becomes a prisoner, where she stands"
 ui.debug.freeprisoner,Free nearest prisoner,ui.debug,PS,"The prisoner nearest the camera is set free again, as if she had never been taken"
+ui.debug.breakout,Break out nearest prisoner,ui.debug,PS,"The prisoner nearest the camera breaks out now, rather than on the hourly roll"
 ui.debug.givemedkits,Give medical supplies,ui.debug,HE,Adds 10 medical supplies near the camera
 ui.debug.jumpsfail,Jumps always fail,ui.debug,JP,"Every jump over a stream falls short into the water, so a failed jump can be watched"
 ui.debug.group.colonists,Colonists,ui.debug,CB,"The Spawn tab heading over the colonist rows"

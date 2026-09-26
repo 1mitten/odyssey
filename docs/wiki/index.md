@@ -2,7 +2,7 @@
 
 Every named thing in the game, generated from the design data. **Do not edit these files by hand**: they are rebuilt by `tools/wiki/build_wiki.py` and your changes would be overwritten. Corrections go in the CSVs named at the bottom of each page.
 
-937 named entries, of which **665 have no icon art** in the owner's sheets.
+946 named entries, of which **674 have no icon art** in the owner's sheets.
 
 | Section | Entries | Without art |
 |---|---:|---:|
@@ -11,9 +11,9 @@ Every named thing in the game, generated from the design data. **Do not edit the
 | [Buildings and orders](buildings.md) | 83 | 24 |
 | [Commands](commands.md) | 55 | 35 |
 | [Work and skills](work.md) | 57 | 22 |
-| [Colonists](colonists.md) | 70 | 52 |
+| [Colonists](colonists.md) | 75 | 57 |
 | [Health and anatomy](health.md) | 39 | 21 |
-| [Events](events.md) | 52 | 27 |
+| [Events](events.md) | 55 | 30 |
 | [Research](research.md) | 26 | 26 |
 | [World and interface](world.md) | 136 | 110 |
 | [Proper nouns](proper-nouns.md) | 30 | — |

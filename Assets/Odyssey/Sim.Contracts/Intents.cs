@@ -394,6 +394,20 @@ namespace Odyssey.Sim.Contracts
         /// Handler: <c>JobSystem.HandleOrderCapture</c>.
         /// </summary>
         OrderCapture,
+
+        /// <summary>
+        /// Say what the colony means to do with a prisoner (design 58 §8, §13): <c>A</c> is her
+        /// <c>PawnId</c> value and <c>B</c> a <see cref="PrisonMode"/>. Ransom is refused until
+        /// factions exist. Handler: <c>JobSystem.HandleSetPrisonMode</c>. Appended.
+        /// </summary>
+        SetPrisonMode,
+
+        /// <summary>
+        /// Arrest a colonist (design 58 §10): <c>A</c> is the arresting colonist's <c>PawnId</c>
+        /// value, or nought for the nearest who can reach her, and <c>B</c> the colonist to be taken. Refused with no free prison bed. Handler:
+        /// <c>JobSystem.HandleOrderArrest</c>. Appended.
+        /// </summary>
+        OrderArrest,
     }
 
     /// <summary>What an <see cref="IntentKind.EditBill"/> does, as its <c>A</c> carries it.</summary>
@@ -531,6 +545,10 @@ namespace Odyssey.Sim.Contracts
             // fight's orders are.
             IntentKind.SetCaptureMark => true,
             IntentKind.OrderCapture => true,
+            // A prisoner's mode (design 58 §8): a setting on her pane, given paused.
+            IntentKind.SetPrisonMode => true,
+            // An arrest is an order over a pawn, given paused as the fight's orders are.
+            IntentKind.OrderArrest => true,
             _ => false,
         };
     }

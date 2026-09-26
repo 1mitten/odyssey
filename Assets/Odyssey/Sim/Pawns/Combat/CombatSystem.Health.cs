@@ -45,6 +45,10 @@ namespace Odyssey.Sim.Pawns
                 return false;
             }
 
+            // Still standing, and badly hurt with this blow: a raider may give up (design 58 §10).
+            // Her fight is over whether or not the blow's stun lands, so she is not standing in it.
+            if (!target.Downed && Surrender.Consider(target, before, _ctx, tick)) return false;
+
             return !target.Downed;
         }
 

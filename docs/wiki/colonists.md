@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-70 entries, 52 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+75 entries, 57 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -19,6 +19,16 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Duct rat** | `ui.pawn.rat` | Vermin from the ducts and the caverns. Climbs anything | no art | AN |
 | **Bandit** | `ui.pawn.bandit` | Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing | no art | CB |
 | **Gunman** | `ui.pawn.gunman` | A bandit with a pistol, dressed as the rest. Shoots whoever it can see, and clubs whoever comes close | no art | RD |
+
+## What the colony does with a prisoner
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Hold** | `ui.prisoner.hold` | Kept in her cell, fed and tended, and nothing more asked of her | no art | PS |
+| **Recruit** | `ui.prisoner.recruit` | A warden talks to her every six hours until she is willing to join | no art | PS |
+| **Release** | `ui.prisoner.release` | Walked out of the cell and let go. A colonist under arrest goes back to work | no art | PS |
+| **Exile** | `ui.prisoner.exile` | Walked to the edge of the map and sent away for good | no art | PS |
+| **Ransom** | `ui.prisoner.ransom` | Sold back to her own people. Needs factions, so not yet | no art | M7 |
 
 ## Needs
 

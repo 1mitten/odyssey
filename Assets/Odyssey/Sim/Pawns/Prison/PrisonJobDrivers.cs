@@ -151,45 +151,195 @@ namespace Odyssey.Sim.Pawns
         }
     }
 
-    /// <summary><c>Job_Chat</c>: a warden talks a prisoner round. Written by P8.</summary>
-    public class ChatJobDriver : JobDriver
+    /// <summary>
+    /// A warden's visit to a prisoner (design 58 §8, §10): walk to her, stand beside her — following
+    /// her if she walks off mid-sentence rather than starting over — and spend <see cref="Ticks"/>
+    /// there, then <see cref="Finish"/>. <see cref="Job.WorkTicks"/> names the prisoner, as the
+    /// feeding's does. The chat and the escort differ only in how long and what happens at the end.
+    /// </summary>
+    public abstract class BesidePrisonerJobDriver : JobDriver
     {
-        public override bool TryMakeReservations(PawnContext ctx) => true;
-        public override JobStatus Tick(PawnContext ctx) => JobStatus.Failed;
+        public override int WorkFocus => ToilIndex == 1 ? Job.DestCell : -1;
+
+        /// <summary>Whether the visit is still wanted: she is still in the state that asked for it.</summary>
+        protected abstract bool StillWanted(Pawn prisoner, PawnContext ctx);
+
+        /// <summary>How long the visit lasts, in ticks at full pace.</summary>
+        protected abstract int Ticks(PawnContext ctx);
+
+        /// <summary>Whether the visit trains the job's skill as work does.</summary>
+        protected virtual bool Trains => false;
+
+        /// <summary>The visit is over.</summary>
+        protected abstract void Finish(Pawn prisoner, PawnContext ctx);
+
+        public override bool TryMakeReservations(PawnContext ctx)
+        {
+            long key = ReservationManager.Key(ReservationTargetKind.Pawn, Job.WorkTicks);
+            if (!ctx.Reservations.Reserve(Pawn.Id, key)) return false;
+            Pawn.HeldReservations.Add(key);
+            return true;
+        }
+
+        public override JobStatus Tick(PawnContext ctx)
+        {
+            Pawn? prisoner = ctx.Pawns.Get(new PawnId(Job.WorkTicks));
+            if (prisoner == null || !StillWanted(prisoner, ctx) || prisoner.CarriedBy != 0)
+                return JobStatus.Failed;
+
+            if (ToilIndex == 0)
+            {
+                if (Pawn.Cell != prisoner.Cell && StillInReach(ctx, Pawn, prisoner.Cell, 0, 0))
+                {
+                    if (Pawn.Destination >= 0 || Pawn.HasPath) { Pawn.ClearPath(); Pawn.Destination = -1; }
+                    Job.DestCell = prisoner.Cell;
+                    NextToil();
+                    return JobStatus.Ongoing;
+                }
+                int stand = Job.TargetCell;
+                if (stand < 0 || stand == prisoner.Cell || !Beside(ctx.Size, stand, prisoner.Cell))
+                    Job.TargetCell = stand = FellJobDriver.StandBeside(ctx, Pawn, prisoner.Cell);
+                if (stand < 0) return JobStatus.Failed;
+                return GotoCell(ctx, stand) == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
+            }
+
+            // She may walk off mid-visit; the warden follows rather than starting over.
+            if (!StillInReach(ctx, Pawn, prisoner.Cell, 0, 0))
+            {
+                Job.TargetCell = FellJobDriver.StandBeside(ctx, Pawn, prisoner.Cell);
+                if (Job.TargetCell < 0) return JobStatus.Failed;
+                return GotoCell(ctx, Job.TargetCell) == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
+            }
+            Job.DestCell = prisoner.Cell;
+            ToilProgress += Rates.Scale;
+            if (Trains) Work(ctx);
+            if (ToilProgress < Ticks(ctx) * Rates.Scale) return JobStatus.Ongoing;
+
+            Finish(prisoner, ctx);
+            return JobStatus.Succeeded;
+        }
+
+        static bool Beside(GridSize size, int cell, int of)
+        {
+            if (cell == of) return false;
+            CellRef a = size.FromIndex(cell), b = size.FromIndex(of);
+            return a.Y == b.Y && System.Math.Abs(a.X - b.X) <= 1 && System.Math.Abs(a.Z - b.Z) <= 1;
+        }
     }
 
-    /// <summary><c>Job_Escort</c>: a warden walks a released prisoner out. Written by P10.</summary>
-    public class EscortJobDriver : JobDriver
+    /// <summary>
+    /// <c>Job_Chat</c> (design 58 §8): talk to a prisoner in Recruit mode for the job's work ticks,
+    /// training Social as any working job trains its skill; at the end the bar fills by
+    /// <see cref="Recruitment.Factors"/>'s gain, and she joins if it is full.
+    /// </summary>
+    public class ChatJobDriver : BesidePrisonerJobDriver
     {
-        public override bool TryMakeReservations(PawnContext ctx) => true;
-        public override JobStatus Tick(PawnContext ctx) => JobStatus.Failed;
+        protected override bool StillWanted(Pawn prisoner, PawnContext ctx) => Recruitment.Due(prisoner, ctx.CurrentTick);
+        protected override int Ticks(PawnContext ctx) => ctx.Content.Jobs[Job.DefIndex].workTicks;
+        protected override bool Trains => true;
+        protected override void Finish(Pawn prisoner, PawnContext ctx) => Recruitment.Chat(prisoner, Pawn, ctx);
     }
 
-    /// <summary><c>Job_GoToCell</c>: a surrendered raider walks to a prison bed. Written by P11.</summary>
+    /// <summary>
+    /// <c>Job_Escort</c> (design 58 §10): a warden goes to a prisoner the player has chosen to
+    /// release or exile, opens her way out, and lets her go — <see cref="PrisonRelease.Let"/>.
+    /// A short visit: the door is opened, a word is said, and she is on her way.
+    /// </summary>
+    public class EscortJobDriver : BesidePrisonerJobDriver
+    {
+        /// <summary>How long letting her go takes at the cell.</summary>
+        public const int EscortTicks = 120;
+
+        protected override bool StillWanted(Pawn prisoner, PawnContext ctx) => PrisonRelease.Wanted(prisoner);
+        protected override int Ticks(PawnContext ctx) => EscortTicks;
+        protected override void Finish(Pawn prisoner, PawnContext ctx) => PrisonRelease.Let(prisoner, ctx);
+    }
+
+    /// <summary>
+    /// <c>Job_GoToCell</c> (design 58 §10): a prisoner on her feet walks herself to her prison bed
+    /// — a raider who surrendered, a colonist who came quietly. She walks in a colonist's mode for
+    /// the length of this job, so the doors on the way in open for her; once she is there she is
+    /// dressed for the cell, and her own mode, which opens nothing, holds her.
+    /// </summary>
     public class GoToCellJobDriver : JobDriver
     {
-        public override bool TryMakeReservations(PawnContext ctx) => true;
-        public override JobStatus Tick(PawnContext ctx) => JobStatus.Failed;
+        public override bool TryMakeReservations(PawnContext ctx) => Job.DestCell >= 0;
+
+        public override JobStatus Tick(PawnContext ctx)
+        {
+            if (Pawn.Custody != PawnCustody.Prisoner || PrisonerTrees.OwnBed(Pawn, ctx) != Job.DestCell)
+                return JobStatus.Failed;
+            JobStatus walk = GotoCell(ctx, Job.DestCell);
+            if (walk != JobStatus.Succeeded) return walk;
+            (Pawn.Prison ??= new PrisonRecord()).Dressed = true;
+            return JobStatus.Succeeded;
+        }
     }
 
-    /// <summary><c>Job_Escape</c>: bash the door, run for the edge. Written by P9.</summary>
-    public class EscapeJobDriver : JobDriver
+    /// <summary>
+    /// <c>Job_Escape</c> (design 58 §9c): an escapee runs for the edge of the board, and at it she
+    /// is gone. The door is not this job's: bashing one is the fight's own building attack, chosen
+    /// by the escape tree when no path out is open.
+    /// </summary>
+    public class EscapeJobDriver : WalkOffJobDriver
     {
-        public override bool TryMakeReservations(PawnContext ctx) => true;
-        public override JobStatus Tick(PawnContext ctx) => JobStatus.Failed;
+        protected override PawnCustody Leaving => PawnCustody.Escaping;
+        protected override int Incident => IncidentHandle.PrisonerEscaped;
     }
 
-    /// <summary><c>Job_LeaveFree</c>: a pawn let go walks off the board. Written by P10.</summary>
-    public class LeaveFreeJobDriver : JobDriver
+    /// <summary>
+    /// <c>Job_LeaveFree</c> (design 58 §6, §10): a pawn let go — released or exiled — walks to the
+    /// edge of the board and is gone. Nobody is told; the player chose it.
+    /// </summary>
+    public class LeaveFreeJobDriver : WalkOffJobDriver
     {
-        public override bool TryMakeReservations(PawnContext ctx) => true;
-        public override JobStatus Tick(PawnContext ctx) => JobStatus.Failed;
+        protected override PawnCustody Leaving => PawnCustody.Released;
+        protected override int Incident => -1;
     }
 
-    /// <summary><c>Job_Arrest</c>: walk to a colonist and take her. Written by P12.</summary>
-    public class ArrestJobDriver : JobDriver
+    /// <summary>
+    /// The walk off the board both ways out share (design 58 §9c, §10): to <c>Job.DestCell</c> on
+    /// the edge, then gone at the end of the tick — the thief's shape, deferred for death's reason
+    /// (a despawn shifts the list every pawn loop walks). The custody is asked every tick, so a
+    /// runner downed and taken back mid-walk stops at once.
+    /// </summary>
+    public abstract class WalkOffJobDriver : JobDriver
     {
-        public override bool TryMakeReservations(PawnContext ctx) => true;
-        public override JobStatus Tick(PawnContext ctx) => JobStatus.Failed;
+        /// <summary>The custody this walk belongs to.</summary>
+        protected abstract PawnCustody Leaving { get; }
+
+        /// <summary>What the ledger is told when she is gone, or -1 for nothing.</summary>
+        protected abstract int Incident { get; }
+
+        public override bool TryMakeReservations(PawnContext ctx) => Job.DestCell >= 0;
+
+        public override JobStatus Tick(PawnContext ctx)
+        {
+            if (Pawn.Custody != Leaving || Pawn.Downed) return JobStatus.Failed;
+            if (ToilIndex == 0)
+            {
+                JobStatus walk = GotoCell(ctx, Job.DestCell);
+                if (walk != JobStatus.Succeeded) return walk;
+                NextToil();
+            }
+            Pawn pawn = Pawn;
+            int jobDef = Job.DefIndex, incident = Incident;
+            ctx.Defer(world => PrisonExit.Leave(ctx, pawn, jobDef, incident, world.CurrentTick));
+            return JobStatus.Ongoing;
+        }
+    }
+
+    /// <summary>
+    /// <c>Job_Arrest</c> (design 58 §10): walk to a colonist, following her if she walks on, and at
+    /// her side take her — <see cref="Arrest.Contact"/>, which rolls whether she resists.
+    /// </summary>
+    public class ArrestJobDriver : BesidePrisonerJobDriver
+    {
+        /// <summary>How long the arrest itself takes at her side: a hand on the shoulder.</summary>
+        public const int ArrestTicks = 30;
+
+        protected override bool StillWanted(Pawn target, PawnContext ctx) => Arrest.CanBeArrested(target);
+        protected override int Ticks(PawnContext ctx) => ArrestTicks;
+        protected override void Finish(Pawn target, PawnContext ctx) => Arrest.Contact(Pawn, target, ctx);
     }
 }

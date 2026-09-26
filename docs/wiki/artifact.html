@@ -143,9 +143,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
 <li><a href="#commands">Commands<b>55</b></a></li>
 <li><a href="#work">Work and skills<b>57</b></a></li>
-<li><a href="#colonists">Colonists<b>70</b></a></li>
+<li><a href="#colonists">Colonists<b>75</b></a></li>
 <li><a href="#health">Health and anatomy<b>39</b></a></li>
-<li><a href="#events">Events<b>52</b></a></li>
+<li><a href="#events">Events<b>55</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
 <li><a href="#world">World and interface<b>136</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>30</b></a></li>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>937</b><i>named entries</i></div>
+<div class="stat"><b>946</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>665</b><i>no art yet</i></div>
+<div class="stat m"><b>674</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1929,7 +1929,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">70 entries</em></h2>
+<h2>Colonists <em class="count">75 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -1999,6 +1999,40 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">A bandit with a pistol, dressed as the rest. Shoots whoever it can see, and clubs whoever comes close</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">RD</div>
+</div>
+</div>
+<h3 class="nsh">What the colony does with a prisoner</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.prisoner.hold" data-hay="hold ui.prisoner.hold kept in her cell, fed and tended, and nothing more asked of her " data-gap="1">
+<div class="nm">Hold<span class="k">ui.prisoner.hold</span></div>
+<div class="dsc">Kept in her cell, fed and tended, and nothing more asked of her</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.prisoner.recruit" data-hay="recruit ui.prisoner.recruit a warden talks to her every six hours until she is willing to join " data-gap="1">
+<div class="nm">Recruit<span class="k">ui.prisoner.recruit</span></div>
+<div class="dsc">A warden talks to her every six hours until she is willing to join</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.prisoner.release" data-hay="release ui.prisoner.release walked out of the cell and let go. a colonist under arrest goes back to work " data-gap="1">
+<div class="nm">Release<span class="k">ui.prisoner.release</span></div>
+<div class="dsc">Walked out of the cell and let go. A colonist under arrest goes back to work</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.prisoner.exile" data-hay="exile ui.prisoner.exile walked to the edge of the map and sent away for good " data-gap="1">
+<div class="nm">Exile<span class="k">ui.prisoner.exile</span></div>
+<div class="dsc">Walked to the edge of the map and sent away for good</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.prisoner.ransom" data-hay="ransom ui.prisoner.ransom sold back to her own people. needs factions, so not yet " data-gap="1">
+<div class="nm">Ransom<span class="k">ui.prisoner.ransom</span></div>
+<div class="dsc">Sold back to her own people. Needs factions, so not yet</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M7</div>
 </div>
 </div>
 <h3 class="nsh">Needs</h3>
@@ -2616,7 +2650,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="events" data-sec="1">
-<h2>Events <em class="count">52 entries</em></h2>
+<h2>Events <em class="count">55 entries</em></h2>
 <p class="blurb">Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about. A raid's mix names who a band of hostiles is made of (design 55).</p>
 <h3 class="nsh">Alerts</h3>
 <div class="tbl">
@@ -2852,6 +2886,24 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">A prisoner has joined us<span class="need">Needs drawing: a prisoner joining us</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M2</div>
+</div>
+<div class="row gap" id="ui.bulletin.escaped" data-hay="prisoner escaped ui.bulletin.escaped a prisoner broke out and got away " data-gap="1">
+<div class="nm">Prisoner escaped<span class="k">ui.bulletin.escaped</span></div>
+<div class="dsc">A prisoner broke out and got away</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.bulletin.surrendered" data-hay="surrendered ui.bulletin.surrendered a badly hurt raider gave up and walked to a cell " data-gap="1">
+<div class="nm">Surrendered<span class="k">ui.bulletin.surrendered</span></div>
+<div class="dsc">A badly hurt raider gave up and walked to a cell</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.bulletin.arrested" data-hay="arrested ui.bulletin.arrested a colonist was taken into custody " data-gap="1">
+<div class="nm">Arrested<span class="k">ui.bulletin.arrested</span></div>
+<div class="dsc">A colonist was taken into custody</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
 </div>
 <div class="row" id="ui.bulletin.research" data-hay="research complete ui.bulletin.research a project has finished " data-gap="0">
 <div class="nm">Research complete<span class="k">ui.bulletin.research</span></div>
@@ -4170,7 +4222,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 937, "gaps": 665};</script>
+<script>window.WIKI={"total": 946, "gaps": 674};</script>
 <script>
 (function(){
   var D = window.WIKI;

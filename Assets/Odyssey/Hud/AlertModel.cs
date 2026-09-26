@@ -165,6 +165,9 @@ namespace Odyssey.Hud
         /// </summary>
         public const string NoPrisonBedKey = "ui.alert.noprisonbed";
 
+        /// <summary>A prisoner is breaking out (design 58 §9c): Danger, one row an escapee, a click goes to her.</summary>
+        public const string PrisonerEscapeKey = "ui.alert.prisonerescape";
+
         /// <summary>
         /// Somebody is kept home and there is no hearth, so home does not exist and keeps nobody
         /// (design 43 §3f, §4d). Only while it matters: with nobody kept home, no hearth is simply
@@ -216,7 +219,7 @@ namespace Odyssey.Hud
         public const byte DeconstructOrderKind = 2;
 
         /// <summary>Every key this panel can put on screen, for the registry test.</summary>
-        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey, StoreStuckKey, PowerLossKey, NoFuelKey, NoRescueBedKey, NoHearthKey, HearthDownKey, InjuredKey, NoMedicineKey, RaidKey, NoPrisonBedKey };
+        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey, StoreStuckKey, PowerLossKey, NoFuelKey, NoRescueBedKey, NoHearthKey, HearthDownKey, InjuredKey, NoMedicineKey, RaidKey, NoPrisonBedKey, PrisonerEscapeKey };
 
         public readonly List<AlertRow> Rows = new List<AlertRow>();
 
@@ -240,6 +243,7 @@ namespace Odyssey.Hud
         int _wasNoBed;
         int _wasNoPrisonBed;
         long _wasNoPrisonBedIds;
+        long _wasEscapingIds;
         // What the two hearth rows say, not only whether they are up: the count kept home while
         // there is no hearth (0 when the row is down), and the cell ordered down (-1 when none).
         int _wasNoHearth;
@@ -317,6 +321,8 @@ namespace Odyssey.Hud
             int keptHome = 0;
             int noPrisonBed = 0;
             long noPrisonBedIds = 0;
+            int escaping = 0;
+            long escapingIds = 0;
 
             // Colonists only (design 33 §5d): these are the colony's alerts, and a bandit or an
             // animal is neither hungry on the colony's account nor part of whether it is idle. A
@@ -335,6 +341,11 @@ namespace Odyssey.Hud
                 {
                     noPrisonBed++;
                     noPrisonBedIds = noPrisonBedIds * 31 + pawn.Id.Value;
+                }
+                if (pawn.Custody == PawnCustody.Escaping)
+                {
+                    escaping++;
+                    escapingIds = escapingIds * 31 + pawn.Id.Value;
                 }
                 if (!pawn.IsColonist) continue;
                 colonists++;
@@ -484,7 +495,7 @@ namespace Odyssey.Hud
                 dark == _wasDark && shortW == _wasShortW && dry == _wasDry &&
                 idleStands == _wasIdle && storeStuck == _wasStoreStuck && colonists == _wasColony &&
                 noBed == _wasNoBed && noBedIds == _wasNoBedIds &&
-                noPrisonBed == _wasNoPrisonBed && noPrisonBedIds == _wasNoPrisonBedIds &&
+                noPrisonBed == _wasNoPrisonBed && noPrisonBedIds == _wasNoPrisonBedIds && escapingIds == _wasEscapingIds &&
                 injured == _wasInjured && injuredIds == _wasInjuredIds && noMedicine == _wasNoMedicine &&
                 _latchVersion == _wasLatchVersion && _dismissVersion == _wasDismissVersion)
                 return;
@@ -503,6 +514,7 @@ namespace Odyssey.Hud
             _wasNoBedIds = noBedIds;
             _wasNoPrisonBed = noPrisonBed;
             _wasNoPrisonBedIds = noPrisonBedIds;
+            _wasEscapingIds = escapingIds;
             _wasInjured = injured;
             _wasInjuredIds = injuredIds;
             _wasNoMedicine = noMedicine;
@@ -594,6 +606,22 @@ namespace Odyssey.Hud
                     NoRescueBedKey,
                     ColonistNames.Of(snapshot, pawn.Id),
                     " is down with no bed to be carried to",
+                    AlertSeverity.Danger,
+                    count: 1,
+                    pawn: pawn.Id));
+            }
+
+            // A prisoner breaking out (design 58 §9c): Danger, a row each, a click goes to her.
+            for (int i = 0; i < pawns.Length && escaping > 0; i++)
+            {
+                PawnView pawn = pawns[i];
+                if (pawn.Custody != PawnCustody.Escaping) continue;
+                int dismissKey = AlertRow.ComputeDismissKey(PrisonerEscapeKey, pawn.Id, default);
+                if (_dismissed.Contains(dismissKey)) continue;
+                Rows.Add(new AlertRow(
+                    PrisonerEscapeKey,
+                    ColonistNames.Of(snapshot, pawn.Id),
+                    " is breaking out",
                     AlertSeverity.Danger,
                     count: 1,
                     pawn: pawn.Id));

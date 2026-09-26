@@ -514,6 +514,9 @@ namespace Odyssey.Presentation.Ui
             /// <summary>Whether the pickable row says what a bed is for, and a press toggles it (design 58 §11a).</summary>
             public bool IsBedPurpose;
 
+            /// <summary>Whether the pickable row is a prisoner's mode, and a press moves it on (design 58 §11b).</summary>
+            public bool IsPrisonMode;
+
             /// <summary>The tint last applied to the value, so a redraw does not restyle on every frame.</summary>
             public HudColour? LastTint;
 

@@ -421,7 +421,21 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A band of hostiles walks in from one edge, gathers, probes, and assaults (design 55).</summary>
         public const int Raid = 5;
 
-        public const int Count = 6;
+        // The prison's four (design 58), written down by the world and never fired, as theft is.
+
+        /// <summary>A prisoner was talked round and joined the colony (design 58 §8).</summary>
+        public const int Recruited = 6;
+
+        /// <summary>A prisoner broke out and got off the board (design 58 §9).</summary>
+        public const int PrisonerEscaped = 7;
+
+        /// <summary>A badly hurt raider gave up and walked to a cell (design 58 §10).</summary>
+        public const int Surrendered = 8;
+
+        /// <summary>A colonist was arrested (design 58 §10).</summary>
+        public const int Arrested = 9;
+
+        public const int Count = 10;
     }
 
     /// <summary>
