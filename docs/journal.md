@@ -14166,3 +14166,38 @@ the Assign tab's column holds it for every colonist at once.
 
 The owner played it the same day: *"it's great - happy to get this resolved and get it ready for a
 merge"*. Nothing moved, so Z for First Person and the 40 px tile stand.
+
+### 2026-09-26 — the highlights reel: designed, and why it replays rather than photographs
+
+The owner asked whether significant moments could be kept and watched later as a cinematic reel,
+part-way through a run and at its end, without costing the frame (design 63, interview
+`highlights-interview.md`, prior art `b-highlights-reel.md`).
+
+**The ground said this project is unusually well placed for real replays.** The simulation draws its
+randomness per (seed, tick, purpose), so a keyframe carries no RNG state. Every write is an intent.
+Resume is proven hash-exact by the combat gate's lockstep twin. And a keyframe already exists every
+game day in the autosave. What was missing is the thing ADR 0004 promised on day one and nobody
+built: an intent log, and the test that replays a world from it.
+
+**The prior art said the opposite about durability.** Every input-log replay found breaks on an
+update: Factorio disables it on purpose, Rocket League's broke in a 2025 patch, and StarCraft II only
+survives by downloading the old build. What survives is a *record*: RimWorld's tales and Dwarf
+Fortress's legends keep ids and write the text when it is shown. The recommendation was stills now
+and replays later. **The owner chose true replays**, and when told that builds here change several
+times a day, chose the **"then and now" card** as the fallback. That is the best-practice shape
+anyway: the chronicle is the durable base and the replay a same-build bonus.
+
+**Four things in the code changed the design before a line was written.**
+- A full state hash is about 10 ms on the played board since OQ-50, so a replay checks itself with
+  a light hash that skips the grid.
+- A load ticks the world once (`RefreshAfterLoad`), so the live colony is parked, never saved and
+  reloaded round a replay.
+- `DrainWhere`'s comment says no command comes through it, but paused orders have since 2026-09-17,
+  so the recorder hooks the handler rather than either drain.
+- The incident ledger is hashed, so the chronicle is a section of its own, saved and not hashed, and
+  no golden moves.
+
+**The keyframe is the daily autosave alone** until a measurement says otherwise. An extra save at the
+start of danger would put a new hitch at exactly the moment a hitch is least acceptable. HR0, a spike
+the owner plays through, measures whether a day of re-simulation is short enough and whether a real
+session replays to the same light hashes. **It is the next step and waits for approval.**
