@@ -217,9 +217,15 @@ namespace Odyssey.Sim.World
         /// one rule that decides what that means. Walking down from the top of the world, the
         /// first cell met that has a floor, is solid, holds an edifice or is impassable water is
         /// where the fall stops. A rooftop slab is such a cell and is walkable, so a drop lands
-        /// on the roof and never in the room under it. A wall's own cell, a tree's, deep water
-        /// and bare rock are met first and are not walkable, so the column is refused rather
-        /// than the load being put somewhere the rule did not say.</para>
+        /// on the roof and never in the room under it. A wall's own cell, deep water and bare
+        /// rock are met first and are not walkable, so the column is refused rather than the load
+        /// being put somewhere the rule did not say.</para>
+        ///
+        /// <para><b>A tree's cell is walkable and is returned.</b> This comment said otherwise until
+        /// 2026-09-25: a tree blocks nothing, so the fall stops on the ground at its foot and the
+        /// column answers the tree's own cell. Keeping the load <i>out</i> of that cell is not this
+        /// grid's rule — it cannot tell a tree from a wall by the handle alone — but
+        /// <c>ColonyItems.CellHasSpace</c>'s, which every caller asks next (design 23 §11).</para>
         ///
         /// <para>Not <see cref="NearestWalkableInColumn"/> from the top, which would search
         /// <em>past</em> a wall to the floor beside its foot and past deep water to the bed under

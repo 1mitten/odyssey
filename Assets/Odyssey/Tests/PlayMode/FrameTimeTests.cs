@@ -2807,7 +2807,7 @@ namespace Odyssey.Tests.PlayMode
 
         /// <summary>
         /// The scenery drawn from GPU buffers looks exactly as the scenery drawn chunk by chunk
-        /// (design 38 §22): tufts, tall-grass stands, flowers, ground cover and bushes, with their
+        /// (design 38 §27): tufts, tall-grass stands, flowers, ground cover and bushes, with their
         /// levels of detail and the distance thinning. Stilled and settled, at three framings — the
         /// start, 70 m and 140 m, where the far field thins and simplifies — and at noon and in the
         /// evening. At each, the chunk path is shot until two shots agree (the floor), then the
@@ -2941,7 +2941,7 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
-        /// What drawing the scenery from GPU buffers is worth (design 38 §22): the chunk path against
+        /// What drawing the scenery from GPU buffers is worth (design 38 §27): the chunk path against
         /// the indirect path, one world per board, on Standard and Huge, at the start zoom and pulled
         /// back to 140 m where the owner saw the drop, at the batch view (CPU-bound) and into a
         /// 3840 x 2160 target. Only differences inside the run are quoted. And the worst regather: a
@@ -4392,7 +4392,7 @@ namespace Odyssey.Tests.PlayMode
                 SkirtLayout.TreeFarDensity = SkirtLayout.DefaultTreeFarDensity;
                 SkirtLayout.FarTreeNearDensity = SkirtLayout.DefaultFarTreeNearDensity;
                 SkirtLayout.FarTreeFarDensity = SkirtLayout.DefaultFarTreeFarDensity;
-                boot.seeThroughToEveryColonist = true;
+                boot.seeThroughToEveryColonist = false; // the default since 2026-09-25 (design 38 §27)
                 if (cam != null) cam.targetTexture = previousTarget;
                 if (fourK != null) fourK.Release();
                 UnityEngine.Object.Destroy(root);
@@ -4492,7 +4492,7 @@ namespace Odyssey.Tests.PlayMode
                 }
                 finally
                 {
-                    boot.seeThroughToEveryColonist = true;
+                    boot.seeThroughToEveryColonist = false; // the default since 2026-09-25 (design 38 §27)
                 }
                 yield break;
             }

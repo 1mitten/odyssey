@@ -28,6 +28,9 @@ namespace Odyssey.Hud
     {
         public const string MissKey = "ui.combat.miss";
         public const string DodgeKey = "ui.combat.dodge";
+
+        /// <summary>The word over cover that took a bullet (design 53 §7e).</summary>
+        public const string CoverKey = "ui.combat.cover";
         public const string StunnedKey = "ui.combat.stunned";
         public const string DownedKey = "ui.status.downed";
         public const string DeadKey = "ui.combat.dead";
@@ -82,6 +85,7 @@ namespace Odyssey.Hud
             CombatEventKind.Hit => Damage(combatEvent.Amount),
             CombatEventKind.Miss => Registry.Label(MissKey),
             CombatEventKind.Dodge => Registry.Label(DodgeKey),
+            CombatEventKind.Covered => Registry.Label(CoverKey),
             CombatEventKind.Stun => Registry.Label(StunnedKey),
             CombatEventKind.Downed => Registry.Label(DownedKey),
             CombatEventKind.Died => Registry.Label(DeadKey),
@@ -100,6 +104,7 @@ namespace Odyssey.Hud
             CombatEventKind.Hit => HudTheme.Bad,
             CombatEventKind.Miss => HudTheme.TextMeta,
             CombatEventKind.Dodge => HudTheme.Info,
+            CombatEventKind.Covered => HudTheme.Info,
             CombatEventKind.Stun => HudTheme.Warn,
             CombatEventKind.Downed => HudTheme.Bad,
             CombatEventKind.Died => HudTheme.Bad,
@@ -117,6 +122,7 @@ namespace Odyssey.Hud
             CombatEventKind.Hit => 1.2f,
             CombatEventKind.Miss => 0.9f,
             CombatEventKind.Dodge => 0.9f,
+            CombatEventKind.Covered => 0.9f,
             CombatEventKind.Stun => 1.4f,
             CombatEventKind.Downed => 2.2f,
             CombatEventKind.Died => 2.2f,

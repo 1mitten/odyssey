@@ -86,8 +86,21 @@ namespace Odyssey.Presentation.Rendering
             if (!pawn.Moving)
             {
                 heading = Vector3.zero;
-                return GroundRelief.Lift(from) +
-                       Vector3.up * (BankLayout.RiseAt(world, pawn.Cell, from.x, from.z) +
+
+                // **Two people standing on one cell are never drawn at one point** (owner,
+                // 2026-09-25: "that should never happen in any scenario"; design 25 §10). The
+                // spread goes out as `steer`, so the live figure eases into it at SwayRate and
+                // the gait never sees it, exactly like the walking sidestep. Zero for a pawn
+                // alone on its cell, and then `stand` is `from` to the bit.
+                Vector3 stand = from;
+                if (otherPawns.Length > 1)
+                {
+                    steer = StandApart(in pawn, world, otherPawns, index);
+                    stand += steer;
+                }
+
+                return GroundRelief.Lift(stand) +
+                       Vector3.up * (BankLayout.RiseAt(world, pawn.Cell, stand.x, stand.z) +
                                      WaterLine.FloatRise(world, pawn.Cell));
             }
 
@@ -321,6 +334,144 @@ namespace Odyssey.Presentation.Rendering
                 ? pawn.MovePerMille * 0.1f + carried
                 : pawn.MovePercent + carried;
             return Mathf.Clamp(percent, 0f, 100f) * 0.01f;
+        }
+
+        /// <summary>
+        /// The closest two people standing on one cell are drawn, centre to centre, in metres:
+        /// about a shoulder's width and a little air, so two bodies do not pass through each
+        /// other. See design 25 §10.
+        /// </summary>
+        public const float StandApartSpacing = 0.7f;
+
+        /// <summary>
+        /// The furthest from its cell's centre a standing pawn is ever drawn by
+        /// <see cref="StandApart"/>, in metres. Half a cell is 1.25 m; this leaves a body's width
+        /// inside it, so a crowd on one cell never looks as if it is standing on the next.
+        /// </summary>
+        public const float StandApartMaxRadius = 0.95f;
+
+        /// <summary>
+        /// Where, relative to its cell's centre, a pawn that is standing still is drawn so that
+        /// nobody else standing on the same cell is drawn at the same point. Horizontal; zero for
+        /// a pawn alone on its cell, a pawn walking, or a pawn this rule leaves where it lies.
+        ///
+        /// <para><b>The rule</b> (design 25 §10). Everybody standing still on the cell — not
+        /// walking, not asleep, not downed and not carried, because those are laid out by a bed, a
+        /// fall or a pair of arms rather than by where they stand — is put on a ring round the
+        /// cell's centre, evenly spaced, in order of pawn id. The ring is sized so that neighbours
+        /// on it are <see cref="StandApartSpacing"/> apart, is kept clear of a trunk standing in
+        /// the cell by the same 0.6 m the walking sidestep gives one, and is capped at
+        /// <see cref="StandApartMaxRadius"/>.</para>
+        ///
+        /// <para><b>Stable.</b> Every input is the snapshot's, so the answer is the same every
+        /// frame until somebody arrives or leaves, and it does not depend on the order of the
+        /// span. The lowest id always takes the first slot, so a newcomer never moves her round
+        /// the ring — only out a little as the ring widens. Where the ring starts is the lowest
+        /// id's too: across the direction she is facing her work or her fire, so two colonists on
+        /// one cell sit side by side facing it rather than one behind the other, and otherwise a
+        /// bearing fixed by the cell. When the set does change, the live figure eases into its new
+        /// place at <c>PawnFigureDirector.SwayRate</c>, because this goes out as the steer.</para>
+        ///
+        /// <para><b>Bounded</b> (P12): with an index rebuilt from this span it visits one bucket,
+        /// <see cref="PawnCrowdIndex.Here"/>, because every pawn standing on one cell has exactly
+        /// the same cached position. Without one it is the linear scan the sidestep falls back to.</para>
+        /// </summary>
+        public static Vector3 StandApart(in PawnView pawn, WorldRenderModel? world,
+            ReadOnlySpan<PawnView> otherPawns, PawnCrowdIndex? index)
+        {
+            if (!StandsApart(in pawn)) return Vector3.zero;
+
+            int count = 0;
+            int rank = 0;
+            bool sawSelf = false;
+            PawnView anchor = pawn;
+
+            bool usable = index != null && index.Count == otherPawns.Length &&
+                          PawnCrowdIndex.Mode == CrowdScan.Bucketed;
+            if (usable)
+            {
+                foreach (int i in index!.Here(CellMetrics.FloorCentre(pawn.Cell)))
+                    Tally(in otherPawns[i], in pawn, ref count, ref rank, ref sawSelf, ref anchor);
+            }
+            else
+            {
+                for (int i = 0; i < otherPawns.Length; i++)
+                    Tally(in otherPawns[i], in pawn, ref count, ref rank, ref sawSelf, ref anchor);
+            }
+
+            // A caller may pose a pawn against a span it is not in; it still stands on its cell.
+            if (!sawSelf) count++;
+            if (count < 2) return Vector3.zero;
+
+            bool trunk = world != null && world.HasObstacle(pawn.Cell);
+            float radius = StandApartRadius(count, trunk);
+            float angle = RingStart(in anchor) + rank * (2f * Mathf.PI / count);
+            return new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle)) * radius;
+        }
+
+        /// <summary>
+        /// Whether a pawn takes a place on the ring: standing still and on its feet. A sleeper,
+        /// the downed and the carried are placed by a bed, the ground they fell on or the arms
+        /// that hold them (<c>PawnFigureDirector.AimSleep</c> lays a body from the cell centre
+        /// whatever this says), so they neither move nor count.
+        /// </summary>
+        static bool StandsApart(in PawnView pawn) =>
+            !pawn.Moving && !pawn.Asleep && !pawn.IsDowned && !pawn.IsCarried;
+
+        /// <summary>One pawn of the span, counted if it stands on the same cell.</summary>
+        static void Tally(in PawnView other, in PawnView self, ref int count, ref int rank,
+            ref bool sawSelf, ref PawnView anchor)
+        {
+            if (other.Cell != self.Cell || !StandsApart(in other)) return;
+            if (other.Id == self.Id)
+            {
+                // Once, however many times the span repeats it.
+                if (sawSelf) return;
+                sawSelf = true;
+            }
+            count++;
+            if (other.Id.Value < self.Id.Value) rank++;
+            if (other.Id.Value < anchor.Id.Value) anchor = other;
+        }
+
+        /// <summary>
+        /// How far from the centre the ring is, for <paramref name="count"/> people: neighbours a
+        /// chord of <see cref="StandApartSpacing"/> apart, out of a trunk's way, and inside the cell.
+        /// Two people stand 0.35 m either side of the centre; six are 0.7 m out.
+        /// </summary>
+        public static float StandApartRadius(int count, bool trunkInCell)
+        {
+            if (count < 2) return 0f;
+            float radius = StandApartSpacing * 0.5f / Mathf.Sin(Mathf.PI / count);
+            if (trunkInCell) radius = Mathf.Max(radius, SteeringCurve.MaxLateralOffset);
+            return Mathf.Min(radius, StandApartMaxRadius);
+        }
+
+        /// <summary>
+        /// The bearing of the ring's first place, in radians, as a yaw (x = sin, z = cos) — decided
+        /// by the lowest id on the cell so that everybody on it agrees. Across her work or her
+        /// fire when she has one in another cell, so the ring's first pair stands abreast of it;
+        /// otherwise a bearing hashed from the cell, so a crowd of pairs does not all line up
+        /// east to west.
+        /// </summary>
+        static float RingStart(in PawnView anchor)
+        {
+            if (anchor.Working || anchor.Seated)
+            {
+                int dx = anchor.WorkCell.X - anchor.Cell.X;
+                int dz = anchor.WorkCell.Z - anchor.Cell.Z;
+                if (dx != 0 || dz != 0) return Mathf.Atan2(dx, dz) + 0.5f * Mathf.PI;
+            }
+
+            unchecked
+            {
+                uint h = (uint)anchor.Cell.X * 73856093u ^ (uint)anchor.Cell.Z * 19349663u ^
+                         (uint)anchor.Cell.Y * 83492791u;
+                h ^= h >> 15;
+                h *= 2246822519u;
+                h ^= h >> 13;
+                return (h & 0xFFFF) * (2f * Mathf.PI / 65536f);
+            }
         }
 
         /// <summary>

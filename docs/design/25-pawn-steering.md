@@ -408,3 +408,60 @@ binds"). What it buys is that the ceiling is no longer where it was.
   a person at the keyboard can answer them.
 - **The second quadratic found on the way is reported, not fixed** — the aspect scan behind
   `Cast.LookFor`, §9d. It is now the largest per-frame quadratic left.
+
+## 10. Standing apart on one cell (2026-09-25)
+
+**The report** (owner, confirmed): *"Colonists stand around the campfire in the same tile ... Don't
+have them exactly over each other — that should never happen in any scenario."* The simulation lets
+pawns share a cell, and everything in §1–§9 runs only for a pawn that is walking: `PawnPose.Of`
+returned a standing pawn's cell centre before any steering was asked for, so every pawn standing on
+one cell was drawn at one point. A sim-side change now makes colonists prefer distinct cells; this
+is the drawing's half, and it holds whatever the simulation does.
+
+**The rule** — `PawnPose.StandApart`, handed back as the steer:
+
+- **Who takes a place:** a pawn that is not walking, not asleep, not downed and not carried — idle,
+  waiting, working, seated, of any kind. A sleeper, the downed and the carried are laid by a bed,
+  the ground they fell on or the arms that hold them (`AimSleep` lays a body from the cell centre
+  whatever the pose says), so they neither move nor count.
+- **Alone on the cell, nothing moves** — not approximately; the pose is `from` to the bit, and
+  `StandApartTests.APawnAloneOnItsCellIsDrawnExactlyWhereItWas` compares it exactly.
+- **Two or more:** a ring round the cell centre, evenly spaced, in order of pawn id. Its radius
+  makes neighbours `StandApartSpacing` (0.7 m) apart — 0.35 m either side of the centre for two,
+  0.40 for three, 0.70 for six — never less than the walking sidestep's 0.6 m where a trunk stands
+  in the cell (`world.HasObstacle`, the same test), and never more than `StandApartMaxRadius`
+  (0.95 m), so a crowd never looks as if it is on the next cell. At the cap the spacing shrinks
+  but no two points coincide.
+- **Where the ring starts** belongs to the lowest id: across the direction of her work or her fire
+  when it is in another cell, so two colonists at one campfire sit abreast of it, both facing it,
+  rather than one behind the other; otherwise a bearing hashed from the cell, so a field of pairs
+  does not all line up east to west.
+
+**Stable.** Every input is in the snapshot and the order of the span does not matter
+(`TheSpreadIsTheSameEveryFrameInAnyOrderAndAnyScan`). The lowest id always holds the first place, so
+an arrival never turns her round the ring, only out a little as it widens
+(`AnArrivalDoesNotTurnTheFirstPlaceRoundTheRing`); the others may take new places, and the live
+figure **eases** to them at `SwayRate` because this goes out as the steer, which is also why the
+gait never sees it (§4, §5). The far form (the baked crowd past the figure cap) has no ease and
+moves at once when somebody arrives or leaves — a few tenths of a metre, a long way off.
+
+**Bounded** (P12). A standing pawn's cached position in `PawnCrowdIndex` is its cell's
+`FloorCentre`, identical to the bit for everybody on that cell, so they all share one bucket:
+`PawnCrowdIndex.Here` visits that bucket alone — one probe where `Near` makes twenty-seven — and
+the check on the cell does the rest. Without an index it falls back to the linear scan, like the
+sidestep, and all three `CrowdScan` arms give the identical answer
+(`PawnCrowdIndexTests.EveryScanModeDrawsTheIdenticalPose` now exercises it too, since its crowd
+puts standing pawns on shared cells).
+
+**Left for later, recorded:**
+
+- **Callers that pose a pawn without the span** get no spread: `OdysseyBootstrap.FeetOf` (where the
+  grass is pressed flat), the ring and bracket fallbacks at lines ~3089–3457, and
+  `SelectionPresenter.ScreenPointOf`. Each prefers the live figure's own feet where there is one, so
+  this shows only for a colonist past the figure cap — her ring and her pressed grass sit at the
+  cell centre while she is drawn up to 0.95 m off it. The fix is to pass `snapshot.Pawns` and the
+  shared `Crowd` index, which is outside this unit's files.
+- **Two colonists working one target from one cell** start apart, but `WorkStance.StandAt` steps
+  each towards the work along the line from where she stands, and two lines from 0.7 m apart to
+  one trunk converge: at full work weight they end perhaps 0.15 m apart. Rare once the simulation
+  prefers distinct cells; the fix would be in `WorkStance`, keeping the lateral part of the spread.

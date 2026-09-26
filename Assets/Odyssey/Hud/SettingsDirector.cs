@@ -67,6 +67,15 @@ namespace Odyssey.Hud
         /// like everything else here.</para>
         /// </summary>
         WallsDown,
+
+        /// <summary>
+        /// Trees fade for every colonist on screen, not only the selected ones (design 38 §19,
+        /// §27). <b>Off by default</b> (owner, 2026-09-25): on, the trees cleared round the colony
+        /// with nothing selected at all, which read as the woods thinning rather than as the
+        /// camera helping. Off, only a selected colonist's line fades anything. Subordinate to
+        /// <see cref="SeeThrough"/>: with that off, nothing fades for anyone.
+        /// </summary>
+        FadeForEveryColonist,
     }
 
     /// <summary>
@@ -406,6 +415,9 @@ namespace Odyssey.Hud
         /// is labelled with as well as the settings row (design 42 §7).</summary>
         public const string WallsDownKey = "ui.settings.wallsdown";
 
+        /// <summary>The registry key naming the trees-fade-for-everyone option (2026-09-25).</summary>
+        public const string FadeForEveryColonistKey = "ui.settings.seethroughall";
+
         static readonly GraphicsOption[] Order =
         {
             GraphicsOption.Shadows,
@@ -413,6 +425,7 @@ namespace Odyssey.Hud
             GraphicsOption.Surround,
             GraphicsOption.GroundRelief,
             GraphicsOption.SeeThrough,
+            GraphicsOption.FadeForEveryColonist,
             GraphicsOption.CutAwayCeiling,
             GraphicsOption.WallsDown,
         };
@@ -440,6 +453,7 @@ namespace Odyssey.Hud
             "ui.settings.seethrough",
             "ui.settings.cutaway",
             WallsDownKey,
+            FadeForEveryColonistKey,
             "ui.settings.volume.master",
             "ui.settings.volume.music",
             "ui.settings.volume.ambience",
@@ -1013,7 +1027,8 @@ namespace Odyssey.Hud
         /// the floor a player has just built is the surprise it was reported as.</para>
         /// </summary>
         public static bool DefaultOn(GraphicsOption option) =>
-            option != GraphicsOption.CutAwayCeiling && option != GraphicsOption.FoliageShadows;
+            option != GraphicsOption.CutAwayCeiling && option != GraphicsOption.FoliageShadows
+            && option != GraphicsOption.FadeForEveryColonist;
 
         /// <summary>The options, in the order they are drawn.</summary>
         public static IReadOnlyList<GraphicsOption> All => Order;
@@ -1146,6 +1161,7 @@ namespace Odyssey.Hud
             GraphicsOption.CutAwayCeiling => "ui.settings.cutaway",
             GraphicsOption.FoliageShadows => "ui.settings.foliageshadows",
             GraphicsOption.WallsDown => WallsDownKey,
+            GraphicsOption.FadeForEveryColonist => FadeForEveryColonistKey,
             _ => "ui.settings.panel",
         };
 

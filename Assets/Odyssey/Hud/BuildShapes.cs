@@ -19,9 +19,9 @@ namespace Odyssey.Hud
         /// <summary>
         /// Cells the thing occupies, in a line along its facing. Parallel to
         /// <see cref="BuildingHandle"/>: nothing, wall, floor, deck plate, ladder, bed, door,
-        /// shelf, campfire, conduit, generator, heater, galley.
+        /// shelf, campfire, conduit, generator, heater, galley, sandbags.
         /// </summary>
-        public static readonly int[] Cells = { 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1 };
+        public static readonly int[] Cells = { 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1 };
 
         /// <summary>
         /// Whether the ghost may be turned with the rotate key before placing. Parallel to
@@ -36,22 +36,23 @@ namespace Odyssey.Hud
         /// test still green. <c>BuildShapesAgreeWithTheDefs</c> now walks both tables rather than
         /// spot-checking two rows, which is what would have caught it.</para>
         /// </summary>
-        public static readonly bool[] Rotates = { false, false, false, false, true, true, true, true, false, false, true, true, true };
+        public static readonly bool[] Rotates = { false, false, false, false, true, true, true, true, false, false, true, true, true, false };
 
         /// <summary>
         /// Whether a drag places a <b>line</b> and never widens into a box. Parallel to
-        /// <see cref="BuildingHandle"/>; true for the conduit alone (design 32 §10). A wall drag
-        /// widens after three cells across because a room is a box; a power run is a path, and a
-        /// box of lines is a slab of copper nobody asked for.
+        /// <see cref="BuildingHandle"/>; true for the conduit (design 32 §10) and for cover (design
+        /// 50 §4). A wall drag widens after three cells across because a room is a box; a power run
+        /// is a path, and a box of lines is a slab of copper nobody asked for — as a box of sandbags
+        /// would be a pile of them. A line of cover is drawn joined, piece to piece.
         /// </summary>
-        public static readonly bool[] LineOnly = { false, false, false, false, false, false, false, false, false, true, false, false, false };
+        public static readonly bool[] LineOnly = { false, false, false, false, false, false, false, false, false, true, false, false, false, true };
 
         /// <summary>
         /// Whether arming this is power work, so the hidden lines are shown while it is armed
         /// (design 32 §9, decision 5). Parallel to <see cref="BuildingHandle"/>: the conduit, the
         /// generator, the heater, and the galley (design 48), which is placed where a line can reach it.
         /// </summary>
-        public static readonly bool[] Power = { false, false, false, false, false, false, false, false, false, true, true, true, true };
+        public static readonly bool[] Power = { false, false, false, false, false, false, false, false, false, true, true, true, true, false };
 
         public static int CellsOf(int building) =>
             (uint)building < (uint)Cells.Length ? Cells[building] : 1;

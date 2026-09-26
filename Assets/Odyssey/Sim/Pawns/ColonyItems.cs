@@ -493,7 +493,30 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Is this cell empty? The question a bed, a spawn or a footprint asks.</summary>
         public bool CellHasSpace(int cell) =>
-            !_itemAtCell.ContainsKey(cell) && !_noItems.Contains(cell);
+            !_itemAtCell.ContainsKey(cell) && !_noItems.Contains(cell) && !TreeAt(cell);
+
+        /// <summary>
+        /// Where the trees are, for <see cref="TreeAt"/>: the grid of standing orders, which holds
+        /// the placed-edifice list and so is the one thing that can say a handle is a tree. Set by
+        /// <see cref="PawnContext.Designations"/>; null in a bare fixture, which has no trees.
+        /// </summary>
+        public Designations.DesignationGrid? Trees { get; set; }
+
+        /// <summary>
+        /// Nothing is put down in a cell a tree stands in (owner, 2026-09-25: *"drops and spawned
+        /// items shouldn't land exactly at a tree's trunk — around it or the next tile"*).
+        ///
+        /// <para><b>Here, inside the space test, so it has one owner.</b> Every way a thing comes
+        /// to rest on the ground — a supply drop, a debug grant, felled wood, a deconstruct
+        /// refund, a mined block, a load falling through a hole, a haul set down on open ground,
+        /// a stockpile destination — asks <see cref="CellHasSpace(int, int, int)"/>, most of them
+        /// through <see cref="NearestCellWithSpace"/>, whose ring search then finds the tile
+        /// beside the trunk. A rule at each caller would be a dozen copies and the thirteenth
+        /// caller would forget it. It is live rather than a set kept beside
+        /// <see cref="_noItems"/>, because a tree comes down by more roads than a bed does and a
+        /// cached copy would have to hear about every one. Design 23 §11.</para>
+        /// </summary>
+        public bool TreeAt(int cell) => Trees != null && Trees.IsTree(cell);
 
         /// <summary>
         /// Cells that hold furniture nothing may be put down in — both cells of every bed.
@@ -534,8 +557,8 @@ namespace Odyssey.Sim.Pawns
         /// stack of anything else, is not space.
         /// </summary>
         public bool CellHasSpace(int cell, int defIndex, int count) =>
-            !_noItems.Contains(cell)
-            && (!_itemAtCell.TryGetValue(cell, out int index) || Fits(_items[index], defIndex, count));
+            !_noItems.Contains(cell) && !TreeAt(cell)
+            &&(!_itemAtCell.TryGetValue(cell, out int index) || Fits(_items[index], defIndex, count));
 
         bool Fits(ColonyItem resident, int defIndex, int count) =>
             resident.DefIndex == defIndex && resident.Stack + count <= Content.Items[defIndex].stackLimit;

@@ -787,3 +787,59 @@ was re-taken from a freshly loaded pack, since `radiantC` here and `maxHitPoints
 
 **No golden moved.** The Sim tier passes on main's re-baked goldens with this line's radiance, fireside
 and seats in: every golden board is fireless.
+
+## 20. Nobody stands on anybody — 2026-09-25
+
+Owner: *"Colonists stand around the campfire in the same tile … first separate tiles. Don't have
+them exactly over each other — that should never happen in any scenario."* (The drawing's nudge
+for two figures that do meet is presentation work and a separate change; this is the simulation's
+half — who chooses which cell.)
+
+**The fault.** `FiresideTarget.Find(reserve: false)` asked nothing about other pawns. Two idlers
+who thought on the same tick got the same nearest ring cell, and an idler arriving later was sent
+to a cell somebody already stood on; the one-in-eight shuffle could send her on to a third
+person's cell. Reservations did not help, deliberately — an idler reserves nothing (§17b).
+
+**One rule, `PawnRegistry.IsClaimedByOther(me, cell)`.** A cell is held by another pawn that
+stands or lies in it, is finishing a step into it, has it as its path's destination, or has it as
+the target of a wander, a sleep or a move order. The last clause is what separates two idlers on
+the same tick: a job handed out this tick has not asked for its path yet, so its destination is
+still −1 while its target already names the cell. A carried patient and the dead hold nothing.
+It generalises the drafted squad's private `Taken` (design 33 §8c), which is left alone because it
+also asks the fight's `Melee.Holds`.
+
+**The fireside uses it for everyone** — idler, shuffler and bedless sleeper:
+
+- A ring cell somebody holds is not offered. A colonist who finds somebody else in her own ring
+  cell is not "already there" and moves on; the one who has not thought yet keeps the cell.
+- **Two rings, not one.** When all eight beside the fire are held she stands in the ring behind it
+  (`FiresideTarget.Rings` = 2, sixteen more cells), and only the first ring sits (`FireBeside`
+  names no fire from the second). Chosen over *waiting* because a waiting idler stands wherever
+  she happens to be, which is exactly the loitering this line was built to stop, and over
+  *sharing* because the owner said never.
+- When both rings are full there is no fireside: she wanders, or lies down on the ground, exactly
+  as on a fireless board. Twenty-four round one fire before that happens.
+- A tree in the ring is never offered either (design 20 §14).
+
+**The wander asks it too.** `WanderTarget.Fill` — the idler's, the mental break's and the
+animals' leg — skips a draw somebody else holds, as the last of its tests; a held draw is simply
+one of its eight attempts. That is the cheap shared rule the report asked for: every "go and stand
+there" choice in the idle mind now refuses a held cell.
+
+**Cost.** `IsClaimedByOther` is one pass over the pawns, asked per candidate by a chooser that runs
+when a stay *starts* — a settle lasts 240–958 ticks, a wander leg its walk — never per tick. It is
+asked last in every chooser, so only a candidate that would otherwise win pays for it: at most the
+eight wander draws, the forty-eight cells of a lie-down search, or the fireside rings of each fire
+— O(pawns) per think, never O(pawns²) per think.
+
+**Tests.** `FiresideTests.SixIdlersAtAFireStandInSixDifferentCells` and
+`ACrowdLargerThanTheRingStandsBehindItAndNobodyShares` watch 6,000 ticks of six and twelve idlers
+and count cells held by two stationary pawns; `ARingCellSomebodyHoldsIsNotOffered` pins the rule
+one decision at a time. **Negative control, measured:** with the claim test switched off all
+three fail — shared cells within the run, and the rule's own assertion.
+
+**Goldens.** Every golden board is fireless (§19), so the fireside moved nothing; the wander did.
+The played board and the city moved `Simulated` only, and `GoldenColonyProbe` against the base
+differs in exactly three numbers — where everybody stands, the progress into their steps, and one
+more wander leg on each (99 → 100, 74 → 75). Items, food, rest, mood, experience and failed jobs
+are identical to the digit. The bare meadow did not move.
