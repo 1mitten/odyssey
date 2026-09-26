@@ -292,6 +292,27 @@ The catalogue was rebuilt with `RebuildCatalogue` and `CharacterSwatches.Classif
 the two new rows were lifted into the committed asset. The diff is 128 lines added and none
 removed.
 
+### 8b. What the PlayMode test and the first photographs found (2026-09-26)
+
+`ButcherSpawnTests` found **three faults, each invisible to every tier before it**:
+- **The cleaver was never drawn.** `SwapWeapon` returned for any negative weapon def, and the
+  natural weapon is −2.
+- **The box measured eleven giants.** The Fantasy Rivals prefab carries all eleven of its giants as
+  inactive siblings, and a figure gathers skins including inactive ones (a bandit's vest needs
+  that), so the butcher was measured 6.2 × 4.1 m. A body in its own paint now drops them at
+  `Create`.
+- **The box was in the wrong frame.** It was read in the figure's own frame, which at scale 2 is
+  not metres. It is now the baked 3.60 m, by a square of the narrower side (1.85 m), and the test
+  holds it between 3.3 and 4.0 m tall and under 3 m across.
+
+`TheButcherInAFightPhotographed` (explicit, `Logs/look/`) shot the wind-up and a fling at the play
+camera; `docs/reference/screenshots/2026-09-26-butcher-windup.png` is the first.
+- The butcher reads as huge beside three colonists, its bar over its head.
+- The three plates lie in front of it, under the colonists it is about to strike.
+- **At 42 per cent the telegraph read brown**, because red over the meadow is brown. It is now 68
+  per cent, and reads the orange-red the draft's own marks read in this light.
+- **The fling does not show in a still.** Whether it reads as a throw is the first play's question.
+
 ## 9. Content and the registry
 
 New keys in `icon-keys.csv`, none with art, so they fall through to a generated placeholder as
