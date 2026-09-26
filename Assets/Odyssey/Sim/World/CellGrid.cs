@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Sim.World
@@ -50,7 +51,14 @@ namespace Odyssey.Sim.World
             Support = new byte[count];
             Flags = new CellFlags[count];
             for (int i = 0; i < count; i++) Edifice[i] = -1;
+            Footprint = new ColonyFootprint(size);
         }
+
+        /// <summary>
+        /// Which layers something the colony placed has changed on (design 43 §3a). Held here so
+        /// that every writer that already holds the grid can say so; read by the home area.
+        /// </summary>
+        public ColonyFootprint Footprint { get; }
 
         public int Index(int x, int z, int y) => Size.Index(x, z, y);
         public int Index(CellRef cell) => Size.Index(cell);
@@ -93,15 +101,19 @@ namespace Odyssey.Sim.World
 
         /// <summary>
         /// Take whatever stands in the cell out of the world: the handle goes, and so does the
-        /// blocking flag. The placement list keeps its slot, so other handles stay valid. A caller
-        /// removing something that blocked must mark navigation dirty itself; a tree blocks
-        /// nothing, so felling one changes no path.
+        /// blocking flag, and the undergrowth flag a bush carries. The placement list keeps its
+        /// slot, so other handles stay valid. A caller removing something that blocked, or a bush,
+        /// must mark navigation dirty itself; a tree blocks nothing, so felling one changes no
+        /// path, but a cleared bush changes what its cell costs to cross.
         /// </summary>
         public void RemoveEdifice(int index)
         {
             Edifice[index] = -1;
-            Flags[index] &= ~CellFlags.BlockingEdifice;
+            Flags[index] &= ~(CellFlags.BlockingEdifice | CellFlags.Undergrowth);
         }
+
+        /// <summary>Is there a bush in this cell? See <see cref="CellFlags.Undergrowth"/>.</summary>
+        public bool IsUndergrowth(int index) => (Flags[index] & CellFlags.Undergrowth) != 0;
 
         /// <summary>Terrain a pawn can neither stand in nor stand on top of. Deep water.</summary>
         public bool IsImpassableTerrain(int index) =>
@@ -186,7 +198,11 @@ namespace Odyssey.Sim.World
             return at;
         }
 
-        /// <summary>Is this cell covered? A slab one layer up is what makes it roofed.</summary>
+        /// <summary>
+        /// Is this cell covered? A slab one layer up is what makes it roofed. <b>Not the rain's
+        /// rule</b>: a roof two storeys up or an overhang of rock is cover this cannot see. Whether
+        /// the sky reaches a cell is <see cref="SkyColumns.ShelteredFromSky"/> (design 43 §6).
+        /// </summary>
         public bool IsRoofed(int index)
         {
             int above = index + Size.LayerStride;
@@ -201,9 +217,15 @@ namespace Odyssey.Sim.World
         /// one rule that decides what that means. Walking down from the top of the world, the
         /// first cell met that has a floor, is solid, holds an edifice or is impassable water is
         /// where the fall stops. A rooftop slab is such a cell and is walkable, so a drop lands
-        /// on the roof and never in the room under it. A wall's own cell, a tree's, deep water
-        /// and bare rock are met first and are not walkable, so the column is refused rather
-        /// than the load being put somewhere the rule did not say.</para>
+        /// on the roof and never in the room under it. A wall's own cell, deep water and bare
+        /// rock are met first and are not walkable, so the column is refused rather than the load
+        /// being put somewhere the rule did not say.</para>
+        ///
+        /// <para><b>A tree's cell is walkable and is returned.</b> This comment said otherwise until
+        /// 2026-09-25: a tree blocks nothing, so the fall stops on the ground at its foot and the
+        /// column answers the tree's own cell. Keeping the load <i>out</i> of that cell is not this
+        /// grid's rule — it cannot tell a tree from a wall by the handle alone — but
+        /// <c>ColonyItems.CellHasSpace</c>'s, which every caller asks next (design 23 §11).</para>
         ///
         /// <para>Not <see cref="NearestWalkableInColumn"/> from the top, which would search
         /// <em>past</em> a wall to the floor beside its foot and past deep water to the bed under
@@ -308,6 +330,14 @@ namespace Odyssey.Sim.World
         /// Deep water landed first and keeps the bit it shipped with; this one moves.</para>
         /// </summary>
         Discovered = 1 << 6,
+
+        /// <summary>
+        /// A bush stands in this cell (design 45 §4). What navigation prices a cell by, since the
+        /// grid holds an edifice's handle and not its kind: <c>NavGrid.ClassAt</c> reads this and
+        /// charges <c>NaturalContent.CostClassBush</c>. Set where a bush is placed, taken away by
+        /// <see cref="CellGrid.RemoveEdifice"/> with the bush, and saved and hashed with the rest.
+        /// </summary>
+        Undergrowth = 1 << 7,
     }
 
     /// <summary>
@@ -331,6 +361,7 @@ namespace Odyssey.Sim.World
             ChunksZ = (size.SizeZ + ChunkSize - 1) / ChunkSize;
             Count = ChunksX * ChunksZ * size.SizeY;
             _dirty = new bool[Count];
+            _columnEdited = new bool[size.LayerStride];
         }
 
         public GridSize Size { get; }
@@ -343,9 +374,43 @@ namespace Odyssey.Sim.World
 
         public int ChunkIndexOfCell(CellRef cell) => ChunkIndexOfCell(cell.X, cell.Z, cell.Y);
 
-        public void MarkDirty(int x, int z, int y) => _dirty[ChunkIndexOfCell(x, z, y)] = true;
+        public void MarkDirty(int x, int z, int y)
+        {
+            _dirty[ChunkIndexOfCell(x, z, y)] = true;
+
+            int column = z * Size.SizeX + x;
+            if (_columnEdited[column]) return;
+            _columnEdited[column] = true;
+            _editedColumns.Add(column);
+        }
 
         public void MarkDirty(CellRef cell) => MarkDirty(cell.X, cell.Z, cell.Y);
+
+        // The columns an edit touched, for the sky map (design 43 §6). Every edit path already
+        // tells this grid which cell changed so the drawing re-meshes it; the sky map hears the
+        // same notice, at column rather than chunk grain, so the two cannot be fresh about
+        // different edits. Kept apart from the chunk flags because the renderer clears those on
+        // its own schedule, and a headless world has no renderer to clear them at all.
+        readonly bool[] _columnEdited;
+        readonly List<int> _editedColumns = new List<int>();
+
+        /// <summary>Has any cell been edited since the last <see cref="TakeEditedColumns"/>?</summary>
+        public bool HasEditedColumns => _editedColumns.Count > 0;
+
+        /// <summary>
+        /// Every column edited since the last call, each once, in the order first touched, added
+        /// to <paramref name="into"/>; then forget them. One reader: the sky map.
+        /// </summary>
+        public void TakeEditedColumns(List<int> into)
+        {
+            for (int i = 0; i < _editedColumns.Count; i++)
+            {
+                int column = _editedColumns[i];
+                _columnEdited[column] = false;
+                into.Add(column);
+            }
+            _editedColumns.Clear();
+        }
 
         public bool IsDirty(int chunkIndex) => _dirty[chunkIndex];
 

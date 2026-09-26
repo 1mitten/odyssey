@@ -134,6 +134,82 @@ namespace Odyssey.Presentation.CameraRig
         public bool suppressActiveCeiling;
 
         /// <summary>
+        /// Walls are drawn as stumps and the built storeys above the slice are hidden, this frame
+        /// (design 42).
+        ///
+        /// <para><b>Written once a frame by the composition root and by nothing else</b>, from
+        /// <c>Odyssey.Hud.WallsView.Lowered</c> — the player's choice with build mode taken out of
+        /// it. It is the answer rather than the choice, so nothing downstream ever works out build
+        /// mode for itself: the renderer, the picker, the order marks, the door leaves and every
+        /// actor pass ask the three questions below and agree by construction (P1).</para>
+        ///
+        /// <para>Not serialised: it is the state of this frame, not a setting of the scene. The
+        /// choice itself is kept by the settings store.</para>
+        /// </summary>
+        [NonSerialized] public bool wallsLowered;
+
+        /// <summary>
+        /// The player's <b>Walls down</b> choice, before build mode takes it out — what decides
+        /// where the ground is (<see cref="BelowSurface"/>), where <see cref="wallsLowered"/>
+        /// decides only what is drawn.
+        ///
+        /// <para><b>Two fields because they are two questions</b> (owner, 2026-09-25). Building
+        /// raises the walls so a player can see what they are building; it was never meant to
+        /// turn a lower terrace back into a tunnel. While the surface followed
+        /// <see cref="wallsLowered"/>, opening the palette on a lower terrace x-rayed the
+        /// terrace above and made everything on it unclickable — reported as a campfire one
+        /// terrace up that "did nothing" when clicked, and measured by
+        /// <c>CampfirePickTests</c>. A player who turns Walls down off keeps the tunnel view the
+        /// owner chose for walls up (design 42 §3a).</para>
+        ///
+        /// <para>Written once a frame by the composition root beside the other two, and not
+        /// serialised, for the same reasons.</para>
+        /// </summary>
+        [NonSerialized] public bool landscapeGround;
+
+        /// <summary>
+        /// The layer of the topmost rock in the lowest column of the generated landscape —
+        /// <c>WorldRenderModel.LowestOutdoorLayer</c>, handed over once a frame by the composition
+        /// root with <see cref="wallsLowered"/>, or -1 before there is a world.
+        ///
+        /// <para>It is what lets walls-down tell a lower terrace from a tunnel (design 42 §3a).
+        /// <see cref="surfaceLayer"/> is the one layer the colony opened on, and the terraced ground
+        /// runs several layers below it — on the played board the colony opens on L12 and the
+        /// lowest terrace's rock tops out at L8, so its ground is walked on L9 (measured,
+        /// <c>LandscapeBandTests.WithTheWallsDownEveryTerraceIsAboveGround</c>). A player standing
+        /// on real ground at L10 was "underground" and got the one-layer x-ray, the see-through
+        /// building the owner reported on 2026-09-24.</para>
+        /// </summary>
+        [NonSerialized] public int landscapeFloor = -1;
+
+        /// <summary>
+        /// Are walls, doors and pillars drawn as stumps on this layer? On every layer that is drawn
+        /// while the walls are down (owner, 2026-09-24): a house standing on a terrace above the
+        /// slice shows its plan in stumps exactly as the one on the slice does.
+        /// </summary>
+        public bool LowersWallsOn(int activeLayer, int layer) => wallsLowered;
+
+        /// <summary>
+        /// Is what is <em>stacked</em> on this layer hidden — an upper storey, and whatever stands
+        /// on one? Above the slice, and only where the layers above are drawn solid (design 42 §3).
+        /// A building standing on the ground of a higher terrace is not stacked and stays. Truly
+        /// underground the one layer above is still an x-ray, a ghost nobody can click, and it is
+        /// left as it is.
+        /// </summary>
+        public bool HidesStackedOn(int activeLayer, int layer) =>
+            wallsLowered && layer > activeLayer && !GhostsAbove(activeLayer);
+
+        /// <summary>
+        /// Is something standing in this cell hidden with the storey it stands on? A colonist on
+        /// the upper floor of a house goes with it; one on the ground floor of a house up on a
+        /// terrace, or on a hilltop, stays (design 42 §5). The one question every actor pass asks.
+        /// </summary>
+        public bool HidesStandingAt(int activeLayer, Odyssey.Sim.Contracts.CellRef cell,
+            Odyssey.Presentation.World.WorldRenderModel? model) =>
+            model != null && HidesStackedOn(activeLayer, cell.Y)
+            && model.Size.Contains(cell.X, cell.Z, cell.Y) && model.IsStackedAt(model.Size.Index(cell));
+
+        /// <summary>
         /// Below the opacity at which a ghosted layer is not drawn at all.
         ///
         /// <para>It lived as a literal in <c>ChunkRenderer</c>'s loop. It is named here because
@@ -143,8 +219,18 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         public const float MinVisibleAlpha = 0.012f;
 
-        /// <summary>Is the slice underground — below the layer the game opens at?</summary>
-        public bool BelowSurface(int activeLayer) => followDepth && activeLayer < surfaceLayer;
+        /// <summary>
+        /// Is the slice underground — below the layer the game opens at? With Walls down chosen
+        /// (<see cref="landscapeGround"/>), below every piece of ground instead, whether or not
+        /// build mode has raised the walls: a lower terrace is ground, not a tunnel (design 42
+        /// §3a). Only a slice beneath the whole landscape keeps the x-ray, because there solid
+        /// rock drawn overhead would bury the working the player went down to see.
+        /// </summary>
+        public bool BelowSurface(int activeLayer) => followDepth && activeLayer < SurfaceFor();
+
+        /// <summary>The layer at and above which the slice counts as above ground.</summary>
+        int SurfaceFor() =>
+            landscapeGround && landscapeFloor >= 0 ? Math.Min(surfaceLayer, landscapeFloor + 1) : surfaceLayer;
 
         /// <summary>
         /// The treatment above the slice, after <see cref="followDepth"/> has had its say.
@@ -275,43 +361,6 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         public bool SuppressCeilingAt(int activeLayer) =>
             suppressActiveCeiling && (followDepth || AboveAt(activeLayer) != AboveMode.Full);
-
-        /// <summary>
-        /// How many layers above the slice a roof must be before it is dropped whatever the
-        /// settings say. Two: the storey directly overhead keeps its slab, anything higher loses
-        /// it (RF1, <c>docs/design/27-roofs.md</c> §4).
-        /// </summary>
-        public const int RoofDropsFrom = 2;
-
-        /// <summary>
-        /// <b>Is a roof this far above the slice dropped because nothing should ever lid you?</b>
-        ///
-        /// <para>Above the surface <see cref="AboveAt"/> answers <c>Full</c> and every layer above
-        /// is drawn solid, and <see cref="SuppressCeilingAt"/> reaches one layer only and is off by
-        /// default. So roofing a building and then working two storeys under it left the colony
-        /// beneath a plate — and RF1 is the unit that makes roofing easy, so it is the unit that
-        /// would have caused it.</para>
-        ///
-        /// <para><b>Unconditional, and that is the point.</b> It is not gated on
-        /// <c>suppressActiveCeiling</c>, because the owner turned that off on 2026-09-17 for a
-        /// reason that holds — <i>"I expected to see and be able to build at least floor above from
-        /// my current height"</i> — and that reason is about the storey <em>directly</em> overhead.
-        /// This rule starts one layer past it, so the setting keeps its exact present meaning and
-        /// nothing higher can hide the colony.</para>
-        ///
-        /// <para><b>Slabs only.</b> The roof list holds slabs and ground surfaces together — a
-        /// storey above the slice dropping its ground is what lets you see into it, and that is
-        /// deliberate. This rule reaches further than one layer, where the thing over your head is
-        /// as likely to be a hillside as a ceiling, so the caller keeps the terrain and drops only
-        /// the slabs: <b>the landscape is never cut away</b>. The renderer tells them apart by
-        /// <c>TintCode.IsTerrain</c> rather than by a fourth bucket list, which would have
-        /// reshaped a structure seven Unity-tier test files read.</para>
-        ///
-        /// <para>Read by <c>ChunkRenderer</c> and by <c>SlicePicker</c>, from here rather than
-        /// twice, because those two live in assemblies neither test tier sees together and that is
-        /// exactly how they came to disagree before <c>FloorToolReachTests</c> was written.</para>
-        /// </summary>
-        public static bool RoofIsAlwaysDropped(int steps) => steps >= RoofDropsFrom;
 
         /// <summary>Is a layer above the slice drawn translucent rather than solid?</summary>
         public bool GhostsAbove(int activeLayer)

@@ -21,7 +21,8 @@ because the two cannot be open together.
 
 ## What is on it
 
-Two tabs since 2026-09-20 (owner: events want a tab of their own), in Settings' tab idiom.
+Four tabs, in Settings' tab idiom: Cheats and Events since 2026-09-20 (owner: events want a tab
+of their own), Spawn since 2026-09-22, and Weather since 2026-09-24.
 `DebugDirector.Tab` holds which is showing and opens on Cheats, because the overlay toggle is the
 row backtick was bound to for a day.
 
@@ -43,9 +44,34 @@ worker, ignoring the gates on purpose (design 23 §3). Today that is one row:
 | Row | What it does | Backed by |
 |---|---|---|
 | Supply drop | A stack of meals falls from the sky somewhere on the board, an Events row appears, and the colony hauls it. Lands on the next tick, so unpause to see it | `SupplyDropWorker` |
-| Skip one day | Spends one whole game day of ticks in one synchronous batch (~0.2 s), then hands the clock back. Works while paused |
-| Skip to morning | Skips the night and hands the clock back at dawn, with a whole watchable day ahead — the harvest happens on screen, not inside the skip | `OdysseyBootstrap.DebugSkipToMorning` — the same batch tick, sized to the next dawn | `OdysseyBootstrap.DebugSkipTicks` — the composition root's own batch tick, not an intent: ticking is the root's one job and the bus is drained *inside* a tick |
+| Raid warning, with **Raid size** and **Raid mix** under it | Fires a raid (design 55). The row is the incident's own; the two controls under it are the raid's and are kept for the session. **Raid size** is a fader from 0 to 200, reading *Auto* at 0, which is the incident's headcount-and-days size. **Raid mix** is a select of the content's mixes: Bandits, Gunmen, or Mixed (the default). The row sends `InvokeIncident(A, B = size, C = mix + 1)`. A band past the pawn ceiling is refused, not trimmed | `RaidWorker`; the controls are `HudShell.DebugRaidSizeRow` / `DebugRaidMixRow`, the Settings window's own fader and select |
+| Skip one day | Spends one whole game day of ticks in one synchronous batch (~0.2 s), then hands the clock back. Works while paused | `OdysseyBootstrap.DebugSkipTicks` — the composition root's own batch tick, not an intent: ticking is the root's one job and the bus is drained *inside* a tick |
+| Skip one month | The same, twelve days at a time (~2.4 s), so **the year can be walked through**. Added 2026-09-22 with temperature: Rime is month five of six, and at a day a press the season the whole thermal model exists for was sixty presses away — which is not a playtest anybody runs. Six presses now take you Wash → Glare → Rime and back | `DebugSkipTicks` again, sized `Content.DayTicks * Calendar.DaysPerMonth` — both read rather than written, so a retuned calendar cannot leave this row skipping some other amount |
+| Skip to morning | Skips the night and hands the clock back at dawn, with a whole watchable day ahead — the harvest happens on screen, not inside the skip | `OdysseyBootstrap.DebugSkipToMorning` — the same batch tick, sized to the next dawn |
 | Ripen crops | Brings every standing crop to ripeness at once, daylight window and all — the harvest half without the four-day wait | `IntentKind.DebugRipen` → `GrowingZones.RipenAll`, refused with AlreadyInThatState when nothing stands |
+
+**Weather** (2026-09-24, commands since 2026-09-25). Each row commands the weather system
+(design 43 §8) with `IntentKind.DebugSetWeather`: a kind, an intensity, and a quick hand-over of
+300 ticks, a few seconds. The spell then runs its rolled length and the season takes over again.
+`DebugDirector.WeatherPresets` holds the rows, and the fast tier tests them. What each sky looks
+like is the content's (`Weather.xml`), so the tab cannot show a sky the game cannot roll. Pausing
+holds the sky; the command lands on the next tick.
+
+| Row | Kind · intensity | Backed by |
+|---|---|---|
+| Clear | Clear · 1000 | `WeatherSystem.HandleForce` |
+| Overcast | Cloudy · 1000: the grey day with no rain | the same |
+| Drizzle | Rain · 250 | the same |
+| Rain | Rain · 700 | the same |
+| Downpour | Rain · 1000 | the same |
+| Storm | Storm · 1000: the rarer dim day, wind ×1.3 | the same |
+| Draw as particles (toggle) | draws the same rain with the weather design's first-draft CPU particles, to compare them moving; drawing only | `RainParticles` |
+| Wet ground: gloss only (toggle) | draws wet ground as shine and puddles only, rather than richer and a little darker; drawing only | `_OdysseyRainLook.x` |
+
+**Rain keeps its colour; only the grey days drain it** (owner, 2026-09-25,
+`docs/research/rain-look-interview.md`). Zoomed out, a screen-space streak layer fades in between
+55 m and 95 m. `WeatherTabTests` (PlayMode) sends a row's own command through the real bootstrap
+and follows it into the draw calls.
 
 ### "Near the camera" is a column, not a cell (corrected 2026-09-19)
 
@@ -90,6 +116,13 @@ hitting zero is a mood penalty, never a death. A debug "kill" today could only m
 from the registry with no health model behind it", which is a different and smaller thing than what
 "kill" would mean once health exists, and building the smaller thing first risks the debug menu
 teaching a habit ("kill just despawns") that a later health system would have to unlearn.
+
+**Overtaken 2026-09-25.** The pool exists since combat C2 (design 33) and design 43 §11 puts *Hurt*,
+*Heal* and *Kill* on the Spawn tab through the one damage owner, so a debug kill is a real death
+that leaves a corpse and is mourned — the thing this paragraph was waiting for. Unit H6 of
+`docs/plans/health.md`. **Built 2026-09-25**: Hurt, Heal and Kill on the Spawn tab's Colonists
+group act on the colonist nearest the camera (`IntentKind.DebugHealth`), and Give medkits sits with
+the items.
 
 **Build gating.** No release build exists yet, so the panel is reachable in every build the same way
 every other panel is.

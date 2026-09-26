@@ -54,6 +54,7 @@ namespace Odyssey.Tests.Hud
         {
             { "escapeKey", "SettingsPresenter.cs" },  // the unwind rule, 09 §6 case 6 — fixed, not bindable
             { "allKeys", "SettingsPresenter.cs" },    // the rebind capture: every key offered, none named
+            { "backspaceKey", "SettingsPresenter.cs" }, // empties a slot while it listens (design 39 §6); only then
             { "leftShiftKey", "SliceCameraRig.cs" },  // Shift: the fast modifier, deliberately unbindable
             { "rightShiftKey", "SliceCameraRig.cs" },
         };
@@ -109,6 +110,10 @@ namespace Odyssey.Tests.Hud
         {
             (HudCommands.BuildKey, HotkeyAction.BuildPalette),
             (HudCommands.WorkKey, HotkeyAction.WorkTab),
+            (HudCommands.InventoryKey, HotkeyAction.InventoryTab),
+            (HudCommands.ResearchKey, HotkeyAction.ResearchTab),
+            (HudCommands.AssignKey, HotkeyAction.AssignTab),
+            (HudCommands.AnimalsKey, HotkeyAction.AnimalsTab),
             (HudCommands.AlmanacKey, HotkeyAction.Almanac),
         };
 

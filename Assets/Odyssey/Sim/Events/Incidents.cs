@@ -55,15 +55,22 @@ namespace Odyssey.Sim.Events
         }
 
         /// <summary>
-        /// <c>InvokeIncident(A = incident def)</c>. A bad index is <see cref="IntentRejection.OutOfBounds"/>;
-        /// a world that cannot take the event right now is <see cref="IntentRejection.NotPermitted"/>,
-        /// which for the supply drop means no column on the board can land it.
+        /// <c>InvokeIncident(A = incident def, B = size, C = mix + 1)</c>. B and C are the raid's
+        /// (design 55 §9): 0 in either leaves it to the incident, so every other caller, which sends
+        /// neither, is unchanged. A bad index, a size past the pawn ceiling or a mix the content does
+        /// not have is <see cref="IntentRejection.OutOfBounds"/>; a world that cannot take the event
+        /// right now is <see cref="IntentRejection.NotPermitted"/>, which for the supply drop means no
+        /// column on the board can land it and for a raid that the band would not fit.
         /// </summary>
         public IntentRejection HandleInvoke(Intent intent)
         {
             int def = intent.A;
             if (def < 0 || def >= Content.Count) return IntentRejection.OutOfBounds;
-            return TryFire(new IncidentParms(def)) ? IntentRejection.None : IntentRejection.NotPermitted;
+            int size = intent.B;
+            if (size < 0 || size > PawnRegistry.PawnCeiling) return IntentRejection.OutOfBounds;
+            int mix = intent.C - 1;
+            if (mix < -1 || mix >= Content.Mixes.Length) return IntentRejection.OutOfBounds;
+            return TryFire(new IncidentParms(def, size, null, mix)) ? IntentRejection.None : IntentRejection.NotPermitted;
         }
 
         /// <summary>Could this incident fire right now? Changes nothing.</summary>

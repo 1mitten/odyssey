@@ -364,6 +364,78 @@ namespace Odyssey.Tests.Hud
             camera.Cancel();
             Assert.That(camera.JumpTarget, Is.Null, "a pan is the player winning");
         }
+
+        /// <summary>
+        /// A close-up jump carries its distance; a plain one after it does not inherit it, and
+        /// every request is numbered so the rig takes a repeat for the cell it is already heading to.
+        /// </summary>
+        [Test]
+        public void AJumpCarriesAZoomOnlyWhenItAsksForOne()
+        {
+            var camera = new CameraDirector();
+            var cell = new CellRef(5, 6, 1);
+            camera.JumpTo(cell);
+            int first = camera.JumpSerial;
+            Assert.That(camera.JumpDistance, Is.Null, "a plain jump keeps the player's zoom");
+
+            camera.JumpTo(cell, CameraDirector.CloseUpMetres);
+            Assert.That(camera.JumpTarget, Is.EqualTo(cell));
+            Assert.That(camera.JumpDistance, Is.EqualTo(CameraDirector.CloseUpMetres));
+            Assert.That(camera.JumpSerial, Is.Not.EqualTo(first), "the same cell asked again is a new request");
+
+            camera.JumpTo(cell);
+            Assert.That(camera.JumpDistance, Is.Null, "the zoom does not leak into the next jump");
+
+            camera.JumpTo(cell, 20f);
+            camera.Arrived();
+            Assert.That(camera.JumpDistance, Is.Null);
+            camera.JumpTo(cell, 20f);
+            camera.Cancel();
+            Assert.That(camera.JumpDistance, Is.Null);
+        }
+    }
+
+    /// <summary>The roster card's double click and the world pick's share one threshold (2026-09-25).</summary>
+    public class DoubleClickTests
+    {
+        [Test]
+        public void TwoClicksOnOneColonistInsideTheThresholdAreADoubleClick()
+        {
+            var clicks = new DoubleClick();
+            var a = new PawnId(3);
+            Assert.That(clicks.Click(a, 10f), Is.False, "the first click is a single");
+            Assert.That(clicks.Click(a, 10f + DoubleClick.Seconds * 0.5f), Is.True);
+            Assert.That(clicks.Click(a, 10f + DoubleClick.Seconds * 0.6f), Is.False,
+                "a double is spent: the third click starts a new pair");
+        }
+
+        [Test]
+        public void TooSlowOrADifferentColonistOrAForgottenFirstClickIsNot()
+        {
+            var clicks = new DoubleClick();
+            var a = new PawnId(3);
+            var b = new PawnId(4);
+
+            clicks.Click(a, 0f);
+            Assert.That(clicks.Click(a, DoubleClick.Seconds + 0.01f), Is.False, "too slow");
+
+            clicks.Click(a, 5f);
+            Assert.That(clicks.Click(b, 5.1f), Is.False, "a different card");
+            Assert.That(clicks.Click(b, 5.2f), Is.True, "but the second card's own pair counts");
+
+            clicks.Click(a, 9f);
+            clicks.Forget();
+            Assert.That(clicks.Click(a, 9.1f), Is.False, "a sweep in between breaks the pair");
+
+            Assert.That(clicks.Click(PawnId.None, 20f), Is.False);
+            Assert.That(clicks.Click(PawnId.None, 20.1f), Is.False, "nobody twice is not a double");
+        }
+
+        [Test]
+        public void TheThresholdIsTheWorldPicksThreeHundredAndFiftyMilliseconds()
+        {
+            Assert.That(DoubleClick.Seconds, Is.EqualTo(0.35f));
+        }
     }
 
     public class HudDirectorsTests
@@ -390,6 +462,54 @@ namespace Odyssey.Tests.Hud
             // order that leaves the colonist selected rather than cleared by their own jump. The
             // directors' own handler runs before the test's, so the clear is announced first.
             Assert.That(order, Is.EqualTo(new[] { "LayerChanged", "layer", "Chosen" }));
+        }
+
+        /// <summary>
+        /// The Animals tab's row (design 30 §6): the selection and the jump, and the slice
+        /// exactly where it was (owner, 2026-09-23: "can the depth remain the same").
+        /// </summary>
+        [Test]
+        public void ChoosingAnAnimalKeepsTheDepth()
+        {
+            var directors = new HudDirectors(4, 1);
+            var snapshot = Frame.Write();
+            var at = new CellRef(6, 2, 3);
+            snapshot.AddPawn(new PawnView(new PawnId(7), at, 800, 800, 800, JobHandle.Wander, kind: 1));
+            int layers = 0;
+            directors.Slice.LayerChanged += _ => layers++;
+
+            Assert.That(directors.ChooseAnimal(new PawnId(7), snapshot), Is.True);
+
+            Assert.That(directors.Slice.ActiveLayer, Is.EqualTo(1), "the slice stayed where the player had it");
+            Assert.That(layers, Is.Zero);
+            Assert.That(directors.Selection.Pawn, Is.EqualTo(new PawnId(7)));
+            Assert.That(directors.Camera.JumpTarget, Is.EqualTo(at));
+            Assert.That(directors.ChooseAnimal(new PawnId(99), snapshot), Is.False);
+        }
+
+        /// <summary>
+        /// A roster card double-clicked (2026-09-25): the slice, the selection and a jump that
+        /// also zooms in close — where <see cref="HudDirectors.ChooseColonist"/>, which the alerts
+        /// and the Events panel still use, keeps the player's zoom.
+        /// </summary>
+        [Test]
+        public void ClosingInOnAColonistAlsoZooms()
+        {
+            var directors = new HudDirectors(layerCount: 4, startLayer: 1);
+            var snapshot = Frame.Write();
+            var at = new CellRef(6, 2, 3);
+            snapshot.AddPawn(new PawnView(new PawnId(7), at, 500, 500, 50, JobHandle.Haul));
+
+            Assert.That(directors.CloseInOnColonist(new PawnId(7), snapshot), Is.True);
+            Assert.That(directors.Slice.ActiveLayer, Is.EqualTo(3));
+            Assert.That(directors.Selection.Pawn, Is.EqualTo(new PawnId(7)));
+            Assert.That(directors.Camera.JumpTarget, Is.EqualTo(at));
+            Assert.That(directors.Camera.JumpDistance, Is.EqualTo(CameraDirector.CloseUpMetres));
+
+            directors.ChooseColonist(new PawnId(7), snapshot);
+            Assert.That(directors.Camera.JumpDistance, Is.Null, "the other callers keep the zoom");
+
+            Assert.That(directors.CloseInOnColonist(new PawnId(99), snapshot), Is.False);
         }
 
         [Test]
@@ -443,6 +563,51 @@ namespace Odyssey.Tests.Hud
             debug.Toggle();
             Assert.That(debug.Open, Is.False);
             Assert.That(raised, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void TheWeatherTabsSwitchesStartOffAndAnnounceEachChange()
+        {
+            var debug = new DebugDirector();
+            int raised = 0;
+            debug.WeatherChanged += () => raised++;
+
+            Assert.That(debug.RainAsParticles, Is.False, "the GPU rain is the proposal, the particles the control");
+            Assert.That(debug.WetGlossOnly, Is.False, "richer is the default wet look");
+            debug.SetRainAsParticles(true);
+            debug.SetRainAsParticles(true);
+            debug.SetWetGlossOnly(true);
+            debug.SetWetGlossOnly(true);
+            Assert.That(raised, Is.EqualTo(2), "setting what is already set says nothing");
+        }
+
+        [Test]
+        public void EveryWeatherRowCommandsTheSimulationWithAKindItCanRoll()
+        {
+            // Since the weather system (design 43 §8) a row is a command, not a look.
+            foreach (DebugDirector.WeatherPreset p in DebugDirector.WeatherPresets)
+            {
+                Intent intent = p.ToIntent();
+                Assert.That(intent.Kind, Is.EqualTo(IntentKind.DebugSetWeather), p.Key);
+                Assert.That(intent.A, Is.InRange(0, 3), $"{p.Key} names no weather kind");
+                Assert.That(intent.B, Is.InRange(1, 1000), $"{p.Key}'s intensity");
+                Assert.That(intent.C, Is.EqualTo(1), $"{p.Key} should blend in over seconds, not two game hours");
+                Assert.That(DebugDirector.IconKeys, Does.Contain(p.Key), $"{p.Key} is not held to the naming CSV");
+            }
+            Assert.That(DebugDirector.WeatherPresets[0].Kind, Is.EqualTo(WeatherKind.Clear), "the first row clears the sky");
+            Assert.That(System.Array.Exists(DebugDirector.WeatherPresets, p => p.Kind == WeatherKind.Storm),
+                "the storm cannot be set by hand");
+            Assert.That(DebugDirector.TabKey(DebugTab.Weather), Is.EqualTo(DebugDirector.WeatherTabKey));
+        }
+
+        [Test]
+        public void TheClockNamesEverySkyFromTheRegistry()
+        {
+            foreach (WeatherKind kind in System.Enum.GetValues(typeof(WeatherKind)))
+                Assert.That(WeatherLabels.IconKeys, Does.Contain(WeatherLabels.KeyOf(kind)), kind.ToString());
+            Assert.That(WeatherLabels.Describe(WeatherView.None), Is.Empty, "a world without weather names no sky");
+            var rain = new WeatherView(WeatherKind.Rain, 700, 560, 0, 700, 1000, -210);
+            Assert.That(WeatherLabels.Describe(rain), Is.EqualTo(Registry.Label(WeatherLabels.RainKey)));
         }
     }
 }
@@ -787,6 +952,55 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// Escape on the main screen backs out one level, and does nothing at its root.
+        ///
+        /// Owner, 2026-09-21: *"On the main menu when I go to load game or character screen and
+        /// push escape — it doesn't close down menus and it gets confused."* The start screen's
+        /// screens had no rung at all, so the key fell through to <c>OpenPanel</c> and laid the
+        /// in-game settings window over the load list.
+        /// </summary>
+        [Test]
+        public void EscapeBacksOutOfTheMainScreenAndDoesNothingAtItsRoot()
+        {
+            var settings = new SettingsDirector();
+
+            Assert.That(settings.Escape(false, false, false, false, false, MenuScreen.Load),
+                Is.EqualTo(EscapeAction.MenuBack));
+            Assert.That(settings.Escape(false, false, false, false, false, MenuScreen.NewGame),
+                Is.EqualTo(EscapeAction.MenuBack),
+                "the character screen is the other half of the report");
+
+            Assert.That(settings.Escape(false, false, false, false, false, MenuScreen.Root),
+                Is.EqualTo(EscapeAction.Nothing),
+                "the one screen with nothing behind it — and Options is a row on it already");
+        }
+
+        [Test]
+        public void TheSettingsPanelUnwindsBeforeTheScreenItStandsIn()
+        {
+            // On the main screen the panel takes the menu's place rather than sitting over it, so
+            // closing the panel is what leaves that screen and the menu follows on its own. A rung
+            // above the panel would move the navigation out from under a panel still on screen.
+            var settings = new SettingsDirector();
+            settings.SetOpen(true);
+
+            Assert.That(settings.Escape(false, false, false, false, false, MenuScreen.Settings),
+                Is.EqualTo(EscapeAction.ClosePanel));
+        }
+
+        [Test]
+        public void InGameEscapeIsUnchangedByTheMainScreenRung()
+        {
+            // Null start screen is "a colony is running", which is every existing caller.
+            var settings = new SettingsDirector();
+
+            Assert.That(settings.Escape(false, false, false, false, false, startScreen: null),
+                Is.EqualTo(EscapeAction.OpenPanel));
+            Assert.That(settings.Escape(false, false, false, false, false),
+                Is.EqualTo(EscapeAction.OpenPanel), "the five-argument overload means the same");
+        }
+
+        /// <summary>
         /// Every option starts as <see cref="SettingsDirector.DefaultOn"/> says, and the panel
         /// knows which ones cost a remesh to change.
         ///
@@ -808,15 +1022,28 @@ namespace Odyssey.Tests.Hud
             Assert.That(SettingsDirector.DefaultOn(GraphicsOption.Shadows), Is.True);
             Assert.That(SettingsDirector.DefaultOn(GraphicsOption.SeeThrough), Is.True);
             Assert.That(SettingsDirector.DefaultOn(GraphicsOption.CutAwayCeiling), Is.False,
-                "the cut-away hides the floor overhead, so it is the one option that starts off");
+                "the cut-away hides the floor overhead, so it starts off");
+            Assert.That(SettingsDirector.DefaultOn(GraphicsOption.FoliageShadows), Is.False,
+                "grass has never cast shadows; turning them on is a choice, not the baseline");
+            Assert.That(SettingsDirector.DefaultOn(GraphicsOption.FadeForEveryColonist), Is.False,
+                "owner, 2026-09-25: the trees cleared round the colony with nothing selected");
+            Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.FadeForEveryColonist), Is.False,
+                "read by the sight lines each frame, like See-through");
+            Assert.That(SettingsDirector.KeyOf(GraphicsOption.FadeForEveryColonist),
+                Is.EqualTo(SettingsDirector.FadeForEveryColonistKey));
+            Assert.That(SettingsDirector.PresetOn(QualityPreset.Ultra, GraphicsOption.FadeForEveryColonist), Is.False,
+                "a preset is what the machine can afford, not how the player likes to look");
 
             // Three are read as the frame is submitted; two are baked into the instance matrices
             // when a chunk is meshed, and the panel has to know which it is holding.
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.Shadows), Is.False);
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.Surround), Is.False);
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.SeeThrough), Is.False);
-            Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.GrassTufts), Is.True);
+            Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.FoliageShadows), Is.False);
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.GroundRelief), Is.True);
+            // The grass is a ladder now, and it is the one ladder baked into the chunks.
+            Assert.That(SettingsDirector.NeedsRedraw(GraphicsLadder.VegetationDensity), Is.True);
+            Assert.That(SettingsDirector.NeedsRedraw(GraphicsLadder.GrassDistance), Is.False);
         }
 
         [Test]
@@ -840,12 +1067,12 @@ namespace Odyssey.Tests.Hud
             var settings = new SettingsDirector();
             var store = new FakeSettingsStore();
 
-            // The scene was built with no grass. Seeding says so without raising anything, so a
+            // The scene was built with no relief. Seeding says so without raising anything, so a
             // panel cannot change the board merely by existing.
             var changed = new System.Collections.Generic.List<GraphicsOption>();
             settings.OptionChanged += changed.Add;
-            settings.Seed(GraphicsOption.GrassTufts, false);
-            Assert.That(settings.IsOn(GraphicsOption.GrassTufts), Is.False);
+            settings.Seed(GraphicsOption.GroundRelief, false);
+            Assert.That(settings.IsOn(GraphicsOption.GroundRelief), Is.False);
             Assert.That(changed, Is.Empty, "seeding is a record of what is, not a request");
 
             // This machine was told once to keep the shadows off. That outranks the scene.
@@ -855,7 +1082,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(settings.IsOn(GraphicsOption.Shadows), Is.False);
             Assert.That(changed, Is.EqualTo(new[] { GraphicsOption.Shadows }),
                 "only the stored value that differed had to be applied to the board");
-            Assert.That(settings.IsOn(GraphicsOption.GrassTufts), Is.False,
+            Assert.That(settings.IsOn(GraphicsOption.GroundRelief), Is.False,
                 "an option the store has never heard of keeps what the scene gave it");
         }
 
@@ -1005,29 +1232,39 @@ namespace Odyssey.Tests.Hud
                     $"whole dB {db} does not survive the seat");
         }
 
+        /// <summary>
+        /// The exit row asks on the first press now, and the asking is <c>LeavePrompt</c>'s.
+        ///
+        /// <para>It armed and fired on a second press until 2026-09-21, when the owner asked for a
+        /// confirmation that offers to save. The arming went with it: the prompt is the question,
+        /// and a row that arms in front of one asks twice before asking properly.</para>
+        /// </summary>
         [Test]
-        public void TheExitRowAsksBeforeItLeavesAndThePanelClosingStandsItDown()
+        public void TheExitRowRaisesItsRequestOnTheFirstPressNow()
         {
             var settings = new SettingsDirector();
-            int armed = 0, asked = 0;
-            settings.ExitChanged += () => armed++;
+            int asked = 0;
             settings.ExitRequested += () => asked++;
 
             settings.RequestExit();
-            Assert.That(settings.ExitArmed, Is.True, "the first click asks to be sure");
-            Assert.That(asked, Is.Zero);
-            settings.RequestExit();
-            Assert.That(asked, Is.EqualTo(1), "the second click is the promise kept");
-            Assert.That(settings.ExitArmed, Is.False, "a fired exit is not still armed");
+            Assert.That(asked, Is.EqualTo(1), "the press is the request; the prompt does the asking");
+            Assert.That(settings.ExitArmed, Is.False, "nothing arms any more");
+        }
 
-            // Nothing is saved, so an armed row must not outlive the panel it lives in.
+        /// <summary>
+        /// Load in game is the last row that still arms, and the rule is still the table's.
+        /// </summary>
+        [Test]
+        public void TheRowThatStillArmsStandsDownWhenThePanelCloses()
+        {
+            var settings = new SettingsDirector();
             settings.SetOpen(true);
-            settings.RequestExit();
-            Assert.That(settings.ExitArmed, Is.True);
+            settings.Request(SessionCommands.LoadKey);
+            Assert.That(settings.ArmedRow, Is.EqualTo(SessionCommands.LoadKey));
+
             settings.SetOpen(false);
-            Assert.That(settings.ExitArmed, Is.False,
+            Assert.That(settings.ArmedRow, Is.Null,
                 "closing the panel stands the row down, Escape included");
-            Assert.That(asked, Is.EqualTo(1), "standing down is not leaving");
         }
 
         [Test]
@@ -1040,6 +1277,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(SettingsDirector.TabKey(SettingsTab.Graphics), Is.EqualTo(SettingsDirector.GraphicsKey));
             Assert.That(SettingsDirector.TabKey(SettingsTab.Audio), Is.EqualTo(SettingsDirector.AudioKey));
             Assert.That(SettingsDirector.TabKey(SettingsTab.Keys), Is.EqualTo(HotkeyDirector.KeysKey));
+            Assert.That(SettingsDirector.TabKey(SettingsTab.Gameplay), Is.EqualTo(SettingsDirector.GameplayKey));
         }
     }
 }

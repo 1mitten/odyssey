@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
@@ -54,8 +55,143 @@ namespace Odyssey.Presentation.World
             public SkinnedMeshRenderer[] Skins = Array.Empty<SkinnedMeshRenderer>();
             public Material?[] ArtMaterials = Array.Empty<Material?>();
 
+            /// <summary>
+            /// The hair and the beard this figure is wearing, as two renderers parented to the
+            /// head bone (<c>docs/design/29-modular-colonists.md</c>, MC5).
+            ///
+            /// <para><b>Built once with the figure and re-dressed on every lease</b>, exactly as
+            /// the materials are and for the same reason: the pool is keyed on the face, so one
+            /// body is lent to colonists with different hair. Instantiating a prefab per lease
+            /// would put an allocation and a destroy in the middle of a colonist walking on
+            /// screen; swapping <c>sharedMesh</c> costs nothing.</para>
+            ///
+            /// <para>Null on a machine with no licensed art, and disabled whenever the pawn was
+            /// dealt no piece — bald and clean-shaven are ordinary outcomes, not failures.</para>
+            /// </summary>
+            public MeshFilter? HairMesh;
+            public MeshRenderer? HairRenderer;
+            public MeshFilter? BeardMesh;
+            public MeshRenderer? BeardRenderer;
+
+            /// <summary>The headgear slot — the bandit's welding helmet (design 42) — on the same terms.</summary>
+            public MeshFilter? HeadMesh;
+            public MeshRenderer? HeadRenderer;
+
+            /// <summary>What the pawn this figure is lent to wears, set on every lease (design 42).</summary>
+            public PawnOutfit Outfit;
+
             /// <summary>The pawn this figure is lent to, or -1 when it is parked in the pool.</summary>
             public int Pawn;
+
+            /// <summary>
+            /// Lent out to lie down as a corpse (<see cref="BorrowForCorpse"/>): nobody's live
+            /// figure, and not in the pool either until it is handed back.
+            /// </summary>
+            public bool Borrowed;
+
+            /// <summary>
+            /// A lent figure falling on a layer that is not drawn: every renderer under it forced
+            /// off (<see cref="ShowCorpse"/>), undone when it is handed back.
+            /// </summary>
+            public bool CorpseHidden;
+
+            /// <summary>The fight as this figure is drawing it: its action, its held states, its clip layer.</summary>
+            public CombatState Fight = new CombatState();
+
+            /// <summary>
+            /// The weapon prop in the right hand, seated once when the pawn's weapon changes, or
+            /// null; and the item def it was made for, -1 for bare hands. See
+            /// <c>PawnFigureDirector.Weapons.cs</c>.
+            /// </summary>
+            public GameObject? Weapon;
+            public int WeaponDef = -1;
+
+            // ---- The gun (design 47 §4b, PawnFigureDirector.Aim.cs) ----------------------------
+
+            /// <summary>The weapon in hand is a gun: fitted by <c>FitPistol</c>, aimed, recoiling.</summary>
+            public bool IsGun;
+
+            /// <summary>Where the palm sits on the gun, in the prop's own frame; set by <c>FitPistol</c>.</summary>
+            public Vector3 GunGrip;
+
+            /// <summary>The gun's slide, if its prop has one by name, and where it rests; null for none.</summary>
+            public Transform? GunSlide;
+            public Vector3 GunSlideRest;
+
+            /// <summary>How far into the aim stance the figure is, eased 0 to 1.</summary>
+            public float AimWeight;
+
+            /// <summary>How far into low ready — drawn, nothing to shoot — eased 0 to 1.</summary>
+            public float LowReadyWeight;
+
+            /// <summary>How far down behind cover (design 53 §8a), eased 0 to 1 from the published crouch.</summary>
+            public float CoverCrouchWeight;
+
+            /// <summary>The point the aim is on, followed through a critically damped spring so a walking target does not snap it.</summary>
+            public Vector3 AimPoint;
+            public Vector3 AimVelocity;
+            public bool HasAimPoint;
+
+            /// <summary>Seconds since the last shot on this figure's own clock (stops when the world does); negative for none yet.</summary>
+            public float FireClock = -1f;
+
+            /// <summary>A shot was seen this frame: a draw still playing is cut short to the hand (design 47 §4b).</summary>
+            public bool FiredThisFrame;
+
+            /// <summary>
+            /// Where the weapon sits in the fist and on the hip, each fitted once when the weapon
+            /// changes, as a local pose under the right hand and under <see cref="Pelvis"/>
+            /// (design 33 §8b, <c>PawnFigureDirector.Sheath.cs</c>). Moving it between the two is a
+            /// re-parent to a cached pose, never a re-fit.
+            /// </summary>
+            public Vector3 WeaponHandPosition;
+            public Quaternion WeaponHandRotation = Quaternion.identity;
+            public Vector3 WeaponHipPosition;
+            public Quaternion WeaponHipRotation = Quaternion.identity;
+
+            /// <summary>True while the weapon is parented at the hip; false in the hand.</summary>
+            public bool WeaponAtHip;
+
+            /// <summary>
+            /// The bone the sheath hangs from: the parent of the left thigh — the real pelvis. Not
+            /// <c>HumanBodyBones.Hips</c>, which the Synty avatar maps to <c>Root</c> on the floor.
+            /// Null where the rig has no left thigh, and then a sheathed weapon is simply not drawn.
+            /// </summary>
+            public Transform? Pelvis;
+
+            /// <summary>
+            /// The sheath's frame, measured once at bind off the drawn mesh in the idle and kept in
+            /// <see cref="Pelvis"/>'s own space: the point on the surface of the left hip the
+            /// weapon hangs from, the way its blade points (down, and back), the way out of the body
+            /// and the figure's front. <see cref="HasStow"/> is false until measured.
+            /// </summary>
+            public Vector3 StowPoint;
+            public Vector3 StowDown;
+            public Vector3 StowOut;
+            public Vector3 StowForward;
+            public bool HasStow;
+
+            /// <summary>Drawn or sheathed, as this figure has seen it. See <c>Odyssey.Hud.WeaponSheath</c>.</summary>
+            public SheathClock Sheath;
+
+            /// <summary>The draw or the sheathe playing, or <see cref="SheathChange.None"/>; its clip and how far in.</summary>
+            public SheathChange SheathAction;
+            public CombatClipEntry? SheathClip;
+            public float SheathSeconds;
+
+            /// <summary>
+            /// The computed gait, for an animal whose row asks for one and whose rig has the
+            /// four legs (design 29). Null on every colonist and on an animal that walks on its
+            /// own clips.
+            /// </summary>
+            public QuadrupedGait? Gait;
+
+            /// <summary>
+            /// The figure's drawn box in its own frame, measured at build from the renderers'
+            /// bounds; what an animal's cursor and click box are sized to. Empty on a colonist,
+            /// whose cursor is the one fixed box for the whole cast.
+            /// </summary>
+            public Bounds DrawnBox;
 
             /// <summary>Which face this figure was built from. Fixed for its life; the rig is bound.</summary>
             public int Look;
@@ -326,6 +462,22 @@ namespace Odyssey.Presentation.World
             public float SwimWeight;
 
             /// <summary>
+            /// How far off the ground a jumping figure is, 0 to 1 (design 46 §7): the footing
+            /// fades by it, so the feet let go at the lip and plant again on the far one. Worked
+            /// out afresh every frame from the step, never eased — <c>JumpArc.Airborne</c> is
+            /// already continuous.
+            /// </summary>
+            public float AirWeight;
+
+            /// <summary>
+            /// The jump clip due in the action slot this frame, and how far into it: the take-off or
+            /// the landing, or null. Worked out afresh every frame from the step's phase, like the
+            /// air; <c>PoseCombat</c> shows it whenever the fight has nothing to show.
+            /// </summary>
+            public CombatClipEntry? JumpClip;
+            public float JumpClipTime;
+
+            /// <summary>
             /// The swim stroke's own clock, in seconds of game time.
             ///
             /// <para>A clock and not a phase taken from the step, which is the opposite choice to
@@ -342,6 +494,12 @@ namespace Odyssey.Presentation.World
             /// colonist lies down and gets up rather than snapping between the two.
             /// </summary>
             public float SleepWeight;
+
+            /// <summary>
+            /// How far down into the row's settled idle this figure is, 0 standing and 1 sitting
+            /// (design 31 §18d). Eased, so a colonist lowers herself and gets up.
+            /// </summary>
+            public float SitWeight;
 
             /// <summary>
             /// Which way the body lies, head to foot. The bed's own facing where there is a bed,

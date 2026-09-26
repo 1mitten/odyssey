@@ -68,6 +68,10 @@ namespace Odyssey.Presentation.World
             _root.layer = layer;
         }
 
+        /// <summary>How many door leaves the last <see cref="Sync"/> placed: the drawn ones, which walls-down
+        /// leaves out (design 42 §5).</summary>
+        public int LeavesPlaced => _placementCount;
+
         public int ActiveDoorCount
         {
             get
@@ -75,6 +79,23 @@ namespace Odyssey.Presentation.World
                 EnsureDoorList();
                 return _doorCells.Count;
             }
+        }
+
+        /// <summary>
+        /// The door cell whose leaf the selection highlight wants this frame, or -1 (design 44 §3).
+        /// Set before <see cref="Sync"/>; the leaf is caught where it is drawn, open or shut.
+        /// </summary>
+        public int CaptureCell { get; set; } = -1;
+
+        Matrix4x4 _captured;
+        bool _hasCaptured;
+
+        /// <summary>The captured leaf's module and placement, when it was drawn this frame.</summary>
+        public bool TryGetCapturedLeaf(out ResolvedModule? module, out Matrix4x4 placement)
+        {
+            placement = _captured;
+            module = _hasCaptured && _leafModule != 0 ? _library[_leafModule] : null;
+            return module != null && !module.IsEmpty;
         }
 
         public float OpenFactor(int cellIndex) =>
@@ -98,6 +119,7 @@ namespace Odyssey.Presentation.World
         {
             EnsureDoorList();
             _placementCount = 0;
+            _hasCaptured = false;
 
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model.LowestOutdoorLayer));
             int highest = slice.HighestVisibleLayer(activeLayer, _model.Size.SizeY);
@@ -150,12 +172,18 @@ namespace Odyssey.Presentation.World
 
                 _states[cellIndex] = state;
 
+                // Walls down (design 42 §5): the leaf is not drawn where the frame is a pair of
+                // jambs or the storey is hidden. The door still opens, closes and sounds above —
+                // only the drawing stops — so raising the walls finds it where it would have been.
+                if (slice.LowersWallsOn(activeLayer, cell.Y)) continue;
+
                 Matrix4x4 root = GroundRelief.Drape(faceFloor) *
                                  Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f));
                 Vector3 slide = new Vector3(SlideDistance * state.OpenFactor, 0f, 0f);
                 Matrix4x4 placement = root * Matrix4x4.Translate(slide);
 
                 AppendPlacement(placement);
+                if (cellIndex == CaptureCell) { _captured = placement; _hasCaptured = true; }
             }
 
             SubmitPlacements();

@@ -102,6 +102,12 @@ namespace Odyssey.Presentation.Rendering
         Pillow = 13,
 
         /// <summary>
+        /// One filled sandbag (design 53 §7a-bis): a flattened pillow with a tied end, spanning the
+        /// unit box. <see cref="CoverShape"/> lays a wall of them; see <see cref="SandbagMesh"/>.
+        /// </summary>
+        Sandbag = 14,
+
+        /// <summary>
         /// A <b>whole</b> flight, rising one full layer across one cell — the colony's own stair
         /// (2026-09-21).
         ///
@@ -111,7 +117,7 @@ namespace Odyssey.Presentation.Rendering
         /// tall. Sharing the shape would have drawn every colony stair at half its height on
         /// exactly the machines that cannot check — the runner, and CI.</para>
         /// </summary>
-        StairFull = 14,
+        StairFull = 15,
     }
 
     /// <summary>
@@ -123,6 +129,20 @@ namespace Odyssey.Presentation.Rendering
     /// <see cref="prefabName"/> records what the reference was, so the editor tool can rebuild it
     /// once the packs are imported and so a missing row can name itself in the log.
     /// </summary>
+    /// <summary>
+    /// Which gendered pool a body or a hair piece belongs to
+    /// (<c>docs/design/29-modular-colonists.md</c> §6).
+    ///
+    /// <see cref="Either"/> is not "unknown": PolygonGeneric's hair is not authored per sex, and a
+    /// piece marked Either is legal for anybody. A body is always one or the other.
+    /// </summary>
+    public enum BodySex
+    {
+        Either = 0,
+        Male = 1,
+        Female = 2,
+    }
+
     [Serializable]
     public sealed class ModuleEntry
     {
@@ -137,6 +157,13 @@ namespace Odyssey.Presentation.Rendering
 
         [Tooltip("The prefab this row wants, by name. Used to rebuild the reference and to report gaps.")]
         public string prefabName = string.Empty;
+
+        [Tooltip("The folder under Assets/Synty the prefab is looked for in first, when more than one pack has a prefab of that name. Empty: any pack, in path order.")]
+        // Because the packs share names: SM_Env_Bush_01 is in Battle Royale, Western Frontier
+        // and Meadow Forest, and a lookup by name alone takes whichever sorts first — so the
+        // Meadow dressing drew Battle Royale's bushes and rocks, which carry no levels of detail
+        // (design 38 §18c).
+        public string prefabUnder = string.Empty;
 
         [Tooltip("Centre the art on the cell in x and z. Off for pieces whose pivot is deliberate.")]
         public bool centreXZ = true;
@@ -176,8 +203,84 @@ namespace Odyssey.Presentation.Rendering
         [Tooltip("Extra local yaw in degrees. Use it when a piece faces the wrong way.")]
         public float yaw;
 
+        /// <summary>
+        /// Lay the art on its broadest face: its thinnest axis turned vertical before anything
+        /// else is measured. For a thing modelled standing up that is dropped on the ground — a
+        /// weapon is modelled haft-up, the way a hand holds it, and a bat stood on its end in a
+        /// field reads as a post (C3, the integration, 2026-09-23). Applied before the centring
+        /// and the base, so both measure the piece as it lies.
+        /// </summary>
+        [Tooltip("Lay the art on its broadest face (thinnest axis up). For props modelled standing, dropped on the ground.")]
+        public bool lieFlat;
+
         [Tooltip("Uniform scale applied to the art. 1 unless a piece must be stretched to the cell.")]
         public Vector3 scale = Vector3.one;
+
+        /// <summary>
+        /// Fit the model into this rectangle, in metres — <c>x</c> across, <c>y</c> along the
+        /// facing, the model's own +Z being its front — scaled uniformly unless
+        /// <see cref="fitStretch"/> says otherwise (design 32 §14, §14c). Zero is off, which every row before power is. It exists because a pack
+        /// prop is modelled at whatever size its artist chose, and a row that had to carry a
+        /// measured scale would be a number nobody could check without opening the editor.
+        /// </summary>
+        public Vector2 fitFootprint;
+
+        /// <summary>With <see cref="fitFootprint"/>: never taller than this, in metres. Zero is no ceiling.</summary>
+        public float fitHeight;
+
+        /// <summary>
+        /// With <see cref="fitFootprint"/>: scale each axis on its own so the model <b>fills</b>
+        /// the rectangle and the height, rather than fitting its tightest axis and leaving gaps on
+        /// the other two. For a machine that is two cells long (design 32 §14c): fitted uniformly,
+        /// the generator stood 3.1 m long in 5 m of footprint with a metre of daylight at each end.
+        /// </summary>
+        public bool fitStretch;
+
+        /// <summary>
+        /// With <see cref="fitFootprint"/>: stand the model's back on the back edge of the
+        /// rectangle rather than centring it, so a thing placed beside a wall stands against it
+        /// (design 32 §14c). The back is the model's −Z; its front looks out along the facing.
+        /// </summary>
+        public bool fitAgainstBack;
+
+
+        /// <summary>
+        /// May a colonist be dealt this body?
+        ///
+        /// <para><b>False does not mean the row is dead.</b> The Farm, Sci-Fi City and Western
+        /// Frontier bodies stay in the colonist family and stay resolvable — the city's own
+        /// inhabitants, traders and raiders will want them — they simply leave the lottery
+        /// (owner, 2026-09-22). The family index space is unchanged, which is the point: it is
+        /// the look index space, and compacting it is the fault
+        /// <c>ColonistAppearanceBook</c> records.</para>
+        /// </summary>
+        public bool colonistPool;
+
+        /// <summary>
+        /// Which gendered pool this row belongs to — a body's shape, or a hair piece's register.
+        /// </summary>
+        public BodySex sex = BodySex.Either;
+
+        /// <summary>
+        /// Does this piece recolour?
+        ///
+        /// <para>Most hair and beard meshes map every vertex to the single atlas texel the scalp
+        /// already uses, so repainting the hair rectangle recolours all three together. Six do
+        /// not — they span real texture, and repainting them throws art away
+        /// (<c>docs/research/e-06-modular-colonists.md</c> §7). Those are excluded here, in data,
+        /// rather than by a rule in code.</para>
+        /// </summary>
+        public bool recolours = true;
+
+        /// <summary>
+        /// Is this body the colony's issued uniform?
+        ///
+        /// <para>Exactly one row per sex carries it. Until clothing is a thing a colonist can be
+        /// given (<c>docs/design/29-modular-colonists.md</c> §9), every colonist wears the uniform
+        /// and the rest of the pool is what the clothing system will draw from — so the pool is
+        /// kept and flagged rather than emptied.</para>
+        /// </summary>
+        public bool uniform;
 
         /// <summary>
         /// Take only the *material* from the prefab and keep the primitive box for the mesh.
@@ -267,10 +370,72 @@ namespace Odyssey.Presentation.Rendering
         public List<LocomotionEntry> locomotion = new List<LocomotionEntry>();
 
         /// <summary>
+        /// The clips a <b>combat row</b> plays (design 33 §1, <c>ModuleIds.CombatRows</c>): one
+        /// entry per variant of the role — a direction, a combo step, or a begin, loop or end.
+        /// Empty on every other row, and every clip null on a checkout without the Sword Combat
+        /// pack, which is what sends the figure to <c>CombatPose</c>'s computed version.
+        /// </summary>
+        public List<CombatClipEntry> combat = new List<CombatClipEntry>();
+
+        /// <summary>
+        /// The settled idle a live figure blends into while it sits beside a fire (design 31
+        /// §18d, <c>SitPose</c>). Not a gait: gaits are chosen by speed and a sitter has none, so
+        /// this is its own input on the figure's mixer, weighted by how far down she is.
+        ///
+        /// <para>Null on every row that cannot sit, and on a clone without the packs; either way
+        /// the figure stands at the fire, which is what it did before this existed.</para>
+        /// </summary>
+        public AnimationClip? sitClip;
+
+        [Tooltip("The settled idle this row sits in, by asset name. Used to rebuild the reference.")]
+        public string sitClipName = string.Empty;
+
+        /// <summary>
+        /// Lay a <b>computed</b> four-legged gait over this row's idle (design 29 §8a,
+        /// <c>QuadrupedGait</c>). The stride is measured off the rig's own legs at build, not
+        /// declared here. Off, the default, means the row's clips are its whole locomotion. On for
+        /// the hog, which has no walk clip; the rat walks on its own clips.
+        /// </summary>
+        [Tooltip("Lay a computed four-legged gait over the idle. Off = the clips are the locomotion.")]
+        public bool quadrupedGait;
+
+        /// <summary>
+        /// This row's fastest locomotion clip is a <b>hop</b>, drawn in place (design 30 §8): the
+        /// figure's drawn position is paced to the clip's own flight, held still while it crouches
+        /// and lands and carried forward while it is in the air, so a frog hops rather than gliding
+        /// along the ground with its legs going. On for the frog, whose only way of moving is its
+        /// Jump clip; see <c>PawnFigureDirector.HopSurge</c>.
+        /// </summary>
+        [Tooltip("The fastest gait is a hop drawn in place: pace the figure's position to the clip's flight.")]
+        public bool hopGait;
+
+        /// <summary>
         /// Which parts of this body's atlas are its skin, its hair and its clothes, so a colonist
         /// can be recoloured. Empty on everything that is not a colonist.
         /// </summary>
         public AppearanceCells appearance = new AppearanceCells();
+
+        /// <summary>
+        /// One of the bandit gang's bodies (<c>docs/design/42-bandits.md</c>): never in the
+        /// colonist lottery, dealt only to a hostile person by <c>ColonistCastPools.BanditMale</c>
+        /// and <c>BanditFemale</c>, which read this.
+        /// </summary>
+        public bool bandit;
+
+        /// <summary>
+        /// A skinned overlay the rig already carries, switched <b>on</b> for this row after the
+        /// head is bared — the bandit's armour vest, <c>SM_Char_Attach_Male_Armor_02</c> and its
+        /// kin. Every Battle Royale rig ships six of them inactive. Empty on every other row.
+        /// </summary>
+        public string overlayName = string.Empty;
+
+        /// <summary>
+        /// Where the overlay takes its colour from, which is <b>not</b> where the body does: the
+        /// vest's camo and the male rig's trousers share one region of the atlas, so one set of
+        /// rectangles would paint the trousers red or the vest black. Filled by
+        /// <c>CharacterSwatches</c> with the rest of the appearance.
+        /// </summary>
+        public AppearanceCells overlayAppearance = new AppearanceCells();
     }
 
     /// <summary>How confidently a body was carved into recolourable regions.</summary>
@@ -360,6 +525,39 @@ namespace Odyssey.Presentation.Rendering
 
         [Tooltip("Metres per second the gait covers ground at. Zero means standing still.")]
         public float metresPerSecond;
+    }
+
+    /// <summary>
+    /// One clip of a combat row: which variant of the role it is and, for a blow, where in it the
+    /// blow lands (design 33 §3, <c>docs/research/synty-sword-combat.md</c>).
+    ///
+    /// <para><b>The impact is measured, not typed.</b> Every attack in the Sword Combat pack is
+    /// cut by its author into WindUp, Hit and FollowThrough sub-clips, so the frame the blade
+    /// lands is the WindUp's last frame. The catalogue build reads it off the importer's own clip
+    /// ranges and writes it here in seconds from the clip's start; the figure then plays the clip
+    /// at the rate that puts this instant on the simulation's <c>windupTicks</c>.</para>
+    /// </summary>
+    [Serializable]
+    public sealed class CombatClipEntry
+    {
+        [Tooltip("The Polygon, in-place, non-returning clip, by its own name.")]
+        public string clipName = string.Empty;
+
+        [Tooltip("The clip. Null on a clone without the Sword Combat pack; the computed pose stands in.")]
+        public AnimationClip? clip;
+
+        [Tooltip("Which variant: F/B/L/R for a direction, A/B/C for a combo step, Begin/Loop/End for a phase.")]
+        public string variant = string.Empty;
+
+        [Tooltip("Seconds from the clip's start to the blow landing: where its WindUp sub-clip ends. 0 for a clip with no blow.")]
+        public float impactSeconds;
+
+        /// <summary>
+        /// The file the clip lives in, when that is not its own name — a jump's landing is inside
+        /// the take-off's file (design 46 §7). Empty for every row whose clip is its file's.
+        /// </summary>
+        [Tooltip("The FBX the clip is in, by name, when that is not the clip's own name. Empty = the same.")]
+        public string fileName = string.Empty;
     }
 
     /// <summary>
@@ -512,11 +710,60 @@ namespace Odyssey.Presentation.Rendering
         public const string Bed = Prefix + "bed";
 
         /// <summary>
+        /// The campfire. As the bed is: no catalogue row owed, the plain block placeholder in
+        /// the stuff's tint until real art lands — a ring of stones reads fine as a low block,
+        /// and the fire's warmth is a number the pane carries, not a thing the mesh does. One
+        /// row on this id upgrades every campfire when the art arrives.
+        /// </summary>
+        public const string Campfire = Prefix + "campfire";
+
+        /// <summary>
+        /// The wood-fired generator and the heater (design 32). The campfire's deal: no catalogue
+        /// row owed yet, the plain block in the stuff's tint until the owner picks art — whether a
+        /// generator is running is a colour on the lines and a row on the pane, not a thing the
+        /// mesh does. One row on either id upgrades every one of them when the art arrives.
+        /// </summary>
+        public const string Generator = Prefix + "generator";
+
+        /// <summary>See <see cref="Generator"/>.</summary>
+        public const string Heater = Prefix + "heater";
+
+        /// <summary>
+        /// The galley (design 48 §5), the electric cooker: the POLYGON Shops stove, drawn once from
+        /// the head and turned to the player's facing like the generator. A clone without that pack
+        /// resolves it to nothing and draws the tinted block, as every machine does.
+        /// </summary>
+        public const string Galley = Prefix + "galley";
+
+        /// <summary>
         /// The bed's pillow, which is a module of its own so it can be a different shape and a
         /// different colour from the rest of the bed. Bedding is linen whatever the frame is made
         /// of: a stone bed has a white pillow, exactly as a wooden one does.
         /// </summary>
         public const string BedPillow = Prefix + "bed.pillow";
+
+        /// <summary>
+        /// The shelf. No catalogue row and none owed: the id resolves to the plain block
+        /// placeholder, tinted by the stuff it was built of, and drawn by the mesher as a carcass,
+        /// a deck and a back lip from scaled instances of it — the bed's idiom exactly, an honest
+        /// stand-in rather than borrowed art. One row on this id upgrades every shelf in the game
+        /// the day real art lands.
+        /// </summary>
+        public const string Shelf = Prefix + "shelf";
+
+        /// <summary>
+        /// Sandbags (design 53 §7a-bis). No catalogue row: the id resolves to
+        /// <see cref="ModuleShape.Sandbag"/>, our own bag mesh, and <c>CoverShape</c> lays a wall of
+        /// them bag by bag in hessian and desert tan. Ours, so a clone without the packs draws it too.
+        /// </summary>
+        public const string Sandbags = Prefix + "sandbags";
+
+        /// <summary>
+        /// The line round a stockpile's outer edge (owner, 2026-09-23: "wash + edge outline"). No
+        /// art is meant to exist for it: it resolves to the plain slab primitive, which the edge
+        /// tint colours flat, the way the bed's placeholder is a box the tint colours.
+        /// </summary>
+        public const string StoreEdge = Prefix + "storeedge";
 
         /// <summary>
         /// The colonist figures. Not placed in a cell by worldgen or the mesher: pawns move every
@@ -537,6 +784,130 @@ namespace Odyssey.Presentation.Rendering
         public static string Colonist(int variant) =>
             variant <= 0 ? ColonistBase : ColonistBase + "." + variant.ToString();
 
+        /// <summary>
+        /// The animals (design 29 §1), one row per <b>kind</b> of pawn that is not a person. The
+        /// name table is parallel to the simulation's <c>PawnKindIndex</c> — 0 is the colonist and
+        /// has no row here — exactly as the interface's <c>PawnKindLabels</c> is, so the three
+        /// tables can be checked against each other and none has to see the others' assembly.
+        /// </summary>
+        public const string AnimalBase = Prefix + "pawn.animal";
+
+        /// <remarks>Kinds 3 and 4 are the bandit and the gunman, people, and have no row; the frog is kind 5
+        /// (design 30 §8).</remarks>
+        public static readonly string[] AnimalNames = { string.Empty, "hog", "rat", string.Empty, string.Empty, "frog" };
+
+        /// <summary>The row for a kind, or empty for a person and for a kind past the table.</summary>
+        public static string Animal(int kind) =>
+            kind > 0 && kind < AnimalNames.Length && AnimalNames[kind].Length > 0
+                ? AnimalBase + "." + AnimalNames[kind] : string.Empty;
+
+        /// <summary>
+        /// The fight's clip rows (design 33 §1, <c>docs/research/synty-sword-combat.md</c>), one
+        /// row per <b>role</b>, never per clip name: a row's clips are the Sword Combat pack's
+        /// Polygon, in-place, non-returning clips for that role — its directional or combo variants
+        /// as the row's entries — and a checkout without the pack has the row with no clips and
+        /// falls back to <c>CombatPose</c>. Claimed by the combat contracts step so the rows' ids
+        /// are fixed before lane B writes the catalogue build (<c>PlayScene.cs</c>) that fills them.
+        /// </summary>
+        public const string CombatBase = Prefix + "anim.combat";
+
+        /// <summary>A light one-handed swing: <c>LightCombo01A/B/C</c>, alternated.</summary>
+        public const string CombatSwingLight = CombatBase + ".swing.light";
+
+        /// <summary>A heavy swing: <c>HeavyCombo01A/B/C</c>, alternated. Never a stab — it is the blunt weapons' row.</summary>
+        public const string CombatSwingHeavy = CombatBase + ".swing.heavy";
+
+        /// <summary>Taking a blow, by direction: <c>Hit_F/B/L/R_React</c>.</summary>
+        public const string CombatHitReact = CombatBase + ".react.hit";
+
+        /// <summary>A big blow or a stun's first beat, by direction: <c>Hit_F/B/L/R_Stagger</c>.</summary>
+        public const string CombatStagger = CombatBase + ".react.stagger";
+
+        /// <summary>Getting out of the way: <c>Dodge_F/B/L</c> (never <c>_R</c>, which imports Generic).</summary>
+        public const string CombatDodge = CombatBase + ".dodge";
+
+        /// <summary>Stunned: begin, loop, end.</summary>
+        public const string CombatStun = CombatBase + ".stun";
+
+        /// <summary>Downed: <c>KnockDown_Begin</c>, then <c>_Loop</c>; the get-up for a recovery.</summary>
+        public const string CombatDowned = CombatBase + ".downed";
+
+        /// <summary>Dying, by direction: <c>Death_F/B/L/R</c>.</summary>
+        public const string CombatDeath = CombatBase + ".death";
+
+        /// <summary>The corpse: each death's one-frame <c>_Pose</c> clip, held.</summary>
+        public const string CombatDeathPose = CombatBase + ".death.pose";
+
+        /// <summary>Every combat row, for the catalogue build and the test that each resolves or falls back.</summary>
+        public static readonly string[] CombatRows =
+        {
+            CombatSwingLight, CombatSwingHeavy, CombatHitReact, CombatStagger, CombatDodge,
+            CombatStun, CombatDowned, CombatDeath, CombatDeathPose,
+        };
+
+        /// <summary>
+        /// The weapon out of its sheath at the left hip and into the right hand (design 33 §8b):
+        /// <c>A_Draw_Sword_Masc</c> and <c>_Femn</c>, the variant by the body's sex. Played on an
+        /// upper-body layer over the walk. <b>Not in <see cref="CombatRows"/></b>, whose order is
+        /// the combat roles' and whose test holds every clip without a blow to an impact of nought.
+        /// </summary>
+        public const string CombatDraw = CombatBase + ".sheath.draw";
+
+        /// <summary>The weapon back from the hand to the hip: <c>A_Sheathe_Sword_Masc</c> and <c>_Femn</c>.</summary>
+        public const string CombatSheathe = CombatBase + ".sheath.sheathe";
+
+        /// <summary>The two sheath rows, for the catalogue build and the test that each resolves or snaps.</summary>
+        public static readonly string[] SheathRows = { CombatDraw, CombatSheathe };
+
+        /// <summary>
+        /// Jumping a one-cell stream (design 46 §7): the take-off, <c>A_Jump_Walking_Masc</c> and
+        /// <c>_Femn</c> from Base Locomotion, the variant by the body's sex as the sheath's is.
+        /// In place; the arc is <c>JumpArc</c>'s. Played in the combat action slot.
+        /// </summary>
+        public const string JumpTakeOff = Prefix + "anim.jump.takeoff";
+
+        /// <summary>
+        /// The landing, <c>A_Land_Walking_Masc</c> and <c>_Femn</c>. <b>Inside the take-off's own
+        /// file</b> (<c>A_Jump_Walking_*.fbx</c> holds both), which is why the row carries a file name
+        /// beside the clip name: a lookup by file would return whichever clip came first.
+        /// </summary>
+        public const string JumpLand = Prefix + "anim.jump.land";
+
+        /// <summary>The two jump rows, for the catalogue build and the test that each resolves.</summary>
+        public static readonly string[] JumpRows = { JumpTakeOff, JumpLand };
+
+        /// <summary>
+        /// Hair pieces a colonist can be dealt, as a family
+        /// (<c>docs/design/29-modular-colonists.md</c>).
+        ///
+        /// <para>A rigid prop parented to <c>HumanBodyBones.Head</c> with an identity transform —
+        /// measured, in both packs (<c>docs/research/e-06-modular-colonists.md</c> §4). There is
+        /// no offset to fit and no per-body special case.</para>
+        /// </summary>
+        public const string HairBase = Prefix + "attach.hair";
+
+        /// <summary>The id of one hair piece.</summary>
+        public static string Hair(int variant) =>
+            variant <= 0 ? HairBase : HairBase + "." + variant.ToString();
+
+        /// <summary>Beards, on exactly the same terms as <see cref="HairBase"/>.</summary>
+        public const string BeardBase = Prefix + "attach.beard";
+
+        /// <summary>The id of one beard.</summary>
+        public static string Beard(int variant) =>
+            variant <= 0 ? BeardBase : BeardBase + "." + variant.ToString();
+
+        /// <summary>
+        /// What covers a whole head — the bandit's welding helmet (<c>docs/design/42-bandits.md</c>
+        /// §4) — on the hair's terms: a rigid prop on the head bone with an identity transform.
+        /// Worn in the pack's own paint, so its rows are not recoloured.
+        /// </summary>
+        public const string HeadgearBase = Prefix + "attach.head";
+
+        /// <summary>The id of one piece of headgear.</summary>
+        public static string Headgear(int variant) =>
+            variant <= 0 ? HeadgearBase : HeadgearBase + "." + variant.ToString();
+
         // Loose items lying in a cell: a crate of rations to be eaten, a heap of scrap to be
         // hauled. These are drawn by the actor pass for the same reason the colonist is — they
         // come from the published snapshot rather than from the mirror, because an item that is
@@ -548,6 +919,32 @@ namespace Odyssey.Presentation.Rendering
         public const string ItemIronOre = Prefix + "item.ironore";
         public const string ItemCoal = Prefix + "item.coal";
         public const string ItemCarrots = Prefix + "item.carrots";
+
+        // The four melee weapons lying on the ground (design 33 §1, C3), claimed by the combat
+        // contracts step so the table below stays as long as ItemIndex. Their rows came at the
+        // C2/C3 integration, and the same row is the prop a figure holds
+        // (PawnFigureDirector.Weapons.cs): one piece of art for the weapon wherever it is.
+        public const string ItemBat = Prefix + "item.bat";
+        public const string ItemCrowbar = Prefix + "item.crowbar";
+        public const string ItemMachete = Prefix + "item.machete";
+        public const string ItemArcBlade = Prefix + "item.arcblade";
+
+        /// <summary>Medical supplies (design 37): a small box, the same art on the ground, on a shelf and in an armful.</summary>
+        public const string ItemMedicalSupplies = Prefix + "item.medicalsupplies";
+
+        /// <summary>Wild berries (design 45 §6): one berry cluster, heaped by the stack, and worn
+        /// by a ripe berry bush.</summary>
+        public const string ItemBerries = Prefix + "item.berries";
+
+        /// <summary>Mushrooms (design 45 §6): one mushroom, heaped by the stack.</summary>
+        public const string ItemMushrooms = Prefix + "item.mushrooms";
+        /// <summary>The kitchen's three meals (design 48 §4): a tray of food on the ground, on a shelf and in an armful.</summary>
+        public const string ItemCookedMeal = Prefix + "item.meal.cooked";
+        public const string ItemVegetableMeal = Prefix + "item.meal.vegetable";
+        public const string ItemBurntMeal = Prefix + "item.meal.burnt";
+        // The pistol (design 47 §4a), claimed by the ranged line's contracts step: POLYGON Battle
+        // Royale's SM_Wep_Pistol_Heavy_01, the ground item and the held prop alike.
+        public const string ItemPistol = Prefix + "item.pistol";
 
 
         /// <summary>
@@ -562,6 +959,12 @@ namespace Odyssey.Presentation.Rendering
         static readonly string[] ItemModules =
         {
             ItemMeal, ItemSalvage, ItemWood, ItemStone, ItemIronOre, ItemCoal, ItemCarrots,
+            ItemBat, ItemCrowbar, ItemMachete, ItemArcBlade,
+            ItemMedicalSupplies,
+            ItemBerries, ItemMushrooms,
+            // The kitchen (design 48 §4), handles 14 to 16.
+            ItemCookedMeal, ItemVegetableMeal, ItemBurntMeal,
+            ItemPistol,
         };
 
         /// <summary>How many item def indices have a module. Must equal <c>ItemIndex.Count</c>.</summary>
@@ -597,6 +1000,13 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const string ToolHammer = Prefix + "tool.hammer";
 
+        /// <summary>
+        /// The cook's frying pan (design 48 §10). Battle Royale's <c>SM_Wep_Pan_01</c>, the one pan in
+        /// the imported packs: a handle and a head, so the fitting path treats it as a short haft
+        /// with the pan where a blade would be, and the stir is the stroke that moves it.
+        /// </summary>
+        public const string ToolPan = Prefix + "tool.pan";
+
         // Tufts of grass strewn over the ground. Decoration and nothing else: they block nothing,
         // are not in the save, and the simulation has never heard of them. What they are for is
         // that a field of one flat colour reads as a carpet, and a field with clumps standing up
@@ -610,6 +1020,47 @@ namespace Odyssey.Presentation.Rendering
         public static int GrassTuftCount => GrassTufts.Length;
 
         public static string GrassTuft(int variant) => GrassTufts[variant];
+
+        // The Meadow dressing: everything that stands on the ground to make a meadow of it, and
+        // none of it simulated (the look pass, owner 2026-09-24: "scenery first, sim after";
+        // design 38 §17). Families rather than single rows, so the variety is the catalogue's and
+        // the layout only ever asks for "a bush". Kept apart from the tufts because they are
+        // placed by a different rule — patches over the land, not a count per cell.
+        const string DressPrefix = Prefix + "dress.";
+
+        /// <summary>The big tall-grass mats, four to seven metres across: the stands in a meadow.</summary>
+        public static readonly string[] DressTallGrass = { DressPrefix + "grass.tall.a", DressPrefix + "grass.tall.b" };
+
+        /// <summary>Low leafy cover and grass bushes, filling between the stands.</summary>
+        public static readonly string[] DressCover =
+            { DressPrefix + "cover.a", DressPrefix + "cover.b", DressPrefix + "cover.c", DressPrefix + "cover.grassbush" };
+
+        /// <summary>Flowers: the standing wildflowers and the flat cards that dot a field with colour.</summary>
+        public static readonly string[] DressFlowers =
+            { DressPrefix + "flower.wild.a", DressPrefix + "flower.wild.b", DressPrefix + "flower.wild.c" };
+
+        /// <summary>A sunflower, for the odd cluster; tall, so used sparingly.</summary>
+        public static readonly string[] DressSunflower = { DressPrefix + "flower.sun" };
+
+        /// <summary>The round bushes, which in the reference are the biggest thing in the picture.</summary>
+        public static readonly string[] DressBushes = { DressPrefix + "bush.a", DressPrefix + "bush.b", DressPrefix + "bush.c" };
+
+        /// <summary>Rocks lying in the grass: single stones and small piles.</summary>
+        public static readonly string[] DressRocks =
+        {
+            DressPrefix + "rock.a", DressPrefix + "rock.b", DressPrefix + "rock.c",
+        };
+
+        /// <summary>
+        /// A tree's art variant. Variant 0 is the species' own row, which every other reader of a
+        /// tree (the cursor, the sight test, the surround) keeps using; the rest are only chosen by
+        /// the mesher, per cell, so a wood is not one tree repeated.
+        /// </summary>
+        public static string TreeVariant(string baseId, int variant) =>
+            variant == 0 ? baseId : baseId + "." + variant;
+
+        /// <summary>How many art variants a tree species may have, the base row included.</summary>
+        public const int MaxTreeVariants = 6;
 
         /// <summary>Terrain is not authored per template, so its ids are derived from the def name.</summary>
         public static string Terrain(string terrainDefName) =>

@@ -14,7 +14,7 @@ namespace Odyssey.Tests.Sim
     /// <para><b>A roof is a floor is a slab</b> and has been since U29, so nothing here is about a
     /// new pipeline. These are about the two things that stopped roofing being something a player
     /// could do: an order named inside the room you are standing in, and a span wider than a hut.
-    /// <c>docs/design/27-roofs.md</c>.</para>
+    /// <c>docs/design/59-roofs.md</c>.</para>
     ///
     /// <para><b>The numbers in these tests were measured, not derived.</b> A first pass reasoned
     /// that support decaying one per cell from a wall put the limit at a six-cell interior; the
@@ -45,7 +45,15 @@ namespace Odyssey.Tests.Sim
         {
             Assert.That(colony.Construction.Place(Size.FromIndex(cell), building, stuff),
                 Is.EqualTo(IntentRejection.None), $"the order for {cell} was refused");
-            colony.Construction.Raise(colony.Pawns, cell);
+
+            // Raise refuses while a colonist is walking through a cell a blocking thing would fill
+            // (design 30, nobody in a wall), and the hall's middle is where the colony starts. So
+            // wait for them to pass rather than build nothing and measure a hall with no pillar,
+            // which is what this helper did silently until the merge with main (2026-09-26).
+            for (int tick = 0; tick < 600 && !colony.Construction.Raise(colony.Pawns, cell); tick++)
+                colony.World.Tick();
+            Assert.That(colony.Construction.SiteAt(Size.FromIndex(cell)), Is.EqualTo(-1),
+                $"{cell} was never raised: somebody stood in it for ten seconds");
         }
 
         static int Above(int cell) => cell + Size.LayerStride;
@@ -352,7 +360,7 @@ namespace Odyssey.Tests.Sim
 
         /// <summary>
         /// A pillar fills its cell, which is the decision that makes span cost floor space
-        /// (27-roofs.md §5). Nothing else goes in there and nobody walks through it.
+        /// (59-roofs.md §5). Nothing else goes in there and nobody walks through it.
         /// </summary>
         [Test]
         public void APillarFillsItsCellSoNothingElseGoesThere()

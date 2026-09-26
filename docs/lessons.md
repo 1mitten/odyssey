@@ -181,6 +181,17 @@ same message — and it does not get slower, because it stops as soon as the eff
 applies to anything downstream of a tick: a published snapshot, a job starting, a designation
 clearing.
 
+**The same trap has a second form: counting frames, or timing a window of frames, across a tick.**
+2026-09-24, PR #180, two PlayMode tests red on the CI runner and green here. `StockpileDragTests`
+counted frames from the drag to the drawn zone and allowed ten, but the zone exists only after the
+next tick, and at the runner's ~1 ms frames that tick can be sixteen frames off — `main` read 3 and
+the branch 11 on the same renderer. `TheFrameWithAFightInView` asserted combat events inside 180
+timed frames, which are 27 ticks at 2.5 ms here and about twelve at 1.2 ms there, and the runner's
+twelve caught no swing. **The runner is the faster machine, so it is where this shows.** Count
+from the effect (the tick that published the zone), and where a window must hold simulation time,
+tick it from the test (`boot.StartCoroutine` ticking once a frame) rather than hoping the frame
+rate supplies it. Print the tick count beside any frame count, so the next failure names itself.
+
 **The fast tier compiles neither Presentation nor Editor.** `scripts/test-fast.sh` builds only the
 two mirror projects, `Odyssey.Tests.Sim` and `Odyssey.Tests.Hud`, so a green fast tier says nothing
 at all about `Assets/Odyssey/Presentation/`, `Assets/Editor/` or the scene wiring. A unit that
@@ -628,6 +639,17 @@ answered within one row, never for absolutes. And a milestone report stated a re
 harness before the harness had been checked against an empty render placed last — the control that
 should have been the first row written, not the last.
 
+**"Is the machine clear?" needs three answers, not one** (2026-09-23). A frame number is only
+comparable with one from the same run, so a measurement waits for every other Unity batch run to
+finish — and a single sample of the process list is not enough to know that it has. A batch run
+that has already printed `total=… passed=…` can still be shutting down for another minute
+(the run that finishes without exiting, above), and a sibling worktree can start one in the gap.
+Three attempts were needed for the crowd-scan measurement: the first raced the session's *own*
+EditMode run, the second refused correctly and reported "still busy", and only the third had the
+machine. **Poll until it has been quiet on three consecutive checks**, and have the script exit
+non-zero rather than measure a contended machine — a refusal costs a retry, a contended number
+costs a wrong conclusion and is indistinguishable from a real regression.
+
 **A profiler recorder is not free to start.** Merely creating `ProfilerRecorder`s for the render
 statistics made every row of the same benchmark ten times slower. Counters that change the thing
 they count are worse than none; the editor's own `UnityStats` (what the Stats overlay reads) costs
@@ -914,6 +936,30 @@ Before deleting any tree that a worktree owns, ask whether anything under it is 
 Get-ChildItem <path> -Recurse -Force -Directory | Where-Object { $_.LinkType }
 ```
 
+**If it has already happened**, see the recovery procedure in *The licensed packs must not live
+inside a worktree* below, and check a GUID before believing any restore — e.g. that
+`PolygonGeneric\Prefabs\Base\SM_Bld_Base_Wall_01.prefab.meta` still reads
+`guid: d6b56504304c325419b598fe3ddb95ed`. Art restored under fresh GUIDs resolves to nothing and the
+world draws as boxes *with* the packs present, which looks exactly like not having them.
+
+> **Retired 2026-09-23.** Three paragraphs stood here describing a junction **chain** — the main
+> checkout junctioned to `D:\code\odyssey-audio`, which held the only real copy — and telling the
+> reader to protect that worktree and not to "tidy" it into a junction. **That arrangement is gone
+> and so is the folder.** `D:\code\odyssey-audio` does not exist; `D:\code\odyssey\Assets\Synty`
+> is a **real directory** (`(Get-Item <path> -Force).LinkType` is empty) and every worktree
+> junctions straight to it, one hop, which is precisely the inversion the retired text asked for.
+> The section below records why, and it is the one to read.
+>
+> It is left as a marked stub rather than deleted because of what it was: a **safety warning that
+> named the wrong folder as the one thing on the machine you must not delete.** Anybody who had
+> followed it would have protected a folder that is not there and left the real one unguarded. A
+> stale fact in a warning is worse than no warning, and CLAUDE.md's own status section carries the
+> same caution — *"a 'known gap' in this file outlived its own fix"*. Found while junctioning a new
+> worktree and checking the claim rather than repeating it.
+
+**Check before pruning any worktree**, with the `LinkType` command above, or:
+`Get-Item <path>\Assets\Synty -Force | Select Attributes, Target` — a `ReparsePoint` is a link and
+safe to `rmdir`, anything else is the real thing.
 **It happened again on 2026-09-20, exactly as the paragraphs below predicted, and the arrangement
 they asked for is now in place.** `D:\code\odyssey-audio` was removed — the worktree that held the
 only real copy — and every checkout on the machine went dark at once: sixteen `Assets\Synty`
@@ -2582,6 +2628,241 @@ git worktree remove D:\code\<worktree>
 
 `rmdir` on a junction removes the link. A recursive delete follows it.
 
+
+## A benchmark that edits the grid directly bypasses every cache a real edit invalidates
+
+`TickBenchmarkTests.MineOneCell` flips a cell and marks the nav grid, and that was the whole
+"edit tick" the map-size numbers were taken on. A colonist's mined cell also marks the enclosure,
+the structure solver and the chunks — and the enclosure solve was the largest of them on Huge
+(2.3 ms of a real edit against 0.9 ms measured) before temperature made it larger. **When a
+benchmark stands in for a game action, list every mark the real action sets and set them all**,
+or the number is of a different action than the one it is named after. Found reviewing PR #164
+(2026-09-21); `EnclosureCostProbe` is the explicit arm that measures the missing one.
+## A dead process can hold the build backend, and the batch run waits for it for ever
+
+`scripts/unity.sh test editmode` wrote its log up to `Compiling Scripts` and then sat there. The last
+line was
+
+```
+bee_backend: error: More than one copy of bee_backend running in D:\code\odyssey-entomb -- PID 15200 waiting
+```
+
+and **PID 15200 did not exist** — it belonged to a batch run that had been killed earlier. The lock
+is not reclaimed when its owner dies, so Unity waited, wrote no `TestResults/EditMode.xml`, and gave
+every appearance of a slow compile. Ten minutes went into deciding whether it was slow or stuck.
+
+**The tell is the log not growing.** A compiling editor writes something every few seconds; a waiting
+one writes nothing at all after that line. Check the log's size twice a minute apart before assuming
+contention, and check the named PID actually exists:
+
+```powershell
+Get-CimInstance Win32_Process -Filter "ProcessId=15200"
+```
+
+Nothing back means the lock is stale. Kill the waiting editor — check its command line names *your*
+project path first, because this machine runs several — and start the run again; a fresh run takes
+the lock cleanly. Do not delete anything under `Library/` to fix it.
+
+## A wait measured in frames is a measurement of the frame rate
+
+`BuildAppearanceTests` asked how long after a wall is built the renderer knows about it, and counted
+**frames**. It read 0 alone and 13 in a full PlayMode run on the same commit, and failed the tier on
+the second. Nothing was slower: the render mirror is written by a snapshot contributor, so it moves
+once a *tick*, and a rig with nothing to draw runs frames far faster than the fixed tick.
+
+**When something is published by the simulation, assert the tick.** Frames are a unit of how fast the
+machine happened to be going; seconds of wall clock are the unit the owner's report was made in, and
+both of those are worth logging. The frame count is a diagnostic, never a gate.
+## Never switch branches in a worktree you have just handed to the owner
+
+**2026-09-21.** The map-size handover named `D:\code\odyssey-bigmaps` as the place to press Play.
+Minutes later the same worktree was moved to a new branch with `git checkout -b` to start the
+follow-up unit, while the owner had an editor open on it. Unity reimported underneath a live
+playtest.
+
+Nothing was lost — the handed-over branch was already committed and pushed, and the new code was
+inert behind a default-off flag — but the owner was asked to reason about a worktree changing shape
+mid-session, which is exactly what a handover exists to prevent.
+
+**The rule: a worktree named in a handover belongs to the owner until they say otherwise.** The
+follow-up unit gets its own worktree, however tempting the warm `Library/` is. A fresh worktree
+costs about ten minutes of Synty import; interrupting a playtest costs the playtest, and the owner
+is the only person who can run one.
+
+The tell that it had happened was not a test failure. It was `scripts/unity.sh` refusing to run —
+see the next lesson.
+
+## `unity.sh` refusing with "this project is locked" identifies the process; use it before assuming
+
+**2026-09-21.** Two batch runs were refused in a row with *"this project is locked and a Unity
+process is running"*. The temptation is to read that as the phantom-editor phenomenon already in
+this file and clear the lock.
+
+The guard is more precise than that. It matches `-projectPath` against **this** project, so the
+message means a Unity process genuinely has *this* worktree open. One query separates the cases:
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='Unity.exe'" | ForEach-Object {
+  $cl = $_.CommandLine
+  $pp = if ($cl -match '(?i)-projectpath\s+"?([^"]+?)"?(\s|$)') { $Matches[1] } else { '<none>' }
+  $kind = if ($cl -match '(?i)-batchmode') { 'BATCH' } else { 'GUI' }
+  "{0} | {1} | {2} | started {3}" -f $_.ProcessId, $kind, $pp, $_.CreationDate
+}
+```
+
+`GUI` plus a path that is the owner's worktree is a person, and the answer is to wait or to work
+elsewhere. `BATCH` plus a path this session started is a leftover of one's own and is safe to end.
+On the day this was written the answer was `GUI | D:\code\odyssey-bigmaps` — the owner, playing what
+they had just been handed.
+
+**Force-killing a batch Unity makes the owner's next editor session open with a recovery prompt.**
+2026-09-21: the owner asked for the lock to be freed, `Stop-Process -Force` took the batch Unity out
+mid-run, and their next open asked *"Scene backups from a previous Editor session have been
+detected. Do you want to copy and preserve these backups in Assets/_Recovery/?"* The answer is
+**no** — a headless test run edits no scene, and saying yes writes new assets **inside `Assets/`**
+for Unity to import and somebody to commit. Better still is not to cause it: stop a batch run
+between its runs rather than killing it mid-run, and if it must be killed, say so *before* the owner
+next opens the editor rather than letting the prompt be a surprise.
+
+**Two rules fall out of it.** Never kill on the strength of the refusal alone; the message does not
+say whose process it is, and the query does. And when a batch Unity of one's own is stopped by
+stopping its wrapper, **the Unity itself survives** — it goes on holding the project and the
+directory cannot be deleted until the process is ended by id.
+
+## Unlink a Synty junction before deleting anything, including a throwaway worktree
+
+**2026-09-21**, and it is worth repeating here because the throwaway case is where it will happen.
+A worktree created for ten minutes of verification still gets `Assets/Synty` junctioned into it, and
+a recursive delete follows a junction. `git worktree remove --force` failed with *"Invalid
+argument"*, and the reflex is to reach for `Remove-Item -Recurse -Force`.
+
+Order that cannot go wrong: `(Get-Item $junction).Delete()` first, **check the real packs are still
+there**, then delete the directory, then `git worktree prune`. The check in the middle is not
+ceremony — it is the only step that catches the mistake while it is still cheap.
+
+**Rebuilding the module catalogue wipes the recolour classification, and nothing says so** (2026-09-22).
+`scripts/unity.sh exec Odyssey.EditorTools.PlayScene.RebuildCatalogue` replaces every row with
+`SetEntries`, and the `appearance` cells on the sixty-one colonist rows are written by a
+*different* tool that deliberately does not rebuild the catalogue. So a rebuild that adds two
+animal rows also empties every colonist's swatches, every colonist draws in the pack's paint, and
+the only thing that notices is `AppearanceCatalogueTests.EveryBodyHasSomethingToRecolour…`
+("Expected 61, but was 0") a full EditMode tier later. **The pair is always run together:**
+
+```
+scripts/unity.sh exec Odyssey.EditorTools.PlayScene.RebuildCatalogue
+scripts/unity.sh exec Odyssey.EditorTools.CharacterSwatches.Classify
+```
+
+and the diff of `ModuleCatalogue.asset` is checked for `quality: [1-9]` still counting sixty-one
+before the commit. The right fix is for the rebuild to carry the cells across from the asset it
+is replacing; until then this is the rule.
+
+## The runner has art of its own now, and "is the art here" must name the rows it means
+
+**2026-09-23, the animals and wildlife PRs.** Both were green on every tier here and red on the
+self-hosted runner, twice over, for one cause: the animals unit committed two rows of the
+project's own art (`Assets/Art/Custom/Animals`), which resolve on the runner precisely because
+they are not the licensed packs. Every guard that asked "is there any art at all" — a slab
+test's "does any catalogue row resolve", `PawnFigureDirector.Enabled` in a colonist test —
+flipped from *ignore* to *run* on the one machine with no colonist art, and failed on what it
+then measured. **A guard asks about the rows the rule is about:** slab rows for a slab rule,
+`CanDrawColonists` for a colonist figure, `Enabled` only for "can anything be drawn".
+
+The second lesson is cheaper and cost more: **run the whole PlayMode tier before the push, not
+the tests you wrote.** Three PlayMode tests elsewhere counted pawns where the world now seeds
+animals beside the colonists, and the runner found all three one push at a time, each a
+fifteen-minute round trip. The tier is ten minutes here.
+## Four tiers, and a branch can report three of them (2026-09-22)
+
+PR #164 reported *"Fast tier 921 + 583 green, Long tier 23 green, Unity EditMode 2,280 total, 0
+failed"* — three tiers, all honest, and **no PlayMode figure**. PlayMode had one real failure
+waiting in it: the campfire was live on the Build palette with no glyph, so its chip drew the
+placeholder square the specification forbids, and it had been that way for as long as the campfire
+had existed.
+
+**Nothing else could have caught it.** `PaletteGlyphs` lives in `Odyssey.Presentation`, which the
+fast tier does not compile at all; EditMode compiles it and does not carry the test;
+`HudGeometryTests` is PlayMode because it needs a panel. So the one tier that was not run was the
+only tier that could see it.
+
+This is the Long tier's lesson again in different clothes — PR #145 merged with three green tiers
+on top of a Long tier nobody ran and turned `main` red on a wall-clock gate. **The rule that comes
+out of both: a report of "tiers green" names every tier, and a tier with no number beside it was
+not run.** "EditMode 2,280, 0 failed" reads like the authoritative gate because CLAUDE.md calls
+EditMode authoritative, and it is — for what it covers.
+
+The four, and what each is the only one able to see:
+
+| Tier | Compiles | Only it can catch |
+|---|---|---|
+| Fast (`test-fast.sh`) | Sim, Sim.Contracts, Hud | nothing exclusively — it is the inner loop, not a gate |
+| Long (`--filter TestCategory=Long`) | the same | soak runs, scale-target round trips, wall-clock gates |
+| Unity EditMode | **everything**, including Presentation and Editor | assembly-definition boundaries, editor tooling, anything that will not compile outside the editor |
+| Unity PlayMode | everything | anything that needs a panel, a frame or a player loop: HUD geometry, glyphs, frame time |
+
+And the player build is the fifth thing, which is not a tier and proves what none of them do: that
+a stripped shader and a runtime path under `Assets/` survive. Two green tiers say nothing about
+whether the game runs.
+
+
+## The logged baseline is not enough to rule out load (2026-09-23)
+
+CLAUDE.md already records that `HudStressTests` is sensitive to what else is running — it failed at
+3.770 ms beside two other `unity.sh` runs and passed at 0.603 ms alone on the same commit — and
+says **"the baseline the test logs is the tell"**, because a real regression would leave the
+baseline alone. That is true as far as it goes and it is not sufficient.
+
+Three runs on the same machine within minutes, one of them a clean `origin/main` worktree as a
+control:
+
+| Run | Baseline | Dense arm, over baseline | Cost of a retexted label | Verdict |
+|---|---|---|---|---|
+| branch | 0.580 ms | **+1.485 ms** | 37.3 us | **failed** |
+| `origin/main` control | 0.583 ms | +0.647 ms | 17.0 us | passed |
+| branch again | **1.591 ms** | −0.298 ms | 76.2 us | passed |
+
+The first two look like a genuine regression by the documented rule: the baselines are identical to
+three decimal places, so conditions were the same, so the dense arm's 2.3× must be the code. **It
+was not.** The third run has the same code as the first and passes, and the per-label figure — the
+same measurement, same machine, same quarter of an hour — reads **17, then 37, then 76 us**.
+
+**The baseline only describes the load that was present when the baseline was taken.** The arms run
+one after another over several seconds; load arriving *between* the baseline and the arm leaves the
+baseline clean and inflates the arm, which is exactly the shape that reads as a regression. Run 3 is
+the mirror image: load present throughout inflated both, the arm is measured *over* the baseline,
+and it passed with a negative delta.
+
+**What to do instead.** Read the **per-label figure across runs**, not the baseline — it is the
+same quantity every time and it has no business moving. If it has moved, and especially if it has
+moved by more than the thing you changed could account for, run it again before believing it. And
+where it matters, take a control on a clean `origin/main` worktree **in the same conditions** — that
+is what settled this one, and it is the only form of the measurement that can distinguish the two.
+
+The owner had three editors open on another worktree and the CI runner was building, which is the
+ordinary state of this machine rather than an unusual one.
+
+## Rebuild a serialized asset after a merge; do not trust git's text merge of it (2026-09-24)
+
+`ModuleCatalogue.asset` merged without a conflict and was wrong: git kept both branches' rows and
+dropped the four `fit*` fields that one side had added to *every* row, because each hunk only
+touched the other side's rows. Nothing fails. The editor fills a missing field with its default, so
+main's machines would have silently lost their footprint fit. After any merge that touches a
+generated asset, regenerate it (`unity.sh exec Odyssey.EditorTools.PlayScene.RebuildCatalogue`,
+then `CharacterSwatches.Classify` and `AudioSetup.Build`). Then compare its ids against both parents
+before trusting it.
+
+## An assertion inside a nested coroutine leaks the test's world (2026-09-25)
+
+`BushPickTests` called `Assert.Ignore` inside a coroutine it `yield return`ed from its `[UnityTest]`.
+On the runner, which has no art, that fired — and the outer test's `finally`, which destroys the
+world it built, never ran: an exception thrown in a nested enumerator stops the test without
+unwinding the outer iterator. The bootstrap, its camera and its trace outlived the test, and two
+tests that ran after it in the same process failed for reasons that had nothing to do with them
+(`GroupingTheTreesDoesNotChangeThePicture` photographed through the leaked camera; the traced
+session's file hit a sharing violation with the leaked session's). **Report from a nested
+coroutine and assert in the outer method, and give a file that builds worlds a `[TearDown]` that
+destroys them by name.** The symptom is a failure in a *different* test that only appears once the
+new file is in the run.
 ## A screenshot probe gets one frame, and a frame meshes eleven chunks
 
 `ChunkRenderer.MeshBudgetPerFrame` landed on `main` on 2026-09-21 and is right for the game: a
@@ -2649,5 +2930,5 @@ scripts/unity.sh shot Odyssey.EditorTools.StairCheck.Run
 ```
 
 The tell is that the *log* is complete and correct while the images are uniform. That is not the
-meshing-budget symptom (`docs/design/28-stairs.md` §8c), where the first picture is empty and the
+meshing-budget symptom (`docs/design/60-stairs.md` §8c), where the first picture is empty and the
 last is full — this one is every picture blank, and it means no device.

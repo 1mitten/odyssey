@@ -2,7 +2,7 @@
 
 Things a colonist carries, wears or fights with, as distinct from the bulk commodities above. A commodity is counted; an item is an object with a quality and a history.
 
-30 entries, 4 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+34 entries, 8 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
@@ -17,13 +17,17 @@ Things a colonist carries, wears or fights with, as distinct from the bulk commo
 | **Drill** | `ui.item.drill` | Powered cutting. Fast salvage | sheet 05 (tools and weapons), high | M3 |
 | **Axe** | `ui.item.axe` | Cutting, and chopping | sheet 05 (tools and weapons), high | M3 |
 | **Cutting torch** | `ui.item.cutter` | Opens a hull. Opens a wall | sheet 05 (tools and weapons), low | M3 |
-| **Sidearm** | `ui.item.pistol` | Short range, always to hand | sheet 05 (tools and weapons), high | M3 |
+| **Pistol** | `ui.item.pistol` | Short range, always to hand | sheet 05 (tools and weapons), high | M3 |
 | **Rifle** | `ui.item.rifle` | The standard ranged weapon | sheet 05 (tools and weapons), med | M3 |
 | **Scattergun** | `ui.item.shotgun` | Devastating close, useless far <br>**Needs:** a scattergun, distinguishable from the rifle | no art | M3 |
 | **Crossbow** | `ui.item.crossbow` | Silent, slow, makeable | sheet 05 (tools and weapons), high | M3 |
 | **Grenade** | `ui.item.grenade` | Area damage, and friendly fire | sheet 08 (salvage gear), med | M3 |
 | **Shield** | `ui.item.shield` | Melee defence | sheet 05 (tools and weapons), high | M3 |
 | **Helmet** | `ui.item.helmet` | Protects the head <br>**Needs:** a helmet | no art | M3 |
+| **Bat** | `ui.item.bat` | Blunt, and now and then it stuns | no art | CB |
+| **Crowbar** | `ui.item.crowbar` | Heavier than a bat, slower, and stuns more often | no art | CB |
+| **Machete** | `ui.item.machete` | Sharp and quick | no art | CB |
+| **Arc blade** | `ui.item.arcblade` | A powered edge. The best thing a colonist can hold | no art | CB |
 | **Vest** | `ui.item.vest` | Torso armour | sheet 08 (salvage gear), med | M3 |
 | **Jacket** | `ui.item.jacket` | Warmth and a little protection <br>**Needs:** a coat or jacket | no art | M3 |
 | **Mask** | `ui.item.mask` | Filters what you would rather not breathe | sheet 08 (salvage gear), high | M3 |

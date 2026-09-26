@@ -170,7 +170,15 @@ namespace Odyssey.Presentation.World
                 // to the boards and drops the hips to follow — a colonist folded through its own
                 // bed. Faded rather than switched, exactly as the swim is, so getting up hands the
                 // footing back continuously instead of planting both feet on one frame.
-                float planted = 1f - Mathf.Clamp01(Mathf.Max(figure.SwimWeight, figure.SleepWeight));
+                //
+                // **Nor a body the knock-down clip has put on its back** (design 33 §1): its boots
+                // are in the air by the clip's own authority, and planting them would drag it
+                // upright by the ankles.
+                // **Nor a body in the air over a stream** (design 46 §7): the footing would reach
+                // for the ground under the gap, which is water a layer down.
+                float planted = 1f - Mathf.Clamp01(Mathf.Max(
+                    Mathf.Max(Mathf.Max(figure.SwimWeight, figure.SleepWeight), figure.AirWeight),
+                    figure.Fight.Unplanted * figure.Fight.Weight));
 
                 // A rig with no legs bound is not an error: a non-Humanoid prefab answers null to
                 // every bone and simply goes on walking, which is what it does for the arms too.
@@ -249,11 +257,21 @@ namespace Odyssey.Presentation.World
             CarryingFigures = 0;
             MeasuredSwimPitch = 0f;
             MeasuredToolDrift = 0f;
+            AimingFigures = 0;
 
             for (int i = 0; i < _figures.Count; i++)
             {
                 Figure figure = _figures[i];
                 if (figure.Pawn < 0) continue;
+
+                // An animal with a computed walk lays it over its idle here and does nothing
+                // else in this pass: it has no arms to swing, no gestures, and does not sleep,
+                // swim or climb yet (design 29). Idempotent for the reason the work pose is.
+                if (figure.Gait != null)
+                {
+                    figure.Gait.Apply(figure.Transform.right, figure.Transform.up);
+                    continue;
+                }
 
                 // A colonist cannot be swinging a pick and climbing at the same time, and the two
                 // poses write the same bones, so the climb is applied here rather than in a pass
@@ -261,6 +279,15 @@ namespace Odyssey.Presentation.World
                 // order, for ever.
                 if (figure.WorkWeight <= 0.001f)
                 {
+                    // Down behind cover first (design 53 §8a): the hips and legs only, so the aim
+                    // laid on below takes the arms and the spine from a crouched body. Not over a
+                    // pose that already owns the legs or the root — lying, swimming, climbing, or a
+                    // stoop of its own.
+                    if (figure.CoverCrouchWeight > 0.001f && figure.SleepWeight <= 0.001f
+                        && figure.SwimWeight <= 0.001f && figure.ClimbPhase < 0f
+                        && figure.Gesture == PawnGesture.None && !ForceGesture.HasValue)
+                        ApplyCoverCrouch(figure);
+
                     // Sleep comes before all of them. Every other pose here describes a colonist
                     // on its feet — swimming, climbing, a one-shot gesture — and none of them
                     // means anything about a body that is lying down. It is also the only one
@@ -276,8 +303,19 @@ namespace Odyssey.Presentation.World
                         ApplySwimPose(figure);
                     else if (figure.ClimbPhase >= 0f && figure.ClimbFace != Vector3.zero)
                         ApplyClimbPose(figure);
+                    // A computed blow, reaction or stun (design 33 §1): the fight owns the arms
+                    // while it lasts, and the pack's clips need nothing here at all.
+                    else if (ShowsComputedCombat(figure))
+                        ApplyCombatPose(figure);
+                    // The gun (design 47 §4b): the aim is a stance that owns both arms while it
+                    // lasts, and low ready the right arm; after a blow or a stagger, which take the
+                    // whole body for their moment, and before the one-shot gestures.
+                    else if (figure.AimWeight > 0.001f)
+                        ApplyAimPose(figure);
                     else if (figure.Gesture != PawnGesture.None || ForceGesture.HasValue)
                         ApplyGesturePose(figure);
+                    else if (figure.LowReadyWeight > 0.001f)
+                        ApplyLowReady(figure);
                     // Last of the five, and the only one that is a stance rather than an event.
                     // Everything above it either moves the whole body somewhere else (sleep, swim,
                     // climb) or is a motion that owns the arms for a moment (the lift, the stow),
@@ -366,7 +404,100 @@ namespace Odyssey.Presentation.World
             // inside the loop would read whichever bones that figure's branch happened to leave,
             // which is a load correct for a walking colonist and a frame late for a stooping one.
             for (int i = 0; i < _figures.Count; i++) PlaceCarriedLoad(_figures[i]);
+
+            // And a third, for the same reason: a carried patient lies in her carrier's arms, and
+            // the arms are final only now (design 33 §11e).
+            PlaceCarriedPatients();
         }
+
+        /// <summary>
+        /// A downed colonist who is carried, or lying on a bed: drawn lying by the sleep pose rather
+        /// than by the pack's floor loop, because the sleep pose can be aimed at a cradle or a
+        /// mattress and the loop lies on whatever floor the root stands on (design 33 §11e).
+        /// </summary>
+        bool Cradled(in PawnView pawn)
+        {
+            if (!pawn.IsDowned) return false;
+            if (pawn.IsCarried) return true;
+            if (World == null || !World.Size.Contains(pawn.Cell.X, pawn.Cell.Z, pawn.Cell.Y)) return false;
+            return World.BedHeadAt(World.Size.Index(pawn.Cell.X, pawn.Cell.Z, pawn.Cell.Y)) >= 0;
+        }
+
+        /// <summary>
+        /// Whether this colonist has somebody in her arms: on a rescue, and the patient it names
+        /// carried. The simulation says who carries whom from the patient's side
+        /// (<c>Pawn.CarriedBy</c>), and publishes the rescuer's patient under an aspect of its own
+        /// (design 33 §18b: the order target means an attack the player ordered, and nothing else).
+        /// </summary>
+        bool CarriesAPatient(in PawnView pawn)
+        {
+            if (_frame == null || pawn.JobDef != JobHandle.Rescue) return false;
+            if (!_frame.TryGetPawnAspect(pawn.Id, Odyssey.Sim.Pawns.CombatAspects.RescuePatient, out int patient)) return false;
+            return _frame.TryGetPawn(new PawnId(patient), out PawnView view) && view.IsCarried;
+        }
+
+        /// <summary>The figure of whoever is carrying <paramref name="patient"/>, if it has one.</summary>
+        Figure? CarrierOf(PawnId patient)
+        {
+            if (_frame == null) return null;
+            ReadOnlySpan<PawnView> pawns = _frame.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                if (pawns[i].JobDef != JobHandle.Rescue) continue;
+                if (!_frame.TryGetPawnAspect(pawns[i].Id, Odyssey.Sim.Pawns.CombatAspects.RescuePatient, out int target)
+                    || target != patient.Value) continue;
+                return _byPawn.TryGetValue(pawns[i].Id.Value, out Figure? carrier) ? carrier : null;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Lay every carried patient across her carrier's arms (design 33 §11e, owner: cradled):
+        /// the body's middle at the cradle measured off the carrier's palms — the load's own point,
+        /// <see cref="CarryPose.Cradle"/> — lying at right angles to the way the carrier faces,
+        /// head to her left. Only the root moves: the lying posture is already on the bones, which
+        /// the root carries with it. A walk over the figures, asking the frame only of the carried.
+        /// </summary>
+        void PlaceCarriedPatients()
+        {
+            if (_frame == null) return;
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn < 0 || !_frame.TryGetPawn(new PawnId(figure.Pawn), out PawnView pawn) || !pawn.IsCarried)
+                    continue;
+                Figure? carrier = CarrierOf(pawn.Id);
+                if (carrier == null || carrier.LeftGrip.Hand == null || carrier.RightGrip.Hand == null) continue;
+
+                Vector3 left = HandGrip.Palm(carrier.LeftGrip);
+                Vector3 right = HandGrip.Palm(carrier.RightGrip);
+                Vector3 chest = carrier.Chest != null ? carrier.Chest.position : carrier.Transform.position;
+                float shoulders = carrier.LeftUpperArm != null && carrier.RightUpperArm != null
+                    ? Vector3.Distance(carrier.LeftUpperArm.position, carrier.RightUpperArm.position)
+                    : 0f;
+                Vector3 cradle = CarryPose.Cradle(left, right, chest, carrier.Transform.forward, shoulders);
+
+                Vector3 across = Vector3.Cross(Vector3.up, carrier.Transform.forward);
+                across.y = 0f;
+                if (across.sqrMagnitude < 1e-6f) across = Vector3.right;
+                across.Normalize();
+
+                float half = SleepPose.BodyLength(figure.StandingHeight) * 0.5f;
+                SleepPose.Place(
+                    SleepPose.PostureFor(figure.Pawn), cradle - across * half, across,
+                    cradle.y - CradleSink, figure.StandingHeight, 0f, 1f,
+                    figure.Transform.position, figure.Transform.rotation,
+                    out Vector3 lain, out Quaternion laid);
+                figure.Transform.position = lain;
+                figure.Transform.rotation = laid;
+            }
+        }
+
+        /// <summary>
+        /// How far below the cradle point the body's underside lies: the palms are under her, not
+        /// level with her middle. INVENTED, for the playtest's eye.
+        /// </summary>
+        const float CradleSink = 0.06f;
 
         /// <summary>
         /// Fold the arms into the scoop: upper arms forward a little, elbows up, spine back.
@@ -425,6 +556,17 @@ namespace Odyssey.Presentation.World
             Pitch(figure.LeftUpperArm, axis, CarryPose.ShoulderPitch * weight);
             Pitch(figure.RightLowerArm, axis, CarryPose.ElbowBend * weight);
             Pitch(figure.LeftLowerArm, axis, CarryPose.ElbowBend * weight);
+
+            // A box is gripped by its two sides, not scooped underneath (owner, 2026-09-25: the
+            // medical kit). Out from the midline, about the figure's own forward axis, after the
+            // scoop rather than instead of it — the same order SleepPose's ArmOut is laid over its
+            // own pitch, and for the same reason.
+            if (CarryPose.GrippedBySides(figure.CarryDef))
+            {
+                Vector3 outAxis = figure.Transform.forward;
+                Pitch(figure.RightUpperArm, outAxis, -CarryPose.BoxGripOut * weight);
+                Pitch(figure.LeftUpperArm, outAxis, CarryPose.BoxGripOut * weight);
+            }
 
             CarryingFigures++;
         }
@@ -910,6 +1052,30 @@ namespace Odyssey.Presentation.World
             Pitch(figure.LeftUpperArm, axis, -34f * reach);
             Pitch(figure.RightLowerArm, axis, -18f * reach);
             Pitch(figure.LeftLowerArm, axis, -18f * reach);
+        }
+
+        /// <summary>
+        /// Down behind cover (design 53 §8a): the gesture stoop's own method — the pelvis down and a
+        /// little back, each leg solved back to the foot the gait put down — held rather than
+        /// played, and nothing done to the back or the arms, which are the aim's or the rest's.
+        /// </summary>
+        void ApplyCoverCrouch(Figure figure)
+        {
+            if (figure.Hips == null || figure.LegLength <= 0f) return;
+            float depth = CoverCrouchLegFraction * figure.LegLength * figure.CoverCrouchWeight;
+            if (depth <= 1e-4f) return;
+            CrouchedFigures++;
+            if (depth > MeasuredCrouchDrop) MeasuredCrouchDrop = depth;
+
+            Vector3 leftFoot = figure.LeftFoot != null ? figure.LeftFoot.position : Vector3.zero;
+            Vector3 rightFoot = figure.RightFoot != null ? figure.RightFoot.position : Vector3.zero;
+            Quaternion leftSole = figure.LeftFoot != null ? figure.LeftFoot.rotation : Quaternion.identity;
+            Quaternion rightSole = figure.RightFoot != null ? figure.RightFoot.rotation : Quaternion.identity;
+
+            figure.Hips.position += Vector3.down * depth - figure.Transform.forward * (depth * 0.25f);
+            Vector3 knee = figure.Transform.forward;
+            SolveLeg(figure.LeftUpperLeg, figure.LeftLowerLeg, figure.LeftFoot, leftFoot, leftSole, knee);
+            SolveLeg(figure.RightUpperLeg, figure.RightLowerLeg, figure.RightFoot, rightFoot, rightSole, knee);
         }
 
         /// <summary>

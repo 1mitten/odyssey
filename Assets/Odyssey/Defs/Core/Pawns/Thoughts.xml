@@ -13,9 +13,16 @@
     <durationTicks>30000</durationTicks>
   </ThoughtDef>
 
+  <!--
+    What a colonist thinks of what she ate (design 48 section 4). Before the kitchen every food was
+    this thought at +20; it is the cooked meal's now, and worth more (+50, the reference's fine
+    meal on this scale, where mood runs 0 to 1000 and the reference's points are tenths). The
+    ration pack keeps the old +20 as Thought_AteRation, so a colony living on rations feels what it
+    always felt. A quarter of a day each, and the good ones stack twice.
+  -->
   <ThoughtDef>
     <defName>Thought_AteMeal</defName>
-    <moodOffset>20</moodOffset>
+    <moodOffset>50</moodOffset>
     <durationTicks>15000</durationTicks>
     <stackLimit>2</stackLimit>
   </ThoughtDef>
@@ -40,6 +47,81 @@
     <moodOffset>-60</moodOffset>
     <durationTicks>20000</durationTicks>
     <stackLimit>2</stackLimit>
+  </ThoughtDef>
+
+  <!--
+    Design 28 §8. Waking from a night outside the temperature bands - remembered, not
+    situational, because it is about the night that happened rather than the morning it left
+    behind. The situational side of being cold is a banded mood offset on the needs interval and
+    never a stored thought at all.
+
+    Milder than a night on the ground (it stacks with it, and SleptOnGround's -40 is the worse
+    half of sleeping rough), longer lived because a bad night's ache outlasts the morning.
+  -->
+  <ThoughtDef>
+    <defName>Thought_SleptCold</defName>
+    <moodOffset>-30</moodOffset>
+    <durationTicks>20000</durationTicks>
+  </ThoughtDef>
+
+  <ThoughtDef>
+    <defName>Thought_SleptHot</defName>
+    <moodOffset>-30</moodOffset>
+    <durationTicks>20000</durationTicks>
+  </ThoughtDef>
+
+  <!--
+    Design 33 §12, friendly fire (the owner's row: "the victim remembers being attacked (-8, one
+    day); any colonist's death is felt by every colonist (-6, three days); no opinions yet").
+    The owner's points are on a mood of a hundred and these are thousandths, so -8 is -80.
+
+    Attacked: given for every swing by a colonist that reaches her - a hit, a miss or a dodge alike
+    (section 14f; the owner, 2026-09-24: a missed swing counts) - and only once while it lasts. A
+    second swing renews it, so the day runs from the latest one (renewsOnRepeat, section 14e; the
+    owner left it to us and we recommended it); no other thought renews. A memory names no other
+    pawn, so two attackers are one grievance; that is "no opinions yet" in the data.
+
+    Died: every other colonist, for three days (60000 ticks a day). Stacks three deep at the usual
+    diminishing multiplier (-60, -45, -33), so a massacre takes a content colony to the edge of a
+    break and not over it on its own. The limit is ours, to be tuned after a play.
+  -->
+  <ThoughtDef>
+    <defName>Thought_AttackedByColonist</defName>
+    <moodOffset>-80</moodOffset>
+    <durationTicks>60000</durationTicks>
+    <renewsOnRepeat>true</renewsOnRepeat>
+  </ThoughtDef>
+
+  <ThoughtDef>
+    <defName>Thought_ColonistDied</defName>
+    <moodOffset>-60</moodOffset>
+    <durationTicks>180000</durationTicks>
+    <stackLimit>3</stackLimit>
+  </ThoughtDef>
+
+  <!--
+    The kitchen (design 48 section 4), appended: a thought index rides every saved memory. The
+    ration keeps what every food was worth before (+20). Burnt food and raw food are the
+    reference's shape softened (-4 and -7 there, in points that are tenths of ours): a colony on
+    carrots minds it and is not miserable. Neither stacks, so two carrots are one grievance.
+  -->
+  <ThoughtDef>
+    <defName>Thought_AteRation</defName>
+    <moodOffset>20</moodOffset>
+    <durationTicks>15000</durationTicks>
+    <stackLimit>2</stackLimit>
+  </ThoughtDef>
+
+  <ThoughtDef>
+    <defName>Thought_AteBurnt</defName>
+    <moodOffset>-40</moodOffset>
+    <durationTicks>15000</durationTicks>
+  </ThoughtDef>
+
+  <ThoughtDef>
+    <defName>Thought_AteRaw</defName>
+    <moodOffset>-50</moodOffset>
+    <durationTicks>15000</durationTicks>
   </ThoughtDef>
 
 </Defs>

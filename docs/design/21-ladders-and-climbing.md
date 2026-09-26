@@ -178,7 +178,7 @@ unmoved, because neither has a ladder on it.
   > up a ladder happily. The sentence above, and the same sentence in `CLAUDE.md`, the `U43` and
   > `U44` plan rows and `24-carrying.md`, all concluded that nothing could be built on an upper
   > storey, and a player could. `U44` gives delivery the hauling mode, in the same commit as the
-  > stair so the capability is never taken away without its replacement. `docs/design/28-stairs.md`
+  > stair so the capability is never taken away without its replacement. `docs/design/60-stairs.md`
   > §3.
 - **Climb cost is unchanged** — `MoveCost.LadderUp` 540 / `LadderDown` 400. Presentation only was the
   owner's choice; a climb rate belongs with WS if it is ever wanted.

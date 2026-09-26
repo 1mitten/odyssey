@@ -68,6 +68,58 @@ namespace Odyssey.Hud
         public static readonly HudColour StoreHue = new HudColour(0x7f, 0x96, 0xa8);
 
         /// <summary>
+        /// Picking berries (design 45 §6): a berry red-violet, the colour of the thing the order is
+        /// for. Not the felling green, because both orders are given over the same bushes and the
+        /// mode must say which one is armed.
+        /// </summary>
+        public static readonly HudColour Forage = new HudColour(0xc0, 0x4f, 0x8a);
+
+        /// <summary>
+        /// A drafted colonist's hue (design 33 §2g): the marker over its head, the line to where it
+        /// has been sent and the bracket on the cell. <b>A deep, dark red</b> — the owner's call
+        /// after the first draft playtest (2026-09-23: <i>"make the cursor a deeper dark red but
+        /// translucent"</i>), replacing a hot orange-red. Far from <see cref="HudTheme.Bad"/>, the
+        /// Cancel tool's brighter red, by being half as bright: a drafted colonist is under
+        /// orders, not being undone. Drawn translucent at <see cref="DraftAlpha"/>.
+        /// </summary>
+        public static readonly HudColour Draft = new HudColour(0x8b, 0x12, 0x12);
+
+        /// <summary>How solid the draft's marks are: translucent, so the colonist under the
+        /// diamond and the ground under the line still read through them.</summary>
+        public const float DraftAlpha = 0.70f;
+
+        /// <summary>
+        /// An attack order's hue: the lock-on ring under the target (design 33 §7b; owner,
+        /// 2026-09-23: <i>"paints a red transparent circle quickly around the selected enemy"</i>).
+        /// <b>A clear, saturated red</b>, and deliberately neither of the two reds already on the
+        /// board. Not <see cref="Draft"/>'s deep dark red, which marks <i>who</i> is under orders —
+        /// the ring marks <i>whom</i> they are sent at, and the two are on screen together in every
+        /// fight, one over a head and one under feet. Not <see cref="HudTheme.Bad"/>, the Cancel
+        /// tool's salmon red, which is also the hostile marker's diamond over the very bandit the
+        /// ring is drawn under: a ring in the marker's colour would read as more of the marker —
+        /// "this is an enemy" — rather than "this is the one you sent them at". Pure red with a
+        /// little blue kept out of pink sits apart from both: brighter than the draft by half
+        /// again, and redder than the salmon by taking the green and blue out.
+        /// <c>OrderColoursTests.TheAttackRedIsNeitherTheDraftNorTheCancelRed</c> holds it apart
+        /// from both at the board's eighty-point distance. Its opacity is the ring's clock's
+        /// (<see cref="LockOnRing"/>), not a constant here.
+        /// </summary>
+        public static readonly HudColour Attack = new HudColour(0xf0, 0x28, 0x2c);
+
+        /// <summary>
+        /// A move order's hue: the landing ring on the cell a selected colonist was sent to, drafted
+        /// or fetching a weapon (design 33 §20; owner, 2026-09-24: <i>"instead of using a square to
+        /// indicate where to land when drafting people, can it be a ring"</i>). <b>Pale and
+        /// neutral</b>, a cool near-white a step under the interface's own ink, and <b>not a red</b>:
+        /// it is the same shape as the <see cref="Attack"/> ring and animates on the same clock, so
+        /// the colour is the whole of what tells "go here" from "hit that". Far from both reds and
+        /// the hostile marker's salmon, and from every order hue that can lie in the field it
+        /// lands in — <c>OrderColoursTests.TheMoveRingIsPaleAndNeutralAndNoRed</c>. Its opacity is
+        /// the ring's clock's (<see cref="LockOnRing"/>), not a constant here.
+        /// </summary>
+        public static readonly HudColour Move = new HudColour(0xdc, 0xe4, 0xec);
+
+        /// <summary>
         /// The hue of an order, opaque — the chip's colour, and the colour every mark and cursor
         /// below is a transparency of.
         ///
@@ -80,6 +132,7 @@ namespace Odyssey.Hud
         public static HudColour Hue(DesignateTool tool) => tool switch
         {
             DesignateTool.Fell => HudTheme.Good,
+            DesignateTool.Harvest => Forage,
             DesignateTool.Mine => Mine,
             DesignateTool.Deconstruct => HudTheme.Warn,
             DesignateTool.Cancel => HudTheme.Bad,
@@ -99,6 +152,9 @@ namespace Odyssey.Hud
             // is not a transformation of the ground, so the order's colour and the result's can
             // be the same one.
             DesignateTool.Stockpile => StoreHue,
+            // Taking a line up is taking something apart, and says so in deconstruct's own amber:
+            // the two are the same act on two layers of one cell (design 32 §2a).
+            DesignateTool.RemoveConduit => HudTheme.Warn,
             _ => HudTheme.Accent,
         };
 
@@ -106,8 +162,8 @@ namespace Odyssey.Hud
         /// The same hue for a standing order read back off the world, whose kind arrives as the
         /// byte <c>OrderView.Kind</c> carries.
         ///
-        /// <para>The numbers are <c>DesignationKind</c>'s — Mine 1, Deconstruct 2, Fell 3 —
-        /// restated here for the reason <see cref="InspectModel"/> already restates them: the enum
+        /// <para>The numbers are <c>DesignationKind</c>'s — Mine 1, Deconstruct 2, Fell 3,
+        /// Harvest 4 — restated here for the reason <see cref="InspectModel"/> already restates them: the enum
         /// lives in <c>Odyssey.Sim</c>, which this assembly does not reference, and the snapshot
         /// carries the value rather than the type. Anything else is a build order.</para>
         /// </summary>
@@ -116,6 +172,7 @@ namespace Odyssey.Hud
             1 => DesignateTool.Mine,
             2 => DesignateTool.Deconstruct,
             3 => DesignateTool.Fell,
+            4 => DesignateTool.Harvest,
             _ => DesignateTool.Build,
         };
 

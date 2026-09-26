@@ -23,8 +23,8 @@ namespace Odyssey.Tests.Presentation
         public void ATreeResolvesToItsOwnModuleAndNotToTheWall()
         {
             var world = new RenderTestWorld(6, 6, 3)
-                .Solid(2, 2, 0).Edifice(2, 2, 1, NaturalContent.EdificeTreeConifer, blocking: false)
-                .Solid(3, 2, 0).Edifice(3, 2, 1, NaturalContent.EdificeTreeBroadleaf, blocking: false)
+                .Solid(2, 2, 0).Edifice(2, 2, 1, NaturalContent.EdificeTreeBirch, blocking: false)
+                .Solid(3, 2, 0).Edifice(3, 2, 1, NaturalContent.EdificeTreeMeadow, blocking: false)
                 .Solid(4, 2, 0).Edifice(4, 2, 1, CoreContent.EdificeWall)
                 .Publish();
 
@@ -45,7 +45,7 @@ namespace Odyssey.Tests.Presentation
             // The mesher emits a wall as up to four face panels and everything else as one body.
             // A tree drawn as panels would be the grey-box fault by another route.
             var world = new RenderTestWorld(6, 6, 3)
-                .Solid(2, 2, 0).Edifice(2, 2, 1, NaturalContent.EdificeTreeConifer, blocking: false)
+                .Solid(2, 2, 0).Edifice(2, 2, 1, NaturalContent.EdificeTreeBirch, blocking: false)
                 .Publish();
 
             int module = world.Model.EdificeModule(world.Index(2, 2, 1));
@@ -210,15 +210,23 @@ namespace Odyssey.Tests.Presentation
             // runner's checkout has no `Assets/Synty` and so every row is a primitive.
             //
             // The two cases are told apart by the library rather than by the environment: with no
-            // packs, *nothing* in the catalogue has art, so there is nothing here to be wrong. With
+            // packs, no *slab* in the catalogue has art, so there is nothing here to be wrong. With
             // packs, ten rows must be checkable, and fewer means the rule has lost its reach.
-            bool anyArtAtAll = false;
+            //
+            // Slabs, not the whole catalogue (2026-09-23). This asked "does any row at all have
+            // art" and was right until the animals unit committed two rows of the project's own
+            // art (design 29 §8a), which resolve on the runner exactly because they are not the
+            // licensed packs. From then on the guard was true there, no slab had art, and the
+            // rule asked for ten and got none — the third time a "is the art here" question has
+            // turned the runner red by asking about the wrong thing (CLAUDE.md, the tiers).
+            bool anySlabArt = false;
             foreach (ModuleEntry row in catalogue.Entries)
             {
-                if (library[library.Resolve(row.moduleId, row.shape)].UsesArt) { anyArtAtAll = true; break; }
+                if (row.shape != ModuleShape.FloorSlab) continue;
+                if (library[library.Resolve(row.moduleId, row.shape)].UsesArt) { anySlabArt = true; break; }
             }
 
-            if (anyArtAtAll)
+            if (anySlabArt)
                 Assert.That(checked_, Is.GreaterThanOrEqualTo(10),
                     "the catalogue should hold at least the five slab ids and the five street tiles");
             else

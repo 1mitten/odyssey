@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Worldgen.Natural;
+using UnityEngine;
 
 namespace Odyssey.Tests.Presentation
 {
@@ -53,6 +54,39 @@ namespace Odyssey.Tests.Presentation
             renderer.Skirt.Enabled = false;
             renderer.MeshBudgetPerFrame = budget;
             return renderer;
+        }
+
+        /// <summary>
+        /// The time budget (design 38 §20f): a frame stops meshing once its milliseconds are spent,
+        /// however many chunks the count would still allow — and meshes one whatever the clock says,
+        /// so the board still finishes arriving.
+        /// </summary>
+        [Test]
+        public void AFrameStopsMeshingWhenItsMillisecondsAreSpentButAlwaysMeshesOne()
+        {
+            RenderTestWorld world = Board();
+            using ChunkRenderer renderer = RendererFor(world, budget: 50);
+            renderer.MeshBudgetMs = 1e-6;
+
+            renderer.Render(1, new SliceSettings());
+            Assert.That(renderer.ChunksMeshedThisFrame, Is.EqualTo(1),
+                "a budget of a nanosecond should mesh exactly the one chunk a frame is always owed");
+            Assert.That(renderer.ChunksMeshDeferred, Is.GreaterThan(0), "nothing was waiting, so this proves nothing");
+
+            int frames = 1;
+            while (renderer.ChunksMeshedThisFrame > 0 && frames < 4096)
+            {
+                renderer.Render(1, new SliceSettings());
+                frames++;
+            }
+            Assert.That(renderer.ChunksMeshDeferred, Is.Zero, "one a frame never drained the board");
+
+            // And no time budget is the count alone.
+            world.Model.Remesh();
+            renderer.MeshBudgetMs = 0d;
+            renderer.MeshBudgetPerFrame = 4;
+            renderer.Render(1, new SliceSettings());
+            Assert.That(renderer.ChunksMeshedThisFrame, Is.EqualTo(4), "with no time budget the count decides");
         }
 
         [Test]
@@ -147,6 +181,52 @@ namespace Odyssey.Tests.Presentation
             renderer.Render(1, new SliceSettings());
             Assert.That(renderer.ChunksMeshedThisFrame, Is.Zero,
                 "the first frame after priming still had meshing to do");
+        }
+
+        /// <summary>
+        /// The frustum is asked before the mesher, so a chunk nobody can see spends none of the
+        /// budget.
+        ///
+        /// <para>Frustum culling first went in after <c>BatchFor</c>: every stale chunk on the
+        /// walk was meshed and only then rejected, so after a board-wide <c>Remesh</c> the budget
+        /// went on chunks behind the camera in index order and the ones on screen waited behind
+        /// them. With the test ahead of the mesher, a whole-board re-mesh under a frustum round one
+        /// chunk meshes that chunk's column and defers nothing.</para>
+        /// </summary>
+        [Test]
+        public void AnOffScreenChunkSpendsNoneOfTheBudget()
+        {
+            RenderTestWorld world = Board();
+            using ChunkRenderer renderer = RendererFor(world, budget: 4);
+            renderer.PrimeAll(1, new SliceSettings());
+
+            // A frustum round the middle of the first 25 x 25 chunk only, with no shadow margin to
+            // widen it. Inward-facing normals, as GeometryUtility.CalculateFrustumPlanes gives.
+            renderer.ShadowCasterMarginMetres = 0f;
+            renderer.FrustumOverride = new[]
+            {
+                new Plane(Vector3.right, new Vector3(20f, 0f, 0f)),
+                new Plane(Vector3.left, new Vector3(40f, 0f, 0f)),
+                new Plane(Vector3.forward, new Vector3(0f, 0f, 20f)),
+                new Plane(Vector3.back, new Vector3(0f, 0f, 40f)),
+            };
+
+            world.Model.Remesh();
+            renderer.Render(1, new SliceSettings());
+
+            Assert.That(renderer.ChunksDrawn, Is.GreaterThan(0), "the frustum admitted nothing, so this proves nothing");
+            Assert.That(renderer.ChunksOutsideFrustum, Is.GreaterThan(4),
+                "too few chunks were off screen for the budget to have been at stake");
+            Assert.That(renderer.ChunksMeshDeferred, Is.Zero,
+                $"{renderer.ChunksMeshDeferred} chunks were deferred with only one chunk on screen, " +
+                "so off-screen chunks are still being offered to the mesher");
+
+            // And the off-screen chunks are still stale rather than dropped: take the frustum away
+            // and they are meshed.
+            renderer.FrustumOverride = null;
+            renderer.Render(1, new SliceSettings());
+            Assert.That(renderer.ChunksMeshedThisFrame, Is.GreaterThan(0),
+                "the off-screen chunks were never marked for meshing, so they would draw stale for ever");
         }
 
         /// <summary>A budget of zero or less is off, so the old behaviour stays reachable.</summary>

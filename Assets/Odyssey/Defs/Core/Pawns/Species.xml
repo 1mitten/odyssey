@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Species and the kinds that spawn as them (docs/design/29-animals.md §1).
+
+  A species is what a pawn IS: whether it is a person, how it traverses the graph, how fast it
+  walks against the colonist's standard, how far it wanders and how long it rests. A kind is what
+  SPAWNS, and names a species. The colonist is a species like any other, with `person` set.
+
+  Kind order is a save contract: PawnContent.FromDefs lists the kinds by name and that list is
+  the order. Append; never insert.
+-->
+<Defs>
+
+  <SpeciesDef>
+    <defName>Species_Person</defName>
+    <labelKey>ui.pawn.colonist</labelKey>
+    <person>true</person>
+    <bodyLengthMm>2490</bodyLengthMm>
+    <movePerMille>1000</movePerMille>
+    <traverseMode>Colonist</traverseMode>
+    <!-- The colonist's wander is the mental break's, in Break_Wander; these two are unread for a person. -->
+    <wanderRadius>6</wanderRadius>
+    <restTicksMin>0</restTicksMin>
+    <restTicksMax>0</restTicksMax>
+    <figureKey></figureKey>
+    <!--
+      Combat (design 33 section 1; owner, 2026-09-23): 100 hit points, downed at nought, dead at
+      half the pool below it. A person has no natural attack - bare hands are Combat.xml's fists -
+      and no revenge chance or species melee level: a colonist's answer to being hit is her
+      faction's and her Melee skill's.
+    -->
+    <healthPoints>100</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <!--
+      Health (docs/design/43-health.md section 2): a person has a body of six regions over the
+      pool. The animals name none and keep the pool alone (section 8).
+    -->
+    <health>Health_Person</health>
+    <!-- A bullet crossing a person's cell takes it 400 times in a thousand before the dead zone
+         (design 47 section 2c): the reference's 40 % at a person's size. -->
+    <interceptPerMille>400</interceptPerMille>
+  </SpeciesDef>
+
+  <!--
+    The midden hog: pig-descended, thrives on refuse heaps, the reliable meat animal
+    (docs/design/proper-nouns.csv, creature.scavenger). Wild first; livestock is a later unit.
+
+    An ambler: 600 per mille of the colonist's walk (was 700; owner, 2026-09-22: the trot read
+    as "way too fast"). A hog never takes a ladder, cannot open a door and does not swim, which
+    is TraverseMode.Animal. Rests are
+    INVENTED: five to fifteen seconds between legs at sixty ticks a second, a radius of eight
+    cells so a hog drifts rather than paces. All three are playtest numbers.
+  -->
+  <SpeciesDef>
+    <defName>Species_MiddenHog</defName>
+    <labelKey>ui.pawn.hog</labelKey>
+    <person>false</person>
+    <bodyLengthMm>1200</bodyLengthMm>
+    <movePerMille>600</movePerMille>
+    <traverseMode>Animal</traverseMode>
+    <wanderRadius>8</wanderRadius>
+    <restTicksMin>300</restTicksMin>
+    <restTicksMax>900</restTicksMax>
+    <figureKey>animal.hog</figureKey>
+    <!--
+      Combat (design 33 section 1). The pool and the revenge are the owner's: 60 hit points, and a
+      hog usually turns on whoever hurt it - 700 in a thousand on every hit, else it runs. The
+      tusks and the melee level are INVENTED: a heavy animal that hits hard and slowly, about as
+      able as a colonist of level 6, which makes a hog a real fight for an unarmed novice.
+    -->
+    <healthPoints>60</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>700</revengePerMille>
+    <meleeSkill>6</meleeSkill>
+    <!-- A hog is a bigger body than a person on the line: 500 (design 47, the reference's
+         size scaling). -->
+    <interceptPerMille>500</interceptPerMille>
+    <naturalAttack>
+      <damage>6</damage>
+      <cooldownTicks>150</cooldownTicks>
+      <windupTicks>30</windupTicks>
+      <damageKind>Blunt</damageKind>
+      <style>Bite</style>
+    </naturalAttack>
+  </SpeciesDef>
+
+  <!--
+    The duct rat (proper-nouns.csv, creature.vermin — proposed). Vermin, small game, the walking
+    proof of the figure path, and a threat once there is a health model to bite.
+
+    Lively: 900 per mille. Climbs anything a colonist can, but does not swim (owner, 2026-09-22:
+    no animal does by default), which is TraverseMode.Climber. Short rests and a short radius: a
+    rat darts and stops. INVENTED, playtest numbers.
+  -->
+  <SpeciesDef>
+    <defName>Species_DuctRat</defName>
+    <nocturnal>true</nocturnal>
+    <labelKey>ui.pawn.rat</labelKey>
+    <person>false</person>
+    <bodyLengthMm>250</bodyLengthMm>
+    <movePerMille>900</movePerMille>
+    <traverseMode>Climber</traverseMode>
+    <wanderRadius>5</wanderRadius>
+    <restTicksMin>120</restTicksMin>
+    <restTicksMax>480</restTicksMax>
+    <figureKey>animal.rat</figureKey>
+    <!--
+      Combat (design 33 section 1). The owner's: 15 hit points, and a rat usually runs - 50 in a
+      thousand turns, the rest flee. The bite and the level are INVENTED: quick and weak, a nip
+      every second and a half.
+    -->
+    <healthPoints>15</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>50</revengePerMille>
+    <meleeSkill>3</meleeSkill>
+    <!-- A rat is hardly there: 40, the reference's floor. -->
+    <interceptPerMille>40</interceptPerMille>
+    <naturalAttack>
+      <damage>2</damage>
+      <cooldownTicks>90</cooldownTicks>
+      <windupTicks>15</windupTicks>
+      <damageKind>Sharp</damageKind>
+      <style>Bite</style>
+    </naturalAttack>
+  </SpeciesDef>
+
+  <!--
+    The culvert frog (proper-nouns.csv, creature.amphibian — proposed; docs/design/30-wildlife.md
+    section 8). Lives on the banks of the streams, ponds and lakes and never strays far from them:
+    bankRadius holds every leg it takes to within three cells of water, and a frog that finds
+    itself further out heads back. It hops (presentation: the Jump clip is its gait).
+
+    It does not swim. A frog would, but a swimming animal is a sixth traverse mode, and every mode
+    costs a district flood on every nav rebuild whether any pawn walks in it or not (design 33
+    section 16b); it is TraverseMode.Animal, the hog's - no ladders, no doors, no water - and sits
+    at the water's edge instead. It does not mind the rain (ignoresRain): it is the one animal
+    that stays out in it.
+
+    Drawn about 0.87 m nose to toe - well over life beside a 2.49 m colonist, and deliberately:
+    0.4 m could not be picked out from the play camera (owner, 2026-09-26: "just over double the
+    size"). Pace 1,000 per mille since the same day, so that the bigger frog's hop is about 1.3 m,
+    a body and a half, rather than the one metre it covered at 0.4 m. A radius of four, short
+    rests. INVENTED, playtest numbers. A frog never turns on
+    whoever hurts it (revenge 0) and so carries no attack.
+  -->
+  <SpeciesDef>
+    <defName>Species_CulvertFrog</defName>
+    <labelKey>ui.pawn.frog</labelKey>
+    <person>false</person>
+    <bodyLengthMm>870</bodyLengthMm>
+    <movePerMille>1000</movePerMille>
+    <traverseMode>Animal</traverseMode>
+    <wanderRadius>4</wanderRadius>
+    <restTicksMin>180</restTicksMin>
+    <restTicksMax>720</restTicksMax>
+    <bankRadius>3</bankRadius>
+    <ignoresRain>true</ignoresRain>
+    <!-- A group's frogs set off in different directions (owner, 2026-09-26): a new hop prefers a
+         heading 60 degrees or more from every other frog within six cells that is already hopping. -->
+    <divergeRadius>6</divergeRadius>
+    <figureKey>animal.frog</figureKey>
+    <healthPoints>8</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>0</revengePerMille>
+    <meleeSkill>1</meleeSkill>
+    <interceptPerMille>40</interceptPerMille>
+  </SpeciesDef>
+
+  <!--
+    The animal kinds. Every needs and rest field on PawnKindDef is unread for an animal — nothing
+    ticks its needs — so only the species is stated and the rest take the type's defaults.
+  -->
+  <PawnKindDef>
+    <defName>PawnKind_MiddenHog</defName>
+    <species>Species_MiddenHog</species>
+    <faction>Wild</faction>
+  </PawnKindDef>
+
+  <PawnKindDef>
+    <defName>PawnKind_DuctRat</defName>
+    <species>Species_DuctRat</species>
+    <faction>Wild</faction>
+  </PawnKindDef>
+
+  <!-- Kind 4, after the bandit: kind order is a save contract and is appended. -->
+  <PawnKindDef>
+    <defName>PawnKind_CulvertFrog</defName>
+    <species>Species_CulvertFrog</species>
+    <faction>Wild</faction>
+  </PawnKindDef>
+
+  <!--
+    The bandit (design 33 section 1): a person under the Hostile faction, debug-spawned, armed,
+    hunting the nearest reachable colonist who is standing. Hostility comes from the kind, so no
+    pawn carries a saved field for it (section 3). A person species, rolled as a colonist is,
+    and dressed as a bandit on top of that: welding helmet, red vest, black trousers (design 42).
+    Its needs do not tick (Pawn.NeedsTick), so the needs fields below are the type's defaults and
+    unread.
+  -->
+  <PawnKindDef>
+    <defName>PawnKind_Bandit</defName>
+    <species>Species_Person</species>
+    <faction>Hostile</faction>
+    <!-- Armed from the moment it arrives (design 33 section 1), with one of these, dealt per
+         bandit by a hash of the pawn rather than a draw (design 42 section 3). A crowbar or a bat,
+         never a blade (owner, 2026-09-24: "not swords - not their style"). -->
+    <weapons>
+      <li>Item_Crowbar</li>
+      <li>Item_Bat</li>
+    </weapons>
+    <!-- A person who does not open the colony's doors (design 33 section 16; owner, 2026-09-24:
+         "do what you recommend"). Ladders, stairs, the hop and the wade as a colonist, but a
+         closed door is a wall: with the colonists behind one, it breaks the door down. -->
+    <traverseMode>Bandit</traverseMode>
+    <!-- What it came for, once nobody is left standing to fight and nothing is left to break
+         (design 33 section 17; owner, 2026-09-24: "thieve items or kidnap people depending on
+         their motivation ... for now - thieve items"). Loot carries the nearest stack off the
+         board; Kidnap is the seam and does exactly what Loot does today. -->
+    <motive>Loot</motive>
+  </PawnKindDef>
+
+  <!--
+    The gunman (design 55 section 8): the bandit with a pistol. Its own kind rather than a bandit
+    handed a weapon, so a raid mix can name it and a storyteller can draw it; everything else is
+    the bandit's - a person, Hostile, the same traverse mode and motive, and the same outfit,
+    because PawnOutfits keys on a hostile person rather than on the kind. The pistol is the only
+    row in its table, so every gunman carries one.
+  -->
+  <PawnKindDef>
+    <defName>PawnKind_Gunman</defName>
+    <species>Species_Person</species>
+    <faction>Hostile</faction>
+    <weapons>
+      <li>Item_Pistol</li>
+    </weapons>
+    <traverseMode>Bandit</traverseMode>
+    <motive>Loot</motive>
+  </PawnKindDef>
+
+</Defs>

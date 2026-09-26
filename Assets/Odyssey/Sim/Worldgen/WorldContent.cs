@@ -103,11 +103,39 @@ namespace Odyssey.Sim.Worldgen
         };
 
         /// <summary>
+        /// The wild things, in <see cref="NaturalContent.WildPlantSlot"/> order (design 45 §2): an
+        /// edifice id's Def is found by its slot here, so this pairing is a save contract like
+        /// <see cref="TerrainOrder"/>. Appended, never inserted.
+        /// </summary>
+        public static readonly string[] WildPlantOrder =
+        {
+            "WildPlant_Birch",
+            "WildPlant_MeadowTree",
+            "WildPlant_FruitTree",
+            "WildPlant_GiantTree",
+            "WildPlant_Bush",
+            "WildPlant_BerryBush",
+        };
+
+        static WildPlantDef[]? _wildPlants;
+
+        /// <summary>The wild plant table from the core pack, in <see cref="WildPlantOrder"/>.</summary>
+        public static WildPlantDef[] WildPlants => _wildPlants ??= WildPlantsFromDefs(ContentPack.Core);
+
+        public static WildPlantDef[] WildPlantsFromDefs(DefDatabase defs)
+        {
+            var table = new WildPlantDef[WildPlantOrder.Length];
+            for (int i = 0; i < WildPlantOrder.Length; i++) table[i] = One<WildPlantDef>(defs, WildPlantOrder[i]);
+            return table;
+        }
+
+        /// <summary>
         /// The Def types the world content is made of, registered in one place so a caller cannot
         /// load half of it.
         /// </summary>
         public static DefLoader Register(DefLoader loader) =>
-            loader.Register<TerrainDef>().Register<OreKindDef>().Register<PlantDef>();
+            loader.Register<TerrainDef>().Register<OreKindDef>().Register<PlantDef>().Register<ClimateDef>()
+                .Register<Weather.WeatherDef>().Register<WildPlantDef>();
 
         /// <summary>
         /// The whole terrain table, in index order. A missing or misspelt kind throws here
@@ -140,7 +168,40 @@ namespace Odyssey.Sim.Worldgen
 
         /// <summary>Drop the cached table, so the next read reloads. Paired with
         /// <c>ContentPack.Reset</c>, which is the only thing that should call it.</summary>
-        internal static void Forget() => _table = null;
+        internal static void Forget()
+        {
+            _table = null;
+            _wildPlants = null;
+            _climate = null;
+            _weathers = null;
+        }
+
+        /// <summary>The weather kinds in <see cref="Contracts.WeatherKind"/> order, one Def each (design 43 §4).</summary>
+        public static readonly string[] WeatherOrder =
+        {
+            "Weather_Clear", "Weather_Cloudy", "Weather_Rain", "Weather_Storm",
+        };
+
+        static Weather.WeatherDef[]? _weathers;
+
+        /// <summary>The weather table the running game reads, indexed by <see cref="Contracts.WeatherKind"/>.</summary>
+        public static Weather.WeatherDef[] Weathers => _weathers ??= WeathersFromDefs(ContentPack.Core);
+
+        public static Weather.WeatherDef[] WeathersFromDefs(DefDatabase defs)
+        {
+            var table = new Weather.WeatherDef[WeatherOrder.Length];
+            for (int i = 0; i < WeatherOrder.Length; i++) table[i] = One<Weather.WeatherDef>(defs, WeatherOrder[i]);
+            return table;
+        }
+
+        static ClimateDef? _climate;
+
+        /// <summary>
+        /// The climate the running game reads, loaded once like the terrain table. The thermal
+        /// system asks for it once at construction and again never, but the cache costs nothing
+        /// and keeps the same shape as <see cref="Table"/> beside it.
+        /// </summary>
+        public static ClimateDef Climate => _climate ??= One<ClimateDef>(ContentPack.Core, "Climate_Temperate");
 
         /// <summary>The ore kinds, resolved into the same struct the generator already draws from.</summary>
         public static NaturalContent.OreKind[] OresFromDefs(DefDatabase defs)

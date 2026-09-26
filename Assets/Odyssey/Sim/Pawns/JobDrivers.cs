@@ -1,7 +1,7 @@
 #nullable enable
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
-using Odyssey.Sim.Pathing;
+using Odyssey.Sim.Worldgen.Natural;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -17,20 +17,45 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class HaulJobDriver : JobDriver
     {
+        /// <summary>
+        /// The destination store, or null when the load is going on to the ground. Resolved from
+        /// the destination <em>cell</em>, because that is all the job record carries and a cell
+        /// holds at most one edifice.
+        /// </summary>
+        Storage.StorageUnit? Destination(PawnContext ctx) => ctx.StorageUnits?.AtCell(Job.DestCell);
+
         public override bool TryMakeReservations(PawnContext ctx)
         {
             var item = ctx.Items.Get(Job.TargetItem);
-            if (item == null || item.Cell < 0) return false;
-            if (!ctx.Items.CellHasSpace(Job.DestCell, item.DefIndex, item.Stack)) return false;
+            // Somewhere real: on the floor, or in a store. A thing already in a pair of hands is
+            // not something to be sent for.
+            if (item == null || ctx.WhereIs(item) < 0) return false;
+
+            // **Every question first, then every claim.** All or nothing before the toils run
+            // (design 05 §2), and the reason this order matters rather than merely reading better:
+            // a check that fails after a claim has been taken walks out holding it.
+            Storage.StorageUnit? into = Destination(ctx);
+            if (into != null)
+            {
+                if (!ctx.StorageUnits!.HasSpaceFor(into, item.DefIndex, item.Stack)) return false;
+            }
+            else if (!ctx.Items.CellHasSpace(Job.DestCell, item.DefIndex, item.Stack)) return false;
 
             long itemKey = ReservationManager.Key(ReservationTargetKind.Item, Job.TargetItem.Value);
-            long cellKey = ReservationManager.Key(ReservationTargetKind.Cell, Job.DestCell);
+            // The destination is claimed as whichever kind of thing it is. **Only the
+            // destination** — a store being taken *out of* is deliberately left unclaimed, because
+            // the item claim already stops two haulers lifting the same stack, and a claim on the
+            // source would stop a second colonist putting something *into* a shelf while this one
+            // empties it.
+            long destKey = into != null
+                ? ReservationManager.Key(ReservationTargetKind.Container, into.Edifice)
+                : ReservationManager.Key(ReservationTargetKind.Cell, Job.DestCell);
 
             if (!ctx.Reservations.Reserve(Pawn.Id, itemKey)) return false;
             Pawn.HeldReservations.Add(itemKey);
 
-            if (!ctx.Reservations.Reserve(Pawn.Id, cellKey)) return false;
-            Pawn.HeldReservations.Add(cellKey);
+            if (!ctx.Reservations.Reserve(Pawn.Id, destKey)) return false;
+            Pawn.HeldReservations.Add(destKey);
             return true;
         }
 
@@ -43,7 +68,7 @@ namespace Odyssey.Sim.Pawns
             {
                 case 0:
                 {
-                    if (item.Cell != Job.TargetCell) return JobStatus.Failed;
+                    if (!StillAt(ctx, item, Job.TargetCell)) return JobStatus.Failed;
                     JobStatus walk = GotoCell(ctx, Job.TargetCell);
                     if (walk == JobStatus.Succeeded) NextToil();
                     return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
@@ -52,7 +77,8 @@ namespace Odyssey.Sim.Pawns
                 case 1:
                     // Taken up rather than merely moved, and it takes time: LiftToil is the stoop,
                     // the grasp and the rise, so every job which ever lifts anything gets all three
-                    // without being asked.
+                    // without being asked. Reaching into a shelf is the same motion and the same
+                    // duration as stooping to the floor, deliberately.
                     return LiftToil(ctx, item);
 
                 case 2:
@@ -69,12 +95,26 @@ namespace Odyssey.Sim.Pawns
                 default:
                 {
                     // Checked again on arrival: something may have been dropped or eaten here
-                    // meanwhile, and the cell claim guards against haulers, not against eaters.
-                    if (!ctx.Items.CellHasSpace(Job.DestCell, item.DefIndex, item.Stack)) return JobStatus.Failed;
-                    // The same motion the other way up, and only on a haul that *arrived*: see
-                    // PutDown, and see Cleanup below for the failure path that deliberately says
-                    // nothing.
-                    PutDown(ctx, item, Job.DestCell);
+                    // meanwhile, and the destination claim guards against haulers, not against
+                    // eaters — which is as true of a shelf somebody has just taken the last meal
+                    // out of as it is of a cell.
+                    Storage.StorageUnit? into = Destination(ctx);
+                    if (into != null)
+                    {
+                        if (!ctx.StorageUnits!.HasSpaceFor(into, item.DefIndex, item.Stack))
+                            return JobStatus.Failed;
+                        PutInto(ctx, item, into);
+                    }
+                    else
+                    {
+                        if (!ctx.Items.CellHasSpace(Job.DestCell, item.DefIndex, item.Stack))
+                            return JobStatus.Failed;
+                        // The same motion the other way up, and only on a haul that *arrived*: see
+                        // PutDown, and see Cleanup below for the failure path that deliberately
+                        // says nothing.
+                        PutDown(ctx, item, Job.DestCell);
+                    }
+
                     Job.CarriedItem = -1;
                     return JobStatus.Succeeded;
                 }
@@ -93,8 +133,11 @@ namespace Odyssey.Sim.Pawns
         public override bool TryMakeReservations(PawnContext ctx)
         {
             var item = ctx.Items.Get(Job.TargetItem);
-            if (item == null || item.Cell < 0) return false;
+            if (item == null || ctx.WhereIs(item) < 0) return false;
 
+            // The item, and **not the store it is in**. Eating takes no slot and leaves the shelf
+            // no fuller than it found it, so two colonists helping themselves from one pantry is
+            // fine; the per-item claim is what keeps them off the same meal.
             long key = ReservationManager.Key(ReservationTargetKind.Item, Job.TargetItem.Value);
             if (!ctx.Reservations.Reserve(Pawn.Id, key)) return false;
             Pawn.HeldReservations.Add(key);
@@ -108,7 +151,7 @@ namespace Odyssey.Sim.Pawns
 
             if (ToilIndex == 0)
             {
-                if (item.Cell != Job.TargetCell) return JobStatus.Failed;
+                if (!StillAt(ctx, item, Job.TargetCell)) return JobStatus.Failed;
                 JobStatus walk = GotoCell(ctx, Job.TargetCell);
                 if (walk == JobStatus.Succeeded) NextToil();
                 return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
@@ -134,7 +177,12 @@ namespace Odyssey.Sim.Pawns
             // why every pantry-size estimate made before this was four times too high.
             if (item.Stack > 1) item.Stack--;
             else ctx.Items.Despawn(item);
-            Pawn.AddMemory(ThoughtIndex.AteMeal, ctx.CurrentTick);
+
+            // What she thinks of it is the food's (design 48 §4): a cooked meal pleases, a ration
+            // is what every food used to be, burnt or raw food she minds.
+            int thought = ctx.Content.Items[item.DefIndex].ateThought;
+            if ((uint)thought < (uint)ctx.Content.Thoughts.Length) Pawn.AddMemory(thought, ctx.CurrentTick);
+            ctx.Kitchen?.Invalidate();
             return JobStatus.Succeeded;
         }
     }
@@ -176,7 +224,14 @@ namespace Odyssey.Sim.Pawns
                 // because rest effectiveness is read off the cell and the thought was not: the
                 // bed's rate and the mud's memory, on the one tick where her rest reached zero
                 // as she arrived.
-                if (Pawn.Needs[NeedIndex.Rest] <= 0 && Pawn.Cell != Job.TargetCell)
+                //
+                // **Not inside a tree, and not on top of anybody** (owner, 2026-09-25): a walk
+                // passes through trunks, since a tree blocks nothing, so the collapse waits for
+                // the first cell on the way that she may lie in — a step or two further along
+                // the path she is already walking — rather than laying her down in the wood.
+                // FreeSpot is the one owner of that question; design 20 §14.
+                if (Pawn.Needs[NeedIndex.Rest] <= 0 && Pawn.Cell != Job.TargetCell
+                    && FreeSpot.CanLie(Pawn, ctx, Pawn.Cell))
                 {
                     if (Job.TargetCell >= 0)
                         Pawn.AddMemory(ThoughtIndex.SleptOnGround, ctx.CurrentTick);
@@ -209,6 +264,18 @@ namespace Odyssey.Sim.Pawns
             if (Pawn.Needs[NeedIndex.Rest] < ctx.Content.Kind.wakeThreshold) return JobStatus.Ongoing;
 
             if (Job.TargetCell < 0) Pawn.AddMemory(ThoughtIndex.SleptOnGround, ctx.CurrentTick);
+
+            // A night outside the temperature bands is remembered on waking (design 28 §8) —
+            // the memory half, beside the mechanical half that ran all night as the sleep
+            // factor. Read from where the sleep ended, which is where it happened.
+            if (ctx.Temperature != null)
+            {
+                int temp = ctx.Temperature.CellTemp(Pawn.Cell, ctx.CurrentTick);
+                if (ctx.Content.Temperature.BandOf(temp) >= 2)
+                    Pawn.AddMemory(temp < ctx.Content.Temperature.comfortMinC
+                        ? ThoughtIndex.SleptCold
+                        : ThoughtIndex.SleptHot, ctx.CurrentTick);
+            }
             return JobStatus.Succeeded;
         }
 
@@ -312,8 +379,12 @@ namespace Odyssey.Sim.Pawns
 
             int cell = Job.DestCell;
             // Somebody else felled it, or the player changed their mind: stop, do not swing at air.
-            if (designations.At(cell) != DesignationKind.Fell || !designations.IsTree(cell))
+            if (designations.At(cell) != DesignationKind.Fell || !designations.IsFellable(cell))
                 return JobStatus.Failed;
+            // The species decides the work and the yield (design 45 §2), so a birch comes down
+            // quicker than a giant and a bush yields nothing at all.
+            WildPlantDef? plant = designations.WildPlantAt(cell);
+            if (plant == null) return JobStatus.Failed;
 
             if (ToilIndex == 0)
             {
@@ -336,12 +407,13 @@ namespace Odyssey.Sim.Pawns
             int rate = Pawn.WorkRatePerMille(WorkTypeIndex.Cutting);
             ToilProgress += rate;
             Work(ctx);
-            if (ToilProgress < ctx.Content.Jobs[Job.DefIndex].workTicks * Rates.Scale)
+            if (ToilProgress < plant.clearWorkTicks * Rates.Scale)
                 return JobStatus.Ongoing;
 
             designations.Clear(cell);
-            int yield = ctx.Content.WoodPerTree;
-            ctx.Defer(_ => FellTree(ctx, cell, yield));
+            int item = plant.clearYields.Length == 0 ? -1 : ctx.Content.ItemIndexOf(plant.clearYields);
+            int yield = item < 0 ? 0 : plant.clearYieldCount;
+            ctx.Defer(_ => FellTree(ctx, cell, item, yield));
 
             // The tree falls now; the woodcutter straightens up before walking off.
             NextToil();
@@ -353,8 +425,12 @@ namespace Odyssey.Sim.Pawns
         /// one of the eight neighbours on the same layer, so the colonist stands at the trunk's
         /// side and the wood falls where the tree stood.
         /// </summary>
-        public static int StandBeside(PawnContext ctx, Pawn pawn, int tree, TraverseMode? mode = null)
+        public static int StandBeside(PawnContext ctx, Pawn pawn, int tree)
         {
+            // The thing worked on must be hers to work on as well as the cell she stands in
+            // (design 43 §4c): a tree just outside home is outside home, whichever side of the
+            // line the stump is felled from.
+            if (!ctx.MayWork(pawn, tree)) return -1;
             GridSize size = ctx.Size;
             CellRef at = size.FromIndex(tree);
             int best = -1, bestDistance = int.MaxValue;
@@ -368,21 +444,22 @@ namespace Odyssey.Sim.Pawns
                 if (!ctx.Cells.IsWalkable(cell)) continue;
                 int distance = ctx.Distance(pawn.Cell, cell);
                 if (distance >= bestDistance) continue;
-                // The mode the *job* will walk in, when the caller knows it. A scan that tested a
-                // laxer mode than the job would hand out work that fails on its first step — which
-                // is exactly what a delivery up a ladder was doing before U44.
-                if (!(mode is TraverseMode m ? ctx.Reachable(pawn, cell, m) : ctx.Reachable(pawn, cell)))
-                    continue;
+                if (!ctx.Reachable(pawn, cell)) continue;
                 bestDistance = distance;
                 best = cell;
             }
             return best;
         }
 
-        static void FellTree(PawnContext ctx, int cell, int yield)
+        static void FellTree(PawnContext ctx, int cell, int item, int yield)
         {
+            // A bush prices its cell (design 45 §4), so taking it out changes what the cell costs
+            // to cross and navigation has to re-read it; a tree blocks nothing and costs nothing.
+            bool bush = ctx.Cells.IsUndergrowth(cell);
             ctx.Cells.RemoveEdifice(cell);
             ctx.Chunks?.MarkDirty(ctx.Size.FromIndex(cell));
+            if (bush) ctx.Nav.MarkDirty(cell);
+            if (item < 0 || yield <= 0) return;
 
             // Where the tree stood, or the nearest cell nearby that can take the wood — which
             // includes a pile of wood from the tree next door with room on it, so a stand of
@@ -390,8 +467,8 @@ namespace Odyssey.Sim.Pawns
             // within three cells is a board packed solid with things, which nothing in the game
             // can produce yet; losing the wood then is the least bad answer, because spawning
             // onto a cell that cannot take it would corrupt the cell index.
-            int at = ctx.Items.NearestCellWithSpace(ctx.Cells, cell, ItemIndex.Wood, yield, maxRadius: 3);
-            if (at >= 0) ctx.Items.Spawn(ItemIndex.Wood, at, yield);
+            int at = ctx.Items.NearestCellWithSpace(ctx.Cells, cell, item, yield, maxRadius: 3);
+            if (at >= 0) ctx.Items.Spawn(item, at, yield);
         }
     }
 }

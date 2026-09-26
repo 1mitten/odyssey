@@ -57,6 +57,13 @@ namespace Odyssey.Sim.World
         internal void Bind(Pawns.PawnContext pawns) => _pawns = pawns;
 
         /// <summary>
+        /// The chunk grid a collapse is reported to: the one this system was built with, else the
+        /// colony's. A fixture that built the system before the colony had a chunk grid would
+        /// otherwise drop a collapse nobody re-meshes and the sky map never hears (design 43 §6).
+        /// </summary>
+        ChunkGrid? Chunks => _chunks ?? _pawns?.Chunks;
+
+        /// <summary>
         /// The solver this system runs. Taken from here by the composition root rather than passed
         /// in beside it, so the solver a collapse is computed from and the solver a wall marks
         /// dirty cannot become two different objects.
@@ -90,9 +97,10 @@ namespace Odyssey.Sim.World
             TotalCollapses += collapsed.Count;
 
             // Mark the affected chunks so rendering and navigation rebuild only what moved.
-            if (_chunks != null)
+            ChunkGrid? chunks = Chunks;
+            if (chunks != null)
                 for (int i = 0; i < collapsed.Count; i++)
-                    _chunks.MarkDirty(collapsed[i]);
+                    chunks.MarkDirty(collapsed[i]);
 
             // The consequences of a collapse run as a structural event, not inline: this is a
             // world system, and other systems in the same phase may be part-way through scanning
@@ -130,7 +138,7 @@ namespace Odyssey.Sim.World
                 // 1. Everything that was in the cell has lost what it was standing on. The same
                 //    answer a dig gives, from the same place, to the first real floor below rather
                 //    than one layer down — see Falling, which is where mining's version went.
-                Pawns.Falling.OutOf(_pawns, cell, Pawns.ThoughtIndex.Fell, world.CurrentTick);
+                Pawns.Falling.OutOf(_pawns, cell, Pawns.ThoughtIndex.Fell, world.CurrentTick, collapse: true);
 
                 // 2. The mess. Where the debris lands, not where the slab was: a floor that falls
                 //    into a stairwell ends up at the bottom of it, which is the rule the spoil from
@@ -145,6 +153,10 @@ namespace Odyssey.Sim.World
             }
 
             Pawns.Falling.DropFloatingItems(_pawns);
+            // And the rooted kinds, which do not fall but must not be left drawn over the
+            // hole either. A collapse can open ground under a field several cells from any
+            // cell in `_fallen`, because the slab that went was holding the soil up.
+            Pawns.Falling.UprootFloatingPlants(_pawns);
             _fallen.Clear();
         }
 
@@ -168,7 +180,7 @@ namespace Odyssey.Sim.World
             if (_grid.Terrain[landing] != Worldgen.CoreContent.TerrainAir) return;
 
             _grid.Terrain[landing] = Worldgen.CoreContent.TerrainRubble;
-            _chunks?.MarkDirty(_grid.Size.FromIndex(landing));
+            Chunks?.MarkDirty(_grid.Size.FromIndex(landing));
         }
     }
 }

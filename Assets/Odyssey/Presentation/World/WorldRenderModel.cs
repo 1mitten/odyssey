@@ -60,6 +60,9 @@ namespace Odyssey.Presentation.World
         readonly byte[] _edificeFacing;
         readonly bool[] _bedHead;
 
+        /// <summary>Whether this cell is its record's head — the one a building drawn once is drawn from (design 32 §14).</summary>
+        readonly bool[] _edificeHead;
+
 
         /// <summary>The crop standing in each cell as <c>plant handle + 1</c>, or 0 for fallow. A crop is not in the grid — it lives in zone state — so this mirror is fed from the published snapshot, not from a contributor.</summary>
         readonly byte[] _cropPlant;
@@ -148,15 +151,27 @@ namespace Odyssey.Presentation.World
         readonly int _wallCoreModule;
         readonly int _waterFallModule;
         readonly int _bedModule;
+        readonly int _campfireModule;
+        readonly int _generatorModule;
+        readonly int _heaterModule;
+        readonly int _galleyModule;
 
         /// <summary>The colony's one-cell, one-layer stair (2026-09-21). See <see cref="StairShape"/>.</summary>
         readonly int _stairFullModule;
         readonly int _bedPillowModule;
+        readonly int _shelfModule;
+        readonly int _sandbagModule;
+        readonly int _storeEdgeModule;
+
+        /// <summary>The strip drawn along a stockpile's outer edge. See <c>ChunkMesher.EmitStoreEdge</c>.</summary>
+        public int StoreEdgeModule => _storeEdgeModule;
 
         public WorldRenderModel(GridSize size, ChunkGrid chunks, ModuleLibrary library, PlantDef[]? plants = null)
         {
             Size = size;
             Chunks = chunks;
+            _chunkVersion = new int[chunks.Count];
+            _dirtyThisRefresh = new int[chunks.Count];
             Library = library;
 
             int count = size.CellCount;
@@ -169,6 +184,7 @@ namespace Odyssey.Presentation.World
             _slot = new ushort[count];
             _edificeFacing = new byte[count];
             _bedHead = new bool[count];
+            _edificeHead = new bool[count];
             _cropPlant = new byte[count];
             _cropStage = new byte[count];
             _zoned = new bool[count];
@@ -213,10 +229,18 @@ namespace Odyssey.Presentation.World
             // When real two-cell art exists a catalogue row on this id upgrades it everywhere,
             // with no code change — the same deal every other module id already offers.
             _bedModule = library.Resolve(ModuleIds.Bed, ModuleShape.SolidBlock);
+            _campfireModule = library.Resolve(ModuleIds.Campfire, ModuleShape.SolidBlock);
+            _generatorModule = library.Resolve(ModuleIds.Generator, ModuleShape.SolidBlock);
+            _heaterModule = library.Resolve(ModuleIds.Heater, ModuleShape.SolidBlock);
+            _galleyModule = library.Resolve(ModuleIds.Galley, ModuleShape.SolidBlock);
 
             // The pillow is a module of its own so it can be a rounded shape and a linen colour
             // whatever the bed's frame is made of (BedShape, PillowMesh).
             _bedPillowModule = library.Resolve(ModuleIds.BedPillow, ModuleShape.Pillow);
+            _shelfModule = library.Resolve(ModuleIds.Shelf, ModuleShape.SolidBlock);
+            // Cover (design 53 §7a-bis): one bag, laid as a wall by CoverShape.
+            _sandbagModule = library.Resolve(ModuleIds.Sandbags, ModuleShape.Sandbag);
+            _storeEdgeModule = library.Resolve(ModuleIds.StoreEdge, ModuleShape.FloorSlab);
         }
 
         /// <summary>
@@ -243,6 +267,29 @@ namespace Odyssey.Presentation.World
 
         /// <summary>Bumped whenever any chunk is refreshed, so the renderer can cheaply notice.</summary>
         public int Version { get; private set; }
+
+        /// <summary>
+        /// Per chunk, the version its contents were last written at — and what the renderer
+        /// compares its meshed batch against.
+        ///
+        /// <para><b>Because <see cref="Version"/> is one number for the whole board.</b> A single
+        /// cell changing — one wall raised — bumped it, and every batch in the world then failed
+        /// its equality test and was re-meshed on the next frame it was drawn. Measured on
+        /// 2026-09-21: raising one wall on the meadow re-meshed all 45 drawn chunks and cost
+        /// <b>12.53 ms</b> in the frame after the raise, against 0.7 ms either side of it — a
+        /// visible hitch, and the "little glitch" in the owner's report of that day. With this,
+        /// one changed cell re-meshes the chunks that changed.</para>
+        ///
+        /// <para>A global refresh (<see cref="RefreshAll"/>, <see cref="Remesh"/>) writes the new
+        /// version into every entry, which is a few hundred integers and keeps "everything must
+        /// be re-meshed" expressible.</para>
+        /// </summary>
+        public int ChunkVersion(int chunkIndex) => _chunkVersion[chunkIndex];
+
+        readonly int[] _chunkVersion;
+
+        /// <summary>Scratch: which chunks one <see cref="RefreshDirty"/> copied. Never allocates.</summary>
+        readonly int[] _dirtyThisRefresh;
 
         /// <summary>
         /// The highest layer worth drawing: the top of the geometry, plus the one a colonist
@@ -310,11 +357,11 @@ namespace Odyssey.Presentation.World
             if (!Size.Contains(cell.X, cell.Z, cell.Y)) return false;
             int index = Size.Index(cell);
             ushort def = _edifice[index];
-            if (def >= NaturalContent.FirstEdifice && def < NaturalContent.EdificeCount) return true;
+            if (NaturalContent.IsTree(def)) return true;
             if (cell.Y > 0)
             {
                 ushort defBelow = _edifice[index - Size.LayerStride];
-                if (defBelow >= NaturalContent.FirstEdifice && defBelow < NaturalContent.EdificeCount) return true;
+                if (NaturalContent.IsTree(defBelow)) return true;
             }
             return false;
         }
@@ -323,12 +370,12 @@ namespace Odyssey.Presentation.World
         {
             if ((uint)index >= (uint)_edifice.Length) return false;
             ushort def = _edifice[index];
-            if (def >= NaturalContent.FirstEdifice && def < NaturalContent.EdificeCount) return true;
+            if (NaturalContent.IsTree(def)) return true;
             int below = index - Size.LayerStride;
             if (below >= 0 && (uint)below < (uint)_edifice.Length)
             {
                 ushort defBelow = _edifice[below];
-                if (defBelow >= NaturalContent.FirstEdifice && defBelow < NaturalContent.EdificeCount) return true;
+                if (NaturalContent.IsTree(defBelow)) return true;
             }
             return false;
         }
@@ -624,6 +671,23 @@ namespace Odyssey.Presentation.World
         /// <summary>Whether an order is waiting to be built in this cell.</summary>
         public bool HasSite(int index) => _sites.ContainsKey(index);
 
+        readonly HashSet<int> _lines = new HashSet<int>();
+
+        /// <summary>
+        /// The power lines published this frame (design 32 §14): every order and removal mark, and
+        /// the laid lines while they are shown. A line is a thing the player can point at exactly
+        /// as a building site is — it has a cell, an order and a pane — so the picker asks here
+        /// beside <see cref="HasSite"/>.
+        /// </summary>
+        public void SetLines(ReadOnlySpan<ConduitView> lines)
+        {
+            _lines.Clear();
+            for (int i = 0; i < lines.Length; i++) _lines.Add(lines[i].CellIndex);
+        }
+
+        /// <summary>Whether a line — ordered, marked, or laid and shown — is in this cell.</summary>
+        public bool HasLine(int index) => _lines.Contains(index);
+
         /// <summary>
         /// What is going up in this cell, as a <c>BuildingHandle</c>, or 0 where nothing is.
         /// </summary>
@@ -677,6 +741,35 @@ namespace Odyssey.Presentation.World
             // only case where the player could see it was arbitrary. A ladder rotates now, and the
             // rotation is read here rather than everywhere, so the wall still wins wherever there
             // is one: which side of a wall a ladder is bolted to is physics, not preference.
+            return chosen & 3;
+        }
+
+        /// <summary>
+        /// Which way a one-cell machine that stands against a wall faces, 0–3 — the heater today
+        /// (design 32 §14c). The mesher and the build cursor both ask here, for the reason
+        /// <see cref="LadderFacing(int, int)"/> is one method rather than two.
+        ///
+        /// <para><b>Its back to a wall when there is one.</b> The player's facing is kept when the
+        /// cell behind it is a wall; otherwise the rotate key's next quarter turn that backs on to
+        /// one is taken, so in a corner R chooses which wall and in the open R chooses freely. The
+        /// ladder's rule lets the wall win outright, which is right for a thing bolted to rock and
+        /// wrong here: the owner reported the heater "doesn't rotate", and a rule that ignored R
+        /// against every wall would have kept that true.</para>
+        /// </summary>
+        public int BackedFacing(int index) => BackedFacing(index, _edificeFacing[index] & 3);
+
+        /// <summary>The same for a machine not built yet, with <paramref name="chosen"/> the cursor's facing.</summary>
+        public int BackedFacing(int index, int chosen)
+        {
+            CellRef cell = Size.FromIndex(index);
+            for (int turn = 0; turn < Directions.Count; turn++)
+            {
+                int facing = (chosen + turn) & 3;
+                int back = Directions.Opposite(facing);
+                int nx = cell.X + Directions.DeltaX[back], nz = cell.Z + Directions.DeltaZ[back];
+                if (Size.Contains(nx, nz, cell.Y) && OccludesFace(Size.Index(nx, nz, cell.Y)))
+                    return facing;
+            }
             return chosen & 3;
         }
 
@@ -769,6 +862,9 @@ namespace Odyssey.Presentation.World
         /// <summary>The module a bed's pillow is drawn from — rounded, and tinted as linen.</summary>
         public int BedPillowModule => _bedPillowModule;
 
+        /// <summary>The facing of whatever rotatable thing stands in this cell, 0–3.</summary>
+        public byte EdificeFacing(int index) => _edificeFacing[index];
+
         /// <summary>The facing of the bed in this cell, 0–3. Meaningful only while a bed stands here.</summary>
         public byte BedFacing(int index) => _edificeFacing[index];
 
@@ -782,13 +878,16 @@ namespace Odyssey.Presentation.World
         /// infer only because worldgen had nowhere to put an answer, and placing is exactly where
         /// the answer is known"</i> — and which is ambiguous the moment two stairwells stand side
         /// by side. A one-cell flight has no partner to scan for, so it must read what the player
-        /// chose, and <c>28-stairs.md</c> §9's first open item closes with it.</para>
+        /// chose, and <c>60-stairs.md</c> §9's first open item closes with it.</para>
         /// </summary>
         public int EdificeFacing(int index) =>
             (uint)index < (uint)_edificeFacing.Length ? _edificeFacing[index] & 3 : 0;
 
         /// <summary>Whether this cell is the head of the bed that stands in it — the half that draws.</summary>
         public bool BedHead(int index) => _bedHead[index];
+
+        /// <summary>Is this cell the head of the record standing in it? True for every one-cell thing.</summary>
+        public bool EdificeHead(int index) => _edificeHead[index];
 
         /// <summary>
         /// The head cell of the bed occupying this one, or -1 where there is no bed.
@@ -846,6 +945,23 @@ namespace Odyssey.Presentation.World
         {
             if ((uint)index >= (uint)_edifice.Length) return 0f;
             if (_edifice[index] == CoreContent.EdificeBed) return BedShape.Size.y;
+
+            // **The deck, not the top of the whole thing.** What a player aims at on a shelf is the
+            // goods, and the goods stand on the deck; the back lip is 0.26 m above it, which at the
+            // play camera's 48° is about a tenth of a cell of drift — in the same direction the
+            // bed's own bug went.
+            if (_edifice[index] == CoreContent.EdificeShelf) return ShelfShape.DeckTop;
+
+            // **The flames, which are what a player aims at** (design 43, 2026-09-25). A campfire
+            // offered only its floor, so a click on its visible body crossed that floor beyond it
+            // and a rolling neighbour in front could take the click instead — measured by
+            // CampfirePickTests. FireDirector draws the flames at this height; one number.
+            if (_edifice[index] == CoreContent.EdificeCampfire) return FireDirector.FlameHeight;
+
+            // Cover (design 53 §7): the top of the bags or the rail, which is what is clicked and
+            // what a deconstruct mark sits on.
+            if (CoverShape.Draws(_edifice[index])) return CoverShape.Top(_edifice[index]);
+            // A stair offers the top of its run (design 60 §8b); everything else its floor.
             return StairShape.TopOfRun(_edifice[index]);
         }
 
@@ -899,8 +1015,69 @@ namespace Odyssey.Presentation.World
         public float MarkHeight(int index)
         {
             if ((uint)index >= (uint)_edifice.Length) return 0f;
+
+            // **A shelf is the first thing for which "where is it picked" and "where is its mark"
+            // differ.** A deconstruct mark at deck height is buried under a full shelf, so the mark
+            // rides the top of the thing while the pick stays on the deck.
+            if (_edifice[index] == CoreContent.EdificeShelf) return ShelfShape.Top;
             return OccludesFace(index) ? CellMetrics.SizeY : StandHeight(index);
         }
+
+        /// <summary>
+        /// The same, with the walls down or not: a lowered wall is marked on top of its stump
+        /// rather than 2.25 m of nothing above it (design 42 §5).
+        /// </summary>
+        public float MarkHeight(int index, bool lowered) =>
+            lowered && Lowers(index) ? CellMetrics.StumpHeight : MarkHeight(index);
+
+        /// <summary>Is what stands in this cell drawn as a stump while the walls are down?</summary>
+        public bool Lowers(int index) => (uint)index < (uint)_edifice.Length && Lowers(_edifice[index]);
+
+        /// <summary>
+        /// The edifices that walls-down lowers (owner, 2026-09-24): walls and windows, the ruined
+        /// city's vault walls, doors and pillars. Natural rock is terrain and is never lowered, and
+        /// neither is anything a player walks up to use — a bed, a shelf, a heater.
+        /// </summary>
+        public static bool Lowers(ushort def) =>
+            def == CoreContent.EdificeWall || def == CoreContent.EdificeWindow
+            || def == CoreContent.EdificeVaultWall || def == CoreContent.EdificeDoor
+            || def == CoreContent.EdificePillar;
+
+        /// <summary>
+        /// Does this cell hold something <em>built</em> — a floor slab, or an edifice that is not a
+        /// tree or a bush? It is the difference between the upper storey of a house and a hilltop, and the
+        /// question walls-down asks of anything standing above the slice (design 42 §5).
+        /// </summary>
+        public bool IsBuiltAt(int index)
+        {
+            if ((uint)index >= (uint)_edifice.Length) return false;
+            if (_floor[index] != CoreContent.SlabNone) return true;
+            ushort def = _edifice[index];
+            return def != CoreContent.EdificeNone && !NaturalContent.IsNatural(def);
+        }
+
+        /// <summary>
+        /// Does this cell rest on the ground — solid terrain directly beneath it? A building's
+        /// ground floor does, whether it stands on the slice or up on a terrace; an upper storey
+        /// rests on another floor or on the walls below it, and does not.
+        /// </summary>
+        public bool RestsOnGround(int index)
+        {
+            int below = index - Size.LayerStride;
+            return below >= 0 && IsSolid(below);
+        }
+
+        /// <summary>
+        /// Is what is built here <em>stacked</em> — an upper storey rather than a ground floor? The
+        /// thing walls-down hides above the slice (owner, 2026-09-24, design 42 §3): the first
+        /// floor of the house being looked into goes, the house on the terrace next to it stays.
+        ///
+        /// <para>It asks only about the cell underneath, so it is absolute rather than relative to
+        /// the slice, and the mesher can bake it into a bucket. What changes it is terrain changing
+        /// underneath, and digging a cell out already marks the chunk above it dirty
+        /// (<c>MineJob.MarkChunksAround</c>).</para>
+        /// </summary>
+        public bool IsStackedAt(int index) => IsBuiltAt(index) && !RestsOnGround(index);
 
         /// <summary>The module index for whatever edifice stands in this cell, or 0.</summary>
         public int EdificeModule(int index) => ModuleForEdificeAt(index, _edifice[index]);
@@ -921,9 +1098,21 @@ namespace Odyssey.Presentation.World
             // The bed first, before the natural range: its id sits above the trees' but it is not
             // one of theirs, and the natural table below would index past itself for it.
             if (def == CoreContent.EdificeBed) return _bedModule;
+            // And the shelf, for the identical reason and it is worth saying twice: id 13 is above
+            // the trees' 10 and 11, so without this line the natural table below indexes past
+            // itself and every shelf in the colony draws as a conifer.
+            if (def == CoreContent.EdificeShelf) return _shelfModule;
+            if (def == CoreContent.EdificeCampfire) return _campfireModule;
+            // The generator and the heater, above the trees' range for the same reason (design 32).
+            if (def == CoreContent.EdificeGenerator) return _generatorModule;
+            if (def == CoreContent.EdificeHeater) return _heaterModule;
+            // The galley (design 48), above the trees' range for the same reason.
+            if (def == CoreContent.EdificeGalley) return _galleyModule;
+            // Cover (design 53), above the trees' range for the same reason.
+            if (def == CoreContent.EdificeSandbags) return _sandbagModule;
             // **And the colony's stair, for exactly the bed's reason and caught exactly the way
-            // this comment warns.** Its id is 13, `FirstEdifice` is 10 and `EdificeCount` is 12, so
-            // the range test below claims it, finds it past the end of the tree table and returns
+            // this comment warns.** Its id was 13 when this was written, above the trees' 10 and 11, so
+            // the range test below claimed it, found it past the end of the tree table and returned
             // 0 — no module, nothing drawn, no error. The first picture of the one-cell stair was a
             // field of grass with no stair in it (2026-09-21), and the `case` for it further down
             // this switch was never reached. Anything numbered above the trees belongs up here.
@@ -932,7 +1121,7 @@ namespace Odyssey.Presentation.World
             // a kind of wall: before this branch existed every tree fell through the switch below
             // to the wall module and the woodland rendered as a grid of grey boxes.
             if (def >= NaturalContent.FirstEdifice)
-                return def < NaturalContent.EdificeCount ? _naturalEdificeModule[def - NaturalContent.FirstEdifice] : 0;
+                return NaturalContent.IsNatural(def) ? _naturalEdificeModule[def] : 0;
             ref ModuleGroup group = ref _groups[_slot[index]];
             switch (def)
             {
@@ -969,6 +1158,11 @@ namespace Odyssey.Presentation.World
 
         /// <summary>The module index for the natural material in this cell, or 0 for open air.</summary>
         public int TerrainModule(int index) => _terrainModule[_terrain[index]];
+
+        /// <summary>The module a terrain is drawn with, wherever it is — for drawing one terrain's
+        /// surface in another's cell, as the shoreline lays water over a bank (design 38 §24).</summary>
+        public int ModuleForTerrain(ushort terrain) =>
+            terrain < _terrainModule.Length ? _terrainModule[terrain] : 0;
 
         /// <summary>Is the cell drawn as a chipped lump rather than as a cube?</summary>
         public bool IsStone(int index) => RockLook.IsStone(_terrain[index]);
@@ -1130,14 +1324,21 @@ namespace Odyssey.Presentation.World
             }
         }
 
-        /// <summary>Tree modules by natural edifice code, offset by <see cref="NaturalContent.FirstEdifice"/>.</summary>
+        /// <summary>
+        /// Tree modules by edifice id, indexed directly and sized to
+        /// <see cref="NaturalContent.EdificeLimit"/>: the natural ids are not contiguous (the
+        /// buildings sit between the first two trees and the rest, design 45 §2), so a slot is
+        /// filled only where <see cref="NaturalContent.IsNatural"/> says it is one of ours. A bush
+        /// has no module here — it is drawn by the dressing's own path.
+        /// </summary>
         static int[] ResolveNaturalEdifices(ModuleLibrary library)
         {
-            var table = new int[NaturalContent.EdificeCount - NaturalContent.FirstEdifice];
+            var table = new int[NaturalContent.EdificeLimit];
             for (int i = 0; i < table.Length; i++)
             {
-                var def = (ushort)(NaturalContent.FirstEdifice + i);
-                table[i] = library.Resolve(NaturalContent.ModuleForEdifice(def), ModuleShape.Pillar);
+                var def = (ushort)i;
+                string? id = NaturalContent.IsTree(def) ? NaturalContent.ModuleForEdifice(def) : null;
+                table[i] = id == null ? 0 : library.Resolve(id, ModuleShape.Pillar);
             }
             return table;
         }
@@ -1262,7 +1463,28 @@ namespace Odyssey.Presentation.World
         /// costs exactly what the renderer already pays after a world edit. No cell is touched, so
         /// nothing here reaches the simulation, the save or the hash.</para>
         /// </summary>
-        public void Remesh() => Version++;
+        public void Remesh()
+        {
+            Version++;
+            BumpEveryChunk();
+        }
+
+        /// <summary>
+        /// Draw one chunk again, without a cell having changed: what a dig, a build or a growing crop
+        /// costs the renderer, isolated for measurement (the indirect scenery regathers the layer the
+        /// chunk is on, design 38 §22). Nothing reaches the simulation, the save or the hash.
+        /// </summary>
+        public void RemeshChunk(int chunkIndex)
+        {
+            Version++;
+            _chunkVersion[chunkIndex] = Version;
+        }
+
+        /// <summary>Stamp the current version on every chunk: everything is to be re-meshed.</summary>
+        void BumpEveryChunk()
+        {
+            for (int i = 0; i < _chunkVersion.Length; i++) _chunkVersion[i] = Version;
+        }
 
         /// <summary>Copy every cell. Run once, after generation, before the first frame.</summary>
         public void RefreshAll(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices)
@@ -1274,6 +1496,7 @@ namespace Odyssey.Presentation.World
             MeasureTheLandscape();
             LastRefreshedChunks = Chunks.Count;
             Version++;
+            BumpEveryChunk();
         }
 
         /// <summary>
@@ -1321,10 +1544,28 @@ namespace Odyssey.Presentation.World
                 if (!Chunks.IsDirty(chunk)) continue;
                 RefreshChunk(grid, edifices, chunk);
                 Chunks.ClearDirty(chunk);
+                _dirtyThisRefresh[refreshed] = chunk;
                 refreshed++;
             }
             LastRefreshedChunks = refreshed;
-            if (refreshed > 0) Version++;
+            if (refreshed > 0)
+            {
+                Version++;
+                // The chunks that actually changed, and only those. Stamped after the version
+                // moves so the number they carry is the new one.
+                for (int i = 0; i < refreshed; i++) _chunkVersion[_dirtyThisRefresh[i]] = Version;
+
+                // **And every chunk beneath them in the same column** (P15, design 38 §20). Whether
+                // a cell is open to the sky is a question about its whole column — a ramp, the
+                // daylit bit on the ground — while the simulation marks only the 3 x 3 x 3 chunks
+                // around an edit. A slab laid five layers up changed the ground below it and nothing
+                // re-meshed it. Their cells did not change, so they are not refreshed, only re-meshed;
+                // a chunk below the drawn band is never meshed at all, so this costs what is on screen.
+                int perLayer = Chunks.ChunksX * Chunks.ChunksZ;
+                for (int i = 0; i < refreshed; i++)
+                    for (int below = _dirtyThisRefresh[i] - perLayer; below >= 0; below -= perLayer)
+                        _chunkVersion[below] = Version;
+            }
             return refreshed;
         }
 
@@ -1333,8 +1574,62 @@ namespace Odyssey.Presentation.World
             ChunkBounds(chunkIndex, out int x0, out int z0, out int y, out int x1, out int z1);
             for (int z = z0; z < z1; z++)
             for (int x = x0; x < x1; x++)
-                CopyCell(grid, edifices, Size.Index(x, z, y));
+            {
+                int index = Size.Index(x, z, y);
+                ushort was = _edifice[index];
+                CopyCell(grid, edifices, index);
+
+                // A tree that was standing and is not any more: felled, or taken by a collapse.
+                // Noted for the topple (design 45 §5), which draws it going over where it stood.
+                // Only here, on an edit, and never in RefreshAll: a world being loaded or built
+                // has no trees falling in it.
+                if (NaturalContent.IsTree(was) && _edifice[index] != was && _felled.Count < MaxFelledPending)
+                    _felled.Add(new FelledTree(index, was));
+            }
         }
+
+        /// <summary>
+        /// How high the bush drawn in this cell stands, in metres over its floor — what a click
+        /// on it is measured against (design 45 §12). Written by the mesher when it draws the bush,
+        /// because only the mesher knows which art and what size; until then, and for a bush with
+        /// no art, <see cref="DefaultBushTop"/>.
+        /// </summary>
+        public float BushTop(int index) => _bushTop.TryGetValue(index, out float top) ? top : DefaultBushTop;
+
+        /// <summary>The mesher's note of a drawn bush's height. Presentation only.</summary>
+        public void NoteBushTop(int index, float top) => _bushTop[index] = top;
+
+        /// <summary>A bush's height before its art has been measured: about the Meadow bushes' middle.</summary>
+        public const float DefaultBushTop = 1.4f;
+
+        readonly Dictionary<int, float> _bushTop = new Dictionary<int, float>();
+
+        /// <summary>A tree that has just left the mirror: where it stood and what it was.</summary>
+        public readonly struct FelledTree
+        {
+            public readonly int Cell;
+            public readonly ushort Def;
+            public FelledTree(int cell, ushort def) { Cell = cell; Def = def; }
+        }
+
+        /// <summary>
+        /// More felled trees than this between two frames are not drawn falling. A clear-cut of a
+        /// wood by a debug command or a collapse is not something anybody watches tree by tree,
+        /// and the list must not grow without a reader.
+        /// </summary>
+        public const int MaxFelledPending = 64;
+
+        readonly List<FelledTree> _felled = new List<FelledTree>();
+
+        /// <summary>Hand over the trees felled since the last call, oldest first, and forget them.</summary>
+        public void DrainFelled(List<FelledTree> into)
+        {
+            into.AddRange(_felled);
+            _felled.Clear();
+        }
+
+        /// <summary>The module a tree of this species is drawn from, before its variant is picked.</summary>
+        public int TreeModule(ushort def) => NaturalContent.IsTree(def) ? _naturalEdificeModule[def] : 0;
 
         void CopyCell(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices, int index)
         {
@@ -1361,6 +1656,7 @@ namespace Odyssey.Presentation.World
                 bool bed = placed.Def == CoreContent.EdificeBed && !placed.Removed;
                 _edificeFacing[index] = placed.Removed ? (byte)0 : placed.Facing;
                 _bedHead[index] = bed && placed.CellIndex == index;
+                _edificeHead[index] = !placed.Removed && placed.CellIndex == index;
             }
             else
             {
@@ -1368,6 +1664,7 @@ namespace Odyssey.Presentation.World
                 _edificeStuff[index] = CoreContent.StuffNone;
                 _edificeFacing[index] = 0;
                 _bedHead[index] = false;
+                _edificeHead[index] = false;
             }
 
             // Anything at all here means this layer is worth drawing, and so is the one above it —

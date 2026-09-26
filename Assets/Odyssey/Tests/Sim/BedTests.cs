@@ -825,6 +825,12 @@ namespace Odyssey.Tests.Sim
             scenario.beds = 0;
             ColonyWorld colony = ColonyWorld.Build(Size, Seed, scenario, barren: false, wooded: true);
             var owner = colony.Pawns.Pawns.All[0];
+            // The bed stands out of doors, so the sky moves its sleeper's temperature and with it
+            // the sleep rate (design 43): this test is about the bed's tier, so the sky is held at
+            // clear, the way the debug menu sets it. Seed 1's first roll was cool enough to cost a
+            // tenth of the rate.
+            Assert.That(colony.Pawns.Weather!.HandleForce(new Intent(IntentKind.DebugSetWeather, default,
+                (int)WeatherKind.Clear, 1000, 1)), Is.EqualTo(IntentRejection.None));
 
             // A footprint standing higher than the start: both cells floor themselves on the
             // terrace's own ground, which is what a floor above is when the floor is the land.

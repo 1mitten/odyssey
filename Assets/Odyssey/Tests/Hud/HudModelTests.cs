@@ -193,6 +193,31 @@ namespace Odyssey.Tests.Hud
             Assert.That(MoodBands.Band(roster.Cards[1].Mood), Is.EqualTo("breaking"));
         }
 
+        /// <summary>
+        /// The roster is the colony's people (design 29 §2). An animal is a pawn in the same
+        /// snapshot with a kind that is not the colonist's, and it gets no card, no name and no
+        /// slot — the control is the colonist beside it, who keeps hers.
+        /// </summary>
+        [Test]
+        public void AnAnimalHasNoCardOnTheRoster()
+        {
+            var snapshot = Frame.Write();
+            snapshot.AddPawn(new PawnView(new PawnId(1), new CellRef(1, 1, 0), 600, 800, 800, JobHandle.Wait));
+            snapshot.AddPawn(new PawnView(new PawnId(2), new CellRef(2, 1, 0), 600, 800, 800, JobHandle.Wander,
+                kind: 1));
+            snapshot.AddPawn(new PawnView(new PawnId(3), new CellRef(3, 1, 0), 600, 800, 800, JobHandle.Wait));
+
+            var roster = new RosterModel();
+            roster.Refresh(snapshot, selected: new PawnId(2));
+
+            Assert.That(roster.TotalCount, Is.EqualTo(2), "two people; the animal is not counted");
+            Assert.That(roster.Cards.Count, Is.EqualTo(2));
+            Assert.That(roster.Cards[0].Id, Is.EqualTo(new PawnId(1)));
+            Assert.That(roster.Cards[1].Id, Is.EqualTo(new PawnId(3)));
+            Assert.That(new List<PawnId>(roster.CustomOrder), Has.No.Member(new PawnId(2)),
+                "and it holds no slot to be dragged into");
+        }
+
         [Test]
         public void PaginationDividesColonistsIntoDiscretePagesAndClampsPage()
         {
@@ -410,13 +435,58 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.Tabs[0].Name, Is.EqualTo("Needs"));
             Assert.That(pane.Tabs[0].Enabled, Is.True);
             Assert.That(pane.Tabs[1].Name, Is.EqualTo("Skills"));
-            Assert.That(pane.Tabs.Count(t => t.Enabled), Is.EqualTo(2),
-                "Needs and Skills are live; Gear, Thoughts, Social, Health and Log are visible " +
-                "with reasons");
+            Assert.That(pane.Tabs.Count(t => t.Enabled), Is.EqualTo(3),
+                "Needs, Skills and Health are live (Health since the combat contracts step, design " +
+                "33 §5); Gear, Thoughts, Social and Log are visible with reasons");
+            Assert.That(pane.Tabs.Single(t => t.Name == "Health").Enabled, Is.True);
 
             Assert.That(pane.Commands, Is.Not.Empty);
-            Assert.That(pane.Commands.Count(c => c.Enabled), Is.Zero,
-                "no colonist command is wired yet, and none may pretend to be");
+            // The draft and the response (design 33 §2f, §18e) are the commands wired; the rest may
+            // not pretend to be.
+            Assert.That(pane.Commands.Where(c => c.Enabled).Select(c => c.IconKey),
+                Is.EqualTo(new[] { InspectModel.DraftKey, ResponseModel.FightBackKey }),
+                "only Draft and the response are wired, and none of the others may pretend to be");
+        }
+
+        /// <summary>
+        /// A clicked animal (design 29 §8): the pane says its species, what it is doing and
+        /// where it is, and carries nothing a person has — no name, no tabs, no commands, no
+        /// skills. The control is the colonist pane above, which has all of them.
+        /// </summary>
+        [Test]
+        public void AnAnimalPaneSaysSpeciesActivityAndWhereAndNothingAPersonHas()
+        {
+            var snapshot = Frame.Write();
+            snapshot.AddPawn(new PawnView(new PawnId(4), new CellRef(6, 7, 2), 800, 800, 600, JobHandle.Wander,
+                kind: 1));
+            snapshot.AddPawn(new PawnView(new PawnId(5), new CellRef(6, 8, 2), 800, 800, 600, JobHandle.Wait,
+                kind: 2));
+
+            var pane = new InspectModel();
+            pane.SetColonist(new PawnId(4));
+            pane.Refresh(snapshot);
+
+            Assert.That(pane.IsAnimal, Is.True);
+            Assert.That(pane.Title, Is.EqualTo(Registry.Label("ui.pawn.hog")), "the species, not a person's name");
+            Assert.That(pane.Subtitle, Is.EqualTo("animal"));
+            Assert.That(pane.Job, Is.EqualTo(Registry.Label("ui.status.wandering")), "a leg reads as wandering, never as idle");
+            Assert.That(pane.KindIconKey, Is.EqualTo("ui.pawn.hog"));
+            Assert.That(pane.Layer, Is.EqualTo(2));
+            Assert.That(pane.Tabs, Is.Empty);
+            Assert.That(pane.Commands, Is.Empty);
+            Assert.That(pane.Skills, Is.Empty);
+
+            pane.SetColonist(new PawnId(5));
+            pane.Refresh(snapshot);
+            Assert.That(pane.Title, Is.EqualTo(Registry.Label("ui.pawn.rat")));
+            Assert.That(pane.Job, Is.EqualTo(Registry.Label("ui.status.resting")), "a rest reads as resting");
+
+            // And back to a person: the flag is cleared and the pane is hers again.
+            snapshot.AddPawn(new PawnView(new PawnId(6), new CellRef(1, 1, 0), 620, 710, 720, JobHandle.Eat));
+            pane.SetColonist(new PawnId(6));
+            pane.Refresh(snapshot);
+            Assert.That(pane.IsAnimal, Is.False);
+            Assert.That(pane.Tabs, Is.Not.Empty);
         }
 
         /// <summary>
@@ -445,9 +515,9 @@ namespace Odyssey.Tests.Hud
             pane.Refresh(snapshot);
 
             Assert.That(pane.Skills.Count, Is.EqualTo(SkillCatalogue.All.Length));
-            Assert.That(pane.Skills.Count(s => s.Live), Is.EqualTo(4),
-                "mining, chopping, construction and growing are the four the simulation backs; " +
-                "hauling is a work type and not a skill in the design's list");
+            Assert.That(pane.Skills.Count(s => s.Live), Is.EqualTo(8),
+                "mining, chopping, construction, growing, melee, medicine, cooking and shooting are the eight the " +
+                "simulation backs; hauling is a work type and not a skill in the design's list");
 
             SkillRow mining = pane.Skills.Single(s => s.IconKey == "ui.skill.mining");
             Assert.That(mining.Name, Is.EqualTo("Mining"), "the registry's word for ui.skill.mining");
@@ -484,6 +554,14 @@ namespace Odyssey.Tests.Hud
                 {
                     "ui.skill.mining", "ui.skill.cutting",
                     "ui.skill.construction", "ui.skill.growing",
+                    // Live since the combat contracts step (design 33 §5).
+                    "ui.skill.melee",
+                    // Live since medical supplies (design 37).
+                    "ui.skill.medicine",
+                    // Live since the kitchen (design 48).
+                    "ui.skill.cooking",
+                    // And since the ranged line's (design 47 §3a).
+                    "ui.skill.shooting",
                 }),
                 "the live rows are the simulation's own skills, each under its own name");
 
@@ -629,8 +707,9 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void RealRowsCountStacksAndPlannedRowsStayGreyed()
         {
-            // Two piles of meals, twenty and four, are twenty-four meals, not two; the ledger is
-            // the number the player decides on, and a pile is not a number.
+            // Two piles of ration packs, twenty and four, are twenty-four rations, not two; the
+            // ledger is the number the player decides on, and a pile is not a number. Handle 0 is
+            // the ration pack, and has had a row of its own since the kitchen (design 48 §3).
             var snapshot = Frame.Write();
             snapshot.AddThing(new ThingView(new ThingId(1), new CellRef(1, 1, 1), ItemHandle.Meal, 0, stack: 20));
             snapshot.AddThing(new ThingView(new ThingId(2), new CellRef(2, 2, 1), ItemHandle.Meal, 0, stack: 4));
@@ -640,8 +719,8 @@ namespace Odyssey.Tests.Hud
             var ledger = new LedgerModel();
             ledger.Refresh(snapshot);
 
-            var meals = ledger.Rows.Find(r => r.Name == "Meal");
-            Assert.That(meals.Real, Is.True, "the row is named as the registry names ui.res.meal");
+            var meals = ledger.Rows.Find(r => r.Name == "Rations");
+            Assert.That(meals.Real, Is.True, "the row is named as the registry names ui.res.rations");
             Assert.That(meals.Quantity, Is.EqualTo(24));
             Assert.That(ledger.Rows.Find(r => r.Name == "Wood").Quantity, Is.EqualTo(20), "felled wood is a real row");
 

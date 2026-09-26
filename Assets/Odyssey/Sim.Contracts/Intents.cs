@@ -24,7 +24,11 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         PlaceBuilding,
 
-        /// <summary>Take a building site off a cell, refunding whatever was delivered to it.</summary>
+        /// <summary>
+        /// Take the orders off a cell, refunding whatever was delivered to them: the building site
+        /// and any power line order or removal mark (design 32 §3). <c>A</c> = 1 takes the building
+        /// site alone — the building pane's Cancel, which names one order rather than a cell.
+        /// </summary>
         CancelBuilding,
 
         /// <summary>
@@ -199,6 +203,192 @@ namespace Odyssey.Sim.Contracts
         /// a preset is not a switch.
         /// </summary>
         SetStorageFilter,
+
+        /// <summary>
+        /// Draft or release one colonist (design 33 §2d): <c>A</c> is a <c>PawnId</c> value and
+        /// <c>B</c> is 1 to draft, 0 to release. Drafting ends the job in hand — keeping the step
+        /// in progress — and holds the colonist where it stands.
+        /// </summary>
+        SetDrafted,
+
+        /// <summary>
+        /// Send one drafted colonist to a cell (design 33 §2d): <see cref="Intent.Cell"/> is the
+        /// cell the player clicked, lifted to where a colonist stands in that column, and <c>A</c>
+        /// a <c>PawnId</c> value. Refused for a colonist who is not drafted.
+        /// </summary>
+        OrderMove,
+
+        /// <summary>
+        /// Mark the built line in <see cref="Intent.Cell"/> for a colonist to take up (design 32
+        /// §3). Its own kind rather than a <see cref="Designate"/>, because a designation is one
+        /// byte per cell and a cell with a line in it very often has a wall or a floor in it too,
+        /// which the deconstruct designation already names. Named at the ground, the line
+        /// standing on it.
+        /// </summary>
+        RemoveConduit,
+
+        /// <summary>
+        /// Switch the power building in <see cref="Intent.Cell"/> on (<c>A</c> = 1) or off
+        /// (<c>A</c> = 0). Either cell of a two-cell building names it. Applied at once, with no
+        /// colonist sent to do it (design 32 §5).
+        /// </summary>
+        SetPowerSwitch,
+
+        /// <summary>
+        /// Start (<c>A</c> = 1) or stop (<c>A</c> = 0) publishing the built power lines — the
+        /// interface is showing them (design 32 §9). <b>A question, not a command</b>, exactly as
+        /// <see cref="QueryCell"/> is: it changes no state the simulation owns, nothing saved and
+        /// nothing hashed, so a paused world answers it at once.
+        /// </summary>
+        WatchPower,
+
+        /// <summary>
+        /// Take back the line order or the removal mark in <see cref="Intent.Cell"/>, and nothing
+        /// else in the cell (design 32 §14). The pane's Cancel for a line; narrower than
+        /// <see cref="CancelBuilding"/>, which also takes a building order standing in the same
+        /// cell — right for a cancel drag, wrong for a button that names one thing.
+        /// </summary>
+        CancelConduit,
+
+        // The combat line's three orders (design 33 §5), claimed together by the contracts step.
+        // Each has had a handler from that commit, filled in by the lane that owned it. They
+        // follow power's four because power reached main first (merge of 2026-09-24).
+
+        /// <summary>
+        /// Send one drafted colonist to attack (design 33 §1, C2): <c>A</c> is the attacker's
+        /// <c>PawnId</c> value and <c>B</c> the target's. A target of 0 names no pawn, and then
+        /// <see cref="Intent.Cell"/> is a building to strike (C6). Handler:
+        /// <c>JobSystem.HandleOrderAttack</c>.
+        /// </summary>
+        OrderAttack,
+
+        /// <summary>
+        /// Send one colonist to pick a weapon up and hold it (design 33 §1, C3): <c>A</c> is the
+        /// colonist's <c>PawnId</c> value and <c>B</c> the weapon's <c>ThingId</c> value;
+        /// <see cref="Intent.Cell"/> is where it was clicked. Handler:
+        /// <c>JobSystem.HandleOrderEquip</c>.
+        /// </summary>
+        OrderEquip,
+
+        /// <summary>
+        /// Send one drafted colonist to carry a downed one to a bed (design 33 §1, C4): <c>A</c>
+        /// is the rescuer's <c>PawnId</c> value and <c>B</c> the patient's. Handler:
+        /// <c>JobSystem.HandleOrderRescue</c>.
+        /// </summary>
+        OrderRescue,
+
+        /// <summary>
+        /// Debug-menu-only (design 33 §9i): every colonist standing with nothing in her hand takes a
+        /// random melee weapon into it at once — made beside her and taken straight up, as a
+        /// bandit is armed at spawn. Colonists already holding one keep it. No arguments. Not
+        /// player content; not applied while paused, like the other debug spawns.
+        /// </summary>
+        DebugArmColonists,
+
+        /// <summary>
+        /// Set what one colonist does about danger near her while undrafted (design 33 §18c):
+        /// <c>A</c> is her <c>PawnId</c> value and <c>B</c> the response — 0 fight back, 1 defend,
+        /// 2 flee. A standing setting, not an order to act: it may be set on any colonist, drafted,
+        /// downed or not. Handler: <c>JobSystem.HandleSetHostilityResponse</c>.
+        /// </summary>
+        SetHostilityResponse,
+
+        /// <summary>
+        /// Debug only: set the sky now (design 43 §8, the debug menu's Weather tab). <c>A</c> is the
+        /// <see cref="WeatherKind"/>, <c>B</c> the intensity in per-mille (0 keeps the kind's own
+        /// roll), and <c>C</c> 1 to blend in over seconds rather than the two game hours a spell
+        /// takes. The spell then runs its rolled length and the season takes over again.
+        /// Handler: <c>WeatherSystem.HandleForce</c>.
+        /// </summary>
+        DebugSetWeather,
+
+        /// <summary>
+        /// Debug-menu-only (design 46 §6): every jump over a stream falls short while
+        /// <c>A</c> is non-zero, and none is forced to while it is nought. A switch on the pawn
+        /// context, unsaved and unhashed. Appended last, so no recorded intent renumbers.
+        /// </summary>
+        DebugJumpsFail,
+
+        /// <summary>
+        /// Set where one colonist may work (design 43 §4a): <c>A</c> is her <c>PawnId</c> value and
+        /// <c>B</c> the area — 0 anywhere, 1 home. A standing setting, not an order: it may be set
+        /// on any colonist, drafted, downed or not. Handler: <c>JobSystem.HandleSetPawnArea</c>.
+        /// </summary>
+        SetPawnArea,
+
+        /// <summary>
+        /// Make the campfire in <c>Cell</c> the colony's hearth (design 43 §3f), the centre home is
+        /// grown from. Refused unless a campfire the colony built stands there. Handler:
+        /// <c>Hearth.HandleSetHearth</c>.
+        /// </summary>
+        SetHearth,
+
+        /// <summary>
+        /// Whether presentation is showing the home (design 43 §5c): <c>A</c> 1 while the Home view
+        /// is on, 0 when it goes off. While watched, the home's border cells are published. A
+        /// question, handled by the world itself as <c>WatchPower</c> is.
+        /// </summary>
+        WatchHome,
+
+        /// <summary>
+        /// Edit the bill list of the cooking station in <see cref="Intent.Cell"/> (design 48 §5).
+        /// <c>A</c> is the <see cref="BillEdit"/>, <c>B</c> the bill's place in the list (for
+        /// <see cref="BillEdit.Add"/>, the <see cref="RecipeHandle"/> instead), and <c>C</c> the
+        /// value a setting takes. One kind for the whole pane, because every row of it is a setting
+        /// over one station, and a kind per button would be seven entries saying the same thing.
+        /// Handler: <c>Kitchen.HandleEditBill</c>. Appended last, so no recorded intent renumbers.
+        /// </summary>
+        EditBill,
+
+        /// <summary>
+        /// Debug-menu-only (design 43 §11): act on the colonist nearest <see cref="Intent.Cell"/>
+        /// — <c>A</c> 0 hurts her (a 20-point wound on a region by the blow's own coverage), 1 heals
+        /// her whole and stands her up, 2 kills her. Through the one owner of damage and the one
+        /// way to die, so a debug kill leaves a corpse and is mourned. Appended; not applied while
+        /// paused, like the other debug spawns.
+        /// </summary>
+        DebugHealth,
+
+        /// <summary>
+        /// Send one colonist to treat another (design 43 §5, §11, §15): <c>A</c> is the doctor's
+        /// <c>PawnId</c> value and <c>B</c> the patient's. Drafted or not, as the Equip order is; the
+        /// same <c>Job_Treat</c> the Doctor work type gives, supplies fetched if any can be reached.
+        /// Handler: <c>JobSystem.HandleOrderTend</c>. Appended.
+        /// </summary>
+        OrderTend,
+
+        /// <summary>
+        /// Ask what a shot would come to (design 53 §8b): <c>A</c> is the shooter's pawn id and
+        /// <c>B</c> the target's; <c>A</c> of nought or less withdraws the question. A question like
+        /// <see cref="QueryCell"/>: it changes nothing the simulation owns, and the answer is a
+        /// <c>ShotReportView</c> on the next publish while it stands. What the hover readout reads.
+        /// </summary>
+        QueryShot,
+    }
+
+    /// <summary>What an <see cref="IntentKind.EditBill"/> does, as its <c>A</c> carries it.</summary>
+    public static class BillEdit
+    {
+        /// <summary>Append a bill for recipe <c>B</c>, in the default mode.</summary>
+        public const int Add = 0;
+
+        /// <summary>Delete bill <c>B</c>.</summary>
+        public const int Remove = 1;
+
+        /// <summary>Swap bill <c>B</c> with the one above it.</summary>
+        public const int MoveUp = 2;
+
+        /// <summary>Swap bill <c>B</c> with the one below it.</summary>
+        public const int MoveDown = 3;
+
+        /// <summary>Set bill <c>B</c>'s mode to <c>C</c>, a <see cref="BillModeHandle"/>.</summary>
+        public const int SetMode = 4;
+
+        /// <summary>Set bill <c>B</c>'s target to <c>C</c>, clamped to 1..999.</summary>
+        public const int SetTarget = 5;
+
+        /// <summary>Suspend bill <c>B</c> (<c>C</c> = 1) or let it run again (<c>C</c> = 0).</summary>
+        public const int SetSuspended = 6;
     }
 
     /// <summary>
@@ -264,6 +454,45 @@ namespace Odyssey.Sim.Contracts
             IntentKind.CancelStorage => true,
             IntentKind.SetStoragePriority => true,
             IntentKind.SetStorageFilter => true,
+            // The draft and its orders (design 33 §2d): a player's order over a colonist, which is
+            // the thing a player pauses to give — a fight is planned with the clock stopped.
+            IntentKind.SetDrafted => true,
+            IntentKind.OrderMove => true,
+            // Taking a line up and throwing a switch are orders over a cell like any other: the
+            // player authored them and nothing needs to run to make them true (design 32).
+            IntentKind.RemoveConduit => true,
+            IntentKind.SetPowerSwitch => true,
+            // A view question, like QueryCell: the lines appear the moment the tool is armed,
+            // paused or not.
+            IntentKind.WatchPower => true,
+            IntentKind.WatchHome => true,
+            IntentKind.CancelConduit => true,
+
+            // The fight's orders, on the same test (design 33 §5): a player's order over a
+            // colonist, written by the player and finished by no system — the job it starts is
+            // the next tick's business, exactly as a move's walk is.
+            IntentKind.OrderAttack => true,
+            IntentKind.OrderEquip => true,
+            IntentKind.OrderRescue => true,
+            IntentKind.OrderTend => true,
+            // A colonist's response (design 33 §18c): a setting over a colonist, on a pane you open
+            // while paused, and a button that read one thing while the world did another until you
+            // pressed play would be the slab fault again.
+            IntentKind.SetHostilityResponse => true,
+            // Jumps always fail (design 46 §6): a switch the player flips in a menu, which is a
+            // thing opened while paused; a row that read "on" while no jump had heard would be
+            // the slab fault again. Nothing needs to run to make it true.
+            IntentKind.DebugJumpsFail => true,
+            // Where a colonist may work (design 43 §4a): the same kind of setting, on a tab you
+            // open while paused.
+            IntentKind.SetPawnArea => true,
+            // The hearth (design 43 §3f): a choice made on a campfire's pane, paused or not.
+            IntentKind.SetHearth => true,
+            // A cooking station's bills (design 48 §5): settings over a building, on a pane you
+            // open while paused. The storage filter's argument exactly.
+            IntentKind.EditBill => true,
+            // A view question, like QueryCell: the readout answers paused as well as running.
+            IntentKind.QueryShot => true,
             _ => false,
         };
     }

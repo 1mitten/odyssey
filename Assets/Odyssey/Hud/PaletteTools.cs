@@ -106,24 +106,64 @@ namespace Odyssey.Hud
         public const string Door = "ui.arch.tool.door";
 
         /// <summary>
-        /// The <b>support pillar</b> (RF1): a column that holds up the slab above it, and what
-        /// makes a room wider than a hut roofable at all. Under <c>Structure</c> beside the wall
-        /// and the slab, because a wall, its roof and the pillar holding the middle of that roof
-        /// up are one job. <c>docs/design/27-roofs.md</c> §5.
-        /// </summary>
-        /// <summary>
-        /// The <b>stair</b> (U44): two cells on one layer, and the only way up a hauler can use,
-        /// so it is what makes an upper storey somewhere a colony can build rather than merely
-        /// visit. Under <c>Structure</c> beside the ladder, where its chip has been drawn disabled
-        /// since the catalogue was written. <c>docs/design/28-stairs.md</c>.
+        /// The <b>stair</b> (U44): one cell climbing a whole layer, rotatable, and the way up a
+        /// colony builds when a ladder is not enough. Under <c>Structure</c> beside the ladder,
+        /// where its chip had been drawn disabled since the catalogue was written.
+        /// <c>docs/design/60-stairs.md</c>.
         /// </summary>
         public const string Stair = "ui.arch.tool.stair";
 
+        /// <summary>
+        /// The <b>support pillar</b> (RF1): a column that holds up the slab above it, and what
+        /// makes a room wider than a hut roofable at all. Under <c>Structure</c> beside the wall
+        /// and the slab, because a wall, its roof and the pillar holding the middle of that roof
+        /// up are one job. <c>docs/design/59-roofs.md</c> §5.
+        /// </summary>
         public const string Pillar = "ui.arch.tool.pillar";
 
         public const string Bed = "ui.arch.tool.bed";
+
+        /// <summary>
+        /// A built store: one cell holding eight stacks, against a stockpile's one stack a cell.
+        /// The key predates the tool — it has been in the Furniture category as a dim chip since
+        /// the palette was written — so arriving is a matter of going live, not of naming
+        /// anything (docs/design/26-storage.md).
+        /// </summary>
+        public const string Shelf = "ui.arch.tool.shelf";
+
+        /// The campfire (design 28 §7): the first heat source, and the reason Rime is survivable
+        /// by anything but digging. Beside the bed under furniture — one placement, no rotation,
+        /// nothing to choose but the material.
+        /// </summary>
+        public const string Campfire = "ui.arch.tool.campfire";
+
+        /// <summary>A power line (design 32): dragged as a run, one wood a cell, no material to choose.</summary>
+        public const string Conduit = "ui.arch.tool.conduit";
+
+        /// <summary>
+        /// Take power lines up — the line alone, never the wall it runs through or the floor it
+        /// runs under (design 32 §2a). A tool of its own, in the Power row beside the line it undoes.
+        /// </summary>
+        public const string Unwire = "ui.arch.tool.unwire";
+
+        /// <summary>The wood-fired generator (design 32 §6).</summary>
+        public const string Generator = "ui.arch.tool.generator";
+
+        /// <summary>The electric heater (design 32 §7), the first thing that spends power.</summary>
+        public const string Heater = "ui.arch.tool.heater";
+
+        /// <summary>The galley (design 48 §5): the electric cooker, where bills are worked.</summary>
+        public const string Galley = "ui.arch.tool.galley";
+
+        /// <summary>Sandbags (design 53 §4): cheap low cover, always stone, dragged as a line.</summary>
+        public const string Sandbag = "ui.arch.tool.sandbag";
+
         public const string Mine = "ui.arch.tool.mine";
         public const string Fell = "ui.arch.tool.fell";
+
+        /// <summary>Pick a ripe berry bush (design 45 §6). The key predates the order, as the
+        /// growing zone's did.</summary>
+        public const string Harvest = "ui.arch.tool.harvest";
         public const string Cancel = "ui.arch.tool.cancel";
         public const string Deconstruct = "ui.arch.tool.deconstruct";
 
@@ -172,10 +212,14 @@ namespace Odyssey.Hud
         public static readonly (string key, string[] tools)[] Categories =
         {
             ("ui.arch.category.structure", new[] { Wall, Paving, Door, Stair, Ladder, Slab, Pillar, "ui.arch.tool.reclaim" }),
-            ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
-            ("ui.arch.category.furniture", new[] { Bed, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
-            ("ui.arch.category.power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
-            ("ui.arch.category.security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
+            ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", Galley, "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
+            ("ui.arch.category.furniture", new[] { Bed, Shelf, Campfire, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp" }),
+            // Power (design 32): the line and its undoing, then what makes power and what spends
+            // it. Battery and reactor stay drawn and disabled — the shape of what is coming.
+            ("ui.arch.category.power", new[] { Conduit, Unwire, Generator, Heater, "ui.arch.tool.battery", "ui.arch.tool.reactor" }),
+            // Security (design 53): cover first, because it is what exists; the turret and the trap
+            // stay drawn and disabled.
+            ("ui.arch.category.security", new[] { Sandbag, "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
             ("ui.arch.category.floors", new[] { Paving, "ui.arch.tool.grating", "ui.arch.tool.tile" }),
             // The dumping-zone chip left on 2026-09-20: a new stockpile accepts everything, so a
             // second tool here would make exactly what the first one makes. Its registry key
@@ -254,7 +298,7 @@ namespace Odyssey.Hud
         /// builds one button per entry. Cancel stays last: it is the one a player reaches for
         /// blind, and a fixed last position is how a hand learns where it is.</para>
         /// </summary>
-        public static readonly string[] Pinned = { Fell, Mine, Deconstruct, GrowZone, Stockpile, Cancel };
+        public static readonly string[] Pinned = { Fell, Harvest, Mine, Deconstruct, GrowZone, Stockpile, Cancel };
 
         /// <summary>
         /// The word the armed banner uses for an order: the order's own name, the one the wiki
@@ -307,8 +351,8 @@ namespace Odyssey.Hud
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Door,
                 wantsMaterial: true),
 
-            // The way up that carries something (U44). Two cells and rotatable, so it arms the
-            // same way the bed does: one per click, turned with the rotate key while it is held.
+            // The way up (U44). One cell and rotatable, so it arms the way the bed does: one per
+            // click, turned with the rotate key while it is held.
             new PaletteTool(Stair,
                 d => d.ArmBuild(BuildingHandle.Stair),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Stair,
@@ -327,8 +371,47 @@ namespace Odyssey.Hud
                 d => d.ArmBuild(BuildingHandle.Bed),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Bed,
                 wantsMaterial: true),
+
+            // The shelf, which has sat in the Furniture category as a dim chip since the palette
+            // was written. It is the first buildable *store*: the stockpile chip paints one and
+            // this one raises one, and the settings a player reaches from either are the same
+            // control over the same record (docs/design/26-storage.md).
+            new PaletteTool(Shelf,
+                d => d.ArmBuild(BuildingHandle.Shelf),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Shelf,
+                wantsMaterial: true),
+
+            new PaletteTool(Campfire,
+                d => d.ArmBuild(BuildingHandle.Campfire),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Campfire,
+                wantsMaterial: true),
+            // Power (design 32). The line is always wood, so it offers no material; the generator
+            // and the heater are built of wood or stone like any other building.
+            new PaletteTool(Conduit,
+                d => d.ArmBuild(BuildingHandle.Conduit),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Conduit),
+            new PaletteTool(Unwire, Toggle(DesignateTool.RemoveConduit), Holding(DesignateTool.RemoveConduit)),
+            new PaletteTool(Generator,
+                d => d.ArmBuild(BuildingHandle.Generator),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Generator,
+                wantsMaterial: true),
+            new PaletteTool(Heater,
+                d => d.ArmBuild(BuildingHandle.Heater),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Heater,
+                wantsMaterial: true),
+            // The kitchen (design 48 §5): built of wood or stone like the heater, with scrap in it.
+            new PaletteTool(Galley,
+                d => d.ArmBuild(BuildingHandle.Galley),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Galley,
+                wantsMaterial: true),
+            // Cover (design 53 §4). Sandbags are always stone, so they offer no material. The
+            // barricade is dim again, beside the turret and the trap (design 53 §13).
+            new PaletteTool(Sandbag,
+                d => d.ArmBuild(BuildingHandle.Sandbags),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Sandbags),
             new PaletteTool(Mine, Toggle(DesignateTool.Mine), Holding(DesignateTool.Mine)),
             new PaletteTool(Fell, Toggle(DesignateTool.Fell), Holding(DesignateTool.Fell)),
+            new PaletteTool(Harvest, Toggle(DesignateTool.Harvest), Holding(DesignateTool.Harvest)),
             new PaletteTool(Cancel, Toggle(DesignateTool.Cancel), Holding(DesignateTool.Cancel)),
             new PaletteTool(Deconstruct, Toggle(DesignateTool.Deconstruct), Holding(DesignateTool.Deconstruct)),
             new PaletteTool(GrowZone, Toggle(DesignateTool.GrowZone), Holding(DesignateTool.GrowZone),

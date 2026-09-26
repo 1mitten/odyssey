@@ -38,6 +38,75 @@ namespace Odyssey.Sim.Contracts
         /// pose is already correct on all sixty-one rigs.
         /// </summary>
         Sow = 3,
+
+        /// <summary>
+        /// A melee swing has begun (design 33 §3, §5). Reported by the attack driver on the tick
+        /// the wind-up starts, on the same serial as every other gesture, so a figure starts the
+        /// clip then and lands its authored impact frame on the swing's wind-up tick. Whether the
+        /// swing hit, missed or was dodged is not this gesture's business: that arrives as a
+        /// <see cref="CombatEventView"/> on the tick it is decided.
+        /// </summary>
+        Strike = 4,
+
+        /// <summary>
+        /// A gun has been fired (design 47 §4b): reported on the tick the aim completes and the
+        /// bullet leaves, so a figure starts its recoil then. Where the bullet goes and what it
+        /// hits arrive as a <see cref="ProjectileView"/> and, at the impact, a
+        /// <see cref="CombatEventView"/>.
+        /// </summary>
+        Fire = 5,
+    }
+
+    /// <summary>
+    /// What a pawn is and what state it is in, as the snapshot publishes it on every
+    /// <see cref="PawnView"/> (design 33 §3, §5).
+    ///
+    /// <para><b>Why this replaced "kind ≠ 0 means animal".</b> Until combat every pawn that was
+    /// not kind 0 was an animal, and six places in the interface and the renderer read the kind
+    /// that way. A bandit is kind 3 and a person, so the question "is this a person" has to be
+    /// asked of the thing that knows — the species — and published as a fact, not reconstructed
+    /// from a table index on the far side of the seam.</para>
+    ///
+    /// <para><b>Every bit is a report</b>, derived each publish from state the simulation holds
+    /// and hashes itself. Nothing here is saved or hashed as a byte.</para>
+    /// </summary>
+    [Flags]
+    public enum PawnFlags : byte
+    {
+        None = 0,
+
+        /// <summary>The species is a person: a colonist, or a hostile person. Absent for an animal.</summary>
+        Person = 1 << 0,
+
+        /// <summary>The kind's faction is hostile: it fights the colony on sight. A red marker.</summary>
+        Hostile = 1 << 1,
+
+        /// <summary>Under the player's hand (design 33 §2).</summary>
+        Drafted = 1 << 2,
+
+        /// <summary>At or below nought hit points and not dead: lying where it fell.</summary>
+        Downed = 1 << 3,
+
+        /// <summary>Stunned by a blunt blow: it cannot swing or step until the stun runs out.</summary>
+        Stunned = 1 << 4,
+
+        /// <summary>In somebody's arms (C4): drawn in the carrier's cradle, not at its own cell.</summary>
+        Carried = 1 << 5,
+
+        /// <summary>
+        /// The weapon in the hand is out rather than at the hip (design 33 §8b): the pawn holds a
+        /// weapon and has a reason to fight with it now — hostile, drafted, its attack target within
+        /// two tiles, or fighting back after a blow. Derived each publish from saved state; the
+        /// ~2 s before a weapon is put away again is presentation's.
+        /// </summary>
+        Drawn = 1 << 6,
+
+        /// <summary>
+        /// Knocked off its feet by a critical blow and not yet up (design 33 §9b): lying on the tile it
+        /// was knocked to for about a second and a half, then standing. Not <see cref="Downed"/> —
+        /// its hit points are above nought and it gets up on its own.
+        /// </summary>
+        KnockedDown = 1 << 7,
     }
 
     /// <summary>
@@ -159,7 +228,8 @@ namespace Odyssey.Sim.Contracts
         public readonly bool Working;
 
         /// <summary>
-        /// What is being worked on, meaningful only while <see cref="Working"/>.
+        /// What is being worked on while <see cref="Working"/>, and the fire a colonist faces
+        /// while <see cref="Seated"/>; meaningless otherwise.
         ///
         /// A cell and not just a flag, because the pose needs a direction: a colonist has to face
         /// what it is swinging at, and presentation has no other way to learn which of the eight
@@ -167,6 +237,28 @@ namespace Odyssey.Sim.Contracts
         /// so by the time the work starts the last thing it could be derived from is gone.
         /// </summary>
         public readonly CellRef WorkCell;
+
+        /// <summary>
+        /// Whether this pawn is sitting down beside a fire, so that it can be <b>drawn</b> sitting
+        /// (design 31 §18d), and <see cref="WorkCell"/> is the fire to face. A bool beside
+        /// <see cref="Asleep"/> rather than a <see cref="PawnFlags"/> bit, because that byte is full
+        /// and belongs to the fight.
+        ///
+        /// <para>A field here rather than an aspect, for the reason <see cref="Asleep"/> gives: every
+        /// figure on screen is posed whether or not anybody has selected it. Derived from the job,
+        /// not stored on the pawn — see <c>Job.Seated</c>.</para>
+        /// </summary>
+        public readonly bool Seated;
+
+        /// <summary>
+        /// The step in hand is a jump over a stream that is falling short (design 46 §6): it
+        /// leaves the bank as a jump and comes down in the water at <see cref="NextCell"/>, where a
+        /// step of the same shape is otherwise a drop off the bank. A bool beside
+        /// <see cref="Seated"/> for <see cref="Seated"/>'s reasons — the flags byte is full, and
+        /// every figure on screen is posed whether or not anybody selected it. Derived from the
+        /// pawn's saved landing, so neither saved nor hashed here.
+        /// </summary>
+        public readonly bool JumpingShort;
 
         /// <summary>
         /// The last momentary thing this pawn did, which stays reported until it does another.
@@ -219,13 +311,58 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly bool Asleep;
 
+        /// <summary>
+        /// What this pawn is: an index into the simulation's kind table, 0 for a colonist
+        /// (design 29 §1). A field rather than an aspect for the reason <see cref="Asleep"/>
+        /// gives — every figure on screen is drawn as what it is whether or not anybody selected
+        /// it, and the roster has to leave the animals out before anyone clicks anything.
+        /// Presentation turns the index into a species through its own catalogue.
+        ///
+        /// <para><b>Not "an animal" when it is not 0</b> — a bandit is kind 3 and a person. Ask
+        /// <see cref="Flags"/> (<see cref="IsPerson"/>, <see cref="IsAnimal"/>,
+        /// <see cref="IsColonist"/>) what a pawn is; ask the kind only which row of a table to
+        /// draw it from.</para>
+        /// </summary>
+        public readonly int Kind;
+
+        /// <summary>
+        /// What this pawn is and what state it is in (design 33 §5). See <see cref="PawnFlags"/>.
+        /// The trailing field, so every view built before combat reads the same.
+        /// </summary>
+        public readonly PawnFlags Flags;
+
+        /// <summary>A person — a colonist or a hostile one — as against an animal.</summary>
+        public bool IsPerson => (Flags & PawnFlags.Person) != 0;
+
+        /// <summary>An animal: the species is not a person.</summary>
+        public bool IsAnimal => (Flags & PawnFlags.Person) == 0;
+
+        /// <summary>One of ours: a person who is not hostile. The roster, the Work tab and the draft.</summary>
+        public bool IsColonist => (Flags & (PawnFlags.Person | PawnFlags.Hostile)) == PawnFlags.Person;
+
+        public bool IsHostile => (Flags & PawnFlags.Hostile) != 0;
+        public bool IsDrafted => (Flags & PawnFlags.Drafted) != 0;
+        public bool IsDowned => (Flags & PawnFlags.Downed) != 0;
+        public bool IsStunned => (Flags & PawnFlags.Stunned) != 0;
+        public bool IsCarried => (Flags & PawnFlags.Carried) != 0;
+        public bool IsWeaponDrawn => (Flags & PawnFlags.Drawn) != 0;
+
+        /// <param name="flags">What the pawn is. <b>Omitted, it is derived from the kind the way
+        /// every view before combat was read</b> — kind 0 a person, anything else an animal — so a
+        /// view built by hand in a test or an editor tool reads as it always did. The simulation
+        /// always passes it.</param>
         public PawnView(
             PawnId id, CellRef cell, int food, int rest, int mood,
             int jobDef = -1, CellRef nextCell = default, int movePercent = 0,
             bool working = false, CellRef workCell = default,
             PawnGesture gesture = PawnGesture.None, byte gestureSerial = 0,
-            bool asleep = false, int movePerMille = 0, int moveDeltaPerMille = 0)
+            bool asleep = false, int movePerMille = 0, int moveDeltaPerMille = 0,
+            int kind = 0, PawnFlags? flags = null, bool seated = false, bool jumpingShort = false)
         {
+            Seated = seated;
+            JumpingShort = jumpingShort;
+            Kind = kind;
+            Flags = flags ?? (kind == 0 ? PawnFlags.Person : PawnFlags.None);
             MovePerMille = movePerMille;
             MoveDeltaPerMille = moveDeltaPerMille;
             Asleep = asleep;
@@ -351,13 +488,309 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly int Favourability;
 
-        public BulletinView(int id, int incidentDef, CellRef cell, int tick, int favourability = 0)
+        /// <summary>
+        /// The item def the entry is about, as an <see cref="ItemHandle"/> value, or -1 when it is
+        /// about none — what a bandit carried off (design 33 §17). Most entries carry none.
+        /// </summary>
+        public readonly int Subject;
+
+        /// <summary>How many of <see cref="Subject"/>: the stack a bandit carried off. 0 with no subject.</summary>
+        public readonly int Amount;
+
+        public BulletinView(int id, int incidentDef, CellRef cell, int tick, int favourability = 0,
+            int subject = -1, int amount = 0)
         {
             Id = id;
             IncidentDef = incidentDef;
             Cell = cell;
             Tick = tick;
             Favourability = favourability;
+            Subject = subject;
+            Amount = amount;
+        }
+    }
+
+    /// <summary>What happened in one moment of a fight. See <see cref="CombatEventView"/>.</summary>
+    public enum CombatEventKind : byte
+    {
+        None = 0,
+
+        /// <summary>A swing's wind-up began. <see cref="CombatEventView.Amount"/> is the wind-up in ticks.</summary>
+        Swing = 1,
+
+        /// <summary>It landed. <see cref="CombatEventView.Amount"/> is the damage, in thousandths of a hit point.</summary>
+        Hit = 2,
+
+        /// <summary>It missed: the attacker's roll failed.</summary>
+        Miss = 3,
+
+        /// <summary>It would have landed and the defender got out of the way.</summary>
+        Dodge = 4,
+
+        /// <summary>A blunt blow stunned the target. <see cref="CombatEventView.Amount"/> is the stun in ticks.</summary>
+        Stun = 5,
+
+        /// <summary>The target went down.</summary>
+        Downed = 6,
+
+        /// <summary>The target died. A <see cref="CorpseView"/> carries it from the same publish.</summary>
+        Died = 7,
+
+        /// <summary>A downed pawn got back up (an animal healing, a colonist in bed).</summary>
+        Recovered = 8,
+
+        /// <summary>
+        /// The blow published as <see cref="Hit"/> on the same tick, by the same attacker on the same
+        /// target, was critical (design 33 §9b). <see cref="CombatEventView.Amount"/> is 0: the damage
+        /// is on the <see cref="Hit"/>. Presentation plays a stagger for it.
+        /// </summary>
+        Critical = 9,
+
+        /// <summary>
+        /// A critical blow knocked the target back a tile (design 33 §9b). <see cref="CombatEventView.Cell"/>
+        /// is where it landed; <see cref="CombatEventView.Amount"/> is the cell index it was knocked
+        /// from, so presentation can slide it along the line of the blow.
+        /// </summary>
+        KnockedBack = 10,
+
+        /// <summary>
+        /// A swing's wind-up began and the blow will land as a critical (design 33 §9g). Published
+        /// INSTEAD of <see cref="Swing"/>; <see cref="CombatEventView.Amount"/> is the wind-up in
+        /// ticks. Presentation plays the critical slice for a sharp weapon, the whoosh otherwise.
+        /// </summary>
+        SwingCritical = 11,
+
+        /// <summary>
+        /// A building was beaten down to nought and is coming down (design 33 §13g): it is gone
+        /// from the frame after this tick's end. <see cref="CombatEventView.Target"/> is <c>default</c>,
+        /// <see cref="CombatEventView.Cell"/> the building's own cell, and
+        /// <see cref="CombatEventView.Amount"/> the <see cref="EdificeHandle"/> it was, so presentation
+        /// knows what fell. Reported once, by the blow that crossed nought.
+        /// </summary>
+        Demolished = 12,
+
+        /// <summary>
+        /// A gun was fired (design 47 §2c). <see cref="CombatEventView.Attacker"/> is the shooter,
+        /// <see cref="CombatEventView.Target"/> whom she aimed at, <see cref="CombatEventView.Cell"/>
+        /// the cell the bullet will end in — the target's on a rolled hit, the scatter cell on a
+        /// miss — so the flash knows its direction, and <see cref="CombatEventView.Amount"/> the
+        /// flight in ticks. What it hits is reported at the impact as a <see cref="Hit"/> or a
+        /// <see cref="Miss"/>.
+        /// </summary>
+        Shot = 13,
+
+        /// <summary>
+        /// Cover took a bullet (design 53 §2e): a shot the cover roll defeated, fired into the piece
+        /// it picked, or a stray caught by cover it crossed. <see cref="CombatEventView.Cell"/> is the
+        /// cover's cell, <see cref="CombatEventView.Target"/> whom the shot was at (or <c>default</c>)
+        /// and <see cref="CombatEventView.Amount"/> the damage the cover took, nought for a thing with
+        /// no hit points (a tree, a rock face). Presentation raises the <i>Cover</i> floater and the
+        /// dust there. A building struck also reports its <see cref="Hit"/> as any blow does.
+        /// </summary>
+        Covered = 14,
+    }
+
+    /// <summary>
+    /// What one shot would come to (design 53 §8b): the answer to a <c>QueryShot</c>, published
+    /// while the question stands and never saved or hashed. Every number is the simulation's own —
+    /// the rule that rolls the shot is the rule that fills this — so the readout and the dice
+    /// cannot disagree.
+    /// </summary>
+    public readonly struct ShotReportView
+    {
+        public readonly PawnId Shooter;
+        public readonly PawnId Target;
+
+        /// <summary>The aim roll's chance, per mille: skill, distance, the gun and its quality.</summary>
+        public readonly int AimPerMille;
+
+        /// <summary>The cover the target has from this shot, per mille (noisy-OR over its neighbours).</summary>
+        public readonly int CoverPerMille;
+
+        /// <summary>What the player is told: the aim times what the cover leaves, or nought out of range or sight.</summary>
+        public readonly int TotalPerMille;
+
+        /// <summary>Centre to centre, in millimetres.</summary>
+        public readonly int DistanceMm;
+
+        /// <summary>The shooter's Shooting level.</summary>
+        public readonly int ShootingLevel;
+
+        /// <summary>The gun, as an item def index.</summary>
+        public readonly int WeaponDef;
+
+        /// <summary>What the shot's descent leaves of low cover, per mille — 1,000 on the level.</summary>
+        public readonly int LowElevationPerMille;
+
+        /// <summary>
+        /// The piece of cover that gives the most, as an <see cref="EdificeHandle"/> value; -1 for a
+        /// rock face, and nought for no cover.
+        /// </summary>
+        public readonly int TopCoverEdifice;
+
+        /// <summary>How many pieces of cover the target has from this shot.</summary>
+        public readonly int CoverPieces;
+
+        public readonly bool InRange;
+        public readonly bool InSight;
+
+        public ShotReportView(PawnId shooter, PawnId target, int aimPerMille, int coverPerMille, int totalPerMille,
+            int distanceMm, int shootingLevel, int weaponDef, int lowElevationPerMille, int topCoverEdifice,
+            int coverPieces, bool inRange, bool inSight)
+        {
+            Shooter = shooter;
+            Target = target;
+            AimPerMille = aimPerMille;
+            CoverPerMille = coverPerMille;
+            TotalPerMille = totalPerMille;
+            DistanceMm = distanceMm;
+            ShootingLevel = shootingLevel;
+            WeaponDef = weaponDef;
+            LowElevationPerMille = lowElevationPerMille;
+            TopCoverEdifice = topCoverEdifice;
+            CoverPieces = coverPieces;
+            InRange = inRange;
+            InSight = inSight;
+        }
+    }
+
+    /// <summary>
+    /// A building somebody has struck, and what is left of it (design 33 §13i): one row per struck
+    /// building, whole buildings having none — the published face of the simulation's
+    /// <c>EdificeDamage</c>. What a hit-point bar over a building is drawn from.
+    ///
+    /// <para>Sparse, a report of saved and hashed state and neither itself, like
+    /// <see cref="CorpseView"/>. A row stands until the building is demolished or taken apart.</para>
+    /// </summary>
+    public readonly struct EdificeDamageView
+    {
+        /// <summary>The building's own cell, as a whole-world index: a two-cell thing's head.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>What stands there, as an <see cref="EdificeHandle"/> value.</summary>
+        public readonly int Edifice;
+
+        /// <summary>What is left, in thousandths of a hit point. At or below nought it is coming down this tick.</summary>
+        public readonly int HpMilli;
+
+        /// <summary>Its pool, in thousandths: the building's points times its material's factor.</summary>
+        public readonly int MaxMilli;
+
+        public EdificeDamageView(int cellIndex, int edifice, int hpMilli, int maxMilli)
+        {
+            CellIndex = cellIndex;
+            Edifice = edifice;
+            HpMilli = hpMilli;
+            MaxMilli = maxMilli;
+        }
+    }
+
+    /// <summary>
+    /// One moment of a fight, published so presentation can draw it and sound it: a swing, a
+    /// hit with its number, a miss, a dodge, a stun, a fall, a death (design 33 §3, §5).
+    ///
+    /// <para><b>A report, on <see cref="BulletinView"/>'s terms and for its reason.</b> Floating
+    /// "miss" and "−7" and the thud of a landed blow are momentary, and a one-tick flag would be
+    /// missed by a frame that reads the snapshot once while the world runs several ticks. So the
+    /// simulation keeps a short ring of these with monotonic ids and publishes its tail; a reader
+    /// keeps the highest id it has drawn and treats anything above it as new.</para>
+    ///
+    /// <para><b>Never saved and never hashed</b>, like a gesture: the state a fight leaves behind
+    /// — hit points, the downed flag, a corpse — is saved and hashed where it lives, and this is
+    /// only the telling of it. <b>Ids are per world instance, not per colony:</b> a load builds a
+    /// new world and its ring starts again from 1, so a reader resets its watermark whenever the
+    /// world it reads changes (a new session, or a load).</para>
+    /// </summary>
+    public readonly struct CombatEventView
+    {
+        /// <summary>How many of the newest events a frame carries. A fight of twenty against twenty
+        /// swings about ten times a second; thirty-two covers several frames of it at speed three.</summary>
+        public const int PublishedTail = 32;
+
+        /// <summary>From 1, in the order they happened, never reused within a world.</summary>
+        public readonly int Id;
+
+        public readonly int Tick;
+        public readonly CombatEventKind Kind;
+
+        /// <summary>Who swung, or <c>default</c> where nobody did (a death from something else).</summary>
+        public readonly PawnId Attacker;
+
+        /// <summary>Who was swung at, or <c>default</c> when the target is a building (C6).</summary>
+        public readonly PawnId Target;
+
+        /// <summary>Where it happened: the target's cell, or the building's.</summary>
+        public readonly CellRef Cell;
+
+        /// <summary>The kind's number — damage in thousandths of a hit point, ticks of wind-up or stun, or 0.</summary>
+        public readonly int Amount;
+
+        /// <summary>What it was done with, as an <see cref="ItemHandle"/> value, or -1 for fists or a natural attack.</summary>
+        public readonly int Weapon;
+
+        public CombatEventView(int id, int tick, CombatEventKind kind, PawnId attacker, PawnId target,
+            CellRef cell, int amount = 0, int weapon = -1)
+        {
+            Id = id;
+            Tick = tick;
+            Kind = kind;
+            Attacker = attacker;
+            Target = target;
+            Cell = cell;
+            Amount = amount;
+            Weapon = weapon;
+        }
+    }
+
+    /// <summary>
+    /// Somebody who died, lying where they fell (design 33 §1, §3). Drawn in the death pose and
+    /// clickable as "Corpse of X"; not haulable yet.
+    ///
+    /// <para><b>A corpse is not a pawn.</b> The pawn left the registry when it died — every
+    /// per-pawn loop would otherwise have to skip the dead — and the simulation's corpse registry
+    /// keeps who it was, what kind, which seed, where and when, and which way it fell. That is
+    /// enough to draw the same face and name it: <see cref="RollSeed"/> is what a colonist's name
+    /// and appearance are dealt from.</para>
+    ///
+    /// <para>Sparse, one row per corpse, every corpse on the board: a colony has a handful. A
+    /// report of the registry's saved and hashed state, and neither itself.</para>
+    /// </summary>
+    public readonly struct CorpseView
+    {
+        /// <summary>The registry's own number for it, from 1, never reused.</summary>
+        public readonly int Id;
+
+        /// <summary>The id the pawn had while alive. No live pawn carries it again.</summary>
+        public readonly PawnId Pawn;
+
+        /// <summary>The kind it was, as <see cref="PawnView.Kind"/> carried it.</summary>
+        public readonly int Kind;
+
+        /// <summary>The seed its looks and name were dealt from, bit for bit.</summary>
+        public readonly uint RollSeed;
+
+        public readonly CellRef Cell;
+
+        /// <summary>The tick it died on.</summary>
+        public readonly int Tick;
+
+        /// <summary>Which way it fell, as one of eight headings: 0 is +Z, counting clockwise from above.</summary>
+        public readonly byte Facing;
+
+        /// <summary>What it was: <see cref="PawnFlags.Person"/> and <see cref="PawnFlags.Hostile"/> as it had them alive.</summary>
+        public readonly PawnFlags Flags;
+
+        public CorpseView(int id, PawnId pawn, int kind, uint rollSeed, CellRef cell, int tick, byte facing,
+            PawnFlags flags)
+        {
+            Id = id;
+            Pawn = pawn;
+            Kind = kind;
+            RollSeed = rollSeed;
+            Cell = cell;
+            Tick = tick;
+            Facing = facing;
+            Flags = flags;
         }
     }
 
@@ -393,6 +826,125 @@ namespace Odyssey.Sim.Contracts
             Landing = landing;
             LaunchTick = launchTick;
             LandTick = landTick;
+        }
+    }
+
+    /// <summary>
+    /// What a raid is doing (design 55 §3), in order. The phase is the simulation's; the words and
+    /// the horn are presentation's.
+    /// </summary>
+    public enum RaidPhase : byte
+    {
+        /// <summary>Members are still walking on at the edge.</summary>
+        Arriving = 0,
+
+        /// <summary>Milling at the gather point near the edge.</summary>
+        Gathering = 1,
+
+        /// <summary>Milling at the probe point, part-way in.</summary>
+        Probing = 2,
+
+        /// <summary>Making for the target, and fighting.</summary>
+        Assaulting = 3,
+
+        /// <summary>Half the band is down: the rest are leaving by the nearest edge.</summary>
+        Withdrawing = 4,
+    }
+
+    /// <summary>
+    /// One raid on the board (design 55 §3): its phase, where its standing members are, and where
+    /// it is going. Published every frame a raid exists; neither saved nor hashed — the group is.
+    /// What the alert and the Events row jump the camera to, and what the alert is raised for.
+    /// </summary>
+    public readonly struct RaidView
+    {
+        /// <summary>The group's id, stable for its life and across a save.</summary>
+        public readonly int Id;
+
+        public readonly RaidPhase Phase;
+
+        /// <summary>The mix it was made from, as an index into the content's mix order.</summary>
+        public readonly int Mix;
+
+        /// <summary>How many it set out with.</summary>
+        public readonly int Size;
+
+        /// <summary>How many of its members are standing on the board now.</summary>
+        public readonly int Standing;
+
+        /// <summary>
+        /// The middle of its standing members — the average of their cells — or the gather point
+        /// while none has arrived.
+        /// </summary>
+        public readonly CellRef Centre;
+
+        /// <summary>Where the assault makes for: the hearth, else the colony's start.</summary>
+        public readonly CellRef Target;
+
+        public RaidView(int id, RaidPhase phase, int mix, int size, int standing, CellRef centre, CellRef target)
+        {
+            Id = id;
+            Phase = phase;
+            Mix = mix;
+            Size = size;
+            Standing = standing;
+            Centre = centre;
+            Target = target;
+        }
+    }
+
+    /// <summary>
+    /// A bullet in flight (design 47 §2c): the skyfaller's shape, sideways. The simulation owns the
+    /// flight — who fired it, where it started and ends, when it left and when it lands — and
+    /// presentation draws the streak wherever along that line the frame falls. <b>The hit, the
+    /// damage and the end cell are the simulation's; the muzzle, the streak and the flash are
+    /// presentation's.</b>
+    ///
+    /// <para>What the bullet hits is not here: it is decided on <see cref="ImpactTick"/>, against
+    /// whoever is on the line then, and published as a <see cref="CombatEventView"/>.</para>
+    /// </summary>
+    public readonly struct ProjectileView
+    {
+        public readonly PawnId Shooter;
+
+        /// <summary>
+        /// Whom it was aimed at, or <c>default</c> for nobody. Carried so a hit's streak can end on
+        /// the target's drawn body rather than on its cell's centre (design 47 §4c).
+        /// </summary>
+        public readonly PawnId Target;
+
+        /// <summary>The shooter's cell when it was fired.</summary>
+        public readonly CellRef Start;
+
+        /// <summary>The cell it ends in if nothing takes it first: the target's on a rolled hit, the scatter cell on a miss.</summary>
+        public readonly CellRef End;
+
+        public readonly int FireTick;
+
+        /// <summary>The tick it lands on. Decided at the fire, so a save mid-flight lands it on the same tick.</summary>
+        public readonly int ImpactTick;
+
+        /// <summary>The weapon, as an <see cref="ItemHandle"/> value.</summary>
+        public readonly int Weapon;
+
+        /// <summary>
+        /// The shot was aimed true (design 47 §2c, amended): it lands on <see cref="Target"/> wherever
+        /// it stands at the impact, so its streak follows the target's body rather than ending at
+        /// <see cref="End"/>. False for a miss, whose streak passes the target and ends at <see cref="End"/>.
+        /// </summary>
+        public readonly bool Aimed;
+
+        public ProjectileView(PawnId shooter, PawnId target, CellRef start, CellRef end, int fireTick, int impactTick, int weapon,
+            bool aimed = false)
+        {
+            Aimed = aimed;
+            Shooter = shooter;
+            Target = target;
+            Start = start;
+            End = end;
+            FireTick = fireTick;
+            ImpactTick = impactTick;
+            Weapon = weapon;
         }
     }
 
@@ -447,13 +999,55 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many are in the pile. A ledger counts these, never the piles.</summary>
         public readonly int Stack;
 
-        public ThingView(ThingId id, CellRef cell, int defIndex, int stuffIndex, int stack = 1)
+        /// <summary>
+        /// The store holding this thing, or 0 when it is lying on the floor.
+        ///
+        /// <para><b>A contained thing is still published, at the store's own cell.</b> That is the
+        /// decision, and it is what keeps every consumer of "what does the colony hold" correct
+        /// without being told anything: the stores panel counts stacks and not piles, the build
+        /// palette sums the material it can afford, and the almanac's find-it jumps to a cell.
+        /// Publishing shelved goods on a channel of their own would have given all four a second
+        /// place to look, and the one that was forgotten would have undercounted in silence — a
+        /// player refused a wall they can pay for.</para>
+        ///
+        /// <para>Two consumers must therefore <em>exclude</em> these rows rather than include them,
+        /// and both are about position rather than quantity: the renderer draws them on the shelf
+        /// instead of on the floor, and the picker does not offer them as click targets, because
+        /// clicking a shelf selects the shelf.</para>
+        /// </summary>
+        public readonly int Container;
+
+        /// <summary>
+        /// Which of the store's slots this thing sits on, so the drawn goods have somewhere to
+        /// stand. Meaningless where <see cref="Container"/> is 0.
+        ///
+        /// <para><b>Published rather than derived from the def, and that is the second answer to
+        /// this question.</b> The first was the def itself, which is stable and needs no field —
+        /// and is wrong the moment a store holds two stacks of one kind, which is the ordinary case
+        /// for anything bulky: eight stacks of wood would all draw in the same place.</para>
+        ///
+        /// <para>It is the thing's place in its store's ordered contents, so a store <b>re-packs</b>
+        /// when something leaves it and the goods behind shift along. That is a real motion on
+        /// screen and the honest price of never overlapping two heaps.</para>
+        /// </summary>
+        public readonly byte Slot;
+
+        public bool Contained => Container != 0;
+
+        /// <summary>How well it was made, a <see cref="QualityHandle"/> value, or 0 for a thing with no quality (design 47 §11).</summary>
+        public readonly byte Quality;
+
+        public ThingView(ThingId id, CellRef cell, int defIndex, int stuffIndex, int stack = 1,
+            int container = 0, byte slot = 0, byte quality = 0)
         {
+            Quality = quality;
             Id = id;
             Cell = cell;
             DefIndex = defIndex;
             StuffIndex = stuffIndex;
             Stack = stack;
+            Container = container;
+            Slot = slot;
         }
     }
 
@@ -547,8 +1141,17 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public float Progress => WorkTotal <= 0 ? 0f : (float)WorkDone / WorkTotal;
 
-        /// <summary>Has every unit arrived, so that the thing can be worked on?</summary>
-        public bool IsFrame => Delivered >= Cost;
+        /// <summary>Has every unit arrived — the material and the parts — so that the thing can be worked on?</summary>
+        public bool IsFrame => Delivered >= Cost && PartsDelivered >= PartsCost;
+
+        /// <summary>Units of the part item that have arrived — the second payment (design 32 §14).</summary>
+        public readonly ushort PartsDelivered;
+
+        /// <summary>Units of the part item the site wants; 0 for anything paid for in its material alone.</summary>
+        public readonly ushort PartsCost;
+
+        /// <summary>The <see cref="ItemHandle"/> the parts are paid in, or -1.</summary>
+        public readonly short PartsItem;
 
         /// <summary>
         /// The rotation the order was placed at, 0–3 — meaningful only while
@@ -562,8 +1165,12 @@ namespace Odyssey.Sim.Contracts
 
         public SiteView(int cellIndex, byte building, byte stuff,
             ushort delivered, ushort cost, int workDone, int workTotal,
-            byte facing = 0, byte footprint = 1)
+            byte facing = 0, byte footprint = 1,
+            ushort partsDelivered = 0, ushort partsCost = 0, short partsItem = -1)
         {
+            PartsDelivered = partsDelivered;
+            PartsCost = partsCost;
+            PartsItem = partsItem;
             CellIndex = cellIndex;
             Building = building;
             Stuff = stuff;
@@ -630,11 +1237,158 @@ namespace Odyssey.Sim.Contracts
         /// <summary>The zone's <c>StoragePriority</c>, 0 to 4. Drawn as a strength, not a hue.</summary>
         public readonly byte Priority;
 
-        public StoreView(int cellIndex, int zone, byte priority)
+        /// <summary>
+        /// The zone's place among the colony's stores, from 1: the "3" of "Stockpile 3".
+        ///
+        /// <para>Published rather than derived on the interface side, because
+        /// <c>StorageZones.OrdinalOfCell</c> is the one owner of that rule and the inspect pane
+        /// already reads it through <see cref="CellDetail.StorageOrdinal"/>. The Inventory tab
+        /// (design 35) names every store at once, and a second copy of the count in the HUD would
+        /// be the tab and the pane able to disagree about which store is which. 0 where no
+        /// numbering was given.</para>
+        /// </summary>
+        public readonly int Ordinal;
+
+        public StoreView(int cellIndex, int zone, byte priority, int ordinal = 0)
         {
             CellIndex = cellIndex;
             Zone = zone;
             Priority = priority;
+            Ordinal = ordinal;
+        }
+    }
+
+    /// <summary>
+    /// One built store — a shelf — as the interface needs to know it.
+    ///
+    /// <para><b>Its own channel rather than a bit on <see cref="StoreView"/>,</b> which is one row
+    /// per <i>cell</i> of a painted zone and exists to tint the ground. A shelf's ground is not
+    /// tinted: the goods standing on it are the tell, and its cells are one each. The two answer
+    /// different questions about different things.</para>
+    ///
+    /// <para>Sparse, one row per store, and it exists so that the alert bar can say a store is
+    /// stuck without the simulation having to decide when to say so. What is published is the
+    /// state; the latch that turns a state into a row is the interface's own, exactly as it is for
+    /// an idle colonist.</para>
+    /// </summary>
+    public readonly struct StorageUnitView
+    {
+        /// <summary>The cell it stands in, as a whole-world index.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>Slots in use, and slots it has.</summary>
+        public readonly byte Stacks, Slots;
+
+        /// <summary>Ordered taken apart, so its contents should be leaving.</summary>
+        public readonly bool Emptying;
+
+        /// <summary>The store's place in the same series zones are numbered in: the "3" of "Shelf 3". See <see cref="StoreView.Ordinal"/>.</summary>
+        public readonly int Ordinal;
+
+        public StorageUnitView(int cellIndex, byte stacks, byte slots, bool emptying, int ordinal = 0)
+        {
+            CellIndex = cellIndex;
+            Stacks = stacks;
+            Slots = slots;
+            Emptying = emptying;
+            Ordinal = ordinal;
+        }
+    }
+
+    /// <summary>
+    /// One cooking station — a galley or a campfire — that has anything to say (design 48 §5): a
+    /// bill, or food in its pan. A station with neither is not published, so a board of campfires
+    /// nobody cooks at costs nothing here.
+    ///
+    /// <para>Its bills are the <see cref="BillCount"/> rows of <see cref="WorldSnapshot.Bills"/>
+    /// from <see cref="FirstBill"/>, top of the list first.</para>
+    /// </summary>
+    public readonly struct StationView
+    {
+        /// <summary>The cell it stands in, as a whole-world index.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>What it is: an <see cref="EdificeHandle"/> value.</summary>
+        public readonly ushort Edifice;
+
+        /// <summary>Could it cook right now — switched on and powered, or a campfire.</summary>
+        public readonly bool Ready;
+
+        /// <summary>How full the pan is, per mille of what one meal takes.</summary>
+        public readonly short PanPerMille;
+
+        /// <summary>How far the meal in the pan has cooked, per mille. Nought before anybody starts.</summary>
+        public readonly short CookPerMille;
+
+        /// <summary>The roll has been made and this one is going to come out burnt.</summary>
+        public readonly bool Burning;
+
+        /// <summary>There is meat in the pan: a meal, not a vegetable one.</summary>
+        public readonly bool HasMeat;
+
+        /// <summary>
+        /// How many meals the raw food on the map would cook into, capped at 999 (design 48 §14):
+        /// what the pane says under "Each meal", and the nought that tells a player why nothing is
+        /// being cooked.
+        /// </summary>
+        public readonly short RawMeals;
+
+        /// <summary>Where this station's bills start in <see cref="WorldSnapshot.Bills"/>, and how many.</summary>
+        public readonly int FirstBill, BillCount;
+
+        public StationView(int cellIndex, ushort edifice, bool ready, short panPerMille, short cookPerMille,
+            bool burning, bool hasMeat, int firstBill, int billCount, short rawMeals = 0)
+        {
+            RawMeals = rawMeals;
+            CellIndex = cellIndex;
+            Edifice = edifice;
+            Ready = ready;
+            PanPerMille = panPerMille;
+            CookPerMille = cookPerMille;
+            Burning = burning;
+            HasMeat = hasMeat;
+            FirstBill = firstBill;
+            BillCount = billCount;
+        }
+    }
+
+    /// <summary>One bill on a station's list (design 48 §5). See <see cref="StationView"/>.</summary>
+    public readonly struct BillView
+    {
+        /// <summary>A <see cref="RecipeHandle"/> value.</summary>
+        public readonly int Recipe;
+
+        /// <summary>A <see cref="BillModeHandle"/> value.</summary>
+        public readonly byte Mode;
+
+        /// <summary>The number the mode counts to: meals to keep, or meals to make.</summary>
+        public readonly int Target;
+
+        /// <summary>Meals this bill has made since it was added.</summary>
+        public readonly int Done;
+
+        /// <summary>
+        /// What the mode is counting right now: the meals the colony holds for
+        /// <see cref="BillModeHandle.UntilYouHave"/>, the meals made for
+        /// <see cref="BillModeHandle.Times"/>, nought for <see cref="BillModeHandle.Forever"/>.
+        /// </summary>
+        public readonly int Count;
+
+        /// <summary>Stopped by the player.</summary>
+        public readonly bool Suspended;
+
+        /// <summary>Has nothing to do right now, because its mode says it is done.</summary>
+        public readonly bool Satisfied;
+
+        public BillView(int recipe, byte mode, int target, int done, int count, bool suspended, bool satisfied)
+        {
+            Recipe = recipe;
+            Mode = mode;
+            Target = target;
+            Done = done;
+            Count = count;
+            Suspended = suspended;
+            Satisfied = satisfied;
         }
     }
 
@@ -772,7 +1526,7 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly int StorageZone;
 
-        /// <summary>The storage zone's <c>StoragePriority</c>, 0 to 4. Meaningless where <see cref="StorageZone"/> is -1.</summary>
+        /// <summary>The store's <c>StoragePriority</c>, 0 to 4. Meaningless where <see cref="StoreKind"/> is 0.</summary>
         public readonly byte StoragePriority;
 
         /// <summary>How many cells the store covers — the extent the pane's title line carries.</summary>
@@ -789,16 +1543,81 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly int StorageOrdinal;
 
+        /// <summary>
+        /// What kind of store covers this cell: 0 none, 1 a painted zone, 2 a built one.
+        ///
+        /// <para><b>A byte rather than "a capacity of nought means a zone".</b> The pane says
+        /// different words for the two — a zone is so many tiles, a shelf so many of its stacks in
+        /// use — and deriving the kind from a magic zero is how a shelf with nothing in it comes to
+        /// read as a stockpile.</para>
+        ///
+        /// <para><see cref="StorageCells"/> and <see cref="StorageOrdinal"/> are answered for both
+        /// kinds: a shelf is one cell and takes its place in the same cell-ordered count, so
+        /// "Store 3" means the third store on the board whether it was painted or raised.</para>
+        /// </summary>
+        public readonly byte StoreKind;
+
+        /// <summary>How many of a built store's slots are in use. 0 for anything else.</summary>
+        public readonly byte StoredStacks;
+
+        /// <summary>How many slots a built store has. 0 for anything else.</summary>
+        public readonly byte StoreSlots;
+
+        /// <summary>
+        /// The one commodity a built store holds, as an <c>ItemHandle</c> — or 255 where it is
+        /// empty or holds more than one kind.
+        /// </summary>
+        public readonly byte StoredDef;
+
+        /// <summary>How many units of <see cref="StoredDef"/> are in there.</summary>
+        public readonly int StoredUnits;
+
+        /// <summary>
+        /// The cell the store itself stands in, or -1 where no store covers this one.
+        ///
+        /// <para><b>Not always the cell that was clicked.</b> Solid terrain answers for the cell
+        /// above it, so a click on the ground under a shelf is a click on the shelf, and
+        /// <c>StorageZones.StoreCellOf</c> is the one owner of that rule. It is published because
+        /// contained goods are published at their <em>store's</em> cell: without it a reader of
+        /// this row cannot pick its own store's goods out of <see cref="WorldSnapshot.Things"/>,
+        /// and would have to guess with the clicked cell and be wrong exactly where the pane and
+        /// the panel already disagreed once.</para>
+        /// </summary>
+        public readonly int StoreCellIndex;
+
+        public const byte StoreNone = 0;
+        public const byte StoreZone = 1;
+        public const byte StoreShelf = 2;
+
+        /// <summary>
+        /// How warm it is here, in centi-degrees (1,250 is 12.5 °C): the room's air where the
+        /// cell is in an enclosed room, the outdoor curve where it is not. Every cell has an
+        /// answer in a world with a thermal pass, which every colony has; <see cref="int.MinValue"/>
+        /// is the one "nothing to say" — a hand-built detail from a fixture that never asked,
+        /// and the pane stays silent for it exactly as it does for a wall's quality.
+        /// </summary>
+        public readonly int AmbientTempC;
+
         public CellDetail(int cellIndex, byte terrain, byte edifice, byte floorStuff, byte support,
             ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0,
             byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue, byte zoneYield = 0,
             bool isIndoors = false, int storageZone = -1, byte storagePriority = 0,
-            int storageCells = 0, int storageOrdinal = 0)
+            int storageCells = 0, int storageOrdinal = 0,
+            byte storeKind = StoreNone, byte storedStacks = 0, byte storeSlots = 0,
+            byte storedDef = 255, int storedUnits = 0, int storeCellIndex = -1,
+            int ambientTempC = int.MinValue)
         {
+            StoreCellIndex = storeCellIndex;
             StorageZone = storageZone;
             StoragePriority = storagePriority;
             StorageCells = storageCells;
             StorageOrdinal = storageOrdinal;
+            StoreKind = storeKind;
+            StoredStacks = storedStacks;
+            StoreSlots = storeSlots;
+            StoredDef = storedDef;
+            StoredUnits = storedUnits;
+            AmbientTempC = ambientTempC;
             CellIndex = cellIndex;
             Terrain = terrain;
             Edifice = edifice;
@@ -832,12 +1651,25 @@ namespace Odyssey.Sim.Contracts
         SiteView[] _sites = Array.Empty<SiteView>();
         ZoneView[] _zones = Array.Empty<ZoneView>();
         StoreView[] _stores = Array.Empty<StoreView>();
+        StorageUnitView[] _units = Array.Empty<StorageUnitView>();
+        StationView[] _stations = Array.Empty<StationView>();
+        BillView[] _bills = Array.Empty<BillView>();
         PlantView[] _plants = Array.Empty<PlantView>();
 
         PawnAspect[] _aspects = Array.Empty<PawnAspect>();
         CellDetail[] _cellDetails = Array.Empty<CellDetail>();
         BulletinView[] _bulletins = Array.Empty<BulletinView>();
         FallingView[] _falling = Array.Empty<FallingView>();
+        ProjectileView[] _projectiles = Array.Empty<ProjectileView>();
+        RaidView[] _raids = Array.Empty<RaidView>();
+        ConduitView[] _conduits = Array.Empty<ConduitView>();
+        HomeCellView[] _homeCells = Array.Empty<HomeCellView>();
+        PowerDeviceView[] _powerDevices = Array.Empty<PowerDeviceView>();
+        PowerNetView[] _powerNets = Array.Empty<PowerNetView>();
+        CombatEventView[] _combatEvents = Array.Empty<CombatEventView>();
+        CorpseView[] _corpses = Array.Empty<CorpseView>();
+        EdificeDamageView[] _edificeDamage = Array.Empty<EdificeDamageView>();
+        int[] _edificeHitPoints = Array.Empty<int>();
 
         public int Tick { get; private set; }
         public int SliceLayer { get; private set; }
@@ -896,6 +1728,15 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many storage-zone cells the world holds, anywhere in it.</summary>
         public int StoreCount { get; private set; }
 
+        /// <summary>How many built stores this frame carries.</summary>
+        public int StorageUnitCount { get; private set; }
+
+        /// <summary>How many cooking stations have a bill or food in the pan.</summary>
+        public int StationCount { get; private set; }
+
+        /// <summary>How many bills there are, over every station.</summary>
+        public int BillCount { get; private set; }
+
         /// <summary>How many planted cells are standing.</summary>
         public int PlantCount { get; private set; }
 
@@ -911,6 +1752,130 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many things are in the air right now. Nearly always zero.</summary>
         public int FallingCount { get; private set; }
 
+        public int ProjectileCount { get; private set; }
+
+        /// <summary>How many raids are on the board. Nearly always zero.</summary>
+        public int RaidCount { get; private set; }
+
+        /// <summary>How many line cells this frame carries — see <see cref="ConduitView"/> for which.</summary>
+        public int ConduitCount { get; private set; }
+
+        /// <summary>How many power buildings this frame carries.</summary>
+        public int PowerDeviceCount { get; private set; }
+
+        /// <summary>How many power nets this frame carries.</summary>
+        public int PowerNetCount { get; private set; }
+
+        /// <summary>
+        /// Moves whenever anything a drawing of the lines shows has changed — a line, an order, a
+        /// mark, a net going live or dark (design 32 §9). A reader that caches what it built from
+        /// <see cref="Conduits"/> rebuilds only when this differs from what it built against.
+        /// </summary>
+        public int PowerVersion { get; private set; }
+
+        /// <summary>The sky this frame (design 43 §5), or <see cref="WeatherView.None"/> with no weather system.</summary>
+        public WeatherView Weather { get; private set; } = WeatherView.None;
+
+        /// <summary>
+        /// The hearth's cell, or -1 when the colony has none (design 43 §3f): the campfire home is
+        /// centred on. Always published; it is one number.
+        /// </summary>
+        public int HearthCell { get; private set; } = -1;
+
+        /// <summary>How many home border cells are published. See <see cref="HomeCellView"/>.</summary>
+        public int HomeCellCount { get; private set; }
+
+        /// <summary>
+        /// Moves exactly when the published <see cref="HomeCells"/> change (design 43 §5c). A reader
+        /// that caches what it built from them rebuilds only when this differs from what it built
+        /// against — and rebuilds on showing the view again, since the rows are not published while
+        /// it is off and the version need not move meanwhile.
+        /// </summary>
+        public int HomeVersion { get; private set; }
+
+        /// <summary>The home's border cells in cell-index order, published only while the Home view is on.</summary>
+        public ReadOnlySpan<HomeCellView> HomeCells => new ReadOnlySpan<HomeCellView>(_homeCells, 0, HomeCellCount);
+
+        /// <summary>Line cells, in cell-index order within each kind. See <see cref="ConduitView"/>.</summary>
+        public ReadOnlySpan<ConduitView> Conduits => new ReadOnlySpan<ConduitView>(_conduits, 0, ConduitCount);
+
+        /// <summary>Every power building, in edifice order. See <see cref="PowerDeviceView"/>.</summary>
+        public ReadOnlySpan<PowerDeviceView> PowerDevices =>
+            new ReadOnlySpan<PowerDeviceView>(_powerDevices, 0, PowerDeviceCount);
+
+        /// <summary>Every power net, in key order. See <see cref="PowerNetView"/>.</summary>
+        public ReadOnlySpan<PowerNetView> PowerNets => new ReadOnlySpan<PowerNetView>(_powerNets, 0, PowerNetCount);
+
+        /// <summary>The power building standing in this cell, either of its cells. A scan of a handful.</summary>
+        public bool TryGetPowerDevice(int cell, out PowerDeviceView view)
+        {
+            for (int i = 0; i < PowerDeviceCount; i++)
+            {
+                if (!_powerDevices[i].Covers(cell)) continue;
+                view = _powerDevices[i];
+                return true;
+            }
+            view = default;
+            return false;
+        }
+
+        /// <summary>The net with this key.</summary>
+        public bool TryGetPowerNet(int key, out PowerNetView view)
+        {
+            for (int i = 0; i < PowerNetCount; i++)
+            {
+                if (_powerNets[i].Key != key) continue;
+                view = _powerNets[i];
+                return true;
+            }
+            view = default;
+            return false;
+        }
+        /// <summary>How many fight events this frame carries: the newest, up to <see cref="CombatEventView.PublishedTail"/>.</summary>
+        public int CombatEventCount { get; private set; }
+
+        /// <summary>How many corpses lie on the board.</summary>
+        public int CorpseCount { get; private set; }
+
+        /// <summary>
+        /// The newest moments of every fight, oldest first, so a reader walking forward meets ids
+        /// in ascending order. See <see cref="CombatEventView"/> for the edge rule.
+        /// </summary>
+        public ReadOnlySpan<CombatEventView> CombatEvents =>
+            new ReadOnlySpan<CombatEventView>(_combatEvents, 0, CombatEventCount);
+
+        /// <summary>Every corpse on the board, in the order they fell. See <see cref="CorpseView"/>.</summary>
+        public ReadOnlySpan<CorpseView> Corpses => new ReadOnlySpan<CorpseView>(_corpses, 0, CorpseCount);
+
+        /// <summary>How many struck buildings this frame carries.</summary>
+        public int EdificeDamageCount { get; private set; }
+
+        /// <summary>Every struck building, by cell ascending. See <see cref="EdificeDamageView"/>.</summary>
+        public ReadOnlySpan<EdificeDamageView> EdificeDamage =>
+            new ReadOnlySpan<EdificeDamageView>(_edificeDamage, 0, EdificeDamageCount);
+
+        /// <summary>The struck building whose own cell is <paramref name="cellIndex"/>, or false for a whole one.</summary>
+        public bool TryGetEdificeDamage(int cellIndex, out EdificeDamageView view)
+        {
+            for (int i = 0; i < EdificeDamageCount; i++)
+            {
+                if (_edificeDamage[i].CellIndex != cellIndex) continue;
+                view = _edificeDamage[i];
+                return true;
+            }
+            view = default;
+            return false;
+        }
+
+        /// <summary>
+        /// The hit points the content gives this edifice, in whole points before its material, or
+        /// nought where it is not something a blow can be aimed at — a tree, a window, nothing
+        /// (design 33 §13b, §13i). The simulation's one rule, published, so the interface can tell
+        /// a wall from a floor under a right-click without a copy of it.
+        /// </summary>
+        public int EdificeHitPoints(int edifice) =>
+            (uint)edifice < (uint)_edificeHitPoints.Length ? _edificeHitPoints[edifice] : 0;
+
         /// <summary>
         /// The newest incidents, oldest first, so a reader walking forward meets ids in ascending
         /// order. See <see cref="BulletinView"/> for the edge rule.
@@ -919,6 +1884,12 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>Everything in the air, in launch order. See <see cref="FallingView"/>.</summary>
         public ReadOnlySpan<FallingView> Falling => new ReadOnlySpan<FallingView>(_falling, 0, FallingCount);
+
+        /// <summary>Every bullet in flight, in the order it was fired. See <see cref="ProjectileView"/>.</summary>
+        public ReadOnlySpan<ProjectileView> Projectiles => new ReadOnlySpan<ProjectileView>(_projectiles, 0, ProjectileCount);
+
+        /// <summary>Every raid on the board, oldest first. See <see cref="RaidView"/>.</summary>
+        public ReadOnlySpan<RaidView> Raids => new ReadOnlySpan<RaidView>(_raids, 0, RaidCount);
 
         public ReadOnlySpan<PawnView> Pawns => new ReadOnlySpan<PawnView>(_pawns, 0, PawnCount);
         public ReadOnlySpan<ThingView> Things => new ReadOnlySpan<ThingView>(_things, 0, ThingCount);
@@ -950,6 +1921,16 @@ namespace Odyssey.Sim.Contracts
         /// drawn none. See <see cref="StoreView"/>.
         /// </summary>
         public ReadOnlySpan<StoreView> Stores => new ReadOnlySpan<StoreView>(_stores, 0, StoreCount);
+
+        /// <summary>Every built store on the board. See <see cref="StorageUnitView"/>.</summary>
+        public ReadOnlySpan<StorageUnitView> StorageUnits =>
+            new ReadOnlySpan<StorageUnitView>(_units, 0, StorageUnitCount);
+
+        /// <summary>Every cooking station with a bill or a pan in use. See <see cref="StationView"/>.</summary>
+        public ReadOnlySpan<StationView> Stations => new ReadOnlySpan<StationView>(_stations, 0, StationCount);
+
+        /// <summary>Every station's bills, one station after another. See <see cref="StationView.FirstBill"/>.</summary>
+        public ReadOnlySpan<BillView> Bills => new ReadOnlySpan<BillView>(_bills, 0, BillCount);
 
         /// <summary>Every standing crop, in cell-index order. See <see cref="PlantView"/>.</summary>
         public ReadOnlySpan<PlantView> Plants => new ReadOnlySpan<PlantView>(_plants, 0, PlantCount);
@@ -987,13 +1968,55 @@ namespace Odyssey.Sim.Contracts
         /// pawn this frame, which callers must handle and which is the ordinary case: the feature
         /// may not be installed, the pawn may not be doing the thing, or the pawn may have died.
         ///
-        /// <para>A scan, like <see cref="TryGetPawn"/> beside it. The published set is tens of
-        /// rows on a real colony — sparse is the whole shape of <see cref="PawnAspect"/> — so an
-        /// index would cost a dictionary per frame to save arithmetic that does not show up.
-        /// A reader that wants every aspect of every pawn walks <see cref="PawnAspects"/> once
-        /// instead of calling this in a loop.</para>
+        /// <para><b>O(1), off an index built on the first lookup of each published frame</b>
+        /// (2026-09-23, <c>docs/design/31-aspect-lookup.md</c>). It was a scan, and its comment
+        /// here justified that with "the published set is tens of rows on a real colony". That
+        /// stopped being true when work priorities and the colonist schedule were added: a
+        /// colonist publishes <b>57 rows</b>, every tick, measured by
+        /// <c>AspectScaleTests</c> — so the set is 57 × colonists, a lookup scanned half of it,
+        /// and a caller doing one per colonist was quadratic in the colony. That was 4.9 ms of a
+        /// frame at 384 colonists in the far-form renderer alone
+        /// (<c>docs/design/25-pawn-steering.md</c> §9d).</para>
+        ///
+        /// <para><b>The advice in the old comment still stands, and is the reason this is not
+        /// enough on its own:</b> sparse is the whole shape of <see cref="PawnAspect"/>, and a
+        /// reader that wants many aspects of one pawn should still walk
+        /// <see cref="PawnAspects"/> once rather than call this in a loop. What changed is what a
+        /// single lookup costs.</para>
         /// </summary>
         public bool TryGetPawnAspect(PawnId pawn, AspectKey key, out int value)
+        {
+            if (!IndexAspects) return ScanForPawnAspect(pawn, key, out value);
+            if (!_aspectsIndexed) BuildAspectIndex();
+
+            int slot = AspectHash(pawn, key) & _aspectMask;
+            while (true)
+            {
+                int row = _aspectSlots[slot];
+                if (row < 0) { value = 0; return false; }
+
+                ref readonly var aspect = ref _aspects[row];
+                if (aspect.Pawn == pawn && aspect.Key == key)
+                {
+                    value = aspect.Value;
+                    return true;
+                }
+                slot = (slot + 1) & _aspectMask;
+            }
+        }
+
+        /// <summary>
+        /// Whether lookups use the index. **A measurement control, not a setting** — it exists so
+        /// <c>FrameTimeTests.TheAspectLookupCostsWhatItScans</c> can time the same world both ways
+        /// in one run, which is the only comparison this project's machine supports
+        /// (<c>docs/design/06-rendering-and-camera.md</c> §6c.1). False is the scan this replaced,
+        /// kept as the control rather than as a second code path: both arms return the same answer
+        /// and <c>AspectScaleTests</c> asserts it.
+        /// </summary>
+        public static bool IndexAspects = true;
+
+        /// <summary>The lookup as it was before 2026-09-23. See <see cref="IndexAspects"/>.</summary>
+        bool ScanForPawnAspect(PawnId pawn, AspectKey key, out int value)
         {
             for (int i = 0; i < AspectCount; i++)
             {
@@ -1007,10 +2030,102 @@ namespace Odyssey.Sim.Contracts
         }
 
         /// <summary>
+        /// Row indices by <c>(pawn, key)</c>, open-addressed with linear probing; <c>-1</c> is a
+        /// free slot. Rebuilt lazily — see <see cref="BuildAspectIndex"/>.
+        /// </summary>
+        int[] _aspectSlots = Array.Empty<int>();
+        int _aspectMask;
+        bool _aspectsIndexed;
+
+        /// <summary>
+        /// Index this frame's aspect rows, once, on the first lookup that wants one.
+        ///
+        /// <para><b>Lazy rather than built as rows are added</b>, which is the whole of the
+        /// decision (<c>docs/design/31-aspect-lookup.md</c> §3). Indexing at publish time would
+        /// put the cost inside the <i>tick</i> — the budget this project guards hardest — and
+        /// would charge every world that publishes aspects whether anything ever read one; a
+        /// headless golden run reads none at all. Built here, a snapshot nobody queries pays
+        /// nothing, and one that is queried pays a single O(rows) pass that is then amortised
+        /// over the hundreds of lookups a frame of interface makes.</para>
+        ///
+        /// <para><b>The first row wins, and that is not a detail.</b> The scan this replaces
+        /// returned the earliest matching row, so if a contributor ever publishes one
+        /// <c>(pawn, key)</c> twice, the index has to return the earlier one as well — otherwise a
+        /// snapshot's answer would depend on whether anything had queried it yet, which is exactly
+        /// the kind of order-dependence the published frame exists to not have.</para>
+        ///
+        /// <para>No <c>Dictionary</c> and no <c>Mathf</c>: this assembly is UnityEngine-free and
+        /// the fast tier and the headless runs depend on its staying that way.</para>
+        /// </summary>
+        void BuildAspectIndex()
+        {
+            // Two slots a row keeps the probe short. The table is reused between frames and only
+            // ever grows, so a colony crossing a power of two does not reallocate it every tick.
+            int wanted = 64;
+            while (wanted < (AspectCount + 1) * 2) wanted *= 2;
+            if (_aspectSlots.Length < wanted) _aspectSlots = new int[wanted];
+            _aspectMask = _aspectSlots.Length - 1;
+
+            for (int i = 0; i < _aspectSlots.Length; i++) _aspectSlots[i] = -1;
+
+            for (int i = 0; i < AspectCount; i++)
+            {
+                ref readonly var aspect = ref _aspects[i];
+                int slot = AspectHash(aspect.Pawn, aspect.Key) & _aspectMask;
+                while (true)
+                {
+                    int row = _aspectSlots[slot];
+                    if (row < 0) { _aspectSlots[slot] = i; break; }
+
+                    // Already published this frame: keep the earlier row, as the scan did.
+                    ref readonly var seen = ref _aspects[row];
+                    if (seen.Pawn == aspect.Pawn && seen.Key == aspect.Key) break;
+
+                    slot = (slot + 1) & _aspectMask;
+                }
+            }
+
+            _aspectsIndexed = true;
+        }
+
+        /// <summary>
+        /// Mixes the pawn and the key into a slot. <see cref="AspectKey.Value"/> is already an FNV
+        /// hash of the symbolic name, so its own bits are well spread; what this has to do is fold
+        /// the pawn in and spread the result over the low bits the mask takes.
+        /// </summary>
+        static int AspectHash(PawnId pawn, AspectKey key)
+        {
+            unchecked
+            {
+                ulong h = key.Value ^ ((ulong)(uint)pawn.Value * 2654435761u);
+                h ^= h >> 33;
+                h *= 0xFF51AFD7ED558CCDUL;
+                h ^= h >> 29;
+                return (int)((uint)h & 0x7FFFFFFF);
+            }
+        }
+
+        /// <summary>
         /// Read back the row for one cell. False when no question stands, which callers must
         /// handle: the row arrives the publish after the question, and is withdrawn the publish
         /// after the question is withdrawn.
         /// </summary>
+        ShotReportView _shotReport;
+        bool _hasShotReport;
+
+        /// <summary>The answer to the standing <c>QueryShot</c>, if there is one (design 53 §8b).</summary>
+        public bool TryGetShotReport(out ShotReportView report)
+        {
+            report = _shotReport;
+            return _hasShotReport;
+        }
+
+        internal void SetShotReport(in ShotReportView report)
+        {
+            _shotReport = report;
+            _hasShotReport = true;
+        }
+
         public bool TryGetCellDetail(int cellIndex, out CellDetail detail)
         {
             for (int i = 0; i < CellDetailCount; i++)
@@ -1040,12 +2155,96 @@ namespace Odyssey.Sim.Contracts
             SiteCount = 0;
             ZoneCount = 0;
             StoreCount = 0;
+            StorageUnitCount = 0;
+            StationCount = 0;
+            BillCount = 0;
             PlantCount = 0;
 
             AspectCount = 0;
+            // The frame the index described has gone. Cleared rather than rebuilt: the next
+            // reader rebuilds it, and a frame nobody asks about never pays for one at all.
+            _aspectsIndexed = false;
             CellDetailCount = 0;
+            _hasShotReport = false;
             BulletinCount = 0;
             FallingCount = 0;
+            ProjectileCount = 0;
+            RaidCount = 0;
+            ConduitCount = 0;
+            PowerDeviceCount = 0;
+            PowerNetCount = 0;
+            PowerVersion = 0;
+            Weather = WeatherView.None;
+            HearthCell = -1;
+            HomeCellCount = 0;
+            HomeVersion = 0;
+            CombatEventCount = 0;
+            CorpseCount = 0;
+            EdificeDamageCount = 0;
+            // The hit-point table is content and rewritten whole every publish, so it is left
+            // standing rather than cleared: a frame whose writer skipped it keeps the last answer.
+        }
+
+        internal void AddEdificeDamage(in EdificeDamageView view)
+        {
+            Grow(ref _edificeDamage, EdificeDamageCount + 1);
+            _edificeDamage[EdificeDamageCount++] = view;
+        }
+
+        internal void SetEdificeHitPoints(int edifice, int points)
+        {
+            if (edifice < 0) return;
+            if (edifice >= _edificeHitPoints.Length)
+            {
+                var grown = new int[edifice + 1];
+                Array.Copy(_edificeHitPoints, grown, _edificeHitPoints.Length);
+                _edificeHitPoints = grown;
+            }
+            _edificeHitPoints[edifice] = points;
+        }
+
+        internal void AddCombatEvent(in CombatEventView view)
+        {
+            Grow(ref _combatEvents, CombatEventCount + 1);
+            _combatEvents[CombatEventCount++] = view;
+        }
+
+        internal void AddCorpse(in CorpseView view)
+        {
+            Grow(ref _corpses, CorpseCount + 1);
+            _corpses[CorpseCount++] = view;
+        }
+
+        internal void AddConduit(in ConduitView view)
+        {
+            Grow(ref _conduits, ConduitCount + 1);
+            _conduits[ConduitCount++] = view;
+        }
+
+        internal void AddPowerDevice(in PowerDeviceView view)
+        {
+            Grow(ref _powerDevices, PowerDeviceCount + 1);
+            _powerDevices[PowerDeviceCount++] = view;
+        }
+
+        internal void AddPowerNet(in PowerNetView view)
+        {
+            Grow(ref _powerNets, PowerNetCount + 1);
+            _powerNets[PowerNetCount++] = view;
+        }
+
+        internal void SetPowerVersion(int version) => PowerVersion = version;
+
+        internal void SetWeather(in WeatherView view) => Weather = view;
+
+        internal void SetHearthCell(int cell) => HearthCell = cell;
+
+        internal void SetHomeVersion(int version) => HomeVersion = version;
+
+        internal void AddHomeCell(in HomeCellView view)
+        {
+            Grow(ref _homeCells, HomeCellCount + 1);
+            _homeCells[HomeCellCount++] = view;
         }
 
         internal void AddBulletin(in BulletinView view)
@@ -1058,6 +2257,18 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _falling, FallingCount + 1);
             _falling[FallingCount++] = view;
+        }
+
+        internal void AddProjectile(in ProjectileView view)
+        {
+            Grow(ref _projectiles, ProjectileCount + 1);
+            _projectiles[ProjectileCount++] = view;
+        }
+
+        internal void AddRaid(in RaidView view)
+        {
+            Grow(ref _raids, RaidCount + 1);
+            _raids[RaidCount++] = view;
         }
 
         internal void AddPawn(in PawnView view)
@@ -1101,6 +2312,24 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _stores, StoreCount + 1);
             _stores[StoreCount++] = view;
+        }
+
+        internal void AddStorageUnit(in StorageUnitView view)
+        {
+            Grow(ref _units, StorageUnitCount + 1);
+            _units[StorageUnitCount++] = view;
+        }
+
+        internal void AddStation(in StationView view)
+        {
+            Grow(ref _stations, StationCount + 1);
+            _stations[StationCount++] = view;
+        }
+
+        internal void AddBill(in BillView view)
+        {
+            Grow(ref _bills, BillCount + 1);
+            _bills[BillCount++] = view;
         }
 
         internal void AddPlant(in PlantView view)

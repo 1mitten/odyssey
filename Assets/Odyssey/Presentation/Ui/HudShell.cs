@@ -130,7 +130,13 @@ namespace Odyssey.Presentation.Ui
         VisualElement _cardsHost = null!;
         readonly List<CardView> _cards = new List<CardView>();
         int _stripCapacity = int.MaxValue;
-        bool _sweepingRoster;
+        // A left press dragged across the cards (design 33 §20): the rule is the model's, and the
+        // page it covers is copied into the scratch list at the press.
+        readonly RosterSweep _rosterSweep = new RosterSweep();
+        readonly List<PawnId> _sweepPage = new List<PawnId>();
+        // Two plain clicks on one card are a double click (owner, 2026-09-25): the threshold is
+        // the world pick's, shared through the model rather than copied.
+        readonly DoubleClick _rosterDoubleClick = new DoubleClick();
         VisualElement? _rosterPager;
         VisualElement? _prevPageBtn;
         VisualElement? _nextPageBtn;
@@ -153,6 +159,8 @@ namespace Odyssey.Presentation.Ui
         // ---- clock and speed (A3/A4)
         Label _clockTime = null!;
         Label _clockDate = null!;
+        Label _clockTemp = null!;
+        HudGlyph? _clockWeather;
         readonly List<VisualElement> _speedButtons = new List<VisualElement>();
 
         // ---- alerts (A5)
@@ -173,7 +181,6 @@ namespace Odyssey.Presentation.Ui
 
         // ---- depth rail (A11)
         VisualElement _railCells = null!;
-        Label _railHint = null!;
         readonly List<RailCellView> _rail = new List<RailCellView>();
         float _railPitch = -1f;
 
@@ -184,6 +191,7 @@ namespace Odyssey.Presentation.Ui
         Label _inspectTitle = null!;
         Label _inspectMeta = null!;
         Label _inspectState = null!;
+        Label _inspectPace = null!;
         IconBadge _inspectAvatar = null!;
 
         // The colonist half of that slot: a drawn face rather than a keyed badge, because no icon
@@ -202,6 +210,7 @@ namespace Odyssey.Presentation.Ui
         int _metaLayer = int.MinValue;
         string? _metaPosition;
         string? _stateJob;
+        string? _statePace;
         string? _stateBand;
         int _stateSelected = int.MinValue;
         string? _stateSite;
@@ -235,54 +244,7 @@ namespace Odyssey.Presentation.Ui
         // ---- panels over the board
         VisualElement _buildPanel = null!;
 
-        VisualElement _settingsPanel = null!;
         VisualElement _debugPanel = null!;
-        VisualElement _interfaceSection = null!;
-        VisualElement _graphicsSection = null!;
-        VisualElement _audioSection = null!;
-        VisualElement _keysSection = null!;
-        VisualElement _exitRow = null!;
-        Label _exitLabel = null!;
-        readonly Dictionary<GraphicsOption, VisualElement> _settingRows = new();
-        readonly Dictionary<SettingsTab, Label> _settingTabs = new();
-        readonly Dictionary<int, Label> _scaleRungs = new();
-        readonly Dictionary<int, Label> _cameraRungs = new();
-        readonly Dictionary<BuildPaletteLayout, Label> _layoutRungs = new();
-
-        /// <summary>One rank of rung labels per number ladder, so a value that moves lights its
-        /// own rung and nothing else is touched.</summary>
-        readonly Dictionary<GraphicsLadder, Dictionary<int, Label>> _ladderRungs = new();
-
-        /// <summary>Each ladder's row and rank, kept so the frame cap can be greyed behind VSync
-        /// and the two display rows can be greyed in the editor.</summary>
-        readonly Dictionary<GraphicsLadder, LadderView> _ladderViews = new();
-
-        /// <summary>The resolution dropdown selector. Built once the machine's sizes are known.
-        /// See <c>BuildResolutionRow</c>.</summary>
-        DropdownField? _resolutionDropdown;
-        VisualElement? _resolutionRow;
-
-        /// <summary>Where the resolution dropdown row goes once the machine's sizes are known. See
-        /// <c>BuildResolutionRow</c>.</summary>
-        VisualElement _resolutionSlot = null!;
-        readonly Dictionary<SettingsBus, FaderView> _busFaders = new();
-        readonly Dictionary<HotkeyAction, KeyRowView> _keyRows = new();
-
-        /// <summary>One volume row: its fader and the readout beside it, refreshed when the
-        /// bus's value moves and never per frame.</summary>
-        sealed class FaderView
-        {
-            public Slider Fader = null!;
-            public Label Value = null!;
-        }
-
-        /// <summary>One binding row: its root and the caps of its two slots, for
-        /// event-driven refresh. Strings are rebuilt on click, never per frame.</summary>
-        sealed class KeyRowView
-        {
-            public VisualElement Root = null!;
-            public readonly Label[] Caps = new Label[HotkeyDirector.SlotCount];
-        }
 
         /// <summary>The command-bar Build cap and its item, so a rebind can move the legend
         /// with the key it names.</summary>
@@ -344,6 +306,17 @@ namespace Odyssey.Presentation.Ui
             public AvatarGlyph Avatar = null!;
             public Label Name = null!;
             public IconBadge JobIcon = null!;
+
+            /// <summary>The health bar (design 33 §9f): the track, its fill, and "Downed" across the portrait's foot.</summary>
+            public VisualElement Health = null!;
+            public VisualElement HealthFill = null!;
+            public Label HealthWord = null!;
+
+            /// <summary>
+            /// What the bar was last drawn from: the fill per mille, or <see cref="DownedHealth"/>.
+            /// The ink and the word are functions of it, so one int says whether anything moved.
+            /// </summary>
+            public int LastHealth = int.MinValue;
 
             public PawnId LastId;
             /// <summary>
@@ -532,6 +505,12 @@ namespace Odyssey.Presentation.Ui
             /// </summary>
             public bool IsPick;
 
+            /// <summary>Whether the pickable row is a power building's switch rather than a bed's owner (design 32 §5).</summary>
+            public bool IsSwitch;
+
+            /// <summary>Whether the pickable row is an order's action — cancel, take up, keep (design 32 §14).</summary>
+            public bool IsOrderAction;
+
             /// <summary>The tint last applied to the value, so a redraw does not restyle on every frame.</summary>
             public HudColour? LastTint;
 
@@ -629,6 +608,10 @@ namespace Odyssey.Presentation.Ui
             BuildSettings();
             BuildDebug();
             BuildWork();
+            BuildAnimals();
+            BuildInventory();
+            BuildResearch();
+            BuildAssign();
             BuildAlmanac();
 
             // B18, last, so it is the top-most element in the tree and its scrim covers everything
@@ -640,12 +623,20 @@ namespace Odyssey.Presentation.Ui
             // from in game today, but the two are both modals and the one raised last should win.
             BuildSavePrompt();
 
+            // And the leave prompt after it, on the same argument: two modals cannot be up at
+            // once today, and if that ever changes the later one should be the one on top.
+            BuildLeavePrompt();
+
+            // Last of all, above every modal: the cover a new world is drawn behind (CurtainFrames).
+            BuildCurtain();
+
             _hud.RegisterCallback<GeometryChangedEvent>(_ => OnResized());
 
             // A session coming or going is the one thing that decides whether the start screen is
             // on screen, so it is driven by the event rather than polled: Update returns early
             // with no world, which is exactly when the start screen has to be visible.
             _boot!.SessionChanged += OnSessionChanged;
+            _boot.Autosaved += OnAutosaved;
             OnSessionChanged();
         }
 
@@ -654,6 +645,7 @@ namespace Odyssey.Presentation.Ui
             if (_boot != null)
             {
                 _boot.SessionChanged -= OnSessionChanged;
+                _boot.Autosaved -= OnAutosaved;
                 // The preferences outlive every session and this component, so a subscription left
                 // on them is a leak that survives the scene.
                 _boot.Preferences.Changed -= OnPreferencesChanged;
@@ -672,6 +664,9 @@ namespace Odyssey.Presentation.Ui
         void Attach(HudDirectors directors)
         {
             _directors = directors;
+            // A new session's overlays start off; the menu rows and the views strip must not go on
+            // saying otherwise, and MarkViews repaints both on the next frame.
+            _viewsPaintedFor = -1;
             _directors.Selection.Changed += OnSelectionChanged;
             _directors.Slice.LayerChanged += OnLayerChanged;
             _directors.Settings.Changed += OnSettingsChanged;
@@ -680,16 +675,24 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.ResolutionChanged += OnResolutionChanged;
             _directors.Settings.TabChanged += OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged += OnUiScaleChanged;
+            _directors.Settings.AutosaveDaysChanged += OnAutosaveDaysChanged;
             _directors.Settings.CameraSpeedChanged += OnCameraSpeedChanged;
             _directors.Settings.BuildPaletteLayoutChanged += OnBuildLayoutChanged;
+            _directors.Settings.SelectionStyleChanged += OnSelectionStyleChanged;
             _directors.Settings.DeveloperOverlayChanged += OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged += OnBusDbChanged;
             _directors.Settings.ExitChanged += OnExitChanged;
             _directors.Settings.RowRequested += OnSessionRow;
             _directors.Debug.Changed += OnDebugChanged;
             _directors.Debug.TabChanged += OnDebugTabChanged;
+            _directors.Debug.WeatherChanged += RefreshDebugWeather;
             _directors.Work.Changed += OnWorkChanged;
             _directors.Work.ModeChanged += OnWorkModeChanged;
+            _directors.Animals.Changed += OnAnimalsChanged;
+            _directors.Inventory.Changed += OnInventoryChanged;
+            _directors.Research.Changed += OnResearchChanged;
+            _directors.Research.StateChanged += OnResearchStateChanged;
+            _directors.Assign.Changed += OnAssignChanged;
             _directors.Almanac.Changed += OnAlmanacChanged;
             _directors.Almanac.Navigated += OnAlmanacNavigated;
             _directors.Hotkeys.BindingChanged += OnBindingChanged;
@@ -707,8 +710,10 @@ namespace Odyssey.Presentation.Ui
             OnSettingsChanged();
             OnSettingsTabChanged(_directors.Settings.Tab);
             OnUiScaleChanged(_directors.Settings.UiScale);
+            OnAutosaveDaysChanged(_directors.Settings.AutosaveDays);
             OnCameraSpeedChanged(_directors.Settings.CameraSpeed);
             OnBuildLayoutChanged(_directors.Settings.BuildPaletteLayout);
+            OnSelectionStyleChanged(_directors.Settings.SelectionStyle);
             OnDeveloperOverlayChanged();
             foreach (SettingsBus bus in SettingsDirector.Buses) OnBusDbChanged(bus);
             OnExitChanged();
@@ -726,6 +731,9 @@ namespace Odyssey.Presentation.Ui
             // without this the panel a player left open in the last colony stays on the screen
             // over the next one, drawing the last colony's rows.
             OnWorkChanged();
+            OnInventoryChanged();
+            OnResearchChanged();
+            OnAssignChanged();
         }
 
         void Detach()
@@ -739,16 +747,23 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.ResolutionChanged -= OnResolutionChanged;
             _directors.Settings.TabChanged -= OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged -= OnUiScaleChanged;
+            _directors.Settings.AutosaveDaysChanged -= OnAutosaveDaysChanged;
             _directors.Settings.CameraSpeedChanged -= OnCameraSpeedChanged;
             _directors.Settings.BuildPaletteLayoutChanged -= OnBuildLayoutChanged;
+            _directors.Settings.SelectionStyleChanged -= OnSelectionStyleChanged;
             _directors.Settings.DeveloperOverlayChanged -= OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged -= OnBusDbChanged;
             _directors.Settings.ExitChanged -= OnExitChanged;
             _directors.Settings.RowRequested -= OnSessionRow;
             _directors.Debug.Changed -= OnDebugChanged;
             _directors.Debug.TabChanged -= OnDebugTabChanged;
+            _directors.Debug.WeatherChanged -= RefreshDebugWeather;
             _directors.Work.Changed -= OnWorkChanged;
             _directors.Work.ModeChanged -= OnWorkModeChanged;
+            _directors.Inventory.Changed -= OnInventoryChanged;
+            _directors.Research.Changed -= OnResearchChanged;
+            _directors.Research.StateChanged -= OnResearchStateChanged;
+            _directors.Assign.Changed -= OnAssignChanged;
             _directors.Almanac.Changed -= OnAlmanacChanged;
             _directors.Almanac.Navigated -= OnAlmanacNavigated;
             _directors.Hotkeys.BindingChanged -= OnBindingChanged;
@@ -820,6 +835,10 @@ namespace Odyssey.Presentation.Ui
 
         void Update()
         {
+            // The curtain (HudShell.Start.cs, CurtainFrames): the new world has been drawn behind
+            // the start screen for long enough, so the screen gives way now.
+            if (_curtain > 0 && --_curtain == 0) LiftCurtain();
+
             var world = _boot!.World;
             if (world == null || _hud == null) return;
             if (_directors == null)
@@ -864,6 +883,9 @@ namespace Odyssey.Presentation.Ui
                 RefreshSpeed();
                 RefreshBuildPalette();
                 RefreshWork();
+                RefreshAnimals();
+                RefreshInventory();
+                RefreshAssign();
             }
             if (_slow >= SlowBucketSeconds)
             {
@@ -875,12 +897,15 @@ namespace Odyssey.Presentation.Ui
             UpdateMarquee();
             UpdateArmedBanner();
             MarkOrders();
+            MarkViews();
+            MarkWalls();
             ReadBarKeys();
+            UpdateContextMenu();
 
             // The roster sweep ends when the button does, wherever the pointer happens to be when
             // it ends — a card's own PointerUp never arrives if the release landed off the strip.
-            if (_sweepingRoster && UnityEngine.InputSystem.Mouse.current?.leftButton.isPressed != true)
-                _sweepingRoster = false;
+            if (_rosterSweep.Active && UnityEngine.InputSystem.Mouse.current?.leftButton.isPressed != true)
+                FinishRosterSweep();
 
             if (_isRightDragging && UnityEngine.InputSystem.Mouse.current?.rightButton.isPressed != true)
             {
@@ -973,7 +998,6 @@ namespace Odyssey.Presentation.Ui
             // height is exactly what HudLayout.RailHeight says it is.
             _railCells.style.marginTop = gap;
             _railCells.style.marginBottom = -gap;
-            _railHint.style.marginTop = gap;
 
             foreach (RailCellView view in _rail)
             {
@@ -1051,7 +1075,7 @@ namespace Odyssey.Presentation.Ui
             // model rather than switched on the tool here: ArmedPinned is what the orders strip
             // lights its button from, so one question answers the word, the colour and the lit
             // button, and the three cannot drift apart.
-            string order = _palette?.ArmedPinned ?? string.Empty;
+            string order = _palette?.ArmedOrder ?? string.Empty;
 
             // The order's own registry name — the same words the wiki prints, the palette's
             // breadcrumb says and the strip's tooltip repeats (owner: "keep the consistent in the
@@ -1070,7 +1094,7 @@ namespace Odyssey.Presentation.Ui
             // The border, in the held order's own colour — the same four tokens the strip paints
             // its buttons with. A build tool is not an order and has no hue of its own, which is
             // what the accent is doing here.
-            HudColour hue = (order.Length > 0 ? HudTheme.PinnedActionHue(order) : null)
+            HudColour hue = (order.Length > 0 ? HudTheme.ArmedOrderHue(order) : null)
                             ?? HudTheme.Accent;
             Color edge = HudTokens.Convert(hue);
             _armedBanner.style.borderTopColor = _armedBanner.style.borderRightColor =
@@ -1109,10 +1133,31 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void OnSelectionChanged(SelectionChange reason)
         {
+            // The context menu was raised for the selection there was (design 33 §7a): its Equip
+            // row names that selection's primary colonist, so a new selection puts it away.
+            CloseContextMenu();
+
             var world = _boot!.World;
             if (world == null || _directors == null) return;
 
             SelectionDirector selection = _directors.Selection;
+
+            // The Animals tab and the inspect pane never show together (design 30 §6): a
+            // selection — including the one a row of the tab makes — puts the tab away and
+            // gives the corner to the pane.
+            // The Inventory and Research tabs share that corner and that rule (designs 35 and 34),
+            // and Inventory's Go is one of the selections that puts it away.
+            if (!selection.IsEmpty)
+            {
+                _directors.Animals.SetOpen(false);
+                _directors.Inventory.SetOpen(false);
+                _directors.Research.SetOpen(false);
+            }
+
+            // The Assign tab is the exception, as the Work tab is: pressing a name there selects
+            // that colonist, and the tab stays open to set the next one (design 43 §6). Its rows
+            // follow the selection at once rather than on the next cadence pass.
+            RefreshAssign();
 
             // The pane and the palette dock into the same bottom-left corner, so the corner holds
             // one of them. Opening the palette has cleared the selection since 2026-09-17; this is
@@ -1125,6 +1170,7 @@ namespace Odyssey.Presentation.Ui
 
             if (selection.HasPawn) _inspect.SetColonist(selection.Pawn);
             else if (selection.HasThing) _inspect.SetItem(selection.Thing);
+            else if (selection.HasCorpse) _inspect.SetCorpse(selection.Corpse);
             else if (selection.Cell is { } cell) _inspect.SetCell(cell);
             else _inspect.ClearSelection();
 

@@ -517,6 +517,13 @@ invent an urgency model.** The capability costs nothing to keep available — it
 rate that will already exist after `WS3`, and the gait blend already does the rest — so nothing is
 lost by waiting until there is something worth running from.
 
+**The first reason arrived on 2026-09-23: a drafted colonist runs** (owner, after the first draft
+playtest: *"when you are drafted you should walk faster/run as this would make sense with the
+urgency"*). It is exactly the rate this section describes — `Pawn.UrgencyPerMille`, the last factor
+in `MoveRatePerMille`, 2,000 per mille while drafted and 1,000 otherwise — and nothing more: fleeing,
+breaks and emergency jobs are still unanswered, and they answer through the same method when they
+come. `docs/design/33-combat.md` §2h.
+
 ### 4g. The trap: do not double-count terrain
 
 Terrain cost is already live and belongs to the **cell being entered** — clear ground 0, marsh +40,
@@ -556,6 +563,60 @@ reverse.**
   that adds it runs `build_wiki.py --check` and `emit_labels.py --check`. Proposed keys:
   `ui.stat.workSpeed`, `ui.stat.moveSpeed`. **Nothing in this document adds a key yet**, because
   adding one now would make the wiki describe a game that does not have it.
+
+
+### 5a. The pace on the pane, as built (2026-09-25, `claude/pace-readout`)
+
+**The request.** Owner, 2026-09-25: *"I notice the move speed is not shown anywhere so I couldn't
+tell whether people were moving slower."* True: `odyssey.pawn.rate.move` had been published every
+tick since `WS3` and nothing on screen read it. The word is the owner's — **Pace** — which also
+settles the naming question above: "walk speed" stays the tile's, and the two never meet.
+
+**What the player sees.** A third line in the colonist pane's header, under the activity line:
+`Pace 90% · in the rain`. Hovering it lists every factor that is not exactly 1,000, in the rate's
+order: `rolled 104% · condition 80% · rain −10% · drafted ×2`. The run reads *drafted* when she is
+drafted and *running* when it is a fight's or a flight's. A colonist with nothing to list says
+*The standard walk* rather than showing an empty hover. **"In the rain" sits on the Pace line**,
+beside the number it explains (the owner's choice, 2026-09-25), and only while the rain factor is
+below 1,000 — so a roof or a crown takes both away together.
+
+**The pane did not grow.** The header is fixed at 60 px because the portrait sets it; its text was
+two lines, 22 + 16 = 38 px, so a third 16 px line fits (54 px). `HudLayout.InspectHeaderText` is
+the sum, `HudLayoutTests` holds it inside `InspectHeader`, and `HudStyleSheetTests` holds the three
+line heights to the stylesheet, so a fourth line fails a test rather than drawing over the tabs.
+
+**What is published.** Four pawn aspects beside `odyssey.pawn.rate.move`, colonists only
+(`RateAspects.PaceRolled` and the rest):
+
+| Aspect | Value | Published |
+|---|---|---|
+| `odyssey.pawn.rate.move.rolled` | `InnatePacePerMille()` | always |
+| `odyssey.pawn.rate.move.condition` | `ConditionPerMille()` | while ≠ 1,000 |
+| `odyssey.pawn.rate.move.weather` | `WeatherPerMille()` | while ≠ 1,000 |
+| `odyssey.pawn.rate.move.urgency` | `UrgencyPerMille()` | while ≠ 1,000 |
+
+- **Each is the value of the very method `MoveRatePerMille` multiplies**, asked again at publish
+  time. There is no second formula.
+- **The headline is the factors' product**, in the rate's order and with its truncation, starting at
+  1,000 (`PaceModel.PerMille`). So the number and its tooltip cannot disagree.
+  - `PaceAspectTests` proves the published factors multiply back to the published move rate
+    **exactly**, across all eight combinations of starving, raining and drafted.
+  - The species' pace is not published. It is 1,000 for every person.
+  - The product equals the move rate only while the walk is tuned at one cost unit a tick.
+    `TheTunedWalkIsOneCellCostATickSoThePaneCanStartFromAThousand` pins that. The day it is retuned,
+    the base goes out beside the factors.
+- **What it costs.** `AspectScaleTests` measures **64 → 65 rows a colonist** on a dry day, and at
+  most 68 when she is starving in the rain while drafted.
+  - `main` was already at 64, not the 57 that design 31 records. The work priorities and the
+    schedule have grown it since.
+  - The pane reads the factors with four O(1) lookups for the one colonist on it (design 31), and
+    builds its strings only when a factor moves.
+- **Nothing is saved or hashed.** The golden hashes did not move, and `GoldenColonyProbe` prints the
+  same census as `origin/main` on all three boards.
+
+**Still not done, on purpose.** The work rate is not on the pane. The Skills tab's "what a level
+is worth" and the two work estimates (§5, bullets three and four) are untouched. Load and health
+will each arrive as one more published factor, and one more tooltip word, the day they multiply in.
 
 ---
 

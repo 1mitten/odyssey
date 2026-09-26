@@ -87,7 +87,7 @@ namespace Odyssey.Tests.Presentation
 
             ChunkBatch batch = MeshLayer(world, 1);
 
-            Assert.That(Instances(batch.Body), Is.EqualTo(5),
+            Assert.That(Instances(batch.Walls), Is.EqualTo(5),
                 "a wall cell with four open neighbours shows four faces, over one core");
         }
 
@@ -109,7 +109,7 @@ namespace Odyssey.Tests.Presentation
 
             // Three cells: the two ends show three faces each, the middle shows two — and each
             // cell carries the core that fills it, so eight panels and three blocks.
-            Assert.That(Instances(batch.Body), Is.EqualTo(11));
+            Assert.That(Instances(batch.Walls), Is.EqualTo(11));
         }
 
         /// <summary>
@@ -133,7 +133,7 @@ namespace Odyssey.Tests.Presentation
 
             Vector3 middle = CellMetrics.FloorCentre(3, 3, 1);
             float head = float.MinValue;
-            foreach (InstanceBucket bucket in batch.Body)
+            foreach (InstanceBucket bucket in batch.Walls)
             for (int i = 0; i < bucket.Count; i++)
             {
                 Bounds box = BoxOf(bucket.Matrices[i]);
@@ -161,7 +161,7 @@ namespace Odyssey.Tests.Presentation
 
             ChunkBatch batch = MeshLayer(world, 1);
 
-            Assert.That(Instances(batch.Body), Is.EqualTo(4),
+            Assert.That(Instances(batch.Walls), Is.EqualTo(4),
                 "four panels and no core");
         }
 
@@ -204,7 +204,7 @@ namespace Odyssey.Tests.Presentation
         {
             GroundRelief.Reset();
             var world = new RenderTestWorld(8, 8, 3)
-                .Edifice(2, 2, 1, NaturalContent.EdificeTreeBroadleaf, NaturalContent.StuffWood,
+                .Edifice(2, 2, 1, NaturalContent.EdificeTreeMeadow, NaturalContent.StuffWood,
                     blocking: false)
                 .Edifice(5, 5, 1, CoreContent.EdificeWall, NaturalContent.StuffWood)
                 .Publish();
@@ -213,6 +213,7 @@ namespace Odyssey.Tests.Presentation
 
             var codes = new HashSet<int>();
             foreach (InstanceBucket bucket in batch.Body) codes.Add(bucket.Tint);
+            foreach (InstanceBucket bucket in batch.Walls) codes.Add(bucket.Tint);
 
             Assert.That(codes, Does.Contain(TintCode.Tree(TreeSpecies.Broadleaf)),
                 "the tree draws as a tree, not in a stuff tint");
@@ -296,7 +297,7 @@ namespace Odyssey.Tests.Presentation
 
             // Two walls at four faces (including the jambs bordering the doorway) and one core each,
             // plus exactly one door frame. A door has no core: it is a frame in an opening, not a piece of wall.
-            Assert.That(Instances(batch.Body), Is.EqualTo(11));
+            Assert.That(Instances(batch.Walls), Is.EqualTo(11));
         }
 
         [Test]
@@ -468,9 +469,9 @@ namespace Odyssey.Tests.Presentation
                 world.Publish();
 
                 ChunkBatch batch = MeshLayer(world, 1);
-                Assert.That(Instances(batch.Body), Is.GreaterThan(0), "there is a wall to check");
+                Assert.That(Instances(batch.Walls), Is.GreaterThan(0), "there is a wall to check");
 
-                Assert.That(WorstSeamGap(Corners(batch.Body)), Is.LessThan(SeamTolerance),
+                Assert.That(WorstSeamGap(Corners(batch.Walls)), Is.LessThan(SeamTolerance),
                     "two panels sharing a vertical edge must arrive at the same height");
             }
             finally
@@ -610,7 +611,7 @@ namespace Odyssey.Tests.Presentation
 
                 ChunkBatch batch = MeshLayer(world, 1);
 
-                foreach (InstanceBucket bucket in batch.Body)
+                foreach (InstanceBucket bucket in batch.Walls)
                 for (int i = 0; i < bucket.Count; i++)
                 {
                     Matrix4x4 m = bucket.Matrices[i];
@@ -638,13 +639,13 @@ namespace Odyssey.Tests.Presentation
             var mesher = new ChunkMesher(world.Model);
             int chunk = world.Chunks.ChunksX * world.Chunks.ChunksZ;
             mesher.Mesh(batch, chunk);
-            int first = Instances(batch.Body);
-            int buckets = batch.Body.Count;
+            int first = Instances(batch.Walls);
+            int buckets = batch.Walls.Count;
 
             mesher.Mesh(batch, chunk);
 
-            Assert.That(Instances(batch.Body), Is.EqualTo(first), "a rebuild must replace, not append");
-            Assert.That(batch.Body.Count, Is.EqualTo(buckets), "bucket arrays are reused across rebuilds");
+            Assert.That(Instances(batch.Walls), Is.EqualTo(first), "a rebuild must replace, not append");
+            Assert.That(batch.Walls.Count, Is.EqualTo(buckets), "bucket arrays are reused across rebuilds");
         }
 
         /// <summary>

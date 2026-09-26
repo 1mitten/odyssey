@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The weather (design 43 §4): four kinds of sky, what each does at full intensity, how often each
+  season rolls it, and how long a spell of it lasts.
+
+  EVERY NUMBER HERE IS INVENTED for the owner to tune at the keyboard. Units:
+    tempOffsetC        centi-degrees added to the outdoor curve at full intensity (150 = 1.5 °C)
+    cloud/gloom/rain   per-mille at full intensity. Cloud dims and keeps the colour; gloom drains
+                       it to grey, and only the grey days carry it (owner, 2026-09-25: "we want to
+                       be colourful when it rains ... then have dim days").
+    windPerMille       the wind against ordinary, 1000 being ordinary
+    seasonWeights      per 10,000, Wash · Glare · Rime. A weight is "that share of rolls", not
+                       "that share of the time": spells have different lengths.
+    minHours/maxHours  a spell's length in game hours
+    minIntensity/max   a spell's intensity in per-mille: for rain, drizzle to downpour
+    moveFloorPerMille  the pace of anybody out under the sky at full intensity (design 43 §5),
+                       1000 when omitted. Scaled by intensity: a drizzle costs a fraction of it.
+                       900 is the pace the design implies for rain, RimWorld's calibration
+                       anchor (x0.90) and not a contract.
+    growBonusPerMilleAtFull  what rain adds to a sky-exposed crop's growth at full intensity,
+                       0 when omitted: 250 is a quarter faster in a downpour. The stand-in for a
+                       moisture model (design 43 §9), so a storm's is the same as rain's.
+
+  What the table gives the seasons (the chance a new spell is each kind):
+    Wash   45 % clear, 30 % cloudy, 19 % rain, 6 % storm    — the showery spring
+    Glare  65 % clear, 20 % cloudy, 11 % rain, 4 % storm    — the bright summer
+    Rime   55 % clear, 40 % cloudy,  4 % rain, 1 % storm    — cold and grey, little rain before snow
+
+  Storm took its weight out of Rain's, about one wet spell in four; the chance of a wet spell in
+  each season is the design's first table unchanged.
+-->
+<Defs>
+
+  <WeatherDef>
+    <defName>Weather_Clear</defName>
+    <label>clear</label>
+    <kind>0</kind>
+    <tempOffsetC>150</tempOffsetC>
+    <cloudPerMille>0</cloudPerMille>
+    <gloomPerMille>0</gloomPerMille>
+    <rainPerMille>0</rainPerMille>
+    <windPerMille>1000</windPerMille>
+    <seasonWeights><li>4500</li><li>6500</li><li>5500</li></seasonWeights>
+    <minHours>16</minHours>
+    <maxHours>40</maxHours>
+    <minIntensity>1000</minIntensity>
+    <maxIntensity>1000</maxIntensity>
+  </WeatherDef>
+
+  <WeatherDef>
+    <defName>Weather_Cloudy</defName>
+    <label>cloudy</label>
+    <kind>1</kind>
+    <tempOffsetC>-150</tempOffsetC>
+    <cloudPerMille>800</cloudPerMille>
+    <gloomPerMille>600</gloomPerMille>
+    <rainPerMille>0</rainPerMille>
+    <windPerMille>1000</windPerMille>
+    <seasonWeights><li>3000</li><li>2000</li><li>4000</li></seasonWeights>
+    <minHours>10</minHours>
+    <maxHours>30</maxHours>
+    <minIntensity>600</minIntensity>
+    <maxIntensity>1000</maxIntensity>
+  </WeatherDef>
+
+  <WeatherDef>
+    <defName>Weather_Rain</defName>
+    <label>rain</label>
+    <kind>2</kind>
+    <tempOffsetC>-300</tempOffsetC>
+    <cloudPerMille>800</cloudPerMille>
+    <gloomPerMille>0</gloomPerMille>
+    <rainPerMille>1000</rainPerMille>
+    <windPerMille>1000</windPerMille>
+    <!-- INVENTED, for the owner to tune (design 43 §5): the pace out in a downpour, and what
+         a downpour adds to an exposed crop's growth. Both scale with the spell's intensity. -->
+    <moveFloorPerMille>900</moveFloorPerMille>
+    <growBonusPerMilleAtFull>250</growBonusPerMilleAtFull>
+    <seasonWeights><li>1900</li><li>1100</li><li>400</li></seasonWeights>
+    <minHours>6</minHours>
+    <maxHours>24</maxHours>
+    <minIntensity>250</minIntensity>
+    <maxIntensity>1000</maxIntensity>
+  </WeatherDef>
+
+  <WeatherDef>
+    <defName>Weather_Storm</defName>
+    <label>storm</label>
+    <kind>3</kind>
+    <tempOffsetC>-500</tempOffsetC>
+    <cloudPerMille>1000</cloudPerMille>
+    <gloomPerMille>1000</gloomPerMille>
+    <rainPerMille>1000</rainPerMille>
+    <windPerMille>1300</windPerMille>
+    <!-- INVENTED, for the owner to tune: a storm is heavy rain, so rain's two numbers. -->
+    <moveFloorPerMille>900</moveFloorPerMille>
+    <growBonusPerMilleAtFull>250</growBonusPerMilleAtFull>
+    <seasonWeights><li>600</li><li>400</li><li>100</li></seasonWeights>
+    <minHours>4</minHours>
+    <maxHours>12</maxHours>
+    <minIntensity>800</minIntensity>
+    <maxIntensity>1000</maxIntensity>
+  </WeatherDef>
+
+</Defs>

@@ -187,7 +187,7 @@ namespace Odyssey.EditorTools
                 // lower flight, turn on the landing and climb the upper one, with its feet on the
                 // treads. That path has to come from the art, so this prints the art's top
                 // surface as a grid and StairTread is authored against the numbers
-                // (docs/design/28-stairs.md 11).
+                // (docs/design/60-stairs.md 11).
                 {
                     var placed = library[model.EdificeModule(head)];
                     const int bins = 20;

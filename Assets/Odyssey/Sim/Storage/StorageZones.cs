@@ -71,7 +71,7 @@ namespace Odyssey.Sim.Storage
             _settings = settings ?? throw new System.ArgumentNullException(nameof(settings));
             _items = items ?? throw new System.ArgumentNullException(nameof(items));
             _chunks = chunks;
-            _zones = new ZoneGrid(grid.Size.CellCount);
+            _zones = new ZoneGrid(grid.Size.CellCount, grid.Footprint);
         }
 
         /// <summary>Every storage cell, ascending. Stable order is what makes a scan deterministic.</summary>
@@ -89,10 +89,33 @@ namespace Odyssey.Sim.Storage
         public bool IsStorage(int cell) => _zones.SlotAt(cell) >= 0;
 
         /// <summary>The settings of the zone covering this cell, or null where there is none.</summary>
+        /// <summary>
+        /// The colony's built stores, or null where it has none.
+        ///
+        /// <para>Held here so that <see cref="SettingsAt"/> can answer for a shelf as well as for a
+        /// zone — which is the whole of what makes the priority and filter intents drive a shelf
+        /// without a second intent pair or a second control. The pane must not be able to say a
+        /// cell is a store that the tool would refuse, and one resolver is how that stays true.</para>
+        /// </summary>
+        public StorageUnits? Units { get; set; }
+
+        /// <summary>
+        /// What the store covering this cell accepts, or null where nothing does.
+        ///
+        /// <para><b>The one resolver, and it answers for both kinds of store.</b> A painted zone
+        /// first, then a shelf standing in the cell — the two can never both be true, because a
+        /// shelf takes its cell out of any zone when it is raised and
+        /// <see cref="SiteAllows"/> refuses to paint a zone over an edifice. Both storage intents
+        /// come through here, which is what lets the priority ladder and the filter the player
+        /// already knows drive a shelf with no second control anywhere.</para>
+        /// </summary>
         public StorageSettings? SettingsAt(int cell)
         {
             int slot = _zones.SlotAt(cell);
-            return slot >= 0 ? _settings[_zones.TagOf(slot)] : null;
+            if (slot >= 0) return _settings[_zones.TagOf(slot)];
+
+            StorageUnit? unit = Units?.AtCell(cell);
+            return unit == null ? null : Units!.SettingsOf(unit);
         }
 
         /// <summary>The settings of one zone by slot.</summary>
@@ -118,15 +141,34 @@ namespace Odyssey.Sim.Storage
             if ((uint)slot >= (uint)_zones.Count) return 0;
 
             IReadOnlyList<int> mine = _zones.CellsOf(slot);
-            int first = mine.Count > 0 ? mine[0] : int.MaxValue;
+            return OrdinalOfCell(mine.Count > 0 ? mine[0] : int.MaxValue);
+        }
 
+        /// <summary>
+        /// What a store beginning at this cell is called: one more than the number of stores that
+        /// begin lower.
+        ///
+        /// <para><b>Both kinds are counted, and that is the whole reason this is separate from
+        /// <see cref="OrdinalOf"/>.</b> A shelf is a store, so it takes its place in the same
+        /// series — "Store 3" has to name exactly one thing, and counting zones and shelves apart
+        /// would give the player two of them.</para>
+        /// </summary>
+        public int OrdinalOfCell(int firstCell)
+        {
             int ordinal = 1;
+
             for (int other = 0; other < _zones.Count; other++)
             {
-                if (other == slot) continue;
                 IReadOnlyList<int> cells = _zones.CellsOf(other);
-                if (cells.Count > 0 && cells[0] < first) ordinal++;
+                if (cells.Count > 0 && cells[0] < firstCell) ordinal++;
             }
+
+            if (Units != null)
+                for (int u = 0; u < Units.Units.Count; u++)
+                {
+                    StorageUnit unit = Units.Units[u];
+                    if (!unit.Removed && Units.CellOf(unit) < firstCell) ordinal++;
+                }
 
             return ordinal;
         }
@@ -253,20 +295,33 @@ namespace Odyssey.Sim.Storage
             return IntentRejection.None;
         }
 
-        /// <summary>Take a cell back out of its storage zone. Anything lying in it becomes loose again.</summary>
-        public IntentRejection Cancel(CellRef cell)
+        /// <summary>
+        /// Take one cell out of whatever zone holds it, by index. False when it was in none.
+        ///
+        /// <para><see cref="Cancel"/> is the player's door to this and calls it after
+        /// <see cref="StoreCellOf"/>; the world's door is a shelf being raised, which takes its own
+        /// cell out of any zone so that no cell is ever in two stores. One owner, because the
+        /// re-bucket and the re-mesh are easy for a second caller to forget.</para>
+        /// </summary>
+        public bool LeaveCell(int index)
         {
-            if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
-
-            int index = StoreCellOf(_grid.Index(cell));
-            if (!_zones.Leave(index)) return IntentRejection.AlreadyInThatState;
+            if (!_zones.Leave(index)) return false;
 
             // A dissolve can have moved the slot the run was pointing at, and a subtract and an add
             // are never the same gesture, so the memo is dropped rather than chased.
             _run = (-1, -1);
             _items.Rebucket(index);
             Mark(index);
-            return IntentRejection.None;
+            return true;
+        }
+
+        /// <summary>Take a cell back out of its storage zone. Anything lying in it becomes loose again.</summary>
+        public IntentRejection Cancel(CellRef cell)
+        {
+            if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
+
+            int index = StoreCellOf(_grid.Index(cell));
+            return LeaveCell(index) ? IntentRejection.None : IntentRejection.AlreadyInThatState;
         }
 
         /// <summary>
@@ -292,7 +347,28 @@ namespace Odyssey.Sim.Storage
         void Mark(int index)
         {
             if (_chunks == null) return;
-            _chunks.MarkDirty(_grid.Size.FromIndex(index));
+            CellRef cell = _grid.Size.FromIndex(index);
+            _chunks.MarkDirty(cell);
+
+            // **And the layer below, which is where the wash is drawn on natural ground.** A
+            // store's cell there is the air over the ground (StoreCellOf), but the ground's top
+            // face is meshed by the terrain cell under it, which washes itself when the cell
+            // above is stored (WorldRenderModel.IsStoredAbove) — a different chunk, because a
+            // chunk is one layer. Marking only the store's own chunk was enough while one mark
+            // re-meshed the whole board; since chunks keep their own versions (2026-09-21) it
+            // left every stockpile on grass undrawn (owner, 2026-09-23: "There is no visual to
+            // the stockpile"). docs/bug-patterns.md P15.
+            if (cell.Y > 0) _chunks.MarkDirty(new CellRef(cell.X, cell.Z, cell.Y - 1));
+
+            // And the four neighbours' chunks, which differ from this one only at a chunk's edge:
+            // the line round a store is drawn on the side of each stored cell that faces an
+            // unstored one, so a cell joining or leaving redraws its neighbours' lines too
+            // (ChunkMesher.EmitStoreEdge).
+            GridSize size = _grid.Size;
+            if (cell.X + 1 < size.SizeX) _chunks.MarkDirty(new CellRef(cell.X + 1, cell.Z, cell.Y));
+            if (cell.X > 0) _chunks.MarkDirty(new CellRef(cell.X - 1, cell.Z, cell.Y));
+            if (cell.Z + 1 < size.SizeZ) _chunks.MarkDirty(new CellRef(cell.X, cell.Z + 1, cell.Y));
+            if (cell.Z > 0) _chunks.MarkDirty(new CellRef(cell.X, cell.Z - 1, cell.Y));
         }
 
         // ---- the intent seam ---------------------------------------------------------------------
@@ -480,13 +556,22 @@ namespace Odyssey.Sim.Storage
 
         public void Contribute(SimWorld world, SnapshotWriter writer)
         {
+            // Each zone's number once, not once per cell: OrdinalOf walks every store, and a
+            // warehouse is thousands of cells over a few dozen zones.
+            _ordinals.Clear();
+            for (int slot = 0; slot < _zones.Count; slot++) _ordinals.Add(OrdinalOf(slot));
+
             IReadOnlyList<int> cells = _zones.Cells;
             for (int i = 0; i < cells.Count; i++)
             {
                 int index = cells[i];
                 int slot = _zones.SlotAt(index);
-                writer.AddStore(new StoreView(index, slot, (byte)_settings[_zones.TagOf(slot)].Priority));
+                writer.AddStore(new StoreView(index, slot, (byte)_settings[_zones.TagOf(slot)].Priority,
+                    _ordinals[slot]));
             }
         }
+
+        /// <summary>Reused by <see cref="Contribute"/> so a publish allocates nothing.</summary>
+        readonly List<int> _ordinals = new List<int>();
     }
 }

@@ -26,5 +26,37 @@ namespace Odyssey.Hud
             DeveloperVisible = visible;
             Changed?.Invoke();
         }
+
+        /// <summary>
+        /// The power overlay (<c>ui.overlay.power</c>, design 32 §9): the lines shown whatever is
+        /// armed or selected. The first of A12's world channels to go live; the Menu's row is its
+        /// switch.
+        /// </summary>
+        public bool PowerVisible { get; private set; }
+
+        public void TogglePower() => SetPower(!PowerVisible);
+
+        public void SetPower(bool visible)
+        {
+            if (PowerVisible == visible) return;
+            PowerVisible = visible;
+            Changed?.Invoke();
+        }
+
+        /// <summary>
+        /// The home view (<c>ui.overlay.home</c>, design 43 §5): the edge of the colony's home on
+        /// the board and the mark over the hearth. Off by default, like power, and not remembered
+        /// between sessions.
+        /// </summary>
+        public bool HomeVisible { get; private set; }
+
+        public void ToggleHome() => SetHome(!HomeVisible);
+
+        public void SetHome(bool visible)
+        {
+            if (HomeVisible == visible) return;
+            HomeVisible = visible;
+            Changed?.Invoke();
+        }
     }
 }

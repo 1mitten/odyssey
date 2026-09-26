@@ -2,6 +2,7 @@
 using Odyssey.Hud;
 using Odyssey.Presentation.Audio;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Presentation.World;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -42,10 +43,10 @@ namespace Odyssey.Presentation.Bootstrap
         /// because this is what has an <c>OnDestroy</c> to give the copy back in.</summary>
         DisplaySettingsApplier? _display;
 
-        // What "on" means for the two levers that carry an amount rather than a state. Captured
-        // from the scene at startup so that turning grass back on restores the density this board
-        // was built with, not a number invented here.
-        int _grassDensity = 60;
+        // What "on" means for relief, the lever that carries an amount rather than a state.
+        // Captured from the scene at startup so that turning it back on restores the amplitude
+        // this board was built with, not a number invented here. The grass used to be the other
+        // one; since M6 its amount is the vegetation ladder's rung and needs no memory here.
         float _reliefAmplitude = GroundRelief.BoardAmplitude;
 
         void Awake()
@@ -101,7 +102,20 @@ namespace Odyssey.Presentation.Bootstrap
             if (hotkeys != null && hotkeys.Listening != null)
             {
                 if (keys.escapeKey.wasPressedThisFrame) hotkeys.ConsumeEscape();
+                // Backspace empties the slot rather than binding it (design 39 §6): the second
+                // binding is optional, and this is how a player says so.
+                else if (keys.backspaceKey.wasPressedThisFrame) hotkeys.ClearListening();
                 else Capture(keys, hotkeys);
+                return;
+            }
+
+            // The leave prompt is modal and has no text field to own the key, so it is answered
+            // here, above everything else Escape could mean. Escape over a modal means the modal
+            // (`17-start-flow.md` §13), and cancelling is its safe answer: a key press must never
+            // be the thing that throws a colony away.
+            if (_shell != null && _shell.LeavePromptOpen)
+            {
+                if (keys.escapeKey.wasPressedThisFrame) _shell.CancelLeavePrompt();
                 return;
             }
 
@@ -117,12 +131,25 @@ namespace Odyssey.Presentation.Bootstrap
             // One key, one rule, one place. The order itself is the director's and is tested
             // without an engine; all that happens here is the doing of it.
             switch (_director.Escape(
+                        _shell != null && _shell.ContextMenuOpen,
                         _designate != null && _designate.ToolArmed,
                         _shell != null && _shell.BuildPaletteOpen,
                         _shell != null && _shell.MenuOpen,
                         _bootstrap?.Directors?.Work.Open == true,
-                        _bootstrap?.Directors?.Almanac.Open == true))
+                        _bootstrap?.Directors?.Almanac.Open == true,
+                        _bootstrap?.Directors?.Animals.Open == true,
+                        _bootstrap?.Directors?.Inventory.Open == true,
+                        _bootstrap?.Directors?.Research.Open == true,
+                        _bootstrap?.Directors?.Assign.Open == true,
+                        // Null while a colony is running: the main screen and the game are the two
+                        // halves of a session's life and only one of them is ever up.
+                        _shell != null && _shell.Menu.Showing ? _shell.Menu.Screen : null))
             {
+                case EscapeAction.CloseContextMenu:
+                    // The menu a right-click raised at the pointer (design 33 §7a): the last thing
+                    // raised, so the first thing Escape puts away.
+                    _shell?.CloseContextMenu();
+                    break;
                 case EscapeAction.DisarmTool:
                     _designate?.PutToolAway();
                     break;
@@ -145,14 +172,34 @@ namespace Odyssey.Presentation.Bootstrap
                     // game with no key that shut it — the X and F1 again, and nothing else.
                     _bootstrap?.Directors?.Work.SetOpen(false);
                     break;
+                case EscapeAction.CloseAnimals:
+                    _bootstrap?.Directors?.Animals.SetOpen(false);
+                    break;
                 case EscapeAction.CloseAlmanac:
                     _bootstrap?.Directors?.Almanac.SetOpen(false);
+                    break;
+                case EscapeAction.CloseInventory:
+                    _bootstrap?.Directors?.Inventory.SetOpen(false);
+                    break;
+                case EscapeAction.CloseResearch:
+                    _bootstrap?.Directors?.Research.SetOpen(false);
+                    break;
+                case EscapeAction.CloseAssign:
+                    _bootstrap?.Directors?.Assign.SetOpen(false);
                     break;
                 case EscapeAction.ClosePanel:
                     _director.SetOpen(false);
                     break;
+                case EscapeAction.MenuBack:
+                    // The main screen's Load and New game screens. Until this rung existed Escape
+                    // fell past them to OpenPanel and laid the settings window over the load list
+                    // (owner, 2026-09-21).
+                    _shell?.Menu.Back();
+                    break;
                 case EscapeAction.OpenPanel:
                     _director.SetOpen(true);
+                    break;
+                case EscapeAction.Nothing:
                     break;
             }
         }
@@ -202,7 +249,6 @@ namespace Odyssey.Presentation.Bootstrap
             // falls back to the field's own default rather than to nothing at all.
             if (_bootstrap != null)
             {
-                if (_bootstrap.grassScatter > 0) _grassDensity = _bootstrap.grassScatter;
                 if (_bootstrap.groundRelief > 0f) _reliefAmplitude = _bootstrap.groundRelief;
 
                 // The interface scale is seeded from the screen rather than from the scene,
@@ -210,12 +256,14 @@ namespace Odyssey.Presentation.Bootstrap
                 // the board. The owner's report on 2026-09-16 was that the HUD read too small on
                 // a 4K panel; SettingsDirector.DefaultScaleFor is where that judgement lives.
                 director.SeedUiScale(SettingsDirector.DefaultScaleFor(Screen.height));
+                director.DefaultUiScale = SettingsDirector.DefaultScaleFor(Screen.height);
 
                 director.Seed(GraphicsOption.Shadows, _bootstrap.castShadows);
                 director.Seed(GraphicsOption.Surround, _bootstrap.terrainSkirt);
-                director.Seed(GraphicsOption.GrassTufts, _bootstrap.grassScatter > 0);
+                director.SeedValue(GraphicsLadder.VegetationDensity, _bootstrap.grassScatter);
                 director.Seed(GraphicsOption.GroundRelief, _bootstrap.groundRelief > 0f);
                 director.Seed(GraphicsOption.SeeThrough, _bootstrap.seeThroughToSelection);
+                director.Seed(GraphicsOption.FadeForEveryColonist, _bootstrap.seeThroughToEveryColonist);
                 director.Seed(GraphicsOption.CutAwayCeiling,
                     _bootstrap.cameraRig != null && _bootstrap.cameraRig.slice != null
                     && _bootstrap.cameraRig.slice.suppressActiveCeiling);
@@ -226,6 +274,7 @@ namespace Odyssey.Presentation.Bootstrap
             _display = new DisplaySettingsApplier(director);
 
             director.OptionChanged += Apply;
+            director.LadderChanged += ApplyLadder;
             director.UiScaleChanged += ApplyScale;
             director.CameraSpeedChanged += ApplyCameraSpeed;
             director.DeveloperOverlayChanged += ApplyDeveloperOverlay;
@@ -277,6 +326,7 @@ namespace Odyssey.Presentation.Bootstrap
         {
             if (_director == null) return;
             _director.OptionChanged -= Apply;
+            _director.LadderChanged -= ApplyLadder;
             _director.UiScaleChanged -= ApplyScale;
             _director.CameraSpeedChanged -= ApplyCameraSpeed;
             _director.DeveloperOverlayChanged -= ApplyDeveloperOverlay;
@@ -323,11 +373,6 @@ namespace Odyssey.Presentation.Bootstrap
                     renderer.Skirt.Enabled = on;
                     break;
 
-                case GraphicsOption.GrassTufts:
-                    renderer.ScatterDensity = on ? _grassDensity : 0;
-                    Redraw(renderer);
-                    break;
-
                 case GraphicsOption.GroundRelief:
                     // A static, because relief is a drawing offset the mesher and the picker both
                     // consult rather than a property of any one object. The picker reads the field
@@ -345,12 +390,90 @@ namespace Odyssey.Presentation.Bootstrap
                         _bootstrap.cameraRig.slice.suppressActiveCeiling = on;
                     break;
 
+                case GraphicsOption.FoliageShadows:
+                    // Read per bucket as the frame is submitted, like the shadows themselves.
+                    renderer.FoliageCastsShadows = on;
+                    break;
+
+                case GraphicsOption.WallsDown:
+                    // Nothing to do here, and on purpose: the composition root reads the option
+                    // once a frame, takes build mode out of it (WallsView.Lowered) and writes the
+                    // answer to the slice. Setting the slice from here too would be a second owner.
+                    break;
+
                 case GraphicsOption.SeeThrough:
                     // Read once a frame while the sight lines are rebuilt, so this is the whole
                     // change and it takes effect on the next frame with no remesh.
                     if (_bootstrap != null) _bootstrap.seeThroughToSelection = on;
                     break;
+
+                case GraphicsOption.FadeForEveryColonist:
+                    // The same frame-by-frame read: UpdateSightLines asks the field each frame
+                    // (owner, 2026-09-25: off by default, design 38 §27).
+                    if (_bootstrap != null) _bootstrap.seeThroughToEveryColonist = on;
+                    break;
             }
+        }
+
+        /// <summary>
+        /// The two ladders that belong to the renderer rather than to the pipeline asset. The
+        /// display ladders are <see cref="DisplaySettingsApplier"/>'s and it hears the same event;
+        /// each side ignores the other's.
+        /// </summary>
+        void ApplyLadder(GraphicsLadder ladder)
+        {
+            ChunkRenderer? renderer = _bootstrap?.Renderer;
+            if (renderer == null || _director == null) return;
+
+            switch (ladder)
+            {
+                case GraphicsLadder.VegetationDensity:
+                    if (renderer.ScatterDensity == _director.Value(ladder)) return;
+                    renderer.ScatterDensity = _director.Value(ladder);
+                    // Re-meshed through the meshing budget, so a board-wide change lands over a
+                    // few frames and never in one (06-rendering-and-camera.md §6c.7). The surround
+                    // re-strews its tufts only: rebuilding all of it was a 50 ms frame on the rung
+                    // press (design 38 §25).
+                    _bootstrap?.Model?.Remesh();
+                    if (renderer.Skirt.Enabled) renderer.Skirt.RebuildTufts();
+                    break;
+
+                case GraphicsLadder.GrassDistance:
+                    renderer.FoliageDrawDistance = DrawDistanceOf(_director.Value(ladder));
+                    break;
+
+                // The meadow's capacity (design 52 §8): a resize of a few arrays, no re-mesh. A new
+                // session reads the rung when it builds its director, so this is only the live press.
+                case GraphicsLadder.Butterflies:
+                    ButterflyDirector? butterflies = _bootstrap?.Butterflies;
+                    if (butterflies != null) butterflies.Capacity = _director.Value(ladder);
+                    break;
+            }
+        }
+
+        static float DrawDistanceOf(int rung) =>
+            rung == SettingsDirector.Unlimited ? float.PositiveInfinity : rung;
+
+        /// <summary>
+        /// Put every renderer-bound preference on a renderer that has just been built: shadows,
+        /// grass shadows, the surround, the grass density and its distance.
+        ///
+        /// <para><b>The one owner of what a preference means to the renderer</b>, called by the
+        /// composition root as a session's renderer is made and before its board is meshed, so a
+        /// new game arrives drawn as the player chose rather than as the scene's fields say. Until
+        /// 2026-09-24 nothing did this: the presenter attaches at the start screen, when there is no
+        /// renderer, so a stored "shadows off" was applied to nothing and every session came up
+        /// with the scene's shadows — which a Low preset that came back as High after a restart
+        /// would have made impossible to miss. The live handlers above set the same fields the
+        /// same way; the ladders' amounts are read from the director, never remembered here.</para>
+        /// </summary>
+        public static void ApplyRendererLevers(ChunkRenderer renderer, SettingsDirector settings)
+        {
+            renderer.CastShadows = settings.IsOn(GraphicsOption.Shadows);
+            renderer.FoliageCastsShadows = settings.IsOn(GraphicsOption.FoliageShadows);
+            renderer.Skirt.Enabled = settings.IsOn(GraphicsOption.Surround);
+            renderer.ScatterDensity = settings.Value(GraphicsLadder.VegetationDensity);
+            renderer.FoliageDrawDistance = DrawDistanceOf(settings.Value(GraphicsLadder.GrassDistance));
         }
 
         void Redraw(ChunkRenderer renderer)
@@ -434,8 +557,21 @@ namespace Odyssey.Presentation.Bootstrap
         /// is a no-op, and a settings row that did nothing when clicked would be a row that
         /// taught the player not to trust it.
         /// </summary>
+        /// <summary>
+        /// The exit row was confirmed. Leaving the application is this component's job and always
+        /// has been — except while a colony is running.
+        ///
+        /// <para><b>Then the shell asks first</b> (owner, 2026-09-21: *"when you quit the game (to
+        /// main menu or to desktop) it should confirm to save before you exit"*). The shell raises
+        /// <c>LeavePrompt</c> off the same row through <c>RowRequested</c>, and quitting here as
+        /// well would close the game out from under the question. It is a stand-aside rather than
+        /// a rewiring because the main screen's exit row still comes through here, and that one
+        /// has no colony to offer to save.</para>
+        /// </summary>
         void Quit()
         {
+            if (_bootstrap != null && _bootstrap.HasSession) return;
+
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #endif

@@ -39,7 +39,30 @@ namespace Odyssey.Sim.Pathing
 
         Hazard = 1 << 9,
 
-        // 1 << 10 and 1 << 11 were ConnectorClimb and ClimbOnly, removed with climbing
+        /// <summary>
+        /// A building ordered here and not yet standing: a blueprint or a frame that will block
+        /// the cell once it is raised.
+        ///
+        /// <para>The cell is perfectly walkable and stays so — a half-built corridor has to be
+        /// crossable or the colony cannot reach the far end of its own site. It costs
+        /// <see cref="MoveCost.SiteDetour"/> extra to enter, which is what keeps a passer-by out
+        /// of the cell a wall is about to stand in when there is any other way round. It is a
+        /// deterrent and not a rule: <c>ConstructionGrid.Raise</c> is what guarantees nobody is
+        /// entombed.</para>
+        /// </summary>
+        BuildSite = 1 << 10,
+
+        /// <summary>
+        /// Something that is crossed but never stood on stands here (design 53 §5): sandbags or a
+        /// barricade. The cell stays walkable — a line of cover seals nobody in — and costs its
+        /// own crossing price (<see cref="NavGrid.PassCostAt"/>) to enter. Whether a pawn may
+        /// <i>stop</i> here is <c>Standing.CanStandAt</c>'s, which reads this flag. Registered by
+        /// the construction grid, like <see cref="BuildSite"/>, because the nav layer does not know
+        /// what an edifice is.
+        /// </summary>
+        PassThrough = 1 << 12,
+
+        // 1 << 11 was ClimbOnly, removed with climbing
         // (owner, 2026-09-16). A colonist jumps up one block or drops down one; anything deeper
         // needs a ladder, which is a built thing. Nothing grants standing without a floor any
         // more, which is what makes a cell in mid-air impossible rather than merely discouraged.
@@ -51,7 +74,7 @@ namespace Odyssey.Sim.Pathing
         /// Bits owned by registration rather than by the terrain. A flag rebuild recomputes
         /// everything else from the <see cref="CellGrid"/> and preserves these.
         /// </summary>
-        Sticky = Door | DoorOpen | Connector | Hazard,
+        Sticky = Door | DoorOpen | Connector | Hazard | BuildSite | PassThrough,
     }
 
     /// <summary>
@@ -67,21 +90,63 @@ namespace Odyssey.Sim.Pathing
         /// <summary>As Colonist, but a bulky load forbids ladders.</summary>
         Hauler = 1,
 
-        /// <summary>No ladders and no manipulable doors.</summary>
+        /// <summary>No ladders, no manipulable doors, and no water: a hog.</summary>
         Animal = 2,
 
-        /// <summary>Raiders and bashers: a closed door is a cost, not an obstacle.</summary>
-        IgnoreDoors = 3,
+        /// <summary>
+        /// As Colonist — ladders, stairs, the hop, the wade — but <b>a closed door is a wall</b>: a
+        /// bandit (design 33 §16). It does not open the colony's doors, so a door between it and
+        /// the colonists leaves them unreachable and it breaks the door down instead (§14b). An
+        /// open door — one a colonist is walking through — it may pass.
+        ///
+        /// <para>Slot 3 was <c>IgnoreDoors</c>, "a closed door is a cost, not an obstacle", which no
+        /// pawn, Def or test ever used. It was repurposed rather than a sixth mode added, because
+        /// every mode costs a district flood on every nav rebuild whether any pawn walks in it or
+        /// not (§16b).</para>
+        /// </summary>
+        Bandit = 3,
+
+        /// <summary>
+        /// As Colonist — ladders, stairs, the hop — but no water: a rat (design 29 §4). The two
+        /// animal modes differ only in the ladder, and neither swims, because no animal does by
+        /// default (owner, 2026-09-22).
+        /// </summary>
+        Climber = 4,
     }
 
     public static class TraverseModes
     {
-        public const int Count = 4;
-        public const byte AllMask = 0x0F;
+        public const int Count = 5;
+        public const byte AllMask = 0x1F;
 
         public static byte Mask(TraverseMode mode) => (byte)(1 << (int)mode);
 
         public static bool Allows(byte mask, TraverseMode mode) => (mask & (1 << (int)mode)) != 0;
+
+        /// <summary>
+        /// May this mode enter shallow water? People wade (design 20); the animal modes do not.
+        /// Deep water is impassable to everyone and is not a question of mode.
+        /// </summary>
+        public static bool Swims(TraverseMode mode) => !IsAnimal(mode);
+
+        /// <summary>The two animal modes: no water, and no hop that is not a terrace ramp.</summary>
+        public static bool IsAnimal(TraverseMode mode) =>
+            mode == TraverseMode.Animal || mode == TraverseMode.Climber;
+
+        /// <summary>
+        /// May this mode open a closed door? Everyone but the hog and the bandit (design 33 §16).
+        /// The rat opens doors, as it always has: <see cref="TraverseMode.Climber"/> was
+        /// "as Colonist, no water", and a door was never part of the difference. The one owner of
+        /// the rule; <see cref="NavGrid.CanEnter"/> is its only caller.
+        /// </summary>
+        public static bool OpensDoors(TraverseMode mode) =>
+            mode != TraverseMode.Animal && mode != TraverseMode.Bandit;
+
+        /// <summary>
+        /// The bits every mode has; the animal modes are stripped by
+        /// <see cref="NavGraph.HopMask"/> where a hop is not a ramp.
+        /// </summary>
+        public const byte AnimalMask = (1 << (int)TraverseMode.Animal) | (1 << (int)TraverseMode.Climber);
     }
 
     /// <summary>
@@ -100,6 +165,14 @@ namespace Odyssey.Sim.Pathing
         /// <summary>Kept so rooms and atmosphere have a substrate. Never carries a link.</summary>
         Impassable = 4,
         Hazard = 5,
+
+        /// <summary>
+        /// Shallow water: walkable, and a region of its own so that a mode which does not swim
+        /// (<see cref="TraverseModes.Swims"/>) is told a far bank is unreachable by the district
+        /// rather than finding out by a failed search. The links into it carry no such mode,
+        /// because <see cref="NavGrid.CanEnter"/> refuses the cells.
+        /// </summary>
+        Water = 6,
     }
 
     /// <summary>
@@ -213,16 +286,55 @@ namespace Odyssey.Sim.Pathing
         /// </summary>
         public const int SlopeExtra = JumpUp - Orthogonal;
 
+        /// <summary>
+        /// Jumping a one-cell stream, bank to bank on one layer: two cells of ground for the
+        /// price of two cells of ground (design 46 §3).
+        ///
+        /// <para><b>Below the 290 it replaces</b> — <see cref="Drop"/> into the channel and
+        /// <see cref="JumpUp"/> out of it — so a colonist offered both jumps. <b>Not below 200</b>,
+        /// because the cell search's heuristic estimates <see cref="Orthogonal"/> for every cell of
+        /// distance, and a two-cell step priced under two cells would make that estimate an
+        /// over-estimate on every route through one: A* stops being admissible board-wide for the
+        /// sake of a rare edge, and says nothing. <b>Exactly 200</b> is walking pace, which is
+        /// what the owner asked for (2026-09-24), and it means no route ever prefers a stream to
+        /// the grass beside it.</para>
+        ///
+        /// <para>Cost is duration: 3.33 s at the standard walk. <c>JumpArc</c> spends the middle
+        /// half of it in the air. This file and <c>NavGraph.cs</c> are the two
+        /// <c>HopPriceHasOneOwnerTests</c> allows to name it.</para>
+        /// </summary>
+        public const int Jump = 2 * Orthogonal;
+
         public const int LiftUp = 400;
         public const int LiftDown = 400;
 
-        /// <summary>Added when entering a closed door a mode is able to open.</summary>
+        /// <summary>
+        /// Added when entering a closed door a mode is able to open. There is no price for walking
+        /// through one a mode cannot open: it cannot (design 33 §16). <c>DoorBash</c>, which priced
+        /// that for the old <c>IgnoreDoors</c> mode, went with it — the cell search charged it and
+        /// the region graph did not, a disagreement nothing was walking into.
+        /// </summary>
         public const int DoorOpening = 60;
 
-        /// <summary>Added when entering a closed door a mode has to break.</summary>
-        public const int DoorBash = 400;
-
         public const int HazardPenalty = 500;
+
+        /// <summary>
+        /// What entering a cell with a building ordered in it adds, so that a colonist with
+        /// anywhere else to walk walks there instead.
+        ///
+        /// <para>Written because a wall raised on somebody's head entombed them (owner,
+        /// 2026-09-21: <i>"sometimes they get stuck inside the wall itself"</i>). Eviction at the
+        /// moment of raising is the guarantee; this is what makes eviction rare enough that the
+        /// player never sees the one-cell shove it costs.</para>
+        ///
+        /// <para>Slightly more than a whole extra flat cell, which is the relation that matters:
+        /// a detour of one cell around a site is preferred, a detour of two is not, and a
+        /// doorway under construction in the only corridor is still crossed rather than making
+        /// the far side unreachable. A site is never made impassable — <see cref="Fall"/> is
+        /// what that would look like and it would strand a builder inside their own half-built
+        /// room.</para>
+        /// </summary>
+        public const int SiteDetour = 120;
 
         /// <summary>Effectively forbidden: a fall edge exists so agents route <em>around</em> holes.</summary>
         public const int Fall = 100_000;
@@ -370,6 +482,11 @@ namespace Odyssey.Sim.Pathing
             byte beneath = under < CostClassByTerrain.Length ? CostClassByTerrain[under] : (byte)0;
             if (beneath != 0) return beneath;
 
+            // A bush, which is an edifice rather than a terrain and says so with a flag (design
+            // 45 §4). After the terrain, so water keeps its own claim, and before the slope,
+            // which a bush never stands on: the undergrowth pass keeps them off a terrace foot.
+            if (grid.IsUndergrowth(index)) return Worldgen.Natural.NaturalContent.CostClassBush;
+
             // **A slope, which no terrain says and the shape of the ground does.**
             //
             // The cell at the foot of a terrace step is drawn as a ramp from the lower floor to
@@ -394,6 +511,7 @@ namespace Odyssey.Sim.Pathing
                 if ((f & NavFlags.Door) != 0) return RegionKind.Door;
                 if ((f & NavFlags.Connector) != 0) return RegionKind.Connector;
                 if ((f & NavFlags.Hazard) != 0) return RegionKind.Hazard;
+                if (CostClass[index] == Worldgen.Natural.NaturalContent.CostClassShallowWater) return RegionKind.Water;
                 return RegionKind.Walkable;
             }
 
@@ -411,8 +529,11 @@ namespace Odyssey.Sim.Pathing
         {
             NavFlags f = Flags[index];
             if ((f & NavFlags.Walkable) == 0) return false;
+            // Shallow water is a wade for a person and a wall for an animal (design 29 §4).
+            if (CostClass[index] == Worldgen.Natural.NaturalContent.CostClassShallowWater
+                && !TraverseModes.Swims(mode)) return false;
             if ((f & NavFlags.Door) == 0 || (f & NavFlags.DoorOpen) != 0) return true;
-            return mode != TraverseMode.Animal;
+            return TraverseModes.OpensDoors(mode);
         }
 
         /// <summary>
@@ -439,9 +560,11 @@ namespace Odyssey.Sim.Pathing
             if (diagonal && terrainExtra > 0)
                 terrainExtra = (terrainExtra * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
             int cost = baseCost + terrainExtra;
+            // Only a mode that opens doors ever pays this: CanEnter refuses a closed door to the
+            // rest. One price for everyone, which is what NavGraph.StepCost charges too.
             if ((f & NavFlags.Door) != 0 && (f & NavFlags.DoorOpen) == 0)
             {
-                int doorCost = mode == TraverseMode.IgnoreDoors ? MoveCost.DoorBash : MoveCost.DoorOpening;
+                int doorCost = MoveCost.DoorOpening;
                 if (diagonal) doorCost = (doorCost * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
                 cost += doorCost;
             }
@@ -451,7 +574,37 @@ namespace Odyssey.Sim.Pathing
                 if (diagonal) hazardCost = (hazardCost * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
                 cost += hazardCost;
             }
+            if ((f & NavFlags.BuildSite) != 0)
+            {
+                int siteCost = MoveCost.SiteDetour;
+                if (diagonal) siteCost = (siteCost * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
+                cost += siteCost;
+            }
+            // Climbing over cover (design 53 §4). NavGraph.StepCost charges the same, and
+            // CrossingHasOneOwnerTests holds the two together.
+            if ((f & NavFlags.PassThrough) != 0)
+            {
+                int crossCost = PassCostAt(index);
+                if (diagonal) crossCost = (crossCost * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
+                cost += crossCost;
+            }
             return cost;
+        }
+
+        /// <summary>
+        /// What climbing over the thing in a <see cref="NavFlags.PassThrough"/> cell costs on top of
+        /// the step, or nought. Sparse — a colony has a few dozen such cells on a board of a
+        /// million — and read only for a cell that carries the flag.
+        /// </summary>
+        public int PassCostAt(int index) => _passCost.TryGetValue(index, out int cost) ? cost : 0;
+
+        readonly System.Collections.Generic.Dictionary<int, int> _passCost = new System.Collections.Generic.Dictionary<int, int>();
+
+        /// <summary>Record, or with nought forget, what crossing a cell costs. <c>NavGraph.SetPassThrough</c> is the one caller.</summary>
+        internal void SetPassCost(int index, int cost)
+        {
+            if (cost > 0) _passCost[index] = cost;
+            else _passCost.Remove(index);
         }
     }
 }

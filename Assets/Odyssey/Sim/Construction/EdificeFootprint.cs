@@ -6,8 +6,8 @@ namespace Odyssey.Sim.Construction
     /// <summary>
     /// Where a built thing's cells are, derived rather than stored.
     ///
-    /// <para>A one-cell thing occupies its own cell. A two-cell thing — the bed and the stair —
-    /// occupies its own cell and the next one along its facing, and
+    /// <para>A one-cell thing occupies its own cell. A two-cell thing — the bed, until something
+    /// else wants a line of cells — occupies its own cell and the next one along its facing, and
     /// that second cell is <b>computed here and nowhere else</b>: the record carries the facing
     /// because placement is where the answer is known, and the def's own
     /// <see cref="BuildingDef.footprint"/> says whether there is a second cell at all, so no
@@ -23,13 +23,9 @@ namespace Odyssey.Sim.Construction
     public static class EdificeFootprint
     {
         /// <summary>
-        /// The cells this edifice value occupies: 2 for the bed and for either half of a stair,
-        /// 1 for everything else. Asked of the content rather than the record, so a def that grows
-        /// a footprint changes one row and every record old and new follows.
-        ///
-        /// <para>A stair's <b>upper</b> half resolves through <c>BuildingDef.secondEdifice</c>,
-        /// which is what keeps the far cell claimed by its own site rather than answering
-        /// <see cref="BuildingHandle.None"/> and a footprint of one (U44).</para>
+        /// The cells this edifice value occupies: 2 for the bed, 1 for everything else. Asked of
+        /// the content rather than the record, so a def that grows a footprint changes one row and
+        /// every record old and new follows.
         /// </summary>
         public static int Cells(ushort edifice)
         {

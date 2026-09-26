@@ -9,6 +9,39 @@ namespace Odyssey.Sim.Pawns
     {
         Cell = 0,
         Item = 1,
+
+        /// <summary>
+        /// A built store, keyed on its edifice index. What stops two haulers both aiming a load at
+        /// the last free slot of one shelf — the race a destination claim exists to prevent, one
+        /// level up from the cell claim that does the same for the floor.
+        ///
+        /// <para><b>One hauler per shelf at a time, in this first cut.</b> Eight slots and one
+        /// claim bit is coarse, and deliberately the conservative reading:
+        /// <see cref="ReservationManager.Reserve"/> already takes a <c>maxPawns</c> and a stack
+        /// count that nothing uses, so per-slot claims are a change of arguments rather than of
+        /// machinery on the day a shelf is measured to be a bottleneck.</para>
+        /// </summary>
+        Container = 2,
+
+        /// <summary>
+        /// A power line's cell — its order or its removal mark (design 32 §3). A kind of its own
+        /// rather than <see cref="Cell"/>, because a cell can hold a wall order and a line order at
+        /// once, and a builder on the one must not lock out the colonist laying the other.
+        /// </summary>
+        Conduit = 3,
+
+        /// <summary>
+        /// A power building, keyed on its edifice index: one colonist feeding a generator at a time,
+        /// so two do not each carry a full stack to a hopper with room for one.
+        /// </summary>
+        Device = 4,
+
+        /// <summary>
+        /// A pawn, keyed on its <c>PawnId</c>: a downed colonist somebody is already coming to carry
+        /// (design 33 §11b), so two rescuers never set out for one patient, and a patient one doctor
+        /// is already treating (design 37).
+        /// </summary>
+        Pawn = 5,
     }
 
     /// <summary>

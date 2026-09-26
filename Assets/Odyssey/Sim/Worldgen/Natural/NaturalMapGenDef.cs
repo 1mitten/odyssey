@@ -45,6 +45,34 @@ namespace Odyssey.Sim.Worldgen.Natural
         public MapType mapType = MapType.Natural;
 
         /// <summary>
+        /// The meadow's animals (design 30 §1): hog sounders in the woodland, rats by the rock,
+        /// frogs in threes to fives on the banks of its water (§8). The natural board's default whether or not <see cref="MakeWooded"/> is called, because
+        /// the untouched def has trees and rock too; <see cref="MakeBarren"/> is what clears it.
+        /// </summary>
+        public static Pawns.Wildlife.WildlifeEntry[] MeadowWildlife() => new[]
+        {
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_MiddenHog", 3, 3, 5, Pawns.Wildlife.Habitat.Woodland),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_DuctRat", 2, 1, 1, Pawns.Wildlife.Habitat.Rock),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_CulvertFrog", 4, 3, 5, Pawns.Wildlife.Habitat.Bank),
+        };
+
+        /// <summary>
+        /// Animals per ten thousand reachable surface columns (design 30 §2). Fifteen until the
+        /// frogs; raised by the frogs' share of the weights so that adding a kind left the hogs
+        /// and the rats as common as they were rather than dividing the same number three ways.
+        /// 21 (7/5) at a frog weight of 2; 27 (9/5) since the weight went to 4 and the groups to
+        /// three to five (owner, 2026-09-26: "more of them"). The ceiling is untouched — it is
+        /// the figure budget's — so a board big enough to reach it shares 24 between all three.
+        /// </summary>
+        public const int MeadowDensity = 27;
+
+        public NaturalMapGenDef()
+        {
+            wildlife = MeadowWildlife();
+            wildlifePer10000Columns = MeadowDensity;
+        }
+
+        /// <summary>
         /// A plain starting board: flat ground, grass everywhere, no trees, outcrops, ore or bare
         /// patches. The strata below are untouched, so digging still finds rock.
         ///
@@ -58,9 +86,16 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// <summary>Flatten the surface and switch off every scattered feature.</summary>
         public NaturalMapGenDef MakeBarren()
         {
+            // No animals: a bare board with a hog on it is a hog to explain in every test that
+            // counts pawns, and the baseline is the board on which nothing needs explaining.
+            wildlife = System.Array.Empty<Pawns.Wildlife.WildlifeEntry>();
+            wildlifePer10000Columns = 0;
             barren = true;
             surfaceRelief = 0;              // one flat surface layer, no terracing
             treeDensityPerMille = 0;
+            bushPerMille = 0;
+            looseRockNearPerMille = 0;
+            looseRockOpenPerMille = 0;
             outcropsPer10000Columns = 0;
             oreDepositsPer10000Columns = 0;
             cavernsPer10000Columns = 0;     // the strata stay solid: a hole in them is a bug here
@@ -119,6 +154,10 @@ namespace Odyssey.Sim.Worldgen.Natural
             // unless its whole footprint is one level terrace, which is what keeps a water surface
             // level and its banks a single step high.
             water = true;
+
+            // And its animals (design 30 §1), which the bare board this may follow had cleared.
+            wildlife = MeadowWildlife();
+            wildlifePer10000Columns = MeadowDensity;
             return this;
         }
 
@@ -179,8 +218,39 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// </summary>
         public int treeClumpFloor = 170;
 
-        /// <summary>Per mille chance a placed tree is broadleaf rather than conifer.</summary>
+        /// <summary>Per mille chance a placed tree is a broadleaf - meadow, fruit or giant -
+        /// rather than a birch (design 45 §3).</summary>
         public int broadleafChance = 420;
+
+        // ---- pass 11, undergrowth ------------------------------------------------------------
+        //
+        // The Meadow dressing's bush rule at its shipped density, made real (design 45 §4):
+        // bushes on the even-even lattice, where a 14-cell value-noise field stands above a
+        // threshold, and at wood edges whatever the field says. Zero switches bushes off.
+
+        /// <summary>Per mille chance at full want that a lattice cell grows a bush. The dressing's 0.4.</summary>
+        public int bushPerMille = 400;
+
+        /// <summary>Lattice period of the bush field, in cells.</summary>
+        public int bushFieldPeriod = 14;
+
+        /// <summary>Per mille of the field below which it wants no bush at all. The dressing's 0.45.</summary>
+        public int bushFieldThreshold = 450;
+
+        /// <summary>The want, per mille, at a cell beside a tree whatever the field says. The dressing's 0.7.</summary>
+        public int bushWoodEdgeWant = 700;
+
+        /// <summary>One bush in this many bears berries.</summary>
+        public int berryBushOneIn = 6;
+
+        /// <summary>No bush within this many cells of the start (the dressing's clearing radius).</summary>
+        public int undergrowthClearRadius = 4;
+
+        /// <summary>Per mille of open grass cells beside rock that hold a loose stone. The dressing's 0.18.</summary>
+        public int looseRockNearPerMille = 180;
+
+        /// <summary>Per mille of open grass cells elsewhere that hold one. The dressing's 0.012.</summary>
+        public int looseRockOpenPerMille = 12;
 
         // ---- pass 4, rock outcrops -----------------------------------------------------------
 
@@ -390,6 +460,11 @@ namespace Odyssey.Sim.Worldgen.Natural
             if (treeDensityPerMille < 0 || treeDensityPerMille > 1000)
                 throw new ArgumentOutOfRangeException(nameof(treeDensityPerMille));
             if (treeClumpPeriod < 1) throw new ArgumentOutOfRangeException(nameof(treeClumpPeriod));
+            if (bushPerMille < 0 || bushPerMille > 1000) throw new ArgumentOutOfRangeException(nameof(bushPerMille));
+            if (bushFieldPeriod < 1) throw new ArgumentOutOfRangeException(nameof(bushFieldPeriod));
+            if (bushFieldThreshold < 0 || bushFieldThreshold >= 1000)
+                throw new ArgumentOutOfRangeException(nameof(bushFieldThreshold));
+            if (berryBushOneIn < 1) throw new ArgumentOutOfRangeException(nameof(berryBushOneIn));
             if (minOutcropRadius < 0 || maxOutcropRadius < minOutcropRadius)
                 throw new ArgumentOutOfRangeException(nameof(minOutcropRadius));
             if (minOutcropHeight < 1 || maxOutcropHeight < minOutcropHeight)

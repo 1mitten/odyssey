@@ -115,12 +115,16 @@ namespace Odyssey.Hud
         public static readonly IReadOnlyList<Entry> All = new[]
         {
             new Entry("ui.work.firefighting", NotSimulated, NoSkill, "firefighting arrives with fire (M5)"),
-            new Entry("ui.work.patient",      NotSimulated, NoSkill, "treatment arrives with health (M6)"),
-            new Entry("ui.work.bedrest",      NotSimulated, NoSkill, "treatment arrives with health (M6)"),
-            new Entry("ui.work.doctor",       NotSimulated, NoSkill, "medicine arrives with health (M6)"),
+            new Entry("ui.work.patient",      NotSimulated, NoSkill, "the hurt go to bed by themselves (design 37)"),
+            new Entry("ui.work.bedrest",      NotSimulated, NoSkill, "the hurt go to bed by themselves (design 37)"),
+            // Live with medical supplies (design 37): Work_Doctor's emergency giver treats the hurt,
+            // and Medicine buys speed at it.
+            new Entry("ui.work.doctor",       "doctor",       "medicine",     "", WorkHandle.Doctor),
             new Entry("ui.work.warden",       NotSimulated, NoSkill, "prisoners arrive with factions (M7)"),
             new Entry("ui.work.handling",     NotSimulated, NoSkill, "animals arrive with M5"),
-            new Entry("ui.work.cooking",      NotSimulated, NoSkill, "cooking arrives with M5"),
+            // Live with the kitchen (design 48 §5): the Cook giver works the bills at a galley or a
+            // campfire, and Cooking buys speed at it.
+            new Entry("ui.work.cooking",      "cooking",      "cooking",      "", WorkHandle.Cooking),
             new Entry("ui.work.hunting",      NotSimulated, NoSkill, "animals arrive with M5"),
             new Entry("ui.work.construction", "construction", "construction", "", WorkHandle.Construction),
             new Entry("ui.work.growing",      "growing",      "growing",      "", WorkHandle.Growing),
@@ -138,7 +142,9 @@ namespace Odyssey.Hud
             new Entry("ui.work.fabrication",  NotSimulated, NoSkill, "advanced production arrives with M8"),
             new Entry("ui.work.art",          NotSimulated, NoSkill, "decoration arrives with M6"),
             new Entry("ui.work.operating",    NotSimulated, NoSkill, "powered machinery arrives with M4"),
-            new Entry("ui.work.rescue",       NotSimulated, NoSkill, "downed colonists arrive with health (M6)"),
+            // Live from the combat contracts step (design 33 §5): Work_Rescue, whose emergency
+            // giver carries the downed to bed from C4.
+            new Entry("ui.work.rescue",       "rescue",       NoSkill,        "", WorkHandle.Rescue),
         };
 
         /// <summary>Every key the grid can draw, for the registry test.</summary>

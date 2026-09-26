@@ -391,6 +391,35 @@ namespace Odyssey.Presentation.World
         /// <summary>Whether this pawn has a live figure at all. See <see cref="TryGetCarried"/>.</summary>
         public bool HasFigureFor(int pawnId) => Drawn.Contains(pawnId);
 
+        /// <summary>
+        /// The live figure drawing this pawn, for the selection highlight to draw again (design 44
+        /// §3): every renderer under it — body, hair, beard, headgear, the weapon and a tool in use —
+        /// is the thing, as drawn. Null when the pawn has no figure this frame.
+        /// </summary>
+        public GameObject? FigureObject(int pawnId) =>
+            Drawn.Contains(pawnId) && _byPawn.TryGetValue(pawnId, out Figure? figure) ? figure.GameObject : null;
+
+        /// <summary>
+        /// What a pawn's live figure has on (design 42), for a test that must see the dress rather
+        /// than the appearance it was dressed from: whether the hair, beard and headgear slots are
+        /// drawn, and how many of the rig's <c>_Armor_</c> overlays are switched on. False when the
+        /// pawn has no figure.
+        /// </summary>
+        public bool TryGetDress(int pawnId, out bool hair, out bool beard, out bool headgear, out int vests)
+        {
+            hair = beard = headgear = false;
+            vests = 0;
+            if (!_byPawn.TryGetValue(pawnId, out Figure? figure)) return false;
+            hair = figure.HairRenderer != null && figure.HairRenderer.enabled;
+            beard = figure.BeardRenderer != null && figure.BeardRenderer.enabled;
+            headgear = figure.HeadRenderer != null && figure.HeadRenderer.enabled;
+            foreach (SkinnedMeshRenderer skin in figure.Skins)
+                if (skin != null && skin.gameObject.activeInHierarchy &&
+                    skin.gameObject.name.IndexOf("_Armor_", StringComparison.Ordinal) >= 0)
+                    vests++;
+            return true;
+        }
+
         /// <summary>Which style a pawn is worked in, the override first. See <see cref="StyleOverride"/>.</summary>
         int StyleFor(int jobDef) =>
             StyleOverride >= 0 && StyleOverride < Styles.Length
@@ -473,6 +502,31 @@ namespace Odyssey.Presentation.World
         /// Reported from a playtest on 2026-09-16: a colonist chopping a tree could not be
         /// selected at all. The box was on the cell; the colonist was not.
         /// </summary>
+        /// <summary>
+        /// An animal's own box (design 29 §8b): where its figure stands, which way it faces and
+        /// how big it is drawn, so the cursor sits flush round the animal rather than round a
+        /// person-sized column (owner, 2026-09-22). False for a colonist and for any pawn without
+        /// a figure; the caller falls back to the colonist cursor.
+        /// </summary>
+        public bool TryGetAnimalBox(PawnId id, out Matrix4x4 place, out Vector3 size)
+        {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn != id.Value || figure.Transform == null) continue;
+                Look? look = LookAt(figure.Look);
+                if (look == null || !look.Animal || figure.DrawnBox.size.sqrMagnitude <= 1e-6f) continue;
+                Transform t = figure.Transform;
+                place = Matrix4x4.TRS(t.TransformPoint(figure.DrawnBox.center), t.rotation, Vector3.one);
+                size = figure.DrawnBox.size;
+                return true;
+            }
+
+            place = default;
+            size = default;
+            return false;
+        }
+
         public bool TryGetFeet(PawnId id, out Vector3 feet)
         {
             for (int i = 0; i < _figures.Count; i++)
@@ -527,13 +581,77 @@ namespace Odyssey.Presentation.World
             public Vector3 Scale;
             public LocomotionEntry[] Gaits = Array.Empty<LocomotionEntry>();
 
+            /// <summary>
+            /// The settled idle to sit in, or null. When present it is the mixer's last input,
+            /// after every gait. See <see cref="SitPose"/>.
+            /// </summary>
+            public AnimationClip? Sit;
+
             /// <summary>Gait speeds as drawn, i.e. after Scale. See <see cref="GroundSpeeds"/>.</summary>
             public float[] Speeds = Array.Empty<float>();
+
+            /// <summary>An animal's row rather than a colonist's (design 29): no swatches, no work bones, its own height window.</summary>
+            public bool Animal;
+
+            /// <summary>Lay the computed four-legged gait over the idle; the rig is measured at build.</summary>
+            public bool QuadrupedGait;
+
+            /// <summary>The fastest gait is a hop drawn in place; see <see cref="HopSurge"/>.</summary>
+            public bool HopGait;
+
+            /// <summary>A feminine body: the draw and the sheathe are the pack's <c>_Femn</c> clips (design 33 §8b).</summary>
+            public bool Feminine;
+
+            /// <summary>The skinned overlay this body wears switched on — a bandit's vest — or empty (design 42).</summary>
+            public string Overlay = string.Empty;
+
+            /// <summary>The overlay's own rectangles, or null when it has none.</summary>
+            public AppearanceCells? OverlayCells;
         }
 
         readonly Look?[] _looks;
         readonly int _usableLooks;
         readonly ModuleCatalogue? _catalogue;
+
+        /// <summary>
+        /// One slot per animal <b>kind</b>, indexed as <c>ModuleIds.Animal</c> is — 0 is the
+        /// colonist and is always null here. A look index at or past <see cref="_looks"/>' length
+        /// names one of these (<see cref="AnimalLookIndex"/>), so the pool, the create and the
+        /// repaint all key on one integer whatever the figure is.
+        /// </summary>
+        readonly Look?[] _animalLooks;
+        readonly int _usableAnimalLooks;
+
+        int AnimalLookIndex(int kind) => _looks.Length + kind;
+
+        Look? LookAt(int look) =>
+            look < _looks.Length ? _looks[look]
+            : look - _looks.Length < _animalLooks.Length ? _animalLooks[look - _looks.Length]
+            : null;
+
+        static Look?[] AnimalLooksFrom(ModuleCatalogue? catalogue)
+        {
+            var looks = new Look?[ModuleIds.AnimalNames.Length];
+            if (catalogue == null) return looks;
+            for (int kind = 1; kind < looks.Length; kind++)
+            {
+                ModuleEntry? row = catalogue.Find(ModuleIds.Animal(kind));
+                if (row == null || row.prefab == null) continue;
+                LocomotionEntry[] gaits = Gaits(row);
+                if (gaits.Length == 0) continue;
+                looks[kind] = new Look
+                {
+                    Prefab = row.prefab,
+                    Scale = row.scale,
+                    Gaits = gaits,
+                    Speeds = GroundSpeeds(gaits, row.scale),
+                    Animal = true,
+                    QuadrupedGait = row.quadrupedGait,
+                    HopGait = row.hopGait,
+                };
+            }
+            return looks;
+        }
 
         /// <summary>
         /// Where a colonist's colours come from. Null draws every figure in the pack's own paint,
@@ -582,6 +700,13 @@ namespace Odyssey.Presentation.World
         public event Action<Vector3>? LoadLifted;
 
         /// <summary>
+        /// A swimmer's hand has just gone forward into the water, at the swimmer (design 20 §9).
+        /// Raised <see cref="SwimPose.StrokeSoundPeakSeconds"/> before the hand arrives, so a sound
+        /// started now is loudest on the splash.
+        /// </summary>
+        public event Action<Vector3>? SwimStroked;
+
+        /// <summary>
         /// A load has just finished settling out of the arms onto the ground, at the point it
         /// landed.
         ///
@@ -605,7 +730,15 @@ namespace Odyssey.Presentation.World
         readonly List<int> _retired = new List<int>();
 
         /// <summary>True when there is at least one usable face, so figures can be made at all.</summary>
-        public bool Enabled => _usableLooks > 0;
+        public bool Enabled => _usableLooks > 0 || _usableAnimalLooks > 0;
+
+        /// <summary>
+        /// True when a colonist can be drawn at all: at least one colonist row resolved to art.
+        /// The question a colonist test must ask, and not <see cref="Enabled"/>, since the animal
+        /// rows are the project's own art and make the director able to draw on the machine
+        /// with no licensed packs (2026-09-23, the runner's PlayMode tier).
+        /// </summary>
+        public bool CanDrawColonists => _usableLooks > 0;
 
         /// <summary>
         /// The size of the face lottery: every colonist row the catalogue has, holes included.
@@ -803,6 +936,8 @@ namespace Odyssey.Presentation.World
             _catalogue = catalogue;
             _looks = LooksFrom(catalogue);
             for (int i = 0; i < _looks.Length; i++) if (_looks[i] != null) _usableLooks++;
+            _animalLooks = AnimalLooksFrom(catalogue);
+            for (int i = 0; i < _animalLooks.Length; i++) if (_animalLooks[i] != null) _usableAnimalLooks++;
             for (int i = 0; i < _toolRows.Length; i++)
                 _toolRows[i] = catalogue != null ? catalogue.Find(Styles[i].ToolModule) : null;
             Chips = new ChipDirector(parent, layer);
@@ -846,6 +981,10 @@ namespace Odyssey.Presentation.World
                     Scale = row.scale,
                     Gaits = gaits,
                     Speeds = GroundSpeeds(gaits, row.scale),
+                    Sit = row.sitClip,
+                    Feminine = row.sex == BodySex.Female,
+                    Overlay = row.overlayName ?? string.Empty,
+                    OverlayCells = row.overlayAppearance != null && row.overlayAppearance.Any ? row.overlayAppearance : null,
                 };
             }
             return looks;
@@ -860,15 +999,23 @@ namespace Odyssey.Presentation.World
         /// answer separately would put a different person on screen the moment a colonist crossed
         /// the figure cap, and the fault would be hunted in the simulation.</para>
         ///
-        /// <para>A harness that never sets one gets a book dealt from seed 0 over the same number
-        /// of faces, so an editor tool still draws a varied cast without having to know this type
-        /// exists. That is safe precisely because the derivation is pure: two books with the same
-        /// seed and the same face count give the same answers, object identity or not. Identity
-        /// still matters once overrides exist, which is why the game hands one object to both.</para>
+        /// <para>A harness that never sets one gets a book dealt from seed 0 <b>over the same
+        /// catalogue</b>, so an editor tool still draws a varied cast without having to know this
+        /// type exists. That is safe precisely because the derivation is pure: two books built the
+        /// same way from the same catalogue give the same answers, object identity or not.
+        /// Identity still matters once overrides exist, which is why the game hands one object to
+        /// both.</para>
+        ///
+        /// <para><b>"The same face count" used to be enough and is not any more.</b> A book now
+        /// carries the gendered pools of bodies, hair and beards, so a fallback built from a row
+        /// count deals from every row, ungendered, with no hair — a different person entirely. The
+        /// setup screen hit exactly that and the colonist you picked was not the colonist you got
+        /// (owner, 2026-09-22; <c>docs/design/29-modular-colonists.md</c> §8). Build it from the
+        /// catalogue or do not build it.</para>
         /// </summary>
         public ColonistAppearanceBook Appearances
         {
-            get => _appearances ??= new ColonistAppearanceBook(0u, _looks.Length);
+            get => _appearances ??= AppearanceBooks.For(0u, _catalogue);
             set => _appearances = value;
         }
 
@@ -885,7 +1032,14 @@ namespace Odyssey.Presentation.World
         uint RollSeedOf(PawnId pawn) =>
             _frame == null ? 0u : ColonistNames.RollSeedOf(_frame, pawn);
 
-        int LookFor(PawnId pawn) => Appearances.LookFor(pawn.Value, RollSeedOf(pawn));
+        /// <summary>
+        /// An animal's look is its kind's row; a person's is the body the book dealt them in the
+        /// outfit they wear — a bandit's is the gang's (design 42), never the colonist lottery's.
+        /// </summary>
+        int LookFor(in PawnView pawn) =>
+            pawn.IsAnimal
+                ? AnimalLookIndex(pawn.Kind)
+                : Appearances.LookFor(pawn.Id.Value, RollSeedOf(pawn.Id), PawnOutfits.For(pawn));
 
         /// <summary>
         /// How far the sole sits below the ankle, on the figure whose boot is thickest.
@@ -907,12 +1061,73 @@ namespace Odyssey.Presentation.World
         public float MeasuredStandingHeight { get; private set; }
 
 
-        /// <summary>True when this pawn's face resolved to art and a figure can be built for it.</summary>
-        bool CanDraw(PawnId pawn)
+        /// <summary>
+        /// True when this pawn's face resolved to art and a figure can be built for it. Asked of a
+        /// view, which is the only thing that knows a pawn's kind and what it wears.
+        /// </summary>
+        bool CanDraw(in PawnView pawn)
         {
+            if (pawn.IsAnimal)
+                return (uint)pawn.Kind < (uint)_animalLooks.Length && _animalLooks[pawn.Kind] != null;
             if (_looks.Length == 0) return false;
-            int look = LookFor(pawn);
+            int look = LookFor(in pawn);
             return (uint)look < (uint)_looks.Length && _looks[look] != null;
+        }
+
+        /// <summary>
+        /// Where in its Jump clip a hopper leaves the ground and lands again, as fractions of the
+        /// clip (design 30 §8). <b>Measured, not judged</b>: <c>AnimalProbe.ShootFrog</c> samples the
+        /// frog's clip at twelve phases, and its body bone sits in a crouch to 0.33, is 12 cm up at
+        /// 0.42 and 16 cm at 0.50, and is back on its landing height by 0.83. The clip itself is in
+        /// place — the body moves four centimetres fore and aft and nothing more.
+        /// </summary>
+        public const float HopLiftOff = 0.35f, HopTouchDown = 0.78f;
+
+        /// <summary>
+        /// How much of a hop's ground a hopper has covered at <paramref name="phase"/> of the clip:
+        /// nothing until it leaves the ground, all of it once it lands, and at a constant rate in
+        /// between, because a body in the air keeps its speed along the ground.
+        /// </summary>
+        public static float HopTravel(float phase) => Mathf.InverseLerp(HopLiftOff, HopTouchDown, phase);
+
+        /// <summary>
+        /// The drawn offset from the even position, as a fraction of one hop's ground, at
+        /// <paramref name="phase"/>: behind on the ground, level at the top, ahead on landing, and
+        /// nought at both ends of the cycle so the loop joins with no step.
+        /// </summary>
+        public static float HopLead(float phase) => HopTravel(phase) - phase;
+
+        /// <summary>
+        /// The offset along its facing that makes a hopper hop rather than glide (design 30 §8).
+        ///
+        /// <para>The simulation moves a frog at an even pace, cell by cell, as it moves everybody;
+        /// its figure plays the Jump clip on a loop while it goes. Left at that, the body rises and
+        /// falls while the whole figure slides forward at a constant speed, so it crouches and
+        /// lands on a moving floor. This takes the distance one clip cycle covers at the gait's
+        /// declared speed and redistributes it within the cycle — none while crouched, all of it
+        /// through the flight — as an offset from the even position (<see cref="HopLead"/>).</para>
+        ///
+        /// <para>Drawn only, and bounded by half a hop: the simulated cell, the measured speed the
+        /// gait is solved from, the cursor box and the click all use the even position. Scaled by
+        /// the hop clip's weight in the mixer, so a frog easing to a stop eases out of it and a
+        /// resting one has none.</para>
+        /// </summary>
+        Vector3 HopSurge(Figure figure)
+        {
+            Look? look = LookAt(figure.Look);
+            if (look == null || !look.HopGait || look.Gaits.Length < 2) return Vector3.zero;
+            int hop = look.Gaits.Length - 1;
+            if (hop >= figure.Clips.Length) return Vector3.zero;
+            float weight = figure.Mixer.GetInputWeight(hop);
+            if (weight <= 1e-3f) return Vector3.zero;
+            AnimationClipPlayable clip = figure.Clips[hop];
+            double length = clip.GetAnimationClip().length;
+            if (length <= 1e-4) return Vector3.zero;
+            float phase = (float)(clip.GetTime() / length % 1.0);
+            if (phase < 0f) phase += 1f;
+            float stride = look.Speeds[hop] * (float)length;
+            Vector3 forward = Quaternion.Euler(0f, figure.Yaw, 0f) * Vector3.forward;
+            return forward * (stride * HopLead(phase) * weight);
         }
 
         /// <summary>Gaits with a live clip, slowest first. Order is what makes the blend a blend.</summary>
@@ -966,6 +1181,16 @@ namespace Odyssey.Presentation.World
             // down the stack rather than from here.
             _frame = snapshot;
 
+            // The fight's clock (design 33 §3): a swing is timed in the simulation's ticks, drawn
+            // at the part-tick this frame is drawn at, so its blow lands on the tick it is resolved.
+            _frameTicks = snapshot.Tick + tickAlpha;
+            FightingFigures = 0;
+
+            // And the part-tick itself, for the jump's clips (design 46 §7): timed from the step
+            // exactly as PawnPose places the figure on it, through PawnPose.StepProgress.
+            _tickAlpha = tickAlpha;
+            _movePerTick = movePerTick;
+
             // Is the world actually running? The snapshot says so — see WorldSnapshot.GameSpeed.
             //
             // It used to be inferred from the tick standing still, with a quarter of a second of
@@ -1009,11 +1234,14 @@ namespace Odyssey.Presentation.World
             {
                 CellRef cell = pawns[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
+                // Walls down: gone with the storey they stand on (design 42 §5). Skipped here and
+                // in the baked pass alike, so a hidden colonist does not fall through to a stand-in.
+                if (slice.HidesStandingAt(activeLayer, cell, World)) continue;
 
                 // A face that did not resolve is not drawn here at all: the pawn falls through to
                 // the baked path, which will draw whatever that row does resolve to (a marker, if
                 // nothing). Skipping is what keeps a missing row a one-colonist problem.
-                if (!CanDraw(pawns[i].Id)) continue;
+                if (!CanDraw(in pawns[i])) continue;
 
                 _eligible.Add(i);
             }
@@ -1024,8 +1252,8 @@ namespace Odyssey.Presentation.World
             {
                 int i = _eligible[n];
                 Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading,
-                    World, pawns, out Vector3 steer);
-                Figure figure = Lease(pawns[i].Id, position);
+                    World, pawns, Crowd, out Vector3 steer);
+                Figure figure = Lease(in pawns[i], position);
                 Pose(figure, in pawns[i], position, heading, steer, deltaTime, running);
                 if (figure.Speed > FastestSpeed) FastestSpeed = figure.Speed;
                 Drawn.Add(pawns[i].Id.Value);
@@ -1116,6 +1344,15 @@ namespace Odyssey.Presentation.World
         /// director's own root, which is what a harness with no camera gets.
         /// </summary>
         public Vector3? ViewerPosition { get; set; }
+        /// <summary>
+        /// This frame's crowd buckets, or null for the plain scan.
+        ///
+        /// <para>Set once a frame by the composition root, which rebuilds one index and hands the
+        /// same one to every pass that poses a pawn — see <c>OdysseyBootstrap</c> and
+        /// <see cref="Odyssey.Presentation.Rendering.PawnCrowdIndex"/>. Null is correct and merely
+        /// slow, which is what a harness or an editor tool with no bootstrap gets.</para>
+        /// </summary>
+        public Odyssey.Presentation.Rendering.PawnCrowdIndex? Crowd { get; set; }
 
         /// <summary>Advance every live figure's animation. Separate from posing so an editor
         /// tool can step the clock deliberately rather than relying on a running player.</summary>
@@ -1228,6 +1465,12 @@ namespace Odyssey.Presentation.World
         /// game's own answer, which is what the pawn says.
         /// </summary>
         public float? ForceSleep { get; set; }
+
+        /// <summary>
+        /// Force every figure to a sit weight, for a harness. Null is the game's own answer,
+        /// which is what the pawn says.
+        /// </summary>
+        public float? ForceSit { get; set; }
 
         /// <summary>Add a world-space pitch to a bone, leaving the rest of its pose alone.</summary>
         static void Pitch(Transform? bone, Vector3 axis, float degrees)
@@ -1367,10 +1610,19 @@ namespace Odyssey.Presentation.World
             // state rather than advancing it is left alone.
             float deltaTime = running ? frameTime : 0f;
 
+            // Whether the work stroke plays. Not for a fight (design 33 §5j): the attack driver
+            // publishes a work focus through its wind-up so the figure turns to its target, and
+            // the blow itself is the fight's clip or computed swing, never the axe's.
+            bool stroking = PlaysWorkStroke(in pawn);
+
             // Work eases in and out rather than switching, and the axe is in the hand for exactly
             // as long as the pose is worth anything. See WorkEaseSeconds.
             float step = WorkEaseSeconds > 1e-3f ? deltaTime / WorkEaseSeconds : running ? 1f : 0f;
-            figure.WorkWeight = Mathf.MoveTowards(figure.WorkWeight, pawn.Working ? 1f : 0f, step);
+            figure.WorkWeight = Mathf.MoveTowards(figure.WorkWeight, stroking ? 1f : 0f, step);
+
+            // The computed walk's cycle steps on here, once a frame, from the speed this figure
+            // was measured at last frame; the pose pass only applies it (design 29).
+            figure.Gait?.Advance(figure.Speed, deltaTime);
 
             // The swing's own clock, which runs only while there is work. Freezing it between
             // jobs rather than letting it free-run means a colonist's first blow at a new tree
@@ -1381,9 +1633,9 @@ namespace Odyssey.Presentation.World
             // off the stroke phase, the chips and the impact audio follow for free. Work stays
             // continuous per tick in the simulation and the swing is scaled to match it — the
             // two agree in aggregate without either owning the other.
-            if (pawn.Working && running)
+            if (stroking && running)
                 figure.SwingClock += SwingAdvance(deltaTime, WorkRateOf(pawn.Id));
-            else if (!pawn.Working && figure.WorkWeight <= 0f) figure.SwingClock = 0f;
+            else if (!stroking && figure.WorkWeight <= 0f) figure.SwingClock = 0f;
 
             // The one-shot gestures, started by a serial that has moved rather than by a state
             // that is true. See PawnView.GestureSerial: the view reports the *last* gesture
@@ -1395,12 +1647,24 @@ namespace Odyssey.Presentation.World
             // pose from the same state. A clock advanced inside it would run at double speed under
             // the player loop and single speed in an editor harness that steps the graph by hand —
             // which is to say, wrong in the game and right in every picture taken of the game.
+            figure.FiredThisFrame = false;
             if (pawn.GestureSerial != figure.SeenSerial)
             {
                 // First sighting records and poses nothing. A figure leased for a colonist who has
                 // been hauling for an hour would otherwise open with a lift it never made, as would
                 // every colonist on the board on the first frame after a load.
-                if (figure.SeenSerial >= 0 && pawn.Gesture != PawnGesture.None)
+                // A strike is the fight's (design 33 §5): it starts a swing, never the crouch every
+                // other gesture is drawn as — GestureOf would otherwise read it as a lift.
+                if (figure.SeenSerial >= 0 && pawn.Gesture == PawnGesture.Strike)
+                    BeginStrike(figure, in pawn);
+                // A shot is the gun's (design 47 §4b): it starts the recoil and the slide, never a
+                // crouch — GestureOf would read it as a lift as it would a strike.
+                else if (figure.SeenSerial >= 0 && pawn.Gesture == PawnGesture.Fire)
+                {
+                    figure.FireClock = 0f;
+                    figure.FiredThisFrame = true;
+                }
+                else if (figure.SeenSerial >= 0 && pawn.Gesture != PawnGesture.None)
                 {
                     figure.Gesture = pawn.Gesture;
                     figure.GestureClock = 0f;
@@ -1409,12 +1673,20 @@ namespace Odyssey.Presentation.World
                 figure.SeenSerial = pawn.GestureSerial;
             }
 
+            // A jump over a stream (design 46 §7): how far off the ground, and which clip is due —
+            // before the fight is posed, because the jump borrows the fight's slot.
+            PoseJump(figure, in pawn);
+
+            // The fight: the action it is drawing and the held states, before anything below
+            // reads them — the downed lie rides the sleeper's weight.
+            PoseCombat(figure, in pawn, frameTime, running);
+
             if (figure.Gesture != PawnGesture.None)
             {
                 // Work wins. Nothing in the game can pick something up and swing an axe at the same
                 // time, but the two poses write the same bones, and a gesture left running under a
                 // work pose would be a fight rather than a blend.
-                if (pawn.Working) figure.Gesture = PawnGesture.None;
+                if (stroking) figure.Gesture = PawnGesture.None;
                 else if (running)
                 {
                     figure.GestureClock += deltaTime;
@@ -1438,7 +1710,7 @@ namespace Odyssey.Presentation.World
             // and it.
             WorkStroke stroke = Styles[figure.Style].Stroke;
             float phase = stroke.Phase(figure.SwingClock, figure.SwingOffset);
-            if (pawn.Working && running && figure.WorkWeight > 0.5f
+            if (stroking && running && figure.WorkWeight > 0.5f
                 && stroke.Lands(figure.LastPhase, phase))
                 figure.Landed = true;
             figure.LastPhase = phase;
@@ -1570,8 +1842,12 @@ namespace Odyssey.Presentation.World
             // water carries what it was carrying, works where it was working, and pays the third
             // speed the cost class has always charged. The helpless-swimmer rules are deep water's
             // and are not built — docs/design/20-swimming-and-water.md.
-            float afloat = ForceSwim ?? WaterLine.Weight(World, pawn.Cell, pawn.NextCell,
-                Mathf.Clamp01(pawn.MovePercent * 0.01f));
+            // A jump falling short is the exception (design 46 §7): its step runs from the bank
+            // into the water like a wade, but the body is in the air for most of it and must not
+            // lie down until it is nearly at the water line.
+            float afloat = ForceSwim ?? (JumpArc.IsJump(in pawn) && pawn.JumpingShort
+                ? JumpArc.ShortSwimWeight(PawnPose.StepProgress(in pawn, _tickAlpha, _movePerTick))
+                : WaterLine.Weight(World, pawn.Cell, pawn.NextCell, Mathf.Clamp01(pawn.MovePercent * 0.01f)));
 
             // Forced weight is taken whole rather than eased towards, so a harness that sets it
             // gets the pose on the frame it asks rather than a third of a second later — the same
@@ -1579,7 +1855,20 @@ namespace Odyssey.Presentation.World
             figure.SwimWeight = ForceSwim.HasValue
                 ? afloat
                 : SwimPose.Settle(figure.SwimWeight, afloat, deltaTime);
-            if (running && figure.SwimWeight > 0.001f) figure.SwimClock += deltaTime;
+            if (running && figure.SwimWeight > 0.001f)
+            {
+                float strokeWas = figure.SwimClock;
+                figure.SwimClock += deltaTime;
+
+                // A hand going into the water (design 20 §9): one sound per arm, on the stroke the
+                // figure is drawn making. Only a figure plainly afloat, and only live figures —
+                // which is every swimmer near enough to the camera to be heard.
+                if (figure.SwimWeight >= SwimPose.StrokeSoundWeight && SwimStroked != null
+                    && SwimPose.StrokeSoundsBetween(strokeWas, figure.SwimClock) > 0)
+                    SwimStroked(figure.Transform != null
+                        ? figure.Transform.position
+                        : GroundRelief.Lift(CellMetrics.FloorCentre(pawn.Cell)));
+            }
 
             // What is in her arms, and how far into looking like it (design 24 §4).
             //
@@ -1647,22 +1936,42 @@ namespace Odyssey.Presentation.World
             // over means the fold begins from where the rise left the hands, which is continuous.
             // The load itself is unaffected: it follows the palms either way (see PlaceCarriedLoad).
             bool gesturing = figure.Gesture != PawnGesture.None || ForceGesture.HasValue;
+            // A body in the arms takes the same scoop as a load (design 33 §11e); the body itself
+            // is laid in them by PlaceCarriedPatients, once every bone is final.
+            bool carryingSomebody = CarriesAPatient(in pawn);
             figure.CarryWeight = CarryPose.Settle(
-                figure.CarryWeight, carryDef >= 0 && !gesturing ? 1f : 0f, deltaTime);
+                figure.CarryWeight, (carryDef >= 0 || carryingSomebody) && !gesturing ? 1f : 0f, deltaTime);
 
             // Asleep, and where. A bed decides which way the body lies and how high off the floor;
             // with no bed the colonist lies where it dropped, facing wherever it last faced, which
             // is the SleptOnGround case and is drawn rather than left standing.
+            // A downed pawn with no knock-down clip to lie in lies down as a sleeper does, on the
+            // ground where she fell (design 33 §1): a body on the floor is a body on the floor.
             figure.SleepWeight = ForceSleep.HasValue
                 ? ForceSleep.Value
-                : SleepPose.Settle(figure.SleepWeight, pawn.Asleep ? 1f : 0f, deltaTime);
+                : SleepPose.Settle(figure.SleepWeight, pawn.Asleep || figure.Fight.Lying ? 1f : 0f, deltaTime);
+            // Lifted or laid in a bed, she goes from the floor loop to lying at once: both are lying
+            // down, and easing between them would stand her up half way (design 33 §11e).
+            if (!ForceSleep.HasValue && Cradled(in pawn)) figure.SleepWeight = 1f;
             if (figure.SleepWeight > 0.001f) AimSleep(figure, in pawn);
+
+            // Sitting by a fire (design 31 §18d). Eased like sleep; the blend itself is in Blend,
+            // because a sit is an input on the mixer rather than angles over it.
+            figure.SitWeight = ForceSit.HasValue
+                ? ForceSit.Value
+                : SitPose.Settle(figure.SitWeight, pawn.Seated ? 1f : 0f, deltaTime);
+            // The weapon in the right hand, now that the tool, the load and the lie are known.
+            ShowWeapon(figure, in pawn, carrying: carryDef >= 0 || carryingSomebody, deltaTime);
+            // The gun's state for the frame (design 47 §4b), after the weapon has been put in the
+            // hand or at the hip.
+            PoseGun(figure, in pawn, deltaTime);
 
             // Face the work. A pawn that has stopped walking has no heading left — that is what
             // makes PawnPose hand back a zero vector — so without the work cell the figure would
             // swing at whatever it happened to be facing when it arrived, which is as often as
-            // not straight past the tree.
-            if (pawn.Working)
+            // not straight past the tree. A sitter faces the fire for the same reason: the view
+            // names it in the same field, or she sits wherever she arrived facing.
+            if (pawn.Working || pawn.Seated)
             {
                 // Lifted before differencing: position is on the drawn ground, so a flat work
                 // cell would put a spurious rise into the vector. It is flattened straight
@@ -1685,7 +1994,7 @@ namespace Odyssey.Presentation.World
             // blend and did not find, because it was never in the blend.
             Vector3 walked = position - steer;
             figure.Speed = ObserveSpeed(figure.Speed, figure.SimPosition, walked, deltaTime, settled,
-                hopping: pawn.Moving && PawnPose.IsDrawnAsAHop(World, in pawn));
+                hopping: pawn.Moving && (PawnPose.IsDrawnAsAHop(World, in pawn) || JumpArc.IsJump(in pawn)));
             figure.Settled = true;
             figure.SimPosition = walked;
 
@@ -1708,7 +2017,8 @@ namespace Odyssey.Presentation.World
             // last one until the weight is gone makes the way out retrace the way in.
             // On the drawn ground, because the whole stance is solved against it: the step-up to
             // the tree, the arm IK target and the chips thrown where the blade lands all read this.
-            if (pawn.Working)
+            // Not for a fight, whose focus only turns the figure (design 33 §5j).
+            if (stroking)
             {
                 figure.WorkCentre = GroundRelief.Lift(CellMetrics.FloorCentre(pawn.WorkCell));
 
@@ -1764,6 +2074,12 @@ namespace Odyssey.Presentation.World
             if (figure.ClimbWeight > 0.001f && figure.LastClimbFace != Vector3.zero)
                 drawn += figure.LastClimbFace * (ClimbLean * figure.ClimbWeight);
 
+            // A computed blow's lunge, a stagger's shove, a dodge's sidestep (design 33 §1).
+            drawn += CombatOffset(figure);
+
+            // A hopper's flight (design 30 §8): still on the ground, quick through the air.
+            drawn += HopSurge(figure);
+
             figure.Transform.position = drawn;
 
             // Turn towards the heading rather than snapping to it.
@@ -1799,7 +2115,7 @@ namespace Odyssey.Presentation.World
             figure.Lean = settled ? Footing.Settle(figure.Lean, wanted, deltaTime) : wanted;
 
             figure.GroundY = drawn.y - GroundRelief.HeightAt(drawn.x, drawn.z);
-            figure.Transform.rotation = figure.Lean * Quaternion.Euler(0f, figure.Yaw, 0f);
+            figure.Transform.rotation = figure.Lean * Quaternion.Euler(0f, figure.Yaw, 0f) * CombatBodyPitch(figure);
 
             // Laid down last, over everything above, because lying is a statement about the whole
             // figure rather than an adjustment to a standing one: the lean, the heading and the
@@ -1843,7 +2159,7 @@ namespace Odyssey.Presentation.World
         /// </summary>
         void Blend(Figure figure, float speed, bool running)
         {
-            Look look = _looks[figure.Look]!;
+            Look look = LookAt(figure.Look)!;
 
             // **A swimmer has ground speed and must not walk on it.** The gait reads speed from
             // how far the figure moved this frame, which is the right rule everywhere else and
@@ -1860,10 +2176,26 @@ namespace Odyssey.Presentation.World
             speed *= 1f - Mathf.Clamp01(figure.SwimWeight);
 
             GaitBlend blend = GaitBlend.Solve(look.Speeds, speed);
+
+            // A sitter's weight is taken from the gaits rather than laid over them, so the mixer
+            // still sums to one: the figure is exactly as much sitter as it is not walker.
+            float sit = look.Sit != null ? Mathf.Clamp01(figure.SitWeight) : 0f;
+            if (look.Sit != null)
+            {
+                int seat = look.Gaits.Length;
+                figure.Mixer.SetInputWeight(seat, sit);
+                figure.Clips[seat].SetSpeed(running ? 1f : 0f);
+            }
+
             for (int i = 0; i < look.Gaits.Length; i++)
             {
-                figure.Mixer.SetInputWeight(i, blend.WeightOf(i));
-                figure.Clips[i].SetSpeed(running ? blend.Rate : 0f);
+                figure.Mixer.SetInputWeight(i, blend.WeightOf(i) * (1f - sit));
+                // Under a computed gait the idle underneath is frozen as the gait fades in: an
+                // idle that shifts its weight and paws the ground is noise under a trot, and
+                // its pose at the frozen frame is a perfectly good stance to trot from.
+                float rate = running ? blend.Rate : 0f;
+                if (figure.Gait != null) rate *= 1f - figure.Gait.Weight;
+                figure.Clips[i].SetSpeed(rate);
             }
         }
 
@@ -1883,7 +2215,8 @@ namespace Odyssey.Presentation.World
                 figure.Gaze.PosturePitchOffset = 0f;
 
             // Tier 6: SleepLock
-            if (pawn.Asleep || figure.SleepWeight > 0.001f)
+            // A downed pawn does not look about either: she is on the ground (design 33 §1).
+            if (pawn.Asleep || figure.SleepWeight > 0.001f || pawn.IsDowned)
             {
                 figure.Gaze.ActivePriority = GazePriority.SleepLock;
                 figure.Gaze.HasTarget = false;
@@ -2053,18 +2386,37 @@ namespace Odyssey.Presentation.World
         /// </summary>
         void Repaint(Figure figure, PawnId pawn)
         {
+            Repaint(figure, pawn, RollSeedOf(pawn));
+        }
+
+        /// <summary>
+        /// The same, dealt from a seed the caller holds rather than the frame's — a corpse's, whose
+        /// pawn the frame no longer carries (design 33 §3).
+        /// </summary>
+        void Repaint(Figure figure, PawnId pawn, uint rollSeed)
+        {
             if (Materials == null || figure.Skins.Length == 0) return;
 
             AppearanceCells? cells = CellsFor(figure.Look);
-            ColonistAppearance look = Appearances.For(pawn.Value, RollSeedOf(pawn));
+            ColonistAppearance look = Appearances.For(pawn.Value, rollSeed, figure.Outfit);
 
+            // The hair and the beard, before the body: they are part of being dressed in this
+            // pawn's colours rather than a separate pass, so nothing can repaint one and forget
+            // the other (docs/design/29-modular-colonists.md, MC5).
+            Dress(figure, look);
+
+            // The bandit's vest is painted from its own rectangles, not the body's (design 42):
+            // its camo and the male rig's trousers share a region of the atlas.
+            Look? face = LookAt(figure.Look);
             for (int i = 0; i < figure.Skins.Length; i++)
             {
                 SkinnedMeshRenderer skin = figure.Skins[i];
                 if (skin == null) continue;
 
+                bool overlay = face != null && face.Overlay.Length > 0 &&
+                               string.Equals(skin.gameObject.name, face.Overlay, StringComparison.Ordinal);
                 Material? art = figure.ArtMaterials[i];
-                Material? painted = Materials.For(art, cells, look);
+                Material? painted = Materials.For(art, overlay ? face!.OverlayCells : cells, look);
                 skin.sharedMaterial = painted != null ? painted : art;
             }
         }
@@ -2088,25 +2440,59 @@ namespace Odyssey.Presentation.World
             }
         }
 
+        ColonistAttachments? _attachments;
+
+        /// <summary>
+        /// The hair and beards, resolved once and shared with every other drawer of a colonist.
+        ///
+        /// <para>Held here rather than resolved here: <see cref="ColonistAttachments"/> is the one
+        /// owner, because <see cref="PortraitStudio"/> dresses the same colonist for their roster
+        /// card and the two must not answer differently.</para>
+        /// </summary>
+        ColonistAttachments Attachments => _attachments ??= new ColonistAttachments(_catalogue);
+
+        /// <summary>
+        /// Put this pawn's hair and beard on, or take them off.
+        /// </summary>
+        void Dress(Figure figure, in ColonistAppearance look)
+        {
+            // Under a helmet the hair and beard are not worn, but they are still the person's:
+            // the appearance keeps both, so the helmet coming off gives them back (design 42).
+            bool covered = look.HidesHair;
+            ColonistAttachments.Wear(
+                figure.HairMesh, figure.HairRenderer,
+                covered ? default : Attachments.Hair(look.HairPiece), Materials, look);
+            ColonistAttachments.Wear(
+                figure.BeardMesh, figure.BeardRenderer,
+                covered ? default : Attachments.Beard(look.BeardPiece), Materials, look);
+            ColonistAttachments.Wear(
+                figure.HeadMesh, figure.HeadRenderer, Attachments.Headgear(look.HeadPiece),
+                Materials, look);
+        }
+
         /// <summary>Which swatches this face's body uses, or null when it was never classified.</summary>
         AppearanceCells? CellsFor(int look)
         {
             if (_catalogue == null) return null;
+            // An animal has no swatches: it is drawn in its own paint (design 29).
+            if (look >= _looks.Length) return null;
             List<ModuleEntry> rows = _catalogue.FindFamily(ModuleIds.ColonistBase);
             if ((uint)look >= (uint)rows.Count) return null;
             AppearanceCells cells = rows[look].appearance;
             return cells.Any ? cells : null;
         }
 
-        Figure Lease(PawnId pawn, Vector3 at)
+        Figure Lease(in PawnView view, Vector3 at)
         {
+            PawnId pawn = view.Id;
             if (_byPawn.TryGetValue(pawn.Value, out Figure? existing)) return existing;
 
             // The pool is keyed by face as well as by being free: a figure is a *built* prefab
             // with a graph bound to its own rig, so handing a parked one to a pawn wearing a
             // different face would put the wrong person on screen rather than save any work.
-            int look = LookFor(pawn);
+            int look = LookFor(in view);
             Figure figure = Free(look) ?? Create(look);
+            figure.Outfit = PawnOutfits.For(view);
             Repaint(figure, pawn);
             figure.Pawn = pawn.Value;
             figure.Settled = false;
@@ -2121,6 +2507,13 @@ namespace Odyssey.Presentation.World
             figure.Gesture = PawnGesture.None;
             figure.GestureClock = 0f;
             figure.SeenSerial = -1;
+            // And somebody else's fight: a body lent to a colonist walking into view must not open
+            // with the last tenant's stagger (design 33 §5f).
+            figure.Fight.Forget();
+            // And somebody else's weapon, until this pawn's own is read on the first pose — and
+            // whether it was drawn: the new pawn's is taken as the frame finds it (design 33 §8b).
+            HideWeapon(figure);
+            ForgetSheath(figure);
             figure.WorkCentre = at;
             figure.SimPosition = at;
             figure.Steer = Vector3.zero;
@@ -2160,8 +2553,9 @@ namespace Odyssey.Presentation.World
 
         Figure? Free(int look)
         {
+            // Never one lent out as a corpse: it is nobody's, but it is not free either.
             for (int i = 0; i < _figures.Count; i++)
-                if (_figures[i].Pawn < 0 && _figures[i].Look == look) return _figures[i];
+                if (_figures[i].Pawn < 0 && !_figures[i].Borrowed && _figures[i].Look == look) return _figures[i];
             return null;
         }
 
@@ -2180,6 +2574,7 @@ namespace Odyssey.Presentation.World
                 // to a colonist who is only walking past would otherwise arrive carrying it.
                 figure.WorkWeight = 0f;
                 ShowHeldTool(figure, working: false);
+                HideWeapon(figure);
                 figure.GameObject.SetActive(false);
                 _byPawn.Remove(_retired[i]);
             }
@@ -2187,9 +2582,11 @@ namespace Odyssey.Presentation.World
 
         Figure Create(int look)
         {
-            Look face = _looks[look]!;
+            Look face = LookAt(look)!;
             GameObject instance = UnityEngine.Object.Instantiate(face.Prefab, _parent);
-            instance.name = $"Colonist figure {_figures.Count} ({face.Prefab.name})";
+            instance.name = face.Animal
+                ? $"Animal figure {_figures.Count} ({face.Prefab.name})"
+                : $"Colonist figure {_figures.Count} ({face.Prefab.name})";
             instance.transform.localScale = face.Scale;
             SetLayer(instance.transform, _layer);
 
@@ -2198,6 +2595,14 @@ namespace Odyssey.Presentation.World
             // click meant for the ground.
             var colliders = instance.GetComponentsInChildren<Collider>(includeInactive: true);
             for (int i = 0; i < colliders.Length; i++) colliders[i].enabled = false;
+
+            // Whatever the pack already put on this head comes off, so our hair is the only hair
+            // and a bare head is reachable at all (docs/design/29-modular-colonists.md).
+            ColonistAttachments.BareTheHead(instance);
+
+            // The bandit's vest (design 42): the one overlay its row names, switched back on after
+            // the head was bared, and before the skins are gathered below so it is painted too.
+            ColonistAttachments.ShowOverlay(instance, face.Overlay);
 
             // Re-skin from the bones as they are at the moment of drawing, not as they were when
             // the animation system last looked at them.
@@ -2221,8 +2626,10 @@ namespace Odyssey.Presentation.World
 
             var graph = PlayableGraph.Create($"Odyssey pawn {_figures.Count}");
             graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
-            var mixer = AnimationMixerPlayable.Create(graph, face.Gaits.Length);
-            var clips = new AnimationClipPlayable[face.Gaits.Length];
+            // One input per gait, and the seat after them when the row has one (design 31 §18d).
+            int inputs = face.Gaits.Length + (face.Sit != null ? 1 : 0);
+            var mixer = AnimationMixerPlayable.Create(graph, inputs);
+            var clips = new AnimationClipPlayable[inputs];
 
             for (int i = 0; i < face.Gaits.Length; i++)
             {
@@ -2231,8 +2638,21 @@ namespace Odyssey.Presentation.World
                 mixer.SetInputWeight(i, i == 0 ? 1f : 0f);
             }
 
+            if (face.Sit != null)
+            {
+                int seat = face.Gaits.Length;
+                clips[seat] = AnimationClipPlayable.Create(graph, face.Sit);
+                graph.Connect(clips[seat], 0, mixer, seat);
+                mixer.SetInputWeight(seat, 0f);
+            }
+
+            // The fight's clip layer over the gaits (design 33 §5f), for a person when the pack is
+            // here. Without it the output reads the gait mixer exactly as it always has.
+            var fight = new CombatState();
+            Playable source = BuildCombatLayer(graph, mixer, face.Animal, fight);
+
             AnimationPlayableOutput output = AnimationPlayableOutput.Create(graph, "Pose", animator);
-            output.SetSourcePlayable(mixer);
+            output.SetSourcePlayable(source);
             graph.Play();
 
             // Write the idle before anything measures this figure. A graph that has been played
@@ -2242,19 +2662,57 @@ namespace Odyssey.Presentation.World
             // fitting to a scarecrow.
             graph.Evaluate(0f);
 
-            var figure = new Figure(instance, animator, graph, mixer, clips) { Look = look };
+            var figure = new Figure(instance, animator, graph, mixer, clips) { Look = look, Fight = fight };
             figure.Skins = skins;
             figure.ArtMaterials = new Material?[skins.Length];
             for (int i = 0; i < skins.Length; i++) figure.ArtMaterials[i] = skins[i].sharedMaterial;
             BindWorkBones(figure, animator);
+
+            // After BindWorkBones, which is what finds the head. The slots are empty until a
+            // lease dresses them, so a figure built for a bald colonist costs two disabled
+            // renderers and nothing else.
+            if (figure.Head != null)
+            {
+                ColonistAttachments.MakeSlot(figure.Head, "Hair", _layer,
+                    out MeshFilter hf, out MeshRenderer hr);
+                ColonistAttachments.MakeSlot(figure.Head, "Beard", _layer,
+                    out MeshFilter bf, out MeshRenderer br);
+                ColonistAttachments.MakeSlot(figure.Head, "Headgear", _layer,
+                    out MeshFilter gf, out MeshRenderer gr);
+                figure.HairMesh = hf;
+                figure.HairRenderer = hr;
+                figure.BeardMesh = bf;
+                figure.BeardRenderer = br;
+                figure.HeadMesh = gf;
+                figure.HeadRenderer = gr;
+            }
+
             figure.SoleOffset = MeasureSole(figure);
             // And how long a body there is to lay down. Measured here, beside the sole, because
             // both are one bake of the posed mesh and both are properties of the rig rather than
-            // of the colonist wearing it.
-            figure.StandingHeight = MeasureBody(figure);
-            if (figure.StandingHeight > MeasuredStandingHeight)
-                MeasuredStandingHeight = figure.StandingHeight;
-            if (figure.SoleOffset > MeasuredSoleOffset) MeasuredSoleOffset = figure.SoleOffset;
+            // of the colonist wearing it. An animal is measured in its own window — a rat is a
+            // quarter of a metre and the colonist window would call that a failed bake — and
+            // does not move the colonists' maxima, which the contact sheets print.
+            if (face.Animal)
+            {
+                // Measured from the renderers' bounds, not a bake: on these Blender "units
+                // scale" rigs a bake reports a hundredth of the truth (bug-patterns, 2026-09-22)
+                // and the bounds were the reading the picture agreed with. A loose box is what a
+                // cursor wants anyway.
+                figure.DrawnBox = FigureBuild.DrawnBounds(figure.Skins, figure.Transform);
+                figure.StandingHeight = figure.DrawnBox.size.y > 0.02f ? figure.DrawnBox.size.y : FigureBuild.FallbackHeight;
+                figure.Gait = face.QuadrupedGait ? QuadrupedGait.Bind(instance.transform) : null;
+            }
+            else
+            {
+                figure.StandingHeight = MeasureBody(figure);
+                // Where a sheathed weapon hangs, and where in the draw the hand is on the hilt:
+                // measured off this body, after its height, in the idle (design 33 §8b).
+                BindSheath(figure, face.Feminine);
+                if (figure.StandingHeight > MeasuredStandingHeight)
+                    MeasuredStandingHeight = figure.StandingHeight;
+                if (figure.SoleOffset > MeasuredSoleOffset) MeasuredSoleOffset = figure.SoleOffset;
+            }
             _figures.Add(figure);
             return figure;
         }

@@ -45,6 +45,18 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Overrides the def's work duration when positive. Used by the stand-down.</summary>
         public int WorkTicks;
 
+        /// <summary>
+        /// A wait taken sitting down beside a fire (design 31 §18d), with <see cref="DestCell"/>
+        /// naming the fire so the figure can face it.
+        ///
+        /// <para><b>Derived rather than stored, on purpose.</b> A wait has no destination, so the
+        /// fire's cell there is unambiguous; and because <see cref="DestCell"/> is already saved
+        /// and hashed, a seat survives a save and is covered by the hash for nothing — no new
+        /// field in the record and no save-format bump. A stand-down, or an idler with nowhere to
+        /// wander, is a wait with no destination and so is always a stand.</para>
+        /// </summary>
+        public bool Seated => DefIndex == JobIndex.Wait && DestCell >= 0;
+
         public void Reset(int defIndex)
         {
             DefIndex = defIndex;
@@ -337,6 +349,24 @@ namespace Odyssey.Sim.Pawns
         /// grasp. After it the thing is carried, its cell is -1, and asking again would fail the
         /// job for having succeeded.</para>
         /// </summary>
+        /// <summary>
+        /// Is this thing within the colonist's reach where she stands — at her feet, or in the
+        /// store standing in her own cell?
+        ///
+        /// <para><b>The reach is the same and so is the motion.</b> A shelf is passable, so a
+        /// colonist fetching from one stands <em>in</em> its cell rather than beside it, and
+        /// stooping to the floor and reaching into a shelf take the same time by decision. Both of
+        /// <see cref="LiftToil"/>'s guards ask this rather than comparing cells, because a
+        /// contained thing has no cell at all: left as <c>item.Cell == Pawn.Cell</c> the grasp can
+        /// never happen, and a colonist sent to a shelf bends over it for ever.</para>
+        /// </summary>
+        protected bool AtHand(PawnContext ctx, ColonyItem item)
+        {
+            if (item.Cell == Pawn.Cell) return true;
+            return item.ContainerId != 0
+                && ctx.StorageUnits?.CellOfContainer(item.ContainerId) == Pawn.Cell;
+        }
+
         protected JobStatus LiftToil(PawnContext ctx, ColonyItem item)
         {
             int total = ctx.Content.LiftTicks * Rates.Scale;
@@ -351,12 +381,12 @@ namespace Odyssey.Sim.Pawns
             if (elapsed < grasp)
             {
                 // Still bending. Somebody else may have taken it, or it may have been eaten.
-                return item.Cell == Pawn.Cell ? JobStatus.Ongoing : JobStatus.Failed;
+                return AtHand(ctx, item) ? JobStatus.Ongoing : JobStatus.Failed;
             }
 
             if (elapsed == grasp)
             {
-                if (item.Cell != Pawn.Cell) return JobStatus.Failed;
+                if (!AtHand(ctx, item)) return JobStatus.Failed;
                 ctx.Items.PickUp(item, Pawn.Id);
                 Job.CarriedItem = item.Id.Value;
             }
@@ -389,9 +419,39 @@ namespace Odyssey.Sim.Pawns
         /// an unreachable target produces the most expensive possible search, and here it costs
         /// two array reads instead.
         /// </summary>
+        /// <summary>
+        /// Is this thing still where the job expects it — on that cell, or in the store standing in
+        /// it?
+        ///
+        /// <para>The guard every carrying driver opens with, and it used to be
+        /// <c>item.Cell != Job.TargetCell</c>. That was "the thing moved or vanished" while a thing
+        /// was on the floor or in a pair of hands; with a third home it is also false for a thing
+        /// sitting perfectly still on the shelf the colonist is walking towards.</para>
+        /// </summary>
+        protected static bool StillAt(PawnContext ctx, ColonyItem item, int cell)
+        {
+            if (item.Cell == cell) return true;
+            return item.ContainerId != 0 && ctx.StorageUnits?.CellOfContainer(item.ContainerId) == cell;
+        }
+
+        /// <summary>
+        /// Set a carried thing into a store. <see cref="PutDown"/>'s twin, and the same gesture:
+        /// the stoop on to the floor and the reach into a shelf are one motion, so they report one
+        /// thing and a watcher cannot tell which happened from the animation alone.
+        /// </summary>
+        protected void PutInto(PawnContext ctx, ColonyItem item, Storage.StorageUnit into)
+        {
+            ctx.StorageUnits!.PutIn(into, item);
+            Pawn.BeginGesture(PawnGesture.Stow);
+        }
+
         protected JobStatus GotoCell(PawnContext ctx, int dest)
         {
+            // A goal on cover crossed but never stood on (design 53 §5) is the neighbour beside it:
+            // the same neighbour every time it is asked, so the walk does not change its mind.
+            dest = Standing.Resolve(ctx, dest, Job.Mode);
             if (dest < 0) return JobStatus.Failed;
+
 
             if (Pawn.Cell == dest)
             {
@@ -415,7 +475,7 @@ namespace Odyssey.Sim.Pawns
 
             if (!Pawn.HasPath && !Pawn.PathPending)
             {
-                if (!ctx.Reachable(Pawn, dest))
+                if (!ctx.CanTravel(Pawn, dest))
                 {
                     Pawn.Destination = -1;
                     return JobStatus.Failed;

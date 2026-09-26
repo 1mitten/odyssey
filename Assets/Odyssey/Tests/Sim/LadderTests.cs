@@ -75,7 +75,7 @@ namespace Odyssey.Tests.Sim
         /// <para>The shape: a wall, a slab on top of the wall as the landing, and the ladder in the
         /// column beside it with nothing above it at all.</para>
         /// </summary>
-        static void AShaftWithALandingBesideIt(
+        internal static void AShaftWithALandingBesideIt(
             ColonyWorld colony, out int ground, out int shaft, out int landing)
         {
             ground = GroundNear(colony, 3);
@@ -419,7 +419,7 @@ namespace Odyssey.Tests.Sim
         /// <para><b>This is the test whose absence let a false claim stand in four documents and
         /// then let the opposite one break a playtest.</b> The test above proves a hauler is
         /// excluded from a ladder; it says nothing about which jobs use that mode, and
-        /// <c>28-stairs.md</c> §3 records the general form: <i>a test that asserts a rule is not a
+        /// <c>60-stairs.md</c> §3 records the general form: <i>a test that asserts a rule is not a
         /// test that asserts the rule is reached.</i> U44 then set
         /// <c>DeliverWorkGiver</c> to <c>Hauler</c> on the strength of the first sentence and made
         /// a ladder-only storey unbuildable — which is a bootstrap deadlock, because the stair

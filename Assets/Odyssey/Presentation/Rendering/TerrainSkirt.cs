@@ -174,6 +174,10 @@ namespace Odyssey.Presentation.Rendering
         readonly MaterialCache _materials;
         readonly List<Batch> _ground = new List<Batch>();
         readonly List<Batch> _trees = new List<Batch>();
+
+        /// <summary>The near wood's bushes (design 38 §19): their own list, so every census of the
+        /// trees still counts trees.</summary>
+        readonly List<Batch> _bushes = new List<Batch>();
         readonly List<Batch> _tufts = new List<Batch>();
         readonly List<SkirtLayout.SkirtTile> _tiles = new List<SkirtLayout.SkirtTile>();
         readonly List<SkirtLayout.SkirtTree> _scattered = new List<SkirtLayout.SkirtTree>();
@@ -394,6 +398,34 @@ namespace Odyssey.Presentation.Rendering
 
             BuildGround(terrain);
             BuildTrees(treeModules, treeThemes);
+        }
+
+        /// <summary>
+        /// Re-strew the first ring's tufts at the current <see cref="TuftDensity"/>, leaving the
+        /// ground, the woods and the bushes as they are.
+        ///
+        /// <para><b>Why not <see cref="Build"/>.</b> A grass rung changes nothing out here but the
+        /// tufts, and <see cref="Build"/> surveys the whole board and lays every tile and every tree
+        /// out to 1,220 m again: measured at about 50 ms in the frame the rung was pressed, the one
+        /// first-use hitch the M10 tour found in play (design 38 §25). The tufts' batches carry the
+        /// foliage tint and nothing else does, so dropping exactly those batches from the index and
+        /// strewing again gives the same lists a full build would.</para>
+        /// </summary>
+        public void RebuildTufts()
+        {
+            if (!Built || _tiles.Count == 0) { Build(); return; }
+
+            var stale = new List<(int, int, int, int, bool, bool, int)>();
+            var tuftBatches = new HashSet<Batch>(_tufts);
+            foreach (var pair in _index)
+                if (tuftBatches.Contains(pair.Value)) stale.Add(pair.Key);
+            foreach (var key in stale) _index.Remove(key);
+            _tufts.Clear();
+
+            float surfaceY = SurfaceLayer * CellMetrics.SizeY;
+            for (int i = 0; i < _tiles.Count; i++)
+                if (_tiles[i].Band == 0) EmitTufts(_tiles[i], surfaceY);
+            TuftInstances = CountOf(_tufts);
         }
 
         // ------------------------------------------------------------- survey
@@ -728,7 +760,12 @@ namespace Odyssey.Presentation.Rendering
                 int sector = SectorOf(x, z, treeModules.Length, tree.Variant);
                 int theme = treeThemes[tree.Variant];
                 Add(_trees, resolved, TintCode.Tree(TreePalette.At(theme).Species), tree.MuteStep,
-                    sector, castsShadow: tree.CastsShadow, foliage: false, placement, bounds, theme);
+                    sector, castsShadow: tree.CastsShadow, foliage: false, placement, bounds, theme,
+                    LevelOf(resolved, NearWoodLevel));
+
+                // A bush beside most of them, as the board's wood edges have (design 38 §19): the
+                // wood out here was trees on bare grass, and read barer than the board it frames.
+                AddBushBeside(x, z, standY, board, tree.MuteStep, SectorOf(x, z, 1, 0));
             }
 
             // Counted before the far wood is added, so the two numbers are separable in the log
@@ -785,10 +822,77 @@ namespace Odyssey.Presentation.Rendering
                 int theme = treeThemes[tree.Variant];
                 Add(_trees, resolved, TintCode.Tree(TreePalette.At(theme).Species),
                     SkirtLayout.MuteSteps, sector,
-                    castsShadow: false, foliage: false, placement, bounds, theme);
+                    castsShadow: false, foliage: false, placement, bounds, theme,
+                    LevelOf(resolved, int.MaxValue));
             }
 
         }
+
+        /// <summary>
+        /// Which level of detail the near wood draws (design 38 §3, §19): a coarse one, because the
+        /// nearest surround tree is past the board's rim and the play camera stands 60–160 m off.
+        /// The far wood draws the last level, the card. Settable for the photograph.
+        /// </summary>
+        public static int NearWoodLevel { get; set; } = DefaultNearWoodLevel;
+
+        public const int DefaultNearWoodLevel = 2;
+
+        /// <summary>Chance a near-wood tree has a bush beside it (design 38 §19).</summary>
+        public static float BushBesideTree { get; set; } = 0.75f;
+
+        /// <summary>A module's parts at a level, clamped to the levels it has; its only parts when
+        /// it is not drawn by level. Every level shares the finest level's placement, so the same
+        /// matrix draws any of them.</summary>
+        static ModulePart[] LevelOf(ResolvedModule resolved, int level)
+        {
+            if (!resolved.DrawsByLevel) return resolved.Parts;
+            return resolved.Lods[Mathf.Clamp(level, 0, resolved.Lods.Length - 1)].Parts;
+        }
+
+        int[]? _bushModules;
+
+        int[] BushModules()
+        {
+            if (_bushModules != null) return _bushModules;
+            var usable = new List<int>();
+            if (_model.Library.Catalogue != null)
+                foreach (string id in ModuleIds.DressBushes)
+                {
+                    if (_model.Library.Catalogue.Find(id) == null) continue;
+                    int module = _model.Library.Resolve(id, ModuleShape.Pillar);
+                    ResolvedModule resolved = _model.Library[module];
+                    if (resolved.UsesArt && !resolved.IsEmpty) usable.Add(module);
+                }
+            return _bushModules = usable.ToArray();
+        }
+
+        void AddBushBeside(float x, float z, float standY, SkirtLayout.SkirtRect board, int muteStep, int sector)
+        {
+            int[] bushes = BushModules();
+            if (bushes.Length == 0 || BushBesideTree <= 0f) return;
+            int cx = Mathf.FloorToInt(x), cz = Mathf.FloorToInt(z);
+            if (GroundScatter.Unit(cx, cz, 0xB05Eu) >= BushBesideTree) return;
+
+            float angle = GroundScatter.Unit(cx, cz, 0xB05Fu) * Mathf.PI * 2f;
+            float reach = 2f + GroundScatter.Unit(cx, cz, 0xB060u) * 2.5f;
+            float bx = x + Mathf.Cos(angle) * reach, bz = z + Mathf.Sin(angle) * reach;
+            if (board.DistanceOutside(bx, bz) <= 0f) return;
+
+            int which = Mathf.Min(bushes.Length - 1, (int)(GroundScatter.Unit(cx, cz, 0xB061u) * bushes.Length));
+            ResolvedModule resolved = _model.Library[bushes[which]];
+            float scale = 0.8f + GroundScatter.Unit(cx, cz, 0xB062u) * 0.6f;
+            Vector3 foot = GroundRelief.LiftSurround(new Vector3(bx, standY, bz), board.DistanceOutside(bx, bz));
+            var placement = Matrix4x4.TRS(foot, Quaternion.Euler(0f, angle * Mathf.Rad2Deg * 3f, 0f), Vector3.one * scale);
+            Bounds local = resolved.Bounds;
+            var bounds = new Bounds(foot + local.center * scale, local.size * scale);
+            Add(_bushes, resolved, TintCode.Dressing(TintCode.Tree(TreeSpecies.Broadleaf)), muteStep,
+                sector * 4 + which + 1_000_000, castsShadow: false, foliage: false, placement, bounds,
+                -1, LevelOf(resolved, int.MaxValue));
+            BushInstances++;
+        }
+
+        /// <summary>Bushes the near wood placed, for the measurement.</summary>
+        public int BushInstances { get; private set; }
 
         static int SectorOf(float x, float z, int variants, int variant)
         {
@@ -811,9 +915,10 @@ namespace Odyssey.Presentation.Rendering
         // ------------------------------------------------------------ batches
 
         void Add(List<Batch> into, ResolvedModule resolved, int tintCode, int muteStep, int sector,
-            bool castsShadow, bool foliage, in Matrix4x4 placement, in Bounds bounds, int theme = -1)
+            bool castsShadow, bool foliage, in Matrix4x4 placement, in Bounds bounds, int theme = -1,
+            ModulePart[]? level = null)
         {
-            ModulePart[] parts = resolved.Parts;
+            ModulePart[] parts = level ?? resolved.Parts;
             for (int p = 0; p < parts.Length; p++)
             {
                 // The theme is part of the key as well as the tint code, because a tree code names
@@ -851,7 +956,12 @@ namespace Odyssey.Presentation.Rendering
             // ChunkRenderer.DrawBuckets for why a tree cannot take a single tint. Without this
             // the wood would change colour at the rim, which is the one thing the surround exists
             // to prevent.
-            Material? painted = TintCode.IsTree(tintCode) && !part.IsFallback
+            // Meadow art takes the board's own Meadow-tree material, muted like the rest of the
+            // surround; the atlas repaint is for the PolygonGeneric trees (design 38 §17).
+            bool meadowTree = TintCode.IsTree(tintCode) && !part.IsFallback
+                              && FoliageLook.IsMeadowFoliage(part.Material);
+            Material? meadow = meadowTree ? _materials.GetTree(part.Material, tint, 1f, ChunkRenderer.DefaultTreeStandVariety) : null;
+            Material? painted = !meadowTree && TintCode.IsTree(tintCode) && !part.IsFallback
                 ? _materials.Trees.For(part.Material, TintCode.TreeSpeciesOf(tintCode), 1f, muteStep)
                 : null;
 
@@ -859,7 +969,7 @@ namespace Odyssey.Presentation.Rendering
             {
                 Mesh = part.Mesh,
                 Submesh = part.Submesh,
-                Material = painted ?? _materials.Get(part.Material, tint, emission, ghost: false, alpha: 1f,
+                Material = meadow ?? painted ?? _materials.Get(part.Material, tint, emission, ghost: false, alpha: 1f,
                     foliage: foliage),
                 Props = painted != null && theme >= 0
                     ? _materials.Trees.UniformProps(theme, muteStep)
@@ -902,6 +1012,7 @@ namespace Odyssey.Presentation.Rendering
             if (activeLayer > SurfaceLayer)
             {
                 Submit(_trees);
+                Submit(_bushes);
                 Submit(_tufts);
             }
         }
@@ -943,6 +1054,7 @@ namespace Odyssey.Presentation.Rendering
         {
             _ground.Clear();
             _trees.Clear();
+            _bushes.Clear();
             _tufts.Clear();
             _tiles.Clear();
             _scattered.Clear();
@@ -952,6 +1064,7 @@ namespace Odyssey.Presentation.Rendering
             FarTreeInstances = 0;
             TuftInstances = 0;
             MeasuredTreeDensity = 0;
+            BushInstances = 0;
             SurfaceLayer = 0;
         }
 

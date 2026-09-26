@@ -102,8 +102,10 @@ namespace Odyssey.Presentation.Rendering
             // two depths are told apart. They must stay close in hue — a body of water has one
             // colour and gets darker, it does not change colour halfway across — so the deep
             // entry is the shallow one darkened and closed up rather than a different blue.
-            new Color(0.28f, 0.52f, 0.55f, 0.62f),     // 18 shallow water — the bed reads through
-            new Color(0.10f, 0.26f, 0.34f, 0.90f),     // 19 deep water — almost nothing does
+            // Greener and darker since design 38 §24: the reference meadow's (#13) water is a
+            // murky green-teal, and the old sky-cyan read as a swimming pool under the noon sun.
+            new Color(0.21f, 0.41f, 0.39f, 0.62f),     // 18 shallow water — the bed reads through
+            new Color(0.08f, 0.21f, 0.24f, 0.90f),     // 19 deep water — almost nothing does
             new Color(0.44f, 0.46f, 0.34f),            // 20 marsh — wet ground, not shadow
         };
 
@@ -159,8 +161,23 @@ namespace Odyssey.Presentation.Rendering
             new Color(0.92f, 1.10f, 0.74f),            // 20 marsh
         };
 
-        public static Color TerrainTint(int terrain) =>
-            terrain >= 0 && terrain < TerrainTints.Length ? TerrainTints[terrain] : Color.white;
+        public static Color TerrainTint(int terrain)
+        {
+            // Over the painted Meadow ground the grass keeps the pack's own colours (owner,
+            // 2026-09-24: "Synty's colours"), so the lift above — which pulled a single olive
+            // texture towards a lime it was never painted as — is not applied (design 38 §17).
+            if (terrain == GrassTerrain && MeadowLook.GroundActive) return Color.white;
+            // Marsh painted into the meadow by the ground field wears the same material as the
+            // grass and the same white tint, or its green would stop at the cell's edge (§24).
+            if (terrain == MarshTerrain && MeadowLook.PaintsMarsh) return Color.white;
+            return terrain >= 0 && terrain < TerrainTints.Length ? TerrainTints[terrain] : Color.white;
+        }
+
+        /// <summary>The grass terrain's index in the tables above.</summary>
+        const int GrassTerrain = 10;
+
+        /// <summary>The marsh terrain's index in the tables above.</summary>
+        const int MarshTerrain = 20;
 
         /// <summary>
         /// What multiplies a tuft of grass or any other piece of standing foliage.
@@ -210,12 +227,19 @@ namespace Odyssey.Presentation.Rendering
         /// Green is a low-blue colour too, so lifting blue is a weak handle — multiplying 0.06 by
         /// two is still 0.12. Bringing red down is what turns yellow-green into green, and it is
         /// why these multipliers look lopsided.</para>
+        ///
+        /// <para><b>Neutral since the look pass (owner, 2026-09-24: "Synty's colours").</b> The
+        /// lopsided multipliers above were tuned against the pack's own shader, which made the
+        /// straw green. <c>Odyssey/Foliage</c> draws the art's own flat colour scheme and multiplies
+        /// this tint straight onto it, so a blue lifted 2.2 times turned two tuft variants in three
+        /// <b>teal</b> — the fault the owner's first look at the meadow showed. Now a whisper of
+        /// variety between modules and no more; the colour is the art's.</para>
         /// </summary>
         static readonly Color[] FoliageTints =
         {
-            new Color(0.55f, 1.00f, 2.20f),            // 0 meadow green
-            new Color(0.45f, 0.86f, 1.80f),            // 1 a deeper green, so a field is not one note
-            new Color(1.00f, 1.00f, 1.00f),            // 2 the odd straw clump, exactly as the pack made it
+            new Color(1.00f, 1.00f, 1.00f),            // 0 the art's own colour
+            new Color(0.94f, 0.97f, 0.92f),            // 1 a shade deeper, so a field is not one note
+            new Color(1.04f, 1.02f, 0.94f),            // 2 a shade warmer
         };
 
         /// <summary>How many tints a tuft can wear. One per clump module, so variety costs no draws.</summary>
@@ -282,6 +306,22 @@ namespace Odyssey.Presentation.Rendering
         /// off-white, the colour of an unbleached sheet.
         /// </summary>
         public static readonly Color Linen = new Color(0.93f, 0.92f, 0.88f, 1f);
+
+        /// <summary>How many sandbag cloths there are (<see cref="Hessian"/>).</summary>
+        public const int HessianShades = 3;
+
+        /// <summary>
+        /// A sandbag's cloth, by shade (design 53 §7a-bis): desert tan, a middle, and hessian —
+        /// research <c>e-12</c> finding 6, whose hex values are estimates, so these are the numbers to
+        /// turn if the wall reads wrong. Three rather than one because identical bags read as tiles
+        /// (finding 13); each bag is dealt one by its own hash.
+        /// </summary>
+        public static Color Hessian(int shade) => shade switch
+        {
+            0 => new Color(0.76f, 0.65f, 0.48f, 1f),  // #C2A67A, desert tan
+            1 => new Color(0.70f, 0.60f, 0.43f, 1f),  // #B39A6E
+            _ => new Color(0.64f, 0.53f, 0.37f, 1f),  // #A3875E, hessian
+        };
 
         /// <summary>The terrain def name for a terrain index, for the module id.</summary>
         public static string TerrainName(int terrain) =>

@@ -21,6 +21,13 @@ namespace Odyssey.Presentation.Rendering
         public const float SizeY = 3.0f;
         public const float HalfXZ = SizeXZ * 0.5f;
 
+        /// <summary>
+        /// How tall a wall stands while the walls are down: a quarter of the storey (owner,
+        /// 2026-09-24, design 42 §2). Below a standing colonist's waist, so what they are doing
+        /// reads over it, and tall enough to read as a wall line from the play camera.
+        /// </summary>
+        public const float StumpHeight = 0.75f;
+
         /// <summary>The low corner of a cell: minimum x, minimum z, the cell's own floor level.</summary>
         public static Vector3 Corner(int x, int z, int y) =>
             new Vector3(x * SizeXZ, y * SizeY, z * SizeXZ);
@@ -133,6 +140,42 @@ namespace Odyssey.Presentation.Rendering
             * Matrix4x4.Translate(new Vector3(0f, SlabLift, 0f))
             * Matrix4x4.Scale(new Vector3(1f, FloorSheet, 1f))
             * Matrix4x4.Translate(new Vector3(0f, -SlabLift, 0f));
+
+        /// <summary>How wide the line round a stockpile's edge is drawn: about a sixteenth of a cell.</summary>
+        public const float StoreEdgeWidth = 0.15f;
+
+        /// <summary>
+        /// How far above the cell's floor plane the line's top sits: 6 mm over a slab's walking
+        /// surface (<see cref="SlabLift"/>), so it is drawn over a built floor as well as over bare
+        /// ground and ties with neither.
+        /// </summary>
+        public const float StoreEdgeLift = SlabLift + 0.006f;
+
+        /// <summary>
+        /// The placement of the store-edge strip on one side of a cell, in the cell's own
+        /// coordinates, composed on the right of the drape as <see cref="FloorTile"/> is. Side 0 is
+        /// +x, 1 is -x, 2 is +z, 3 is -z. The slab primitive is a cell across and 0.15 m thick; it
+        /// is narrowed to <see cref="StoreEdgeWidth"/>, set inside the cell against that side, and
+        /// squashed to a sheet about <see cref="StoreEdgeLift"/>.
+        /// </summary>
+        public static Matrix4x4 StoreEdge(int side)
+        {
+            float inset = HalfXZ - StoreEdgeWidth * 0.5f;
+            float narrow = StoreEdgeWidth / SizeXZ;
+            Vector3 offset = side switch
+            {
+                0 => new Vector3(inset, 0f, 0f),
+                1 => new Vector3(-inset, 0f, 0f),
+                2 => new Vector3(0f, 0f, inset),
+                _ => new Vector3(0f, 0f, -inset),
+            };
+            Vector3 scale = side < 2 ? new Vector3(narrow, 1f, 1f) : new Vector3(1f, 1f, narrow);
+            return Matrix4x4.Translate(offset)
+                   * Matrix4x4.Scale(scale)
+                   * Matrix4x4.Translate(new Vector3(0f, StoreEdgeLift, 0f))
+                   * Matrix4x4.Scale(new Vector3(1f, FloorSheet, 1f))
+                   * Matrix4x4.Translate(new Vector3(0f, -StoreEdgeLift, 0f));
+        }
 
         /// <summary>The centre of the cell volume. Used for bounds, never for placement.</summary>
         public static Vector3 Centre(int x, int z, int y) =>

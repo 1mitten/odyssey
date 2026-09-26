@@ -69,10 +69,25 @@ namespace Odyssey.Sim.Pawns
         public bool Wooded;
 
         /// <summary>
+        /// Whether the world's own animals are seeded and kept (design 30). On by default and
+        /// off only for a fixture that deals pawn ids by hand: a seeded hog would take the id
+        /// the test meant for a colonist. Not a player setting.
+        /// </summary>
+        public bool Wildlife = true;
+
+        /// <summary>
         /// Natural by owner instruction, which is what the scene loads. The ruined city is still
         /// generated and still tested (ADR 0008).
         /// </summary>
         public MapType Map = MapType.Natural;
+
+        /// <summary>
+        /// A natural map's surface relief in layers, or -1 for the def's own. A measurement seam
+        /// for the board-depth arms (<c>docs/design/38-meadow-overhaul.md</c> §7); the game never
+        /// sets it, and it is <b>not saved</b> — a colony built with it would reload on the def's
+        /// own relief.
+        /// </summary>
+        public int SurfaceRelief = -1;
 
         /// <summary>
         /// The presentation chunk grid, when a renderer will be attached, so the support system

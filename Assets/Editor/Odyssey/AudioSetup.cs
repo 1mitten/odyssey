@@ -112,8 +112,18 @@ namespace Odyssey.EditorTools
             /// </summary>
             public readonly System.Func<float[]>? Placeholder;
 
+            /// <summary>
+            /// Whether the importer peak-normalises the clip, or null to leave the importer's own
+            /// setting alone. Unity normalises the downmix when <see cref="Mono"/> is on, which
+            /// raises every take to a 0 dBFS peak and throws away the level a bake set. <b>Only the
+            /// gunshot says false today</b> (design 47 §4c-bis): turning it off for every clip
+            /// changes how loud every chop, blow and stroke is, and that is its own change, wanting
+            /// a listen.
+            /// </summary>
+            public readonly bool? Normalize;
+
             public ClipSpec(string name, AudioCompressionFormat format, AudioClipLoadType loadType,
-                bool mono, bool loadInBackground, System.Func<float[]>? placeholder)
+                bool mono, bool loadInBackground, System.Func<float[]>? placeholder, bool? normalize = null)
             {
                 Name = name;
                 Format = format;
@@ -121,6 +131,7 @@ namespace Odyssey.EditorTools
                 Mono = mono;
                 LoadInBackground = loadInBackground;
                 Placeholder = placeholder;
+                Normalize = normalize;
             }
         }
 
@@ -167,6 +178,34 @@ namespace Odyssey.EditorTools
                 mono: true, loadInBackground: false, placeholder: null),
             new("carry-drop", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: true, loadInBackground: false, placeholder: null),
+            // The swim stroke (design 20 §9), three takes of three quarters of a second: the carry
+            // sounds' class, for the same reason — short, constant while anyone swims.
+            new("swim-stroke", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null),
+            // The draft's blade (design 33 §2i): two thirds of a second, mono in the file already,
+            // and it has to sound on the frame the order lands — so PCM, decompressed on load, the
+            // chimes' class. 58 KB.
+            new("draft", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null),
+            // The sound of a blow (design 33 §9g), baked by tools/audio/bake_combat.sh: two
+            // whooshes (combat-whoosh and its _01), the critical slice and the thud. Mono, because
+            // each is heard from a fighter; PCM decompressed on load, because each is timed to the
+            // frame against the blow and a decode at the moment of play is latency the timing
+            // cannot see. 197 KB for all four.
+            new("combat-whoosh", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null),
+            new("combat-crit-slice", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null),
+            new("combat-hit", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null),
+            // The gunshot (design 47 §4c-bis), baked by tools/audio/bake_gunshot.sh: three near
+            // takes and two far. The blows' class for the blows' reason — it plays on the Shot's
+            // own frame — and **not normalised**: the bake sets the near takes at -14 LUFS and the
+            // far at -20, and the importer's normalise would raise both to a 0 dBFS peak.
+            new("combat-shot", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            new("combat-shot-far", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
             new("alert-normal", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: false, loadInBackground: false, Alert),
             new("alert-negative", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
@@ -177,6 +216,8 @@ namespace Odyssey.EditorTools
                 mono: false, loadInBackground: false, placeholder: null),
             new("alert-raid", AudioCompressionFormat.ADPCM, AudioClipLoadType.CompressedInMemory,
                 mono: false, loadInBackground: false, placeholder: null),
+            new("alert-raid-arrive", AudioCompressionFormat.ADPCM, AudioClipLoadType.CompressedInMemory,
+                mono: false, loadInBackground: false, placeholder: null),
             // The forest beds are minutes long, so they stream rather than sit in memory: a
             // three-minute stereo bed decompressed on load is eighteen megabytes of RAM to play
             // something the player is not supposed to notice. Streaming costs ~200 KB a voice.
@@ -184,6 +225,14 @@ namespace Odyssey.EditorTools
                 mono: false, loadInBackground: true, () => Outdoor(12f, day: true)),
             new("ambience-night", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
                 mono: false, loadInBackground: true, () => Outdoor(12f, day: false)),
+            // The rain beds (design 43 §7), baked by tools/audio/bake_rain.sh: stereo because rain
+            // is the air all round, and streamed like the outdoor beds because they are long loops
+            // that play together for hours. No placeholder — synthesised rain is white noise, and
+            // a clone without the clips hears a dry sky, which is honest.
+            new("rain-light", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
+                mono: false, loadInBackground: true, placeholder: null),
+            new("rain-heavy", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
+                mono: false, loadInBackground: true, placeholder: null),
 
             // A fire is a place you stand near, so it is mono. Compressed in memory rather than
             // decompressed, because it is a long loop that plays continuously: ADPCM decodes for
@@ -249,7 +298,7 @@ namespace Odyssey.EditorTools
                         kept++;
                     }
 
-                    Import(path, spec.Format, spec.LoadType, spec.Mono, spec.LoadInBackground);
+                    Import(path, spec.Format, spec.LoadType, spec.Mono, spec.LoadInBackground, spec.Normalize);
                 }
             }
 
@@ -608,6 +657,106 @@ namespace Odyssey.EditorTools
                 // together are what stop a stockpile run sounding like one file on repeat.
                 CarrySound(SoundIds.CarryLift, "carry-lift"),
                 CarrySound(SoundIds.CarryDrop, "carry-drop"),
+                // A hand going into the water (design 20 §9), once per arm. **Heard only close**
+                // (owner, 2026-09-25): the listener is the camera, which zooms 10 to 160 m and
+                // starts at 48, so full volume inside 8 m and nothing past 40 — a swimmer is heard
+                // when the player has zoomed in on them and not across the board. The cooldown is
+                // under the 0.77 s between one swimmer's strokes and over a frame, so two swimmers
+                // in step are one splash rather than a doubled one.
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.SwimStroke,
+                    Clips = Variants("swim-stroke"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.55f, VolumeVariance = 0.12f, PitchVariance = 0.05f,
+                    SpatialBlend = 1f, MinDistance = 8f, MaxDistance = 40f,
+                    Priority = 170, Cooldown = 0.08f,
+                },
+                // The draft (design 33 §2i): a blade drawn when a colonist is drafted. An
+                // indicator, so 2D like a chime and with no variance — a signal that wobbles reads
+                // as a fault — but on the Effects bus rather than Alerts: it answers the player's
+                // own click and must not duck the music the way an alert does. The cooldown makes
+                // a box of five drafted at once one draw, not a clatter.
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.Draft,
+                    Clips = Variants("draft"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.7f, VolumeVariance = 0f, PitchVariance = 0f,
+                    SpatialBlend = 0f, MinDistance = 1f, MaxDistance = 500f,
+                    Priority = 24, Cooldown = 0.25f,
+                },
+                // The sound of a blow (design 33 §9g). Placed like the axe, at the axe's ranges —
+                // a fight is heard where felling is — and every one on the Effects bus.
+                //
+                // **No cooldown on any of the three.** The director's cooldown is per sound, so any
+                // cooldown at all swallows a second fighter's blow read in the same frame, and in a
+                // group fight at x3 that is most of them. The bound on a big fight is the voice
+                // budget instead, and the priorities say what yields: a whoosh (140) gives its voice
+                // to a thud (110) or a slice (100) before a blow goes unheard.
+                //
+                // The mix against the axe is baked (the script's header): a thud sits about 6 dB
+                // over a felling blow at the same distance, a whoosh about 4 dB over, the slice
+                // the loudest thing in a fight. Volume is one number for all three so the bake's
+                // balance between them is the one that plays.
+                new AudioCatalogue.SoundDef
+                {
+                    // Two takes and a little pitch spread, so a long exchange is not one file on
+                    // repeat. Pitch moves the peak by a few per cent of 40 ms — a millisecond or two.
+                    Id = SoundIds.CombatSwing,
+                    Clips = Variants("combat-whoosh"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.65f, VolumeVariance = 0.12f, PitchVariance = 0.06f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = 140, Cooldown = 0f,
+                },
+                new AudioCatalogue.SoundDef
+                {
+                    // No variance: the slice is timed so its biggest moment lands on the impact, and
+                    // it is rare enough that repetition is not the risk a wandering pitch would be.
+                    Id = SoundIds.CombatCritSlice,
+                    Clips = Variants("combat-crit-slice"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.65f, VolumeVariance = 0f, PitchVariance = 0f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = 100, Cooldown = 0f,
+                },
+                new AudioCatalogue.SoundDef
+                {
+                    // One take, so the variance the axe gets: the same thud fifty times in a fight
+                    // needs its level and pitch moved a little to stop reading as a sample.
+                    Id = SoundIds.CombatHit,
+                    Clips = Variants("combat-hit"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.65f, VolumeVariance = 0.15f, PitchVariance = 0.07f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = 110, Cooldown = 0f,
+                },
+                // The gunshot (design 47 §4c-bis), two sounds by distance: CombatFeedback plays the
+                // crack when the shooter is within 70 m of the listener and the thump beyond, so a
+                // player zoomed in on a fight hears the one and one pulled back over the colony the
+                // other. Priority 90 is above every blow (100-140) and below the alerts, so a fight
+                // steals voices from the chop and the carry rather than the other way round. The
+                // near cooldown makes two shots on one frame one report; a volley a frame apart is
+                // still a volley.
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.CombatShot,
+                    Clips = Variants("combat-shot"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.85f, VolumeVariance = 0.12f, PitchVariance = 0.04f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 150f,
+                    Priority = 90, Cooldown = 0.03f,
+                },
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.CombatShotFar,
+                    Clips = Variants("combat-shot-far"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.8f, VolumeVariance = 0.10f, PitchVariance = 0.03f,
+                    SpatialBlend = 1f, MinDistance = 50f, MaxDistance = 400f,
+                    Priority = 120, Cooldown = 0.06f,
+                },
                 // The alerts. Zero variance on all five: a chime is a signal and a signal that
                 // wobbles reads as a fault, which is the opposite of what the work sounds want
                 // variance for. 2D, top voice priority, and a cooldown long enough that two
@@ -624,18 +773,37 @@ namespace Odyssey.EditorTools
                 // The raid siren carries its own crescendo and is nine seconds long; a second
                 // one starting over the first would be a mess, so its cooldown covers the clip.
                 AlertSound(SoundIds.AlertRaid, "alert-raid", 0.9f, cooldown: 10f),
+                // A raid arriving at the edge (design 55 §7): the war horn, 18 s and kept whole, so
+                // its cooldown covers the clip for the same reason as the siren's. It baked to
+                // -17.3 LUFS against the siren's -18.6, so 1.3 dB comes off here: 0.9 x 0.86.
+                AlertSound(SoundIds.AlertRaidArrive, "alert-raid-arrive", 0.78f, cooldown: 19f),
             });
 
-            // The campfire: in the library, played by nothing. A looping sound that belongs to a
-            // thing at a place is a kind of emitter the director does not have — see
-            // SoundIds.Campfire. The row is here so the day fires arrive the sound is already
-            // named, imported and mixed, and the work is whatever plays it.
+            // The campfire, and it is played by something at last (design 31 §7): FireDirector
+            // declares every drawn fire each frame and AudioDirector.SyncLoops keeps the nearest
+            // few sounding. The emitter this row waited for is LoopEmitters.
+            //
+            // **Volume 0.45, and it got there by being listened to.** It was 0.55 against a
+            // synthesised placeholder, raised to 0.75 on the arithmetic below, and then cut to
+            // 0.45 because the owner heard the real thing and said it was too loud (2026-09-23).
+            // An ear beats a calculation about loudness every time; the arithmetic is kept
+            // because it explains why the clip is quieter than the placeholder it replaced, which
+            // is still the thing a future reader would otherwise wonder about.
+            //
+            // **The superseded reasoning.** The
+            // placeholder this mix was set against was synthesised and sat at -19.8 LUFS. The
+            // real recording is a field capture with a ~38 dB crest — a quiet bed under sharp
+            // cracks — and at the -3 dBFS peak the sourcing doc asks for it lands at -23.8 LUFS.
+            // Reaching -19.8 would have taken about 19 dB of limiting on the cracks, which is
+            // the one thing that makes it a fire rather than a hiss, so the clip keeps its
+            // dynamics and the catalogue makes up 2.7 dB of the 4 dB difference. The rest is
+            // deliberately left: a campfire is a quiet thing, and MinDistance 15 m is generous.
             catalogue.Sounds.Add(new AudioCatalogue.SoundDef
             {
                 Id = SoundIds.Campfire,
                 Clips = Variants("campfire"),
                 Bus = SoundBus.Ambience,
-                Volume = 0.55f, VolumeVariance = 0f, PitchVariance = 0f,
+                Volume = 0.45f, VolumeVariance = 0f, PitchVariance = 0f,
                 SpatialBlend = 1f, MinDistance = 15f, MaxDistance = 110f,
                 Priority = 180, Cooldown = 0f,
             });
@@ -652,6 +820,25 @@ namespace Odyssey.EditorTools
                 Clip = Require("water"),
                 Volume = 0.32f, FadeSeconds = 2.5f, MinDistance = 60f, MaxDistance = 300f,
             });
+
+            // The rain (design 43 §7). Both clips are baked to -23 LUFS, so one volume serves
+            // both and RainMix's weights are loudness. 0.6 puts a downpour about 4 dB over the
+            // day bed as it plays (the day bed is -20.4 LUFS at 0.28, so -31.5 in the mix; a
+            // downpour is -23 at 0.6, -27.4) and a drizzle a little under it, while RainMix hushes
+            // the birds. FadeSeconds is how long a change of sky takes to be heard: three, so a
+            // forced storm swells in rather than switches on. INVENTED; tuned by ear.
+            AddRain(SoundIds.AmbienceRainLight, "rain-light");
+            AddRain(SoundIds.AmbienceRainHeavy, "rain-heavy");
+
+            void AddRain(string id, string name)
+            {
+                AudioClip? clip = Clip(name);
+                if (clip == null) return;
+                catalogue.Ambience.Add(new AudioCatalogue.AmbienceDef
+                {
+                    Id = id, Clip = clip, Volume = 0.6f, FadeSeconds = 3f,
+                });
+            }
 
             // The outdoor bed: the floor of the mix, under the work rather than beside it —
             // night lower than day, because the world is quieter after dark and the bed
@@ -719,7 +906,7 @@ namespace Odyssey.EditorTools
         // ---- plumbing ----
 
         static void Import(string path, AudioCompressionFormat format, AudioClipLoadType loadType,
-            bool mono, bool loadInBackground)
+            bool mono, bool loadInBackground, bool? normalize = null)
         {
             AssetDatabase.ImportAsset(path);
             if (AssetImporter.GetAtPath(path) is not AudioImporter importer) return;
@@ -734,8 +921,28 @@ namespace Odyssey.EditorTools
             // mono threw away the image it was mixed with.
             importer.forceToMono = mono;
             importer.loadInBackground = loadInBackground;
+            if (normalize.HasValue) SetNormalize(importer, normalize.Value);
             importer.SaveAndReimport();
         }
+
+        /// <summary>
+        /// The importer's normalise switch, which the scripting API does not expose, written
+        /// through its serialised form. Throws when the field cannot be found, so a Unity that
+        /// renames it fails the build rather than quietly normalising the gunshot again.
+        /// </summary>
+        static void SetNormalize(AudioImporter importer, bool value)
+        {
+            var serialized = new SerializedObject(importer);
+            SerializedProperty? property = NormalizeProperty(serialized)
+                ?? throw new System.InvalidOperationException(
+                    "[AudioSetup] the audio importer has no normalise field; the gunshot would import normalised.");
+            property.boolValue = value;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>The importer's serialised normalise field: <c>m_Normalize</c>, as the .meta writes <c>normalize</c>.</summary>
+        internal static SerializedProperty? NormalizeProperty(SerializedObject importer) =>
+            importer.FindProperty("m_Normalize") ?? importer.FindProperty("normalize");
 
         /// <summary>A 16-bit PCM mono WAV. Nothing compressed, nothing platform-specific: the
         /// importer decides what the engine actually keeps.</summary>

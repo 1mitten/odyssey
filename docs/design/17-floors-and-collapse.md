@@ -176,7 +176,7 @@ row and loses none, and the rule still lifts exactly one step, so an already-roo
 instead of stacking storeys. **It asks `Floor[index]` and deliberately not `HasFloor`** — the looser
 test would take in the air cell over open ground, and measured, a click on the grass beside a wall
 would then land a slab one cell above the wall's head with the support rule accepting it at 3.
-`docs/design/27-roofs.md` §3 has the measurement and the control test.
+`docs/design/59-roofs.md` §3 has the measurement and the control test.
 
 ### The cursor is a plate — owner, 2026-09-17
 

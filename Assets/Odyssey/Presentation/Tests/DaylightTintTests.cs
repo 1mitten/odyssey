@@ -98,6 +98,8 @@ namespace Odyssey.Tests.Presentation
         {
             var codes = new List<int>();
             foreach (InstanceBucket bucket in batch.Body) if (bucket.Count > 0) codes.Add(bucket.Tint);
+            // And the ground skin's groups, which is where the ground's tint lives now (design 38 §20).
+            for (int g = 0; g < batch.Skin.GroupCount; g++) codes.Add(batch.Skin.GroupTint(g));
             foreach (InstanceBucket bucket in batch.Roof) if (bucket.Count > 0) codes.Add(bucket.Tint);
             return codes;
         }
@@ -228,7 +230,7 @@ namespace Odyssey.Tests.Presentation
                 for (int y = 0; y <= 1; y++) world.Solid(x, z, y, NaturalContent.TerrainSubsoil);
                 world.Solid(x, z, 1, NaturalContent.TerrainGrass);
             }
-            world.Edifice(1, 1, 2, NaturalContent.EdificeTreeBroadleaf, blocking: false);
+            world.Edifice(1, 1, 2, NaturalContent.EdificeTreeMeadow, blocking: false);
             world.Publish();
 
             foreach (int code in TintsOf(MeshLayer(world, 1)))

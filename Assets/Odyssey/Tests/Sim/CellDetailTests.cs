@@ -99,24 +99,43 @@ namespace Odyssey.Tests.Sim
             Assert.That(TerrainHandle.DeepWater, Is.EqualTo(NaturalContent.TerrainDeepWater));
             Assert.That(TerrainHandle.Marsh, Is.EqualTo(NaturalContent.TerrainMarsh));
 
-            // Two edifices now sit past the generators' own numbering: CoreContent's ids end at 9,
-            // the trees continue from 10, the bed takes 12 (see CoreContent.EdificeBed for why 12
-            // and not 10) and the colony's one-cell stair takes 13. The count is pinned to the
-            // LAST of them rather than to the bed, so the next thing a colonist can build has to
-            // come and change this line rather than silently leaving the contract one short.
+            // The bed, the shelf, the campfire, the generator and the heater are the edifices past
+            // the generators' own numbering: CoreContent's ids end at 9, the trees continue from 10,
+            // and each takes the next free id rather than either family's next offset - see
+            // CoreContent.EdificeBed for why 12 and not 10, EdificeShelf for 13, EdificeCampfire for
+            // 14, and design 32 for the generator's 15 and the heater's 16.
+            // The wild things of design 45 continue after the heater: fruit tree 17, giant 18,
+            // bush 19, berry bush 20 and 21 picked.
+            // And the galley after them (design 48): 22, the Electric Cooker.
+            Assert.That(NaturalContent.EdificeLimit, Is.EqualTo(CoreContent.EdificeGalley));
+            Assert.That(EdificeHandle.Galley, Is.EqualTo(CoreContent.EdificeGalley));
+            // Cover's sandbags (design 53 §4) after the galley.
+            Assert.That(EdificeHandle.Sandbags, Is.EqualTo(CoreContent.EdificeSandbags));
+            // And the colony's one-cell stair after sandbags (design 60): 24. The count is pinned
+            // to the LAST of them, so the next thing a colonist can build has to come and change
+            // this line rather than silently leaving the contract one short.
+            Assert.That(EdificeHandle.StairFull, Is.EqualTo(CoreContent.EdificeStairFull));
             Assert.That(EdificeHandle.Count, Is.EqualTo(CoreContent.EdificeStairFull + 1));
+            Assert.That(EdificeHandle.TreeFruit, Is.EqualTo(NaturalContent.EdificeTreeFruit));
+            Assert.That(EdificeHandle.TreeGiant, Is.EqualTo(NaturalContent.EdificeTreeGiant));
+            Assert.That(EdificeHandle.Bush, Is.EqualTo(NaturalContent.EdificeBush));
+            Assert.That(EdificeHandle.BerryBush, Is.EqualTo(NaturalContent.EdificeBerryBush));
+            Assert.That(EdificeHandle.BerryBushPicked, Is.EqualTo(NaturalContent.EdificeBerryBushPicked));
             Assert.That(EdificeHandle.Wall, Is.EqualTo(CoreContent.EdificeWall));
             Assert.That(EdificeHandle.Door, Is.EqualTo(CoreContent.EdificeDoor));
             Assert.That(EdificeHandle.Ladder, Is.EqualTo(CoreContent.EdificeLadder));
-            Assert.That(EdificeHandle.TreeConifer, Is.EqualTo(NaturalContent.EdificeTreeConifer));
-            Assert.That(EdificeHandle.TreeBroadleaf, Is.EqualTo(NaturalContent.EdificeTreeBroadleaf));
+            Assert.That(EdificeHandle.TreeBirch, Is.EqualTo(NaturalContent.EdificeTreeBirch));
+            Assert.That(EdificeHandle.TreeMeadow, Is.EqualTo(NaturalContent.EdificeTreeMeadow));
             Assert.That(EdificeHandle.Bed, Is.EqualTo(CoreContent.EdificeBed));
+            Assert.That(EdificeHandle.Shelf, Is.EqualTo(CoreContent.EdificeShelf));
+            Assert.That(EdificeHandle.Campfire, Is.EqualTo(CoreContent.EdificeCampfire));
+            Assert.That(EdificeHandle.Generator, Is.EqualTo(CoreContent.EdificeGenerator));
+            Assert.That(EdificeHandle.Heater, Is.EqualTo(CoreContent.EdificeHeater));
 
             // The colony's stair, which is deliberately NOT worldgen's StairLower/StairUpper pair
             // — the two shapes coexist and the contract has to be able to name both.
             Assert.That(EdificeHandle.StairLower, Is.EqualTo(CoreContent.EdificeStairLower));
             Assert.That(EdificeHandle.StairUpper, Is.EqualTo(CoreContent.EdificeStairUpper));
-            Assert.That(EdificeHandle.StairFull, Is.EqualTo(CoreContent.EdificeStairFull));
         }
 
         // ---- the answer -------------------------------------------------------------------
@@ -225,7 +244,7 @@ namespace Odyssey.Tests.Sim
             var frame = Ask(colony, Size.FromIndex(index));
 
             Assert.That(frame.TryGetCellDetail(index, out CellDetail detail), Is.True);
-            Assert.That(detail.Edifice, Is.GreaterThanOrEqualTo(EdificeHandle.TreeConifer),
+            Assert.That(detail.Edifice, Is.GreaterThanOrEqualTo(EdificeHandle.TreeBirch),
                 "the tree is the thing the player clicked");
         }
 

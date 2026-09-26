@@ -74,7 +74,7 @@ namespace Odyssey.Sim.Growing
             _plants = plants ?? throw new ArgumentNullException(nameof(plants));
             _chunks = chunks;
             int count = grid.Size.CellCount;
-            _zones = new ZoneGrid(count);
+            _zones = new ZoneGrid(count, grid.Footprint);
             _cropAt = new byte[count];
             _growthAt = new int[count];
         }
@@ -187,13 +187,32 @@ namespace Odyssey.Sim.Growing
         public IntentRejection Cancel(CellRef cell)
         {
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
+            return CancelAt(_grid.Index(cell)) ? IntentRejection.None : IntentRejection.AlreadyInThatState;
+        }
 
-            int index = _grid.Index(cell);
-            if (!_zones.Leave(index)) return IntentRejection.AlreadyInThatState;
+        /// <summary>
+        /// The same cancel by cell index, for callers that are not answering an intent: the world
+        /// took the cell away rather than the player un-painting it. Answers whether anything was
+        /// actually there to take.
+        ///
+        /// <para><b>The crop is asked about separately from the paint</b> rather than inside the
+        /// <c>Leave</c>. Sowing needs a zone, so a crop without one should not exist — but this is
+        /// the method the falling rule calls on a cell whose ground has just gone, and a cell left
+        /// holding a seed after its zone had somehow departed would keep that seed for ever, drawn
+        /// in mid-air, which is the exact fault this path exists to end
+        /// (docs/design/22-growing.md §10).</para>
+        /// </summary>
+        public bool CancelAt(int index)
+        {
+            if ((uint)index >= (uint)_cropAt.Length) return false;
 
-            if (_cropAt[index] != 0) Uproot(index);
+            bool left = _zones.Leave(index);
+            bool cropped = _cropAt[index] != 0;
+            if (!left && !cropped) return false;
+
+            if (cropped) Uproot(index);
             MarkCellAndSides(index);
-            return IntentRejection.None;
+            return true;
         }
 
         /// <summary>

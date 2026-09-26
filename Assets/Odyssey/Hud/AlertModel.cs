@@ -66,7 +66,9 @@ namespace Odyssey.Hud
             PawnId pawn = default,
             CellRef? cell = null,
             string targetPrefix = "",
-            string detail = "")
+            string detail = "",
+            bool dismissByKey = false,
+            int identity = 0)
         {
             Key = key;
             TargetName = targetName;
@@ -78,7 +80,12 @@ namespace Odyssey.Hud
             Count = count;
             Pawn = pawn;
             Cell = cell;
-            DismissKey = ComputeDismissKey(key, pawn, cell);
+            // A row whose cell follows something moving — a raid's centre — is dismissed by its key,
+            // or a dismiss would last only until the band took a step; and by the identity of what
+            // it is about (the band's id), or dismissing one raid would dismiss the next.
+            DismissKey = dismissByKey
+                ? ComputeDismissKey(key, new PawnId(identity), null)
+                : ComputeDismissKey(key, pawn, cell);
         }
 
         public AlertRow(string key, string lead, string detail, AlertSeverity severity, int count)
@@ -136,9 +143,73 @@ namespace Odyssey.Hud
         public const string StarveKey = "ui.alert.starvation";
         public const string BreakKey = "ui.alert.mentalbreak";
         public const string IdleKey = "ui.alert.idle";
+        public const string StoreStuckKey = "ui.alert.storagestuck";
+
+        /// <summary>A net has gone dark with something on it wanting power (design 32 §10).</summary>
+        public const string PowerLossKey = "ui.alert.powerloss";
+
+        /// <summary>A switched-on generator is empty and its net wants power.</summary>
+        public const string NoFuelKey = "ui.alert.nofuel";
+
+        /// <summary>
+        /// A downed colonist lying where she fell with no free bed to be carried to (design 33
+        /// §11d): the owner's "leave her, and say why". Read off the simulation's
+        /// <c>odyssey.pawn.rescue.nobed</c>, one row a colonist, a click on it goes to her.
+        /// </summary>
+        public const string NoRescueBedKey = "ui.alert.norescuebed";
+
+        /// <summary>
+        /// Somebody is kept home and there is no hearth, so home does not exist and keeps nobody
+        /// (design 43 §3f, §4d). Only while it matters: with nobody kept home, no hearth is simply
+        /// a colony that has not built a fire.
+        /// </summary>
+        public const string NoHearthKey = "ui.alert.nohearth";
+
+        /// <summary>A deconstruct order stands on the hearth: home goes when it comes down (§3f's warning).</summary>
+        public const string HearthDownKey = "ui.alert.hearthdown";
+
+        /// <summary>
+        /// Seconds a store must be marked for removal and still full before the panel says so.
+        ///
+        /// <para>Longer than the idle latch because the ordinary case looks identical for a while:
+        /// a shelf ordered taken apart is full until a hauler has walked to it, and telling the
+        /// player it is stuck while somebody is on their way to empty it would be crying wolf. Ten
+        /// seconds is long enough for a colonist to cross a room and short enough that a player who
+        /// walks away and comes back finds the reason waiting.</para>
+        /// </summary>
+        public const double StoreStuckSustain = 10.0;
+
+        /// <summary>
+        /// A colonist with an injury nobody has tended who is waiting on a doctor (design 43 §11,
+        /// §15): Danger while it bleeds, with the hours the bleed leaves her; Warning while she lies
+        /// downed with it. One row a colonist; a click goes to her. A colonist on her feet with a
+        /// bruise is not news: the doctor's round leaves her to bed rest (design 37 §4).
+        /// </summary>
+        public const string InjuredKey = "ui.alert.injured";
+
+        /// <summary>
+        /// Somebody needs tending and there are no medical supplies anywhere on the board (design 43
+        /// §5, design 37): the doctor dresses the wound bare, for less heal and a worse tend.
+        /// </summary>
+        public const string NoMedicineKey = "ui.alert.nomedicine";
+
+        /// <summary>
+        /// A raid is assaulting (design 55 §7): Danger, the standing raiders counted, a click going to
+        /// the middle of them. Raised from the assault, not the arrival — a band gathering at the edge
+        /// is the Events row's news, and the alert is the condition to act on. Its chime is the assault
+        /// horn, through the override the sound library has carried since 2026-09-19.
+        /// </summary>
+        public const string RaidKey = "ui.alert.raid";
+
+        /// <summary>
+        /// The order kind a deconstruction is published as (<c>DesignationKind.Deconstruct</c>, 2).
+        /// Restated here as <c>InspectModel.OrderVerb</c> and <c>OrderColours.ToolOf</c> restate it,
+        /// because this assembly cannot see the simulation's enum.
+        /// </summary>
+        public const byte DeconstructOrderKind = 2;
 
         /// <summary>Every key this panel can put on screen, for the registry test.</summary>
-        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey };
+        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey, StoreStuckKey, PowerLossKey, NoFuelKey, NoRescueBedKey, NoHearthKey, HearthDownKey, InjuredKey, NoMedicineKey, RaidKey };
 
         public readonly List<AlertRow> Rows = new List<AlertRow>();
 
@@ -148,14 +219,50 @@ namespace Odyssey.Hud
 
         double _idleSince = -1.0;
 
+        /// <summary>When the first store that is being emptied and is not empty was seen.</summary>
+        double _storeStuckSince = -1.0;
+        bool _wasStoreStuck;
+
+        int _wasDark = -1;
+        int _wasShortW = -1;
+        int _wasDry = -1;
         int _wasStarving = -1;
         int _wasBreaking = -1;
         bool _wasIdle;
         int _wasColony = -1;
+        int _wasNoBed;
+        // What the two hearth rows say, not only whether they are up: the count kept home while
+        // there is no hearth (0 when the row is down), and the cell ordered down (-1 when none).
+        int _wasNoHearth;
+        int _wasHearthDown = -1;
+        int _hearthDownDismissKey;
+        long _wasNoBedIds;
+        int _wasInjured = -1;
+        long _wasInjuredIds;
+        int _wasNoMedicine = -1;
+        int _wasRaid = -1;
+        int _wasRaidId;
+
+        /// <summary>The dismiss key of the band the Raid row is about, so it can be forgotten when that band stops.</summary>
+        int _raidDismiss;
         int _latchVersion;
         int _wasLatchVersion = -1;
         int _dismissVersion;
         int _wasDismissVersion = -1;
+
+        /// <summary>
+        /// Has this pawn an injury nobody has tended? Read off the body's sparse aspects: the
+        /// records counted against the tended. <paramref name="hours"/> is the bleed's, or nought.
+        /// </summary>
+        static bool Untended(WorldSnapshot snapshot, in PawnView pawn, out int hours)
+        {
+            hours = 0;
+            if (!snapshot.TryGetPawnAspect(pawn.Id, HealthAspectNames.InjuriesKey, out int injuries) || injuries <= 0) return false;
+            snapshot.TryGetPawnAspect(pawn.Id, HealthAspectNames.TendedKey, out int tended);
+            if (tended >= injuries) return false;
+            snapshot.TryGetPawnAspect(pawn.Id, HealthAspectNames.BleedHoursKey, out hours);
+            return hours > 0 || pawn.IsDowned;
+        }
 
         /// <summary>Dismiss an active alert until its condition clears and re-occurs.</summary>
         public void Dismiss(int dismissKey)
@@ -194,11 +301,26 @@ namespace Odyssey.Hud
             int starving = 0;
             int breaking = 0;
             int idle = 0;
+            int noBed = 0;
+            long noBedIds = 0;
+            int injured = 0;
+            long injuredIds = 0;
+            int keptHome = 0;
+
+            // Colonists only (design 33 §5d): these are the colony's alerts, and a bandit or an
+            // animal is neither hungry on the colony's account nor part of whether it is idle. A
+            // bandit's needs never move at all (design 33 §5c). Read from the flags, which a view
+            // built without them derives from the kind as it always did.
+            int colonists = 0;
+            PawnId onlyColonist = default;
 
             var pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length; i++)
             {
                 PawnView pawn = pawns[i];
+                if (!pawn.IsColonist) continue;
+                colonists++;
+                onlyColonist = pawn.Id;
                 int id = pawn.Id.Value;
 
                 if (Latch(_starving, id, pawn.Food, StarveAt, StarveClearAt, ref _latchVersion))
@@ -220,12 +342,42 @@ namespace Odyssey.Hud
                 }
 
                 if (pawn.JobDef < 0) idle++;
+
+                if (snapshot.TryGetPawnAspect(pawn.Id, AreaAspectNames.AreaKey, out int area) && area != 0) keptHome++;
+
+                if (snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.RescueNoBedKey, out _))
+                {
+                    noBed++;
+                    noBedIds = noBedIds * 31 + id;
+                }
+                else _dismissed.Remove(AlertRow.ComputeDismissKey(NoRescueBedKey, pawn.Id, default));
+
+                // Untended injuries (design 43 §11), read off the body's sparse aspects: a colonist
+                // nobody has hurt publishes none and costs one lookup. The bleed's hours are in the
+                // hash so a row that counts down is rewritten when its number moves.
+                if (Untended(snapshot, pawn, out int hours))
+                {
+                    injured++;
+                    injuredIds = injuredIds * 31 + id * 1_000 + hours;
+                }
+                else _dismissed.Remove(AlertRow.ComputeDismissKey(InjuredKey, pawn.Id, default));
             }
+
+            // No medical supplies anywhere on the board while somebody needs them (design 43 §5, design 37).
+            int noMedicine = 0;
+            if (injured > 0)
+            {
+                noMedicine = 1;
+                System.ReadOnlySpan<ThingView> things = snapshot.Things;
+                for (int i = 0; i < things.Length; i++)
+                    if (things[i].DefIndex == ItemHandle.MedicalSupplies) { noMedicine = 0; break; }
+            }
+            if (noMedicine == 0) _dismissed.Remove(AlertRow.ComputeDismissKey(NoMedicineKey, default, default));
 
             Forget(_starving, snapshot, ref _latchVersion);
             Forget(_breaking, snapshot, ref _latchVersion);
 
-            if (idle > 0 && idle == pawns.Length)
+            if (idle > 0 && idle == colonists)
             {
                 if (_idleSince < 0.0) _idleSince = seconds;
             }
@@ -239,18 +391,134 @@ namespace Odyssey.Hud
 
             bool idleStands = _idleSince >= 0.0 && seconds - _idleSince >= IdleSustain;
 
-            if (starving == _wasStarving && breaking == _wasBreaking &&
-                idleStands == _wasIdle && pawns.Length == _wasColony &&
+            // A store that has been told to come apart and still has something in it. The
+            // simulation publishes the state and this decides when it is news, exactly as it does
+            // for an idle colony: a wall-clock rule has no business inside a fixed-tick tick.
+            int stuck = 0;
+            System.ReadOnlySpan<StorageUnitView> stores = snapshot.StorageUnits;
+            for (int i = 0; i < stores.Length; i++)
+                if (stores[i].Emptying && stores[i].Stacks > 0) stuck++;
+
+            if (stuck > 0)
+            {
+                if (_storeStuckSince < 0.0) _storeStuckSince = seconds;
+            }
+            else _storeStuckSince = -1.0;
+
+            bool storeStuck = _storeStuckSince >= 0.0 && seconds - _storeStuckSince >= StoreStuckSustain;
+
+            // Power (design 32 §10). No sustain on either: a dark net is a fact on the frame it
+            // happens, and the whole-net rule means it does not flicker — demand counts what is
+            // switched on, not what is powered, so a dark net stays dark until something changes.
+            int dark = 0, shortW = 0, dry = 0;
+            int darkCell = -1, dryCell = -1;
+            System.ReadOnlySpan<PowerNetView> nets = snapshot.PowerNets;
+            for (int i = 0; i < nets.Length; i++)
+            {
+                if (nets[i].State != PowerNetState.Dark) continue;
+                dark++;
+                shortW += nets[i].DemandW - nets[i].SupplyW;
+            }
+            System.ReadOnlySpan<PowerDeviceView> devices = snapshot.PowerDevices;
+            for (int i = 0; i < devices.Length; i++)
+            {
+                PowerDeviceView d = devices[i];
+                if (darkCell < 0 && d.Role == PowerRole.Consumer && d.On && !d.Powered
+                    && snapshot.TryGetPowerNet(d.NetKey, out PowerNetView dn) && dn.State == PowerNetState.Dark)
+                    darkCell = d.HeadCell;
+                if (d.Role != PowerRole.Generator || !d.On || !d.BurnsFuel || d.FuelMilli > 0) continue;
+                if (!snapshot.TryGetPowerNet(d.NetKey, out PowerNetView n) || n.DemandW <= 0) continue;
+                dry++;
+                if (dryCell < 0) dryCell = d.HeadCell;
+            }
+
+            // The hearth (design 43 §3f): missing while somebody is kept home, or ordered down.
+            int hearth = snapshot.HearthCell;
+            bool noHearth = hearth < 0 && keptHome > 0;
+            bool hearthDown = false;
+            if (hearth >= 0)
+            {
+                System.ReadOnlySpan<OrderView> orders = snapshot.Orders;
+                for (int i = 0; i < orders.Length; i++)
+                    if (orders[i].CellIndex == hearth && orders[i].Kind == DeconstructOrderKind) { hearthDown = true; break; }
+            }
+
+            // A raid assaulting (design 55 §7): the standing raiders of every assaulting band, and the
+            // first band's middle and mix for the row. The middle is coarsened to eight cells in the
+            // signature, so the row's jump follows the band without a rebuild on every step.
+            int raidStanding = 0, raidMix = -1, raidId = 0;
+            CellRef raidCentre = default;
+            System.ReadOnlySpan<RaidView> raids = snapshot.Raids;
+            for (int i = 0; i < raids.Length; i++)
+            {
+                if (raids[i].Phase != RaidPhase.Assaulting || raids[i].Standing <= 0) continue;
+                raidStanding += raids[i].Standing;
+                if (raidMix >= 0) continue;
+                raidMix = raids[i].Mix;
+                raidCentre = raids[i].Centre;
+                raidId = raids[i].Id;
+            }
+            int raidSignature = raidMix < 0 ? -1 : raidStanding * 1_000_000 + raidCentre.X / 8 * 1_000 + raidCentre.Z / 8;
+
+            if (raidSignature == _wasRaid && raidId == _wasRaidId &&
+                starving == _wasStarving && breaking == _wasBreaking &&
+                (noHearth ? keptHome : 0) == _wasNoHearth && (hearthDown ? hearth : -1) == _wasHearthDown &&
+                dark == _wasDark && shortW == _wasShortW && dry == _wasDry &&
+                idleStands == _wasIdle && storeStuck == _wasStoreStuck && colonists == _wasColony &&
+                noBed == _wasNoBed && noBedIds == _wasNoBedIds &&
+                injured == _wasInjured && injuredIds == _wasInjuredIds && noMedicine == _wasNoMedicine &&
                 _latchVersion == _wasLatchVersion && _dismissVersion == _wasDismissVersion)
                 return;
 
+            _wasDark = dark;
+            _wasShortW = shortW;
+            _wasDry = dry;
             _wasStarving = starving;
             _wasBreaking = breaking;
             _wasIdle = idleStands;
-            _wasColony = pawns.Length;
+            _wasStoreStuck = storeStuck;
+            _wasColony = colonists;
+            _wasNoBed = noBed;
+            _wasNoHearth = noHearth ? keptHome : 0;
+            _wasHearthDown = hearthDown ? hearth : -1;
+            _wasNoBedIds = noBedIds;
+            _wasInjured = injured;
+            _wasInjuredIds = injuredIds;
+            _wasNoMedicine = noMedicine;
             _wasLatchVersion = _latchVersion;
             _wasDismissVersion = _dismissVersion;
+            _wasRaid = raidSignature;
+            _wasRaidId = raidId;
             Rows.Clear();
+
+            // Worst of all first: a band in the colony.
+            // Dismissed by the band, not the key alone: a raid that follows another in the same
+            // refresh is news, and its assault horn with it.
+            int raidDismiss = AlertRow.ComputeDismissKey(RaidKey, new PawnId(raidId), null);
+            if (raidMix >= 0 && raidDismiss != _raidDismiss)
+            {
+                _dismissed.Remove(_raidDismiss);
+                _raidDismiss = raidDismiss;
+            }
+            if (raidMix >= 0)
+            {
+                if (!_dismissed.Contains(raidDismiss))
+                    Rows.Add(new AlertRow(
+                        RaidKey,
+                        Registry.Label(RaidKey),
+                        raidStanding == 1 ? string.Empty : " × " + raidStanding,
+                        AlertSeverity.Danger,
+                        count: raidStanding,
+                        cell: raidCentre,
+                        detail: RaidMixLabels.Label(raidMix),
+                        dismissByKey: true,
+                        identity: raidId));
+            }
+            else
+            {
+                _dismissed.Remove(_raidDismiss);
+                _raidDismiss = 0;
+            }
 
             // Worst first: Danger (starving), then Warning (breaking), then Notice (idle).
             for (int i = 0; i < pawns.Length; i++)
@@ -293,21 +561,147 @@ namespace Odyssey.Hud
                 }
             }
 
+            // Down with nowhere to be carried: Danger, because she lies where she fell until a bed
+            // frees, and a click goes to her (design 33 §11d).
+            for (int i = 0; i < pawns.Length && noBed > 0; i++)
+            {
+                PawnView pawn = pawns[i];
+                if (!pawn.IsColonist || !snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.RescueNoBedKey, out _)) continue;
+                int dismissKey = AlertRow.ComputeDismissKey(NoRescueBedKey, pawn.Id, default);
+                if (_dismissed.Contains(dismissKey)) continue;
+                Rows.Add(new AlertRow(
+                    NoRescueBedKey,
+                    ColonistNames.Of(snapshot, pawn.Id),
+                    " is down with no bed to be carried to",
+                    AlertSeverity.Danger,
+                    count: 1,
+                    pawn: pawn.Id));
+            }
+
+            // Untended injuries (design 43 §11): Danger while bleeding, with how long it leaves her,
+            // else Warning. A downed colonist already has the rescue's row or the downed flag; this
+            // is the one that says a doctor is owed.
+            for (int i = 0; i < pawns.Length && injured > 0; i++)
+            {
+                PawnView pawn = pawns[i];
+                if (!pawn.IsColonist || !Untended(snapshot, pawn, out int hours)) continue;
+                int dismissKey = AlertRow.ComputeDismissKey(InjuredKey, pawn.Id, default);
+                if (_dismissed.Contains(dismissKey)) continue;
+                Rows.Add(new AlertRow(
+                    InjuredKey,
+                    ColonistNames.Of(snapshot, pawn.Id),
+                    hours > 0 ? " is bleeding: " + hours + " h " + Registry.Label("ui.health.todeath") : " needs tending",
+                    hours > 0 ? AlertSeverity.Danger : AlertSeverity.Warning,
+                    count: 1,
+                    pawn: pawn.Id));
+            }
+
+            if (noMedicine > 0 && !_dismissed.Contains(AlertRow.ComputeDismissKey(NoMedicineKey, default, default)))
+                Rows.Add(new AlertRow(
+                    NoMedicineKey,
+                    Registry.Label(NoMedicineKey),
+                    ": the doctor will dress wounds bare",
+                    AlertSeverity.Notice,
+                    count: 1));
+
+            // A dark net is Danger: whatever it was keeping warm is going cold now. The cell is a
+            // consumer on it, so a click on the row goes to what has stopped, which is where the
+            // player's eyes want to be.
+            if (dark > 0)
+            {
+                CellRef? at = darkCell >= 0 ? snapshot.Size.FromIndex(darkCell) : (CellRef?)null;
+                int dismissKey = AlertRow.ComputeDismissKey(PowerLossKey, default, null);
+                if (!_dismissed.Contains(dismissKey))
+                    Rows.Add(new AlertRow(
+                        PowerLossKey,
+                        Registry.Label(PowerLossKey),
+                        dark == 1 ? string.Empty : " × " + dark,
+                        AlertSeverity.Danger,
+                        count: dark,
+                        cell: at,
+                        detail: PowerLabels.Watts(shortW) + " short"));
+            }
+            else _dismissed.Remove(AlertRow.ComputeDismissKey(PowerLossKey, default, null));
+
+            if (dry > 0)
+            {
+                CellRef? at = dryCell >= 0 ? snapshot.Size.FromIndex(dryCell) : (CellRef?)null;
+                int dismissKey = AlertRow.ComputeDismissKey(NoFuelKey, default, null);
+                if (!_dismissed.Contains(dismissKey))
+                    Rows.Add(new AlertRow(
+                        NoFuelKey,
+                        Registry.Label(NoFuelKey),
+                        dry == 1 ? string.Empty : " × " + dry,
+                        AlertSeverity.Warning,
+                        count: dry,
+                        cell: at));
+            }
+            else _dismissed.Remove(AlertRow.ComputeDismissKey(NoFuelKey, default, null));
+
+            // The hearth ordered down is Warning: nothing has happened yet, and a click goes to it.
+            // The row's dismissal key is made from the cell it points at, so the check is too.
+            if (hearthDown)
+            {
+                CellRef at = snapshot.Size.FromIndex(hearth);
+                int key = AlertRow.ComputeDismissKey(HearthDownKey, default, at);
+                // The hearth moved to another campfire that is also marked: a dismissal of the
+                // old one's warning is not a dismissal of this one's.
+                if (_hearthDownDismissKey != 0 && _hearthDownDismissKey != key) _dismissed.Remove(_hearthDownDismissKey);
+                _hearthDownDismissKey = key;
+                if (!_dismissed.Contains(_hearthDownDismissKey))
+                    Rows.Add(new AlertRow(
+                        HearthDownKey,
+                        Registry.Label(HearthDownKey),
+                        string.Empty,
+                        AlertSeverity.Warning,
+                        count: 1,
+                        cell: at));
+            }
+            else if (_hearthDownDismissKey != 0)
+            {
+                _dismissed.Remove(_hearthDownDismissKey);
+                _hearthDownDismissKey = 0;
+            }
+
+            // No hearth with somebody kept home is Warning: home does not exist, so she is kept
+            // nowhere. There is no cell to go to; the fix is building or marking a campfire.
+            if (noHearth)
+            {
+                int dismissKey = AlertRow.ComputeDismissKey(NoHearthKey, default, null);
+                if (!_dismissed.Contains(dismissKey))
+                    Rows.Add(new AlertRow(
+                        NoHearthKey,
+                        Registry.Label(NoHearthKey),
+                        string.Empty,
+                        AlertSeverity.Warning,
+                        count: keptHome,
+                        cell: null));
+            }
+            else _dismissed.Remove(AlertRow.ComputeDismissKey(NoHearthKey, default, null));
+
+            if (storeStuck)
+                Rows.Add(new AlertRow(
+                    StoreStuckKey,
+                    Registry.Label(StoreStuckKey),
+                    stuck == 1 ? " — nowhere to put what is in it" : " — " + stuck + " of them",
+                    AlertSeverity.Warning,
+                    count: stuck));
+
             if (idleStands)
             {
-                if (pawns.Length == 1)
+                if (colonists == 1)
                 {
-                    int dismissKey = AlertRow.ComputeDismissKey(IdleKey, pawns[0].Id, default);
+                    int dismissKey = AlertRow.ComputeDismissKey(IdleKey, onlyColonist, default);
                     if (!_dismissed.Contains(dismissKey))
                     {
-                        string name = ColonistNames.Of(snapshot, pawns[0].Id);
+                        string name = ColonistNames.Of(snapshot, onlyColonist);
                         Rows.Add(new AlertRow(
                             IdleKey,
                             name,
                             " is idle",
                             AlertSeverity.Notice,
                             count: 1,
-                            pawn: pawns[0].Id));
+                            pawn: onlyColonist));
                     }
                 }
                 else

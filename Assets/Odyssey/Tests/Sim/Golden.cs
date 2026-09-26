@@ -30,6 +30,17 @@ namespace Odyssey.Tests.Sim
     /// commit message what you changed and why the numbers moved. A golden updated without that
     /// sentence is a golden that has stopped being a test.</para>
     ///
+    /// <para><b>All six moved again on 2026-09-21, the temperature review's fixes (design 28
+    /// §12), and here is the sentence.</b> Two more fields entered the hash — a colonist's
+    /// last-felt ambient (F8) and each room's energy residual (F7) — which is the whole of the
+    /// <c>Generated</c> move on all three: with those two lines disabled every tick-zero hash
+    /// came back to the committed value. <c>Simulated</c> moved on the two boards that have
+    /// caverns and not on the barren one, and it was measured component by component: cells,
+    /// pawns and edifices hash identically before and after on all three; only the thermal
+    /// section differs, because a cavern now converges instead of stopping a cell count short
+    /// (the residual) and a cavern under a cavern is no longer charged to the sky (F6). Nothing
+    /// a colonist did changed.</para>
+    ///
     /// <para><b>All six numbers moved on 2026-09-17, and here is the sentence.</b> The list of
     /// standing buildings entered the state hash (<c>EdificeSaveSection</c>): what a wall is made
     /// of was outside it until then, so a wooden wall and a stone wall in the same cell hashed
@@ -242,6 +253,21 @@ namespace Odyssey.Tests.Sim
         /// The one that runs on every save. Small and short on purpose: the fast tier is a thing
         /// people run while working, and a gate nobody waits for is a gate nobody runs.
         /// </summary>
+        /// <remarks>
+        /// <b>All six numbers re-baked 2026-09-22 for animals</b> (design 29 section 6): a pawn's
+        /// kind entered <c>Pawn.ContributeTo</c> beside its roll seed, so every Generated and
+        /// Simulated hash moved by the hash seeing one more zero per colonist. Measured, not
+        /// assumed: <see cref="GoldenColonyProbe"/> run on <c>main</c> and on the branch, same
+        /// file, diffs clean in every number on all three boards. No golden world has an animal
+        /// in it (the debug menu is the only spawner), so nothing here walks differently.
+        /// <para><b>Two Simulated numbers re-baked again the same day, and this time the colony
+        /// did change.</b> A job's expiry waits for the next cell boundary for every pawn now
+        /// (design 29 section 3a), so a mental-break wander ends one step later than it did. The
+        /// played board and the city moved; the bare meadow, where nobody breaks in the window,
+        /// did not. The probe on <c>main</c> and here differs in one number on each of the two
+        /// boards - the sum of the pawns' cells - and in nothing else: food, rest, items and
+        /// orders identical. That is a step taken, not a hash seeing more.</para>
+        /// </remarks>
         ///
         /// <remarks>
         /// <b>All three cases re-baked together on 2026-09-20, both halves of each.</b> A
@@ -318,7 +344,158 @@ namespace Odyssey.Tests.Sim
         /// tighter board, not a space problem, and not worth engineering around for one piece of
         /// scrap. <c>ScenarioDefTests.AScenarioThatNamesNoStoreyPlacesExactlyWhereItAlwaysDid</c>
         /// carries the same note beside the two placement signatures it pins.</para>
+        /// <para><b>Re-baked a sixth time, 2026-09-21, by storage S2 — and it is the first kind
+        /// again, not the second.</b> <c>StorageUnits</c> is a hashed component, so every board in
+        /// the game now contributes one more count to the walk, including the three below, none of
+        /// which has a shelf on it. That moves all six numbers before a tick runs.</para>
+        ///
+        /// <para><b>Measured, and the instrument is committed this time.</b>
+        /// <c>GoldenColonyProbe</c> prints what each colony is made of — live things, per-def
+        /// stacks, the sum of item cells, the two lister counts, the sum of pawn cells, total food
+        /// and rest, standing orders and zones — at generation and after the full run. It is
+        /// written against nothing newer than <c>main</c> on purpose, so the same file runs on both
+        /// branches; it was run on each and the two outputs <b>diff clean</b>. All three colonies
+        /// are identical in every one of those numbers. The hash sees one more zero and the
+        /// colonies do not know it. Earlier re-bakes used a throwaway probe and had to describe it
+        /// afterwards; this one leaves the probe behind so the next re-bake starts with it.</para>
+        ///
+        /// <para><b>Re-baked a seventh time, 2026-09-23, by the draft (design 33 §2c) — the first
+        /// kind again.</b> Two jobs joined the job table, and <c>JobSystem</c> hashes a completed
+        /// and a failed counter per job def, so every board in the game contributes four more
+        /// zeros before a tick runs: all six numbers move, the three here included. The drafted
+        /// flag itself is hashed only while it is set, so it moved nothing. Measured with
+        /// <c>GoldenColonyProbe</c> run on <c>claude/wildlife</c> and on this branch: the two
+        /// outputs diff clean for all three colonies.</para>
+        ///
+        /// <para><b>Re-baked an eighth time, 2026-09-23, by power (design 32) — the first kind
+        /// again.</b> Three job defs were appended (lay a line, take one up, refuel), and the job
+        /// system hashes a completed and a failed counter for every def, so every board's walk
+        /// gains six zeros and all six numbers move before a tick runs. The power grid itself adds
+        /// nothing: it is empty on all three boards, and an empty grid contributes nothing to the
+        /// hash by design (<c>PowerTests.AnEmptyGridAddsNothingToTheHashAndOneLineDoes</c>).</para>
+        ///
+        /// <para><b>Measured by the sharpest instrument available rather than the census:</b> the
+        /// job system's hash was cut back, uncommitted, to the first twelve defs — the pre-power
+        /// set — and all three boards then matched the <i>previous</i> committed values exactly,
+        /// generated and simulated. So nothing but those six zeros moved: the new givers never
+        /// fired and the new scan order changed no colonist's job on any board.</para>
+        ///
+        /// <para><b>Re-baked again on 2026-09-24, merging main into power.</b> Main had re-baked
+        /// for the draft's two jobs and this branch for power's three; the merged job table has
+        /// all five (drafting keeps 12 and 13, power follows at 14 to 16), so neither side's
+        /// numbers were produced by the merged code. <c>GoldenColonyProbe</c> run on the merge and
+        /// on <c>origin/main</c> (ee1f9fdc) <b>diffs clean</b> on all three boards: the hash sees
+        /// three more pairs of zeros, and no colony does anything different.</para>
+        ///
+        /// <para><b>Re-baked an eighth time, 2026-09-23, by the combat contracts step (design 33
+        /// §5) — the first kind again, and the last time the combat line moves these.</b> Every
+        /// handle the line needs was claimed at once: five job defs (ten more zeros in the job
+        /// counters), <c>Skill_Melee</c> (a sixth experience, passion and daily-gain slot on every
+        /// colonist, rolled at spawn and on the first tick on streams that draw the first five
+        /// exactly as before), <c>Work_Rescue</c> (a sixth priority) and four weapons (four more
+        /// slots in every storage allow list). The combat state on a pawn, the corpse registry and
+        /// the edifice damage store are hashed only while set, and nothing in these windows fights,
+        /// so they moved nothing. <b>Measured</b>: <c>GoldenColonyProbe</c>, widened the same day to
+        /// print mood, mid-step progress, the first five skills' experience and passions, jobs
+        /// started and failed and every job def's completed and failed counts (the first fourteen,
+        /// so the file runs unchanged on both sides), was run on <c>origin/main</c> (33525521) and
+        /// on this branch: the two outputs diff clean for all three colonies. From here every
+        /// combat lane asserts these six numbers unchanged (<c>docs/plans/combat-contracts.md</c>).</para>
+        /// <para><b>All six moved again on 2026-09-23, on the merge of temperature into a main
+        /// that had gained animals, and neither side's numbers were right for the merged code.</b>
+        /// Both branches had moved all six — main for the pawn's kind entering the hash, this one
+        /// for the colonist's last-felt ambient and each room's energy residual — so taking either
+        /// side would have committed a number nothing had produced. Re-baked afresh, which is the
+        /// only honest resolution of a golden conflict.</para>
+        ///
+        /// <para><b>Measured before they were written.</b> <c>GoldenColonyProbe</c> run on the
+        /// merged branch and on <c>main</c>: the two outputs <b>diff clean</b>. Every census
+        /// number — live things, per-def stacks, item cells, the two lister counts, pawn cells,
+        /// total food, total rest, standing orders, zones — is identical on all three boards. The
+        /// hash sees more; no colony does anything different.</para>
+        ///
+        /// <para><b>All six moved again on 2026-09-24, merging main (power, research) into the
+        /// combat line's second and third units.</b> Both sides had moved them: main for power's
+        /// three job defs (the job system hashes a completed and failed counter for every def),
+        /// this branch for the combat state it hashes. Re-baked afresh from the merged code, for
+        /// the reason given above. <b>Measured</b>: <c>GoldenColonyProbe</c>, reading the first
+        /// seventeen job defs so it runs unchanged on both sides, was run on <c>main</c> (54df119a)
+        /// and on the merge; the outputs are identical on all three boards.</para>
+        ///
+        /// <para><b>All six moved again on 2026-09-24, with medical supplies (design 37).</b>
+        /// Every colonist carries a seventh work priority (<c>Work_Doctor</c>) and a seventh skill
+        /// (<c>Skill_Medicine</c>), and the job system two more counter pairs (<c>Job_Treat</c>,
+        /// <c>Job_Patient</c>); all are hashed. The twelfth item moved nothing: none of these
+        /// colonies has a storage zone, so no allow list grew. The
+        /// treatment cooldown is hashed only while set and nobody in these windows is hurt, so it
+        /// moved nothing, and neither did the starting kit, which Bare does not carry.
+        /// <b>Measured</b>: <c>GoldenColonyProbe</c> run on <c>main</c> (52f53112) and on this
+        /// branch; the outputs are identical on all three boards, experience and passions
+        /// included. The hash sees more; no colony does anything different.</para>
+        ///
+        /// <para><b>All six moved on 2026-09-25, by the weather (design 43, <c>weather-core</c>):
+        /// the first change here that is a colony doing something different, and meant to be.</b>
+        /// A new system is hashed (the sky: kind, intensity, the hand-over and the spell's end),
+        /// which moves the generated numbers before a tick runs. It writes the outdoor curve's
+        /// weather term, which moves the simulated numbers. <b>Measured</b>: <c>GoldenColonyProbe</c>
+        /// run on <c>origin/main</c> and on the branch differs in <b>mood alone</b>, 200 lower on each
+        /// board, as the rolled sky's cooler air crosses a comfort band. Food, rest, work
+        /// progress, experience, passions, jobs started and finished, and where every colonist
+        /// stands are identical on all three boards. The weather changed how the colonies feel,
+        /// and nothing they did.</para>
+        ///
+        /// <para><b>One moved on 2026-09-25, the ruined city's <see cref="Case.Simulated"/>, by the
+        /// rain touching the world (design 43, <c>weather-world</c>): pace and animals, and
+        /// nothing else, as intended.</b> The sky map is derived and unhashed, so no
+        /// <c>Generated</c> number moved, and neither did the meadow or the played board, because
+        /// neither sees a drop inside its window: seed 4242 and seed 1 both roll a cloudy spell
+        /// that lasts the whole run. Seed 9 rolls rain at intensity 459 from the first tick to the
+        /// last — past the animals' gate of 400, and a pace of 955 for anyone out in it (30,129 of
+        /// the 50,000 colonist-ticks were). <b>Measured</b> with <c>GoldenColonyProbe</c> on
+        /// <c>origin/main</c> (fccdebcd) and on the branch, and on the branch twice more with one
+        /// half switched off at a time. Food, rest, mood, experience and passions are identical in
+        /// all four: nobody ate, slept, felt or worked differently. <b>Pace alone</b> leaves the
+        /// jobs where they were (119 started against 118; 81 wanders and 29 waits against 79 and
+        /// 30) and takes the summed move progress from 519,595 to 341,744 and every pawn to a
+        /// different cell. <b>Shelter alone</b> is the jobs: 303 started, and waits from 30 to 220,
+        /// which are the four animals standing under cover in the 120-tick waits
+        /// <c>AnimalShelterThinkNode</c> gives them. Both together: 300 started, 74 wanders, 217
+        /// waits, 341,744 progress.</para>
+        ///
+        /// <para><b>All six moved on 2026-09-25, with the kitchen (design 48, K1).</b> Every
+        /// colonist carries an eighth work priority (<c>Work_Cooking</c>) and an eighth skill
+        /// (<c>Skill_Cooking</c>), and the job system one more counter pair (<c>Job_Cook</c>); all
+        /// are hashed. The kitchen itself is hashed only once a station has been used, and none of
+        /// these colonies has one. Eating changed too — the best tier first, and a thought that is
+        /// the food's own — but nobody in these windows gets hungry enough to eat.
+        /// <b>Measured</b>: <c>GoldenColonyProbe</c> run on <c>main</c> (837c895a) and on this
+        /// branch; the outputs are identical on all three boards, food, rest, mood, experience and
+        /// every job counted included. The hash sees more; no colony does anything different.</para>
+        ///
+        /// <para><b>All six moved on 2026-09-25, by the ranged line's contracts step (design 47 R0):
+        /// the hash seeing more, and no colony doing anything different.</b> Every person carries a
+        /// seventh skill, passion and daily-gain slot — Shooting — and each colonist is dealt a
+        /// level in it on the first tick, from the same stream the first six are dealt from and
+        /// after them, so the six come out exactly as they were. That moves the generated numbers
+        /// (the arrays are longer before a tick runs) and the simulated ones (the dealt level is
+        /// hashed). <b>Measured</b>: <c>GoldenColonyProbe</c> on <c>origin/main</c> (804c2e6a) and on
+        /// the branch is identical on all three boards, line for line — food, rest, mood, work
+        /// progress, the shared skills' experience and passions, jobs, and where every pawn
+        /// stands.</para>
+        ///
+        /// <para><b>And again at the ranged line's merge with <c>main</c> (2a1cfa63), for the same
+        /// reason.</b> Medical supplies had taken the seventh skill slot first, so Shooting is the
+        /// eighth, <c>Job_AttackRanged</c> the twenty-seventh job and the pistol the fifteenth
+        /// item: longer hashed tables, dealt after everything main deals. <b>Measured</b> the same
+        /// way: <c>GoldenColonyProbe</c> on <c>origin/main</c> and on the merge is identical on all
+        /// three boards, all nine census lines.</para>
+        ///
+        /// <para><b>And a third time at the merge with the kitchen (<c>origin/main</c> fc6b8ba6).</b>
+        /// Cooking took the eighth skill, so Shooting is the ninth, <c>Job_AttackRanged</c> the
+        /// twenty-eighth job and the pistol the eighteenth item. <b>Measured</b> the same way; the
+        /// merge commit says what the probe found.</para>
         /// </remarks>
+
         public static readonly Case Meadow = new Case
         {
             Name = "meadow 60x60x16 barren, seed 4242, 5,000 ticks",
@@ -327,8 +504,12 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 17008194344181807078UL,
-            Simulated = 4719151686505776620UL,
+            // Re-baked 2026-09-25 at the merge of medical supplies (design 37) with main
+            // (ODYSSEY_REGOLDEN=1), on top of the weather's own re-bake: the combined job, item,
+            // skill and incident tables moved the hash the same way any content append does.
+            // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            Generated = 14881731598722590511UL,
+            Simulated = 5300718913518332604UL,
         };
 
         /// <summary>
@@ -344,8 +525,75 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 3339421815403079839UL,
-            Simulated = 15373579406289841645UL,
+            // 2026-09-23, wildlife (design 30): the meadow is seeded with nine animals at tick
+            // zero, so both values move; the bare meadow did not, and the colony probe says the
+            // colonists' economy is identical — the difference is the animals and nothing else.
+            // And again the same afternoon for the scatter (design 30 §2: sounders apart and
+            // loose); the probe read the same as the first time — the animals' cells, nothing else.
+            // 2026-09-23 again, the draft's two job defs (see the meadow's remarks): four more
+            // zeros in the job counters; the probe diffs clean.
+            // 2026-09-23, the combat contracts step (the meadow's remarks): the combat line's
+            // handles, hashed as more zeros; the widened probe diffs clean against origin/main.
+            // 2026-09-25, the scenery made real (design 45, M5): the trees carry their species
+            // and the undergrowth pass placed bushes, each an edifice with its flag, so the
+            // generated board moved. The probe against main: the generated census is identical
+            // (the same people, the same items, the same starting cells) and the simulated one
+            // differs only where it should - the fifteen colonists wander through bushes at a
+            // price, so they made 95 wanders in the ten thousand ticks where they made 105, and
+            // ended on different cells. Food, rest, mood and experience are unchanged. The bare
+            // meadow and the city did not move: neither grows a bush.
+            // 2026-09-25, jumping a one-cell stream (design 46): Simulated only, and this board
+            // only — the bare meadow and the city have no stream and did not move, nor did
+            // Generated. The colonists behaved differently, and in one way: they take different
+            // routes. The probe against main is identical in items, needs, mood, experience,
+            // passions and failed jobs; only where they stand, the progress into their steps and
+            // the wander legs started (105 -> 98 in the window) differ. Re-baked again on merging
+            // the weather from main: Generated is main's, and the probe against main (0dff2b36)
+            // differs in exactly the same three numbers and nothing else.
+            // Re-baked again 2026-09-25 at the merge of medical supplies (design 37) with main
+            // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
+            // 2026-09-25, both at once on merging main into the scenery line: the bushes' wander
+            // price and the stream jump together. Re-taken from the merged code, not adopted from
+            // either side; the probe against main is in the merge commit's message.
+            // 2026-09-25 again, M13 (design 45 §6): the map lays its loose stones and first
+            // mushrooms - 680 stone in 136 stacks and 89 mushrooms in 22, by the probe - and one
+            // more stack of mushrooms came up in the ten thousand ticks. Every colonist number is
+            // the M5 run's to the digit (cells, food, rest, mood, progress, the 95 wanders): the
+            // colony has no store, so nobody carried a stone, and nobody was hungry enough to
+            // walk to a mushroom. The bare meadow and the city did not move.
+            // Both lines together, 2026-09-25: M13's stones and mushrooms on the merged M5-and-jump
+            // board; re-taken from the merged code.
+            // The scenery line merged with medical supplies (design 37), 2026-09-25: re-taken from the
+            // merged code; the probe against main is in the merge commit's message.
+            // The kitchen merged with the wild foods, 2026-09-25: an eighth work priority and skill
+            // on every colonist and Job_Cook's counter pair, on the wild-food board. Re-taken from
+            // the merged code; GoldenColonyProbe on main (2a1cfa63) and on the merge is identical on
+            // all three boards, so the hash sees more and no colony does anything different.
+            // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            // 2026-09-25, nobody over anybody and nothing in a tree (design 31 §20, 20 §14, 23 §11):
+            // Simulated only. A wander leg now refuses a cell another pawn stands on or is heading
+            // to, so people and animals take different legs. GoldenColonyProbe against the branch's
+            // base: items, food, rest, mood, experience, passions and failed jobs identical; only
+            // where they stand, the progress into their steps and the wanders (99 -> 100) differ.
+            // 2026-09-25, the culvert frog (design 30 §8): the meadow's table gained frogs on the
+            // bank and its density went 15 -> 21, so the board is seeded with three more animals
+            // (pawns 15 -> 18). GoldenColonyProbe against main (4c40e189): items, experience, passions and
+            // failed jobs identical; food, rest and mood differ by exactly three animals' untouched
+            // needs (3 x 800 / 800 / 600), and the rest — pawn cells, progress, wanders and waits
+            // started — is the animals' own. The colonists did the same things. The bare meadow
+            // and the city did not move: neither table has a frog.
+            // 2026-09-26, "more of them": the frog's weight 2 -> 4, groups 3-5, density 21 -> 27,
+            // and its pace 800 -> 1,000. Pawns 15 -> 22 against main (4c40e189); items,
+            // experience, passions and failed jobs identical, food/rest/mood differ by exactly
+            // seven animals' untouched needs (7 x 800 / 800 / 600). The colonists did the same things.
+            // Then the frogs' legs diverge from each other (design 30 §8e): Simulated only; the
+            // probe differs from the line above in the animals' wander count alone (217 -> 216).
+            // Merged with main (wander claims, design 31 §20), 2026-09-26: re-taken from the merged code.
+            // Merged with raids (design 55), 2026-09-26: the gunman keeps kind 4 and the frog moves
+            // to 5, and a pawn's kind is hashed. GoldenColonyProbe on the frog branch (fca2ef08) and
+            // on the merge is identical on all three boards, so only the number moved.
+            Generated = 5385105565351640744UL,
+            Simulated = 1457182368184692081UL,
         };
 
         /// <summary>
@@ -381,8 +629,17 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 763613953800532440UL,
-            Simulated = 2426006305777484532UL,
+            // 2026-09-23, wildlife (design 30): the ruin is seeded with its rats and hogs.
+            // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
+            // 2026-09-23, the combat contracts step; the widened probe diffs clean.
+            // 2026-09-25, weather-world: it rains here all run — pace and animal shelter (remarks).
+            // Re-baked again 2026-09-25 at the merge of medical supplies (design 37) with main
+            // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
+            // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            // 2026-09-25, nobody over anybody (design 31 §20): Simulated only, the wander legs
+            // (74 -> 75) and where everybody stands; every other census number identical.
+            Generated = 14180088319569370523UL,
+            Simulated = 6894148259867231222UL,
         };
     }
 }

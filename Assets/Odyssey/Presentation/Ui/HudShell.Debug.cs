@@ -21,22 +21,32 @@ namespace Odyssey.Presentation.Ui
     /// is open, because a debug menu that froze the game to use it would defeat most of what it is
     /// for.</para>
     ///
-    /// <para><b>Two tabs</b> (owner, 2026-09-20). <b>Cheats</b>: the developer-overlay toggle,
+    /// <para><b>Four tabs</b> (owner, 2026-09-20, 2026-09-22 and, for Weather, 2026-09-24). <b>Cheats</b>: the developer-overlay toggle,
     /// moved here wholesale from Settings' Interface tab rather than duplicated
     /// (<c>EveryLiveToolIsDrawnSomewhere</c>), and the grants that wrap sim APIs that already exist.
     /// <b>Events</b>: one row per incident the content declares, each fired through the same door
     /// a storyteller will use (design 23 §3), built from the open colony's content when the panel
-    /// opens so a second Def appears by existing.</para>
+    /// opens so a second Def appears by existing. <b>Spawn</b>: one row per kind of pawn —
+    /// the colonist, the animals and the bandit — and one per weapon, placed near the camera
+    /// (<see cref="DebugDirector.SpawnRows"/>).</para>
     /// </summary>
     public sealed partial class HudShell
     {
         VisualElement _debugDeveloperRow = null!;
         VisualElement _debugCheats = null!;
         VisualElement _debugEvents = null!;
+        VisualElement _debugSpawn = null!;
+        VisualElement _debugWeather = null!;
+        readonly List<VisualElement> _debugWeatherRows = new();
+        VisualElement? _debugParticlesRow;
+        VisualElement? _debugGlossRow;
         readonly Dictionary<DebugTab, Label> _debugTabs = new();
 
         /// <summary>The content the event rows were last built from, so a new colony rebuilds them and a reopen does not.</summary>
         IncidentContent? _debugEventsFrom;
+
+        /// <summary>Under the Raid row: why the last raid asked for was refused, hidden while none was.</summary>
+        Label? _raidNote;
 
         void BuildDebug()
         {
@@ -46,7 +56,7 @@ namespace Odyssey.Presentation.Ui
             // The tab strip, in Settings' idiom: nothing new is invented for a third use of it.
             var tabs = new VisualElement();
             tabs.AddToClassList("settings__tabs");
-            foreach (DebugTab tab in new[] { DebugTab.Cheats, DebugTab.Events })
+            foreach (DebugTab tab in new[] { DebugTab.Cheats, DebugTab.Spawn, DebugTab.Events, DebugTab.Weather })
             {
                 Label chip = HudText.Make(Registry.Label(DebugDirector.TabKey(tab)), HudTextRole.Body, ussClass: "tab");
                 DebugTab captured = tab;
@@ -62,43 +72,115 @@ namespace Odyssey.Presentation.Ui
                 "The frame-time readout. Also the ` key, and kept between sessions",
                 () => _directors?.Settings.SetDeveloperOverlay(!_directors.Settings.DeveloperOverlay));
             _debugCheats.Add(_debugDeveloperRow);
-            _debugCheats.Add(DebugActionRow(DebugDirector.SpawnPawnKey,
-                "Adds a colonist near the camera, with no scenario and no starting kit",
-                SpawnPawn));
-            _debugCheats.Add(DebugActionRow(DebugDirector.GiveWoodKey, "Adds 50 wood near the camera",
-                () => GiveResource(ItemIndex.Wood)));
-            _debugCheats.Add(DebugActionRow(DebugDirector.GiveStoneKey, "Adds 50 stone near the camera",
-                () => GiveResource(ItemIndex.Stone)));
-            _debugCheats.Add(DebugActionRow(DebugDirector.GiveFoodKey, "Adds 50 meals near the camera",
-                () => GiveResource(ItemIndex.Meal)));
+            // The three grants moved to the Spawn tab's Items heading (design 33 §9i): they put
+            // things on the board, which is what that tab is for.
             _debugCheats.Add(DebugActionRow(DebugDirector.SkipDayKey,
                 "Spends one whole game day of ticks at once (about a fifth of a second). "
                     + "The crop's stage changes arrive at the same hour each press; works while paused",
                 SkipDay));
+            _debugCheats.Add(DebugActionRow(DebugDirector.SkipMonthKey,
+                "Spends a whole game month of ticks at once - twelve days, so a couple of seconds "
+                    + "of standing still. Six presses walk the year: Wash is mild, Glare is warm, "
+                    + "and Rime is the season the campfire exists for",
+                SkipMonth));
             _debugCheats.Add(DebugActionRow(DebugDirector.SkipMorningKey,
                 "Skips the night and hands back the clock at dawn, with a whole watchable day "
                     + "ahead: the harvest happens on screen, not inside the skip",
                 () => _boot!.DebugSkipToMorning()));
+            _debugCheats.Add(DebugActionRow(DebugDirector.SkipNightKey,
+                "Skips to ten at night, fully dark, with seven hours of night ahead: the "
+                    + "butterflies' glow at its brightest (design 52)",
+                () => _boot!.DebugSkipToNight()));
             _debugCheats.Add(DebugActionRow(DebugDirector.RipenCropsKey,
                 "Brings every standing crop to ripeness at once, daylight window and all - "
                     + "the harvest half without the four-day wait",
                 RipenCrops));
+            _debugCheats.Add(DebugActionRow(DebugDirector.FinishResearchKey,
+                "Completes the project being researched and starts the next in the queue - the "
+                    + "only way a project becomes done until research is a mechanism",
+                FinishResearch));
             _debugTraceRow = DebugToggleRow(DebugDirector.TraceKey,
                 "Stops or starts this session's performance trace. Off, then a second session on, "
                     + "is how the tracer itself gets ruled out of a report about stutter",
                 ToggleTrace);
             _debugCheats.Add(_debugTraceRow);
+            _debugJumpsFailRow = DebugToggleRow(DebugDirector.JumpsFailKey,
+                "Every jump over a one-cell stream falls short into the water, and the colonist "
+                    + "climbs out on the far side. Off by default; a new colony starts with it off",
+                ToggleJumpsFail);
+            _debugCheats.Add(_debugJumpsFailRow);
             _debugCheats.Add(DebugActionRow(DebugDirector.MarkTraceKey,
                 "Writes a marker into this session's performance trace, so the seconds around "
                     + "this moment can be found afterwards - press it when something felt wrong",
                 MarkTrace));
             _debugPanel.Add(_debugCheats);
 
+            // Who and what can be put on the board (owner, 2026-09-22: a tab of its own rather
+            // than three rows among the grants): the colonist first, the animals, the bandit and
+            // one of each weapon (design 33 §1). The rows and what each sends are
+            // DebugDirector.SpawnRows, held by the fast tier; this only lays them out.
+            // Grouped under a heading each (design 33 §9i; owner, 2026-09-24: "a category for each
+            // type of spawn"), in two columns now the window is wide enough for them: who (colonists,
+            // hostiles, animals) on the left, what (weapons, items) on the right. The headings are
+            // the Keys tab's .settings__section, so nothing new is invented for them.
+            _debugSpawn = new VisualElement();
+            _debugSpawn.AddToClassList("settings__body");
+            var spawnColumns = new VisualElement();
+            spawnColumns.AddToClassList("settings__columns");
+            var who = new VisualElement();
+            who.AddToClassList("settings__column");
+            var what = new VisualElement();
+            what.AddToClassList("settings__column");
+            spawnColumns.Add(who);
+            spawnColumns.Add(what);
+            foreach (string group in DebugDirector.SpawnGroups)
+            {
+                VisualElement column = group == DebugDirector.GroupWeaponsKey || group == DebugDirector.GroupItemsKey
+                    ? what : who;
+                column.Add(HudText.Make(Registry.Label(group), HudTextRole.Meta, ussClass: "settings__section"));
+                foreach (DebugDirector.SpawnRow spawn in DebugDirector.SpawnRows)
+                {
+                    if (spawn.Group != group) continue;
+                    DebugDirector.SpawnRow captured = spawn;
+                    column.Add(DebugActionRow(spawn.Key, spawn.Tooltip, () => Spawn(captured)));
+                }
+            }
+            _debugSpawn.Add(spawnColumns);
+            _debugPanel.Add(_debugSpawn);
+
             // Filled when the panel opens, from the colony that is open: the content is the
             // colony's, and there is no colony when the shell is built.
             _debugEvents = new VisualElement();
             _debugEvents.AddToClassList("settings__body");
             _debugPanel.Add(_debugEvents);
+
+            // The sky set by hand (owner, 2026-09-24): one row per preset, the set one lit with
+            // Settings' pip, and the particle control as a toggle beneath them. Drawing only — the
+            // bootstrap reads DebugDirector.CurrentWeather each frame and nothing reaches the
+            // simulation, which has no weather yet (design 43 §8).
+            _debugWeather = new VisualElement();
+            _debugWeather.AddToClassList("settings__body");
+            // Each row commands the weather system (design 43 §8): the sky blends in over a few
+            // seconds, runs its rolled spell, and the season takes over again. The row lit is the
+            // kind the published sky holds, so a row never claims a sky the game has moved on from.
+            for (int i = 0; i < DebugDirector.WeatherPresets.Length; i++)
+            {
+                DebugDirector.WeatherPreset preset = DebugDirector.WeatherPresets[i];
+                VisualElement row = DebugToggleRow(preset.Key, preset.Tooltip, () => SetWeather(preset));
+                _debugWeatherRows.Add(row);
+                _debugWeather.Add(row);
+            }
+            _debugParticlesRow = DebugToggleRow(DebugDirector.RainParticlesKey,
+                "Draws the rain with CPU particles, as the weather design first wrote it, so the two "
+                    + "can be compared moving. Wet ground stays on either way",
+                () => _directors?.Debug.SetRainAsParticles(!_directors.Debug.RainAsParticles));
+            _debugWeather.Add(_debugParticlesRow);
+            _debugGlossRow = DebugToggleRow(DebugDirector.WetGlossKey,
+                "Draws wet ground as shine and puddles only, rather than richer and a little darker - "
+                    + "the two looks being chosen between by eye",
+                () => _directors?.Debug.SetWetGlossOnly(!_directors.Debug.WetGlossOnly));
+            _debugWeather.Add(_debugGlossRow);
+            _debugPanel.Add(_debugWeather);
 
             OnDebugTabChanged(DebugTab.Cheats);
             _hud.Add(_debugPanel);
@@ -116,6 +198,31 @@ namespace Odyssey.Presentation.Ui
         void MarkTrace() => _boot?.MarkTrace("debug menu");
 
         VisualElement? _debugTraceRow;
+
+        VisualElement? _debugJumpsFailRow;
+
+        /// <summary>The colony the jumps switch was last turned on in. The switch lives on that
+        /// colony's pawn context, unsaved, so a new colony starts with it off and the row has to
+        /// say so rather than remember a switch that no longer exists.</summary>
+        object? _debugJumpsFailColony;
+
+        bool DebugJumpsFailOn => _debugJumpsFailColony != null && ReferenceEquals(_debugJumpsFailColony, _boot?.Colony);
+
+        /// <summary>
+        /// Jumps always fail (design 46 §6): flips the switch on the pawn context through its
+        /// intent, which applies while paused, and shows which it is.
+        /// </summary>
+        void ToggleJumpsFail()
+        {
+            var world = _boot?.World;
+            if (world == null) return;
+            bool on = !DebugJumpsFailOn;
+            world.Intents.Submit(new Intent(IntentKind.DebugJumpsFail, default, on ? 1 : 0));
+            _debugJumpsFailColony = on ? _boot!.Colony : null;
+            RefreshJumpsFailRow();
+        }
+
+        void RefreshJumpsFailRow() => _debugJumpsFailRow?.EnableInClassList("settings__row--on", DebugJumpsFailOn);
 
         /// <summary>
         /// Turn tracing off or on, and show which it is.
@@ -189,10 +296,110 @@ namespace Odyssey.Presentation.Ui
 
             for (int i = 0; i < content.Count; i++)
             {
+                // An incident the world writes down when it happens — a theft (design 33 §17) —
+                // cannot be fired, so a row for it would do nothing.
+                if (!content.Workers[i].Fireable) continue;
                 int def = i;
+
+                // A raid carries its two controls under its row (design 55 §9): how many and who.
+                // The row sends what they hold; they hold it for the session.
+                if (content.Workers[i] is RaidWorker)
+                {
+                    _debugEvents.Add(DebugActionRow(IncidentLabels.IconKey(i),
+                        content.Defs[i].description ?? string.Empty, () => InvokeRaid(def)));
+                    _debugEvents.Add(DebugRaidSizeRow());
+                    _debugEvents.Add(DebugRaidMixRow());
+                    _raidNote = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "settings__note");
+                    _raidNote.style.display = DisplayStyle.None;
+                    _debugEvents.Add(_raidNote);
+                    continue;
+                }
+
                 _debugEvents.Add(DebugActionRow(IncidentLabels.IconKey(i),
                     content.Defs[i].description ?? string.Empty, () => InvokeIncident(def)));
             }
+        }
+
+        /// <summary>
+        /// The raid's size (design 55 §9): the Settings window's own fader, whole numbers from 0 to
+        /// <see cref="DebugDirector.RaidSizeMax"/>, the figure after it reading <i>Auto</i> at 0.
+        /// </summary>
+        VisualElement DebugRaidSizeRow()
+        {
+            var row = new VisualElement();
+            row.AddToClassList("settings__row");
+            var icon = new IconBadge(DebugDirector.RaidSizeKey, IconBadge.RowSize);
+            icon.Inherit(HudTokens.TextMeta);
+            row.Add(icon);
+            row.Add(HudText.Make(Registry.Label(DebugDirector.RaidSizeKey), HudTextRole.Row, ussClass: "settings__label"));
+            row.tooltip = DebugDirector.RaidSizeTooltip;
+
+            int start = _directors?.Debug.RaidSize ?? 0;
+            var control = new VisualElement();
+            control.AddToClassList("sw__slider");
+            var slider = new SliderInt(0, DebugDirector.RaidSizeMax, SliderDirection.Horizontal);
+            slider.AddToClassList("settings__fader");
+            slider.SetValueWithoutNotify(start);
+            VisualElement tracker = slider.Q(className: "unity-base-slider__tracker") ?? slider;
+            var fill = new VisualElement { pickingMode = PickingMode.Ignore };
+            fill.AddToClassList("sw__fill");
+            fill.style.width = Length.Percent(start * 100f / DebugDirector.RaidSizeMax);
+            tracker.Add(fill);
+            control.Add(slider);
+
+            Label value = HudText.Make(DebugDirector.RaidSizeText(start), HudTextRole.Row,
+                numeric: true, ussClass: "settings__value");
+            control.Add(value);
+
+            slider.RegisterValueChangedCallback(evt =>
+            {
+                if (_directors == null) return;
+                _directors.Debug.SetRaidSize(evt.newValue);
+                int size = _directors.Debug.RaidSize;
+                value.text = DebugDirector.RaidSizeText(size);
+                fill.style.width = Length.Percent(size * 100f / DebugDirector.RaidSizeMax);
+            });
+            row.Add(control);
+            return row;
+        }
+
+        /// <summary>
+        /// The raid's mix (design 55 §8): the Settings window's own select, one choice per mix in
+        /// the content's order, named by <see cref="RaidMixLabels"/>.
+        /// </summary>
+        VisualElement DebugRaidMixRow()
+        {
+            var row = new VisualElement();
+            row.AddToClassList("settings__row");
+            var icon = new IconBadge(DebugDirector.RaidMixKey, IconBadge.RowSize);
+            icon.Inherit(HudTokens.TextMeta);
+            row.Add(icon);
+            row.Add(HudText.Make(Registry.Label(DebugDirector.RaidMixKey), HudTextRole.Row, ussClass: "settings__label"));
+            row.tooltip = DebugDirector.RaidMixTooltip;
+
+            var choices = new List<string>(RaidMixLabels.Keys.Length);
+            for (int m = 0; m < RaidMixLabels.Keys.Length; m++) choices.Add(RaidMixLabels.Label(m));
+            int current = _directors?.Debug.RaidMix ?? RaidMixLabels.Default;
+
+            var dropdown = new DropdownField(choices, current);
+            dropdown.AddToClassList("sw__select");
+            if (dropdown.labelElement != null) dropdown.labelElement.style.display = DisplayStyle.None;
+            var textElem = dropdown.Q<TextElement>(className: "unity-base-popup-field__text");
+            if (textElem != null) HudText.Apply(textElem, HudTextRole.Body);
+
+            // The engine's arrow is a texture; the window draws its own marks.
+            VisualElement? input = dropdown.Q(className: "unity-base-popup-field__input");
+            VisualElement? arrow = dropdown.Q(className: "unity-base-popup-field__arrow");
+            if (arrow != null) arrow.style.display = DisplayStyle.None;
+            input?.Add(new PathGlyph(SettingsLayout.SelectArrow, 10f, 6f, Ink(HudTheme.TextMeta), 10f, fill: true));
+
+            dropdown.RegisterValueChangedCallback(evt =>
+            {
+                int picked = choices.IndexOf(evt.newValue);
+                if (picked >= 0) _directors?.Debug.SetRaidMix(picked);
+            });
+            row.Add(dropdown);
+            return row;
         }
 
         void OnDebugTabChanged(DebugTab tab)
@@ -205,6 +412,38 @@ namespace Odyssey.Presentation.Ui
             }
             _debugCheats.style.display = tab == DebugTab.Cheats ? DisplayStyle.Flex : DisplayStyle.None;
             _debugEvents.style.display = tab == DebugTab.Events ? DisplayStyle.Flex : DisplayStyle.None;
+            _debugSpawn.style.display = tab == DebugTab.Spawn ? DisplayStyle.Flex : DisplayStyle.None;
+            _debugWeather.style.display = tab == DebugTab.Weather ? DisplayStyle.Flex : DisplayStyle.None;
+            RefreshDebugWeather();
+        }
+
+        /// <summary>Light the preset that is set, and the particle row if it is on.</summary>
+        void RefreshDebugWeather()
+        {
+            // The last row sent, until the sky it asked for has arrived; then the kind the sky holds.
+            WeatherKind kind = _boot?.World?.Views.Current.Weather.Kind ?? WeatherKind.Clear;
+            for (int i = 0; i < _debugWeatherRows.Count; i++)
+                _debugWeatherRows[i].EnableInClassList("settings__row--on",
+                    i == _debugWeatherSent || (_debugWeatherSent < 0 && DebugDirector.WeatherPresets[i].Kind == kind
+                        && FirstRowOf(kind) == i));
+            _debugParticlesRow?.EnableInClassList("settings__row--on", _directors?.Debug.RainAsParticles ?? false);
+            _debugGlossRow?.EnableInClassList("settings__row--on", _directors?.Debug.WetGlossOnly ?? false);
+        }
+
+        /// <summary>The row sent last, or -1: lit until the sky moves on.</summary>
+        int _debugWeatherSent = -1;
+
+        static int FirstRowOf(WeatherKind kind) =>
+            System.Array.FindIndex(DebugDirector.WeatherPresets, p => p.Kind == kind);
+
+        /// <summary>One Weather row: the command to the simulation, landing on the next tick.</summary>
+        void SetWeather(DebugDirector.WeatherPreset preset)
+        {
+            var world = _boot?.World;
+            if (world == null) return;
+            world.Intents.Submit(preset.ToIntent());
+            _debugWeatherSent = System.Array.IndexOf(DebugDirector.WeatherPresets, preset);
+            RefreshDebugWeather();
         }
 
         void OnDeveloperOverlayChanged()
@@ -226,14 +465,24 @@ namespace Odyssey.Presentation.Ui
                 // previous session, or a test, may have left either way round, and a pip showing
                 // the opposite of the truth is worse than no pip.
                 RefreshTraceRow();
+                // And the jumps switch, which a new colony has quietly turned off.
+                RefreshJumpsFailRow();
             }
         }
 
-        void SpawnPawn()
+        /// <summary>
+        /// One Spawn row's intent — a pawn of a kind (design 29 §7, design 33 §1) or one weapon —
+        /// aimed at the column the player is looking at. What it sends is the row's own
+        /// (<see cref="DebugDirector.SpawnRow.ToIntent"/>); only the anchor is found here.
+        /// </summary>
+        void Spawn(DebugDirector.SpawnRow row)
         {
             var world = _boot!.World;
             if (world == null || _directors == null) return;
-            world.Intents.Submit(new Intent(IntentKind.SpawnPawn, DebugAnchorCell(world)));
+            Intent intent = row.ToIntent(DebugAnchorCell(world));
+            // A band of three is three intents at one column; the simulation spreads each onto its
+            // own tile (design 33 §9h).
+            for (int i = 0; i < row.Repeat; i++) world.Intents.Submit(intent);
         }
 
         /// <summary>Fire one incident regardless of its gates (design 23 §3). Lands on the next tick.</summary>
@@ -244,16 +493,35 @@ namespace Odyssey.Presentation.Ui
             world.Intents.Submit(new Intent(IntentKind.InvokeIncident, default, def));
         }
 
-        void GiveResource(int itemIndex)
+        /// <summary>
+        /// Fire a raid of the size and mix the two controls hold (design 55 §9). The incident's own
+        /// door is asked first, so a refusal is said on the row rather than only in the console: a
+        /// second band of 200 beside the first does not fit under the ceiling, and a press that
+        /// does nothing visible reads as a broken button. The intent is sent either way; the
+        /// simulation is the judge and this is only its answer read early.
+        /// </summary>
+        void InvokeRaid(int def)
         {
             var world = _boot!.World;
             if (world == null || _directors == null) return;
-            world.Intents.Submit(new Intent(IntentKind.GiveResource, DebugAnchorCell(world),
-                itemIndex, DebugGiveAmount));
+            Intent intent = _directors.Debug.RaidIntent(def);
+
+            var colony = _boot.Colony;
+            if (colony != null && _raidNote != null)
+            {
+                bool fires = colony.Incidents.CanFire(new IncidentParms(def, intent.B, null, intent.C - 1));
+                RaidParams? p = colony.Incidents.Content.Defs[def].raid;
+                string note = fires || p == null ? string.Empty
+                    : DebugDirector.RaidRefusal(RaidWorker.SizeFor(colony.Pawns, p, intent.B, world.CurrentTick),
+                        RaidWorker.Room(colony.Pawns));
+                _raidNote.text = note;
+                _raidNote.style.display = note.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            world.Intents.Submit(intent);
         }
 
         /// <summary>
-
         /// A day a press. The day's length is read from the content rather than written here, so
         /// a retuned calendar does not leave this row skipping some other amount.
         /// </summary>
@@ -262,6 +530,20 @@ namespace Odyssey.Presentation.Ui
             var colony = _boot!.Colony;
             if (colony == null) return;
             _boot.DebugSkipTicks(colony.Pawns.Content.DayTicks);
+        }
+
+        /// <summary>
+        /// A month a press, so the year can be walked through and the season seen (design 28).
+        ///
+        /// <para>The day's own length times the calendar's <c>DaysPerMonth</c>, both read rather
+        /// than written, for the reason <see cref="SkipDay"/> gives: two places that hold a
+        /// month's length would be one more thing to keep in step with a retuned calendar.</para>
+        /// </summary>
+        void SkipMonth()
+        {
+            var colony = _boot!.Colony;
+            if (colony == null) return;
+            _boot.DebugSkipTicks(colony.Pawns.Content.DayTicks * Calendar.DaysPerMonth);
         }
 
         void RipenCrops()
@@ -304,6 +586,5 @@ namespace Odyssey.Presentation.Ui
             return new CellRef(x, z, Mathf.Clamp(layer, 0, world.Size.SizeY - 1));
         }
 
-        const int DebugGiveAmount = 50;
     }
 }

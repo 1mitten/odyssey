@@ -78,6 +78,21 @@ namespace Odyssey.Hud
         /// cannot hold one.</para>
         /// </summary>
         Stockpile = 7,
+
+        /// <summary>
+        /// Take power lines up (design 32 §2a). A tool of its own rather than a use of
+        /// <see cref="Deconstruct"/>, because deconstruct takes one thing a cell — the building,
+        /// then the floor — and a line runs through walls and under floors: folding it in would
+        /// make rerouting a wire under a floor cost the floor. This takes the line and nothing else.
+        /// </summary>
+        RemoveConduit = 8,
+
+        /// <summary>
+        /// Pick a ripe berry bush (design 45 §6). A verb applied to what is already in a cell, like
+        /// <see cref="Fell"/>; a bush that has been picked, or anything that is not a berry bush,
+        /// is refused by the simulation cell by cell.
+        /// </summary>
+        Harvest = 9,
     }
 
     /// <summary>
@@ -453,6 +468,14 @@ namespace Odyssey.Hud
             cell = OnTheWorkingLayer(cell);
             _head = cell;
             if (_tool != DesignateTool.Build) return;
+
+            // A power run is a path, never an area (design 32 §10): a box of lines is a slab of
+            // copper nobody asked for, so a line drag stays one row however far it wanders.
+            if (BuildShapes.IsLineOnly(Building))
+            {
+                _wide = false;
+                return;
+            }
 
             // Across the run, not along it: the gated axis is whichever one has travelled less,
             // decided afresh every frame, because a drag that starts east and turns north is one

@@ -258,6 +258,111 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// Twenty colonists against twenty bandits on the played board (design 33 §6A, lane A):
+        /// what a fight costs the tick, beside the same colony at peace in the same run. The
+        /// combat pass walks every pawn with one branch each and does its real work only for the
+        /// swings landing and the hurt healing, and the hunt and the self-defence each scan the
+        /// pawns once per think — so the row that matters is the Pawns phase, fight against peace.
+        ///
+        /// <para>Explicit, like every arm here. The assertion is only that the fight was real:
+        /// swings were resolved in the window.</para>
+        /// </summary>
+        [Test, Explicit, Category("Benchmark")]
+        public void TwentyAgainstTwenty()
+        {
+            var report = new StringBuilder();
+            double peace = MeasureFight(report, "twenty colonists at peace", bandits: 0, out _);
+            double fight = MeasureFight(report, "twenty against twenty", bandits: 20, out int swings);
+            report.AppendLine($"the fight costs {fight - peace:F3} ms a tick over the colony at peace ({fight / Math.Max(peace, 1e-9):F2}x)");
+            // Every colonist drafted (design 33 §15): each one on her hold scans the pawns every
+            // tick for a threat beside her or a fight to join, and joins the ones nearby.
+            double drafted = MeasureFight(report, "twenty drafted against twenty", bandits: 20, out _, drafted: true);
+            report.AppendLine($"drafted, the fight costs {drafted - peace:F3} ms a tick over the colony at peace");
+            TestContext.WriteLine(report.ToString());
+            Assert.That(swings, Is.GreaterThan(50), "the measured window held no fight");
+        }
+
+        /// <summary>
+        /// Fifty colonists and ten bandits on the scale target and on the Huge board (C7, the
+        /// combat gate's benchmark rows), each beside the same colony at peace and drafted, in one
+        /// run. <b>Not the lattice world</b>: these colonies are built by <see cref="ColonyWorld.Build"/>
+        /// on the map the game generates (barren and wooded, <see cref="ColonyWorld.DefFor"/>), so
+        /// the region count is a played board's, and the figure is comparable with the game rather
+        /// than with the rest of this class. The fight is the colony's, not the board's: the
+        /// combat pass and the hunt both scale with the pawns, so the row that matters is the Pawns
+        /// phase against peace on the same board.
+        /// </summary>
+        [Test, Explicit, Category("Benchmark")]
+        public void FiftyAgainstTenOnTheBigBoards()
+        {
+            var report = new StringBuilder();
+            int swings = 0;
+            foreach ((string name, GridSize size) in new[] { ("scale target", Scale), ("huge", BoardSizes.Huge) })
+            {
+                double peace = MeasureFight(report, $"fifty at peace, {name}", 0, out _, size: size, colonists: 50, wooded: true);
+                double fight = MeasureFight(report, $"fifty against ten, {name}", 10, out int here, size: size, colonists: 50, wooded: true);
+                double drafted = MeasureFight(report, $"fifty drafted against ten, {name}", 10, out _, drafted: true, size: size, colonists: 50, wooded: true);
+                report.AppendLine($"{name}: the fight costs {fight - peace:F3} ms a tick over peace ({fight / Math.Max(peace, 1e-9):F2}x), " +
+                                  $"drafted {drafted - peace:F3} ms");
+                report.AppendLine();
+                swings = Math.Min(swings == 0 ? here : swings, here);
+            }
+            TestContext.WriteLine(report.ToString());
+            Assert.That(swings, Is.GreaterThan(20), "a measured window held no fight");
+        }
+
+        static double MeasureFight(StringBuilder report, string label, int bandits, out int swings, bool drafted = false,
+                                   GridSize? size = null, int colonists = 20, bool wooded = false)
+        {
+            GridSize board = size ?? new GridSize(120, 120, 16);
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = colonists;
+            scenario.beds = colonists;
+            scenario.stockpileCells = 9;
+            var setup = Stopwatch.StartNew();
+            ColonyWorld colony = ColonyWorld.Build(board, 12345u, scenario, wooded: wooded);
+            setup.Stop();
+            var rules = new CombatFixture.RecordingRules();
+            colony.Pawns.MeleeRules = rules;
+
+            CellRef start = colony.Start;
+            for (int i = 0; i < bandits; i++)
+            {
+                int cell = colony.Pawns.Cells.NearestWalkableInColumn(start.X + 12 + i % 5, start.Z - 2 + i / 5, start.Y);
+                if (cell >= 0) colony.Pawns.Pawns.Spawn(cell, PawnKindIndex.Bandit);
+            }
+            if (drafted)
+                foreach (Pawn pawn in new System.Collections.Generic.List<Pawn>(colony.Pawns.Pawns.All))
+                    if (pawn.IsColonist) CombatFixture.Draft(colony, pawn);
+
+            // Past the approach, into the thick of it, before the window opens.
+            colony.World.Tick(600);
+            int before = rules.Swings.Count;
+
+            var trace = new PhaseTrace(Ticks);
+            colony.World.PhaseSink = trace;
+            var wall = Stopwatch.StartNew();
+            colony.World.Tick(Ticks);
+            wall.Stop();
+            colony.World.PhaseSink = null;
+            swings = rules.Swings.Count - before;
+
+            int downed = 0, people = 0;
+            foreach (Pawn pawn in colony.Pawns.Pawns.All)
+            {
+                if (pawn.Downed) downed++;
+                if (pawn.IsColonist) people++;
+            }
+            double tick = trace.MeanTickMs();
+            report.AppendLine($"--- {label}: {colony.Pawns.Pawns.Count} pawns ({people} colonists, the rest the board's animals and the bandits) on {board.SizeX} x {board.SizeZ} x {board.SizeY} " +
+                              $"({(wooded ? "the played map" : "bare")}, {colony.Pawns.Nav.RegionCapacity:N0} regions), {Ticks} ticks, " +
+                              $"setup {setup.ElapsedMilliseconds} ms ---");
+            report.AppendLine($"tick {tick:F3} ms mean, {trace.P95TickMs():F3} p95; Pawns phase {trace.MeanMs(TickSegment.Pawns):F3} ms mean, " +
+                              $"{trace.P95Ms(TickSegment.Pawns):F3} p95; {swings} swings resolved in the window, {downed} down at its end");
+            return tick;
+        }
+
+        /// <summary>
         /// The two enumerations that describe the order of a tick must not come to disagree about
         /// it. <see cref="TickPhase"/> names the three phases a system may register in;
         /// <see cref="TickSegment"/> names all seven, for timing. Where they overlap the numbers
@@ -369,6 +474,81 @@ namespace Odyssey.Tests.Sim
             }
         }
 
+        /// <summary>
+        /// Design 43 §3d: what the home area costs to work out again. A base of floors — a 40 x 40
+        /// block and 200 scattered cells on the surface — is written straight into the grid, then
+        /// timed two ways: every layer rebuilt (what a load costs) and one layer rebuilt (what a
+        /// placement costs, since a touch marks one layer and the growth reaches only the two
+        /// beside it). At rest the home costs nothing at all, which is not an arm: a query of a
+        /// clean home is two array reads.
+        /// </summary>
+        [Test, Explicit, Category("Benchmark")]
+        public void WhatOneHomeRebuildCosts()
+        {
+            foreach (GridSize size in new[] { BoardSizes.Standard, BoardSizes.Huge, Scale })
+            {
+                ScenarioDef scenario = ScenarioDef.Bare();
+                scenario.colonists = 1;
+                scenario.beds = 0;
+                scenario.stockpileCells = 0;
+                ColonyWorld colony = ColonyWorld.Build(size, 12345u, scenario, barren: true, wooded: false);
+                HomeArea home = colony.Pawns.Home!;
+                CellGrid cells = colony.Pawns.Cells;
+                CellRef stand = size.FromIndex(colony.Pawns.Pawns.All[0].Cell);
+
+                // The hearth (design 43 §3f), so the base is home: the flood from it is part of
+                // what a rebuild costs now.
+                Assert.That(colony.Construction.Place(new CellRef(stand.X + 3, stand.Z, stand.Y), BuildingHandle.Campfire,
+                    StuffHandle.Wood), Is.EqualTo(IntentRejection.None));
+                Assert.That(colony.Construction.Raise(colony.Pawns, colony.Construction.Sites[0]), Is.True);
+
+                for (int dx = -20; dx < 20; dx++)
+                for (int dz = -20; dz < 20; dz++)
+                {
+                    int x = stand.X + dx, z = stand.Z + dz;
+                    if (!size.Contains(x, z, stand.Y)) continue;
+                    int c = size.Index(x, z, stand.Y);
+                    cells.Floor[c] = CoreContent.SlabBuilt;
+                    cells.Footprint.Touch(c);
+                }
+                uint s = 7u;
+                for (int i = 0; i < 200; i++)
+                {
+                    int c = size.Index((int)(Next(ref s) % (uint)size.SizeX), (int)(Next(ref s) % (uint)size.SizeZ), stand.Y);
+                    cells.Floor[c] = CoreContent.SlabBuilt;
+                    cells.Footprint.Touch(c);
+                }
+                home.Rebuild();
+
+                var watch = new Stopwatch();
+                const int Whole = 5, One = 50;
+                for (int i = 0; i < Whole; i++)
+                {
+                    cells.Footprint.TouchAll();
+                    watch.Start();
+                    home.Rebuild();
+                    watch.Stop();
+                }
+                double whole = watch.Elapsed.TotalMilliseconds / Whole;
+
+                watch.Reset();
+                int one = size.Index(stand.X, stand.Z, stand.Y);
+                for (int i = 0; i < One; i++)
+                {
+                    cells.Footprint.Touch(one);
+                    watch.Start();
+                    home.Rebuild();
+                    watch.Stop();
+                }
+                double layer = watch.Elapsed.TotalMilliseconds / One;
+
+                TestContext.WriteLine(
+                    $"[Home] {size}: {home.CellCount} home cells; every layer = {whole:F3} ms, " +
+                    $"one placement = {layer:F3} ms");
+                Assert.That(home.IsEmpty, Is.False);
+            }
+        }
+
         static double TimeRebuilds(NavGraph nav, Colony colony, ref uint s, int count)
         {
             CellGrid cells = colony.Cells;
@@ -392,6 +572,76 @@ namespace Odyssey.Tests.Sim
             }
 
             return watch.Elapsed.TotalMilliseconds / done;
+        }
+
+        /// <summary>
+        /// What the sky map (design 43 §6) costs an edit, on the played map at every offered size.
+        ///
+        /// <para><b>It scales with the columns an edit touched and never with the board.</b> An
+        /// edit tells the chunk grid which cell changed; the map recomputes that column and the
+        /// ones a trunk there could shade — nine for a single cell, twenty-five for the 3 × 3 × 3
+        /// an order's chunk marking touches — and nothing else. The assertion is that count, which
+        /// must be the same on Standard and Huge; the milliseconds are printed, not asserted,
+        /// because a timing is only comparable with one taken in the same run. The board-wide
+        /// build is printed beside them: it is paid once, on the first question after a load, and
+        /// is the number that does grow with the board.</para>
+        /// </summary>
+        [Test, Category("Long")]
+        public void TheSkyColumnsCostWhatAnEditTouches()
+        {
+            var report = new StringBuilder();
+            var perEdit = new List<int>();
+            var perOrder = new List<int>();
+            foreach (GridSize size in new[] { BoardSizes.Standard, BoardSizes.Large, BoardSizes.Huge })
+            {
+                CellGrid grid = PlayedMap.Generate(size, 7u, out var result);
+                var chunks = new ChunkGrid(size);
+                var sky = new SkyColumns(grid, result.Context.Edifices, chunks);
+
+                var watch = Stopwatch.StartNew();
+                sky.Sync();
+                watch.Stop();
+                double build = watch.Elapsed.TotalMilliseconds;
+
+                // One slab at a time, over the top of a column, laid and then taken away: the
+                // cheapest edit there is and the commonest (a roof going up).
+                uint s = 43u;
+                const int Edits = 2_000;
+                int single = 0;
+                watch.Reset();
+                for (int i = 0; i < Edits; i++)
+                {
+                    int x = (int)(Next(ref s) % (uint)size.SizeX), z = (int)(Next(ref s) % (uint)size.SizeZ);
+                    int y = size.SizeY - 1;
+                    int cell = size.Index(x, z, y);
+                    grid.Floor[cell] = grid.Floor[cell] == 0 ? CoreContent.SlabBuilt : CoreContent.SlabNone;
+                    chunks.MarkDirty(x, z, y);
+                    watch.Start();
+                    sky.Sync();
+                    watch.Stop();
+                    single = Math.Max(single, sky.LastRecomputed);
+                }
+                double edit = watch.Elapsed.TotalMilliseconds / Edits;
+
+                // An order's marking: the 3 × 3 × 3 cells around the changed one, as
+                // ConstructionGrid.MarkChunksAround and MineJob do.
+                int cx = size.SizeX / 2, cz = size.SizeZ / 2, cy = size.SizeY / 2;
+                for (int dy = -1; dy <= 1; dy++)
+                for (int dz = -1; dz <= 1; dz++)
+                for (int dx = -1; dx <= 1; dx++)
+                    chunks.MarkDirty(cx + dx, cz + dz, cy + dy);
+                sky.Sync();
+                int order = sky.LastRecomputed;
+
+                perEdit.Add(single);
+                perOrder.Add(order);
+                report.AppendLine($"[Sky] {size}: board-wide build {build:F2} ms ({size.LayerStride:N0} columns); " +
+                                  $"one slab {edit * 1000:F2} us, {single} columns; an order's 3 x 3 x 3 marking {order} columns");
+            }
+            TestContext.WriteLine(report.ToString());
+
+            Assert.That(perEdit, Is.All.EqualTo(9), "one cell recomputes its column and the eight a trunk there could shade, on any board");
+            Assert.That(perOrder, Is.All.EqualTo(25), "an order's marking touches a 3 x 3 of columns, widened by the canopy's reach");
         }
 
         // ---------------------------------------------------------------- the workload
@@ -496,7 +746,7 @@ namespace Odyssey.Tests.Sim
                 // so the dirty block is waiting when NavigationSystem rebuilds in phase 2 of the
                 // *next* tick. The cost therefore lands on WorldSystems, which is where a
                 // colonist's own mined cell would land it.
-                miner = new MineOneCell(cells, nav, s);
+                miner = new MineOneCell(cells, nav, s, pawns.Enclosure);
                 world.Register(miner);
             }
 
@@ -538,12 +788,18 @@ namespace Odyssey.Tests.Sim
         {
             readonly CellGrid _cells;
             readonly NavGraph _nav;
+            readonly EnclosureGrid? _enclosure;
             uint _s;
 
-            public MineOneCell(CellGrid cells, NavGraph nav, uint seed)
+            /// <param name="enclosure">The colony's enclosure, so the edit marks what a real
+            /// mined cell marks. Until 2026-09-21 this arm marked nav alone, and the enclosure
+            /// solve — the largest cost of a real edit on Huge — was never in the number
+            /// (`docs/lessons.md`).</param>
+            public MineOneCell(CellGrid cells, NavGraph nav, uint seed, EnclosureGrid? enclosure = null)
             {
                 _cells = cells;
                 _nav = nav;
+                _enclosure = enclosure;
                 _s = seed == 0 ? 1u : seed;
             }
 
@@ -564,6 +820,7 @@ namespace Odyssey.Tests.Sim
 
                     _cells.Flags[idx] &= ~CellFlags.SolidTerrain;
                     _nav.MarkDirty(idx);
+                    _enclosure?.MarkDirty(idx);
                     Mined++;
                     return;
                 }

@@ -28,8 +28,9 @@ namespace Odyssey.Presentation.Bootstrap
     /// </summary>
     public sealed class SelectionPresenter : MonoBehaviour
     {
-        /// <summary>Two presses closer than this, on the same colonist, are a double click.</summary>
-        const float DoubleClickSeconds = 0.35f;
+        /// <summary>Two presses closer than this, on the same colonist, are a double click — one
+        /// threshold shared with the roster card's double click, owned by <see cref="DoubleClick"/>.</summary>
+        const float DoubleClickSeconds = DoubleClick.Seconds;
 
         OdysseyBootstrap? _bootstrap;
         SliceCameraRig? _rig;
@@ -101,6 +102,17 @@ namespace Odyssey.Presentation.Bootstrap
             // readout visibly skipped to something else before settling). Republishing between
             // ticks is safe for exactly the reason a question is safe: it changes no state the
             // simulation owns, publishes over the same settled world, and moves no counter.
+            // A corpse under the pointer, where no living pawn is (design 33 §5f): clickable as
+            // "Corpse of X". The corpse's own box, the one its cursor draws. The choice is lane C's
+            // (HudDirectors.ChooseCorpse); until it answers yes the click falls through to the
+            // ground beneath, as it always did.
+            if (!under.IsValid && picked.HasValue && !shift && _bootstrap?.Corpses != null)
+            {
+                SelectableBand(out int lowest, out _);
+                int corpse = _bootstrap.Corpses.CorpseUnderRay(ray, Mathf.Max(lowest, picked.Value.Y));
+                if (corpse > 0 && directors.ChooseCorpse(corpse, world.Views.Current)) return;
+            }
+
             if (picked.HasValue)
                 world.Intents.Submit(new Intent(IntentKind.QueryCell, picked.Value));
             else
@@ -109,6 +121,66 @@ namespace Odyssey.Presentation.Bootstrap
 
             directors.Selection.Pick(picked, under, world.Views.Current, additive: shift);
         }
+
+        /// <summary>
+        /// A right-click with no tool armed (design 33 §2f), handed on by
+        /// <see cref="DesignatePresenter"/>. <see cref="OrderModel.RightClick"/> decides; this only
+        /// supplies the two things a Unity-free model cannot find for itself — who is under the
+        /// pointer, by the same hit-test a left click uses, and whether Ctrl is held — and carries
+        /// the answer to the world. A selection with no colonist in it is not asked at all, so
+        /// a right-click that is not an order costs nothing.
+        ///
+        /// <para><b>A colonist, not a drafted one</b> (design 33 §5j): a right-click on a weapon
+        /// sends the primary colonist for it drafted or not, so the gate is
+        /// <see cref="OrderModel.HearsRightClick"/>. Behind <c>AnyDrafted</c>, as C1 left it, an
+        /// undrafted colonist could not be sent for a weapon at all — the model said yes and the
+        /// click never reached it (integration, 2026-09-23). Everything else still needs a draft
+        /// inside the model, so the wider gate sends nothing new.</para>
+        ///
+        /// <para><b>A thing with several answers asks instead of acting</b> (design 33 §7a): when
+        /// the model answers with menu rows — a weapon's <i>Equip</i> and <i>Cancel</i> — the HUD
+        /// raises them at the pointer and nothing is sent until a row is chosen. The model fills
+        /// one list or the other, never both.</para>
+        /// </summary>
+        public void Order(CellRef? cell, Ray ray)
+        {
+            var world = _bootstrap?.World;
+            var directors = _bootstrap?.Directors;
+            if (world == null || directors == null) return;
+
+            WorldSnapshot snapshot = world.Views.Current;
+            IReadOnlyList<PawnId> selection = directors.Selection.Pawns;
+            if (!OrderModel.HearsRightClick(selection, snapshot)) return;
+
+            PawnId under = cell.HasValue ? PawnUnderRay(snapshot, ray, cell.Value.Y) : PawnId.None;
+            bool ctrl = Keyboard.current?.ctrlKey.isPressed == true;
+
+            // What stands in the clicked cell, off the render mirror, for the building half of the
+            // order (C6, design 33 §13i): the model cannot see the grid, and which edifices are
+            // targets is the snapshot's, so this is a fact handed over like the pawn and Ctrl.
+            Odyssey.Presentation.World.WorldRenderModel? mirror = _bootstrap?.Model;
+            int edifice = cell.HasValue && mirror != null && snapshot.Size.Contains(cell.Value.X, cell.Value.Z, cell.Value.Y)
+                ? mirror.EdificeDef(snapshot.Size.Index(cell.Value))
+                : EdificeHandle.None;
+
+            _orders.Clear();
+            OrderModel.RightClick(selection, snapshot, cell, under, ctrl, _orders, _menu, edifice);
+            if (_menu.Count > 0)
+            {
+                if (_shell == null) _shell = GetComponent<Ui.HudShell>();
+                Mouse? mouse = Mouse.current;
+                if (_shell != null && mouse != null) _shell.OpenContextMenu(_menu, mouse.position.ReadValue());
+            }
+            for (int i = 0; i < _orders.Count; i++) world.Intents.Submit(_orders[i]);
+            _orders.Clear();
+            _menu.Clear();
+        }
+
+        // Scratch for Order: filled and emptied inside one call, never state. The shell copies
+        // the rows it is handed, so the list can be emptied as soon as the menu is up.
+        readonly List<Intent> _orders = new List<Intent>();
+        readonly List<ContextMenuRow> _menu = new List<ContextMenuRow>();
+        Ui.HudShell? _shell;
 
         void OnBoxSelected(Rect screenRect, bool additive)
         {
@@ -240,10 +312,23 @@ namespace Odyssey.Presentation.Bootstrap
                 // a pawn drawn by the instanced pass. A working figure is stepped off its cell to
                 // reach the wood, so the pose and the screen disagree by most of a stride exactly
                 // while a colonist is chopping — which is when the player is trying to click them.
-                if (_bootstrap?.Figures == null || !_bootstrap.Figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                    feet = Odyssey.Presentation.Rendering.PawnPose.Of(
-                        pawn, tickAlpha, movePerTick, out _, _bootstrap?.Model);
-                var bounds = new Bounds(feet + Vector3.up * (box.y * 0.5f), box);
+                Bounds bounds;
+                if (pawn.IsAnimal && _bootstrap?.Figures != null
+                    && _bootstrap.Figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 place, out Vector3 animal))
+                {
+                    // An animal is clicked through its own drawn box, the one the cursor draws
+                    // (owner, 2026-09-22). Axis-aligned at the longer of its two footprint sides,
+                    // which is a square a turned hog still fits inside.
+                    float side = Mathf.Max(animal.x, animal.z);
+                    bounds = new Bounds(place.GetPosition(), new Vector3(side, animal.y, side));
+                }
+                else
+                {
+                    if (_bootstrap?.Figures == null || !_bootstrap.Figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                        feet = Odyssey.Presentation.Rendering.PawnPose.Of(
+                            pawn, tickAlpha, movePerTick, out _, _bootstrap?.Model, pawns, _bootstrap?.CrowdIndex);
+                    bounds = new Bounds(feet + Vector3.up * (box.y * 0.5f), box);
+                }
                 if (!bounds.IntersectRay(ray, out float distance) || distance >= nearest) continue;
 
                 nearest = distance;

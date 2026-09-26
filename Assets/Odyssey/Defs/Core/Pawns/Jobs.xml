@@ -160,4 +160,189 @@
     <settleTicks>30</settleTicks>
   </JobDef>
 
+  <!--
+    The draft (design 33 section 2c). A drafted colonist is always doing one of these two: standing
+    where it was put, or walking to where it was sent. Neither expires - the hold ends when the
+    draft's quiet hours run out, the move when it arrives - and neither may be taken away by a
+    casual think, because the player put them there.
+  -->
+  <JobDef>
+    <defName>Job_DraftHold</defName>
+    <driver>12</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Goto</defName>
+    <driver>13</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+  </JobDef>
+
+  <!--
+    Power (design 32). Laying a line fetches its one wood and lays it in one job, priced by
+    ConstructionContent.WorkFor like any build, so there is no workTicks here - Job_Build's argument.
+    Taking one up is priced like deconstructing. Both train construction and settle as building
+    does. Refuelling is a carry, and trains and prices as hauling does.
+  -->
+  <JobDef>
+    <defName>Job_LayConduit</defName>
+    <driver>14</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>3</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_RemoveConduit</defName>
+    <driver>15</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>3</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Refuel</defName>
+    <driver>16</driver>
+    <expiryTicks>6000</expiryTicks>
+    <trainsSkill>0</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+  </JobDef>
+
+  <!--
+    The combat line (design 33 section 5), claimed together by its contracts step so that no two
+    lanes can each append a job and both call it 14 (renumbered to 17-21, after power's three, at the merge with main). The drivers are stubs that fail until their
+    lane fills them; nothing starts any of these yet.
+
+    None may be taken away by a casual think: a fight, a flight, a body on the ground, a weapon
+    being fetched on the player's word and a colonist being carried to bed are all things a
+    better-looking job must not interrupt.
+
+    Job_AttackMelee trains Skill_Melee (5), but per SWING and not per tick of work: the weapon's
+    experiencePerSwing is the amount (Combat.xml, Items.xml), which is why experiencePerWorkTick
+    is nought here. It never expires; the chase ends when one of the two goes down.
+
+    Job_Equip and Job_Rescue carry the generous walking expiry the other working jobs have, for
+    their reason: a weapon or a patient can be a long walk away.
+  -->
+  <JobDef>
+    <defName>Job_AttackMelee</defName>
+    <driver>17</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <trainsSkill>5</trainsSkill>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Flee</defName>
+    <driver>18</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>1200</expiryTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Downed</defName>
+    <driver>19</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Equip</defName>
+    <driver>20</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>6000</expiryTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Rescue</defName>
+    <driver>21</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+  </JobDef>
+
+  <!--
+    A bandit with nobody to fight and nothing to break carries off the nearest stack it can lift
+    and walks off the board's edge with it (design 33 section 17; owner, 2026-09-24: "thieve
+    items"). No expiry: an expiry ends the job, and ending it drops the load, so a long walk to the
+    edge would put the loot down and pick it up again. It looks up on the combat's rechooseTicks
+    instead. Trains nothing: a bandit has no work to get better at.
+  -->
+  <JobDef>
+    <defName>Job_Steal</defName>
+    <driver>22</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+  </JobDef>
+
+  <!--
+    Medical supplies (design 37), after Job_Steal at the merge with main (renumbered 22-23 ->
+    23-24; bandits shipped first). Job_Treat is a doctor fetching one unit (or none, a bare
+    dressing) and treating a patient, or a colonist treating herself: workTicks is one treatment
+    at the standard pace (600, INVENTED), which Work_Doctor's curve scales and self-treatment
+    triples. It trains medicine at growing's rate. Not casually interruptible: a doctor halfway
+    through a dressing finishes it.
+
+    Job_Patient is a hurt colonist lying in a bed (or on the ground, when there is none) until
+    she is back to the release line. She sleeps there, so rest and the bed's heal both run.
+  -->
+  <JobDef>
+    <defName>Job_Treat</defName>
+    <driver>23</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+    <workTicks>600</workTicks>
+    <trainsSkill>6</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Patient</defName>
+    <driver>24</driver>
+  </JobDef>
+
+  <!--
+    Picking a berry bush (design 45 section 6), driver 25: after medical
+    supplies' Treat and Patient at the merge with main, which shipped them first. No workTicks: the work is the plant's own, in
+    World/WildPlants.xml, as felling's is. Growing's skill and experience, because it is picking
+    a crop.
+  -->
+  <JobDef>
+    <defName>Job_Forage</defName>
+    <driver>25</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>4</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
+  <!--
+    The kitchen (design 48 section 5), JobHandle 26, after the forager's 25 (nature reached main first). One job for both halves of a bill: fetching a
+    load of raw food into a station's pan, and cooking what the pan holds. The work is the
+    recipe's (Recipes.xml) and not this def's, so there is no workTicks here - Job_Build's
+    argument. It trains cooking at every working job's rate. Not casually interruptible: a cook
+    stirring a pan finishes the meal. Expiry is the walking jobs' generous one, because the
+    carrots can be a long way from the kitchen.
+  -->
+  <JobDef>
+    <defName>Job_Cook</defName>
+    <driver>26</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>7</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
+  <!--
+    The ranged attack (design 47 section 2d): stand where the line to the target is open and
+    shoot. Not casually interruptible, as the melee attack is not. Trains Skill_Shooting (8) per
+    SHOT, hit or miss, as the melee attack trains per swing: the gun's experiencePerSwing is the
+    amount (Items.xml), so experiencePerWorkTick is nought.
+  -->
+  <JobDef>
+    <defName>Job_AttackRanged</defName>
+    <driver>27</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <trainsSkill>8</trainsSkill>
+  </JobDef>
+
 </Defs>

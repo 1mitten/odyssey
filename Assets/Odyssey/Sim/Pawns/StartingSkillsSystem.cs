@@ -41,7 +41,11 @@ namespace Odyssey.Sim.Pawns
             var pawns = _ctx.Pawns.All;
             // Each from its own seed since U40, which is the world's for every colonist the world
             // placed itself and the candidate's for one chosen on the select screen.
-            for (int i = 0; i < pawns.Count; i++) pawns[i].RollStartingSkills();
+            // An animal has no skills to roll (design 29 §2). The draw is not made for it either,
+            // which is safe: each pawn's draw is keyed on its own id and seed, so skipping one
+            // cannot shift another's.
+            for (int i = 0; i < pawns.Count; i++)
+                if (pawns[i].IsPerson) pawns[i].RollStartingSkills();
         }
     }
 }

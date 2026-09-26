@@ -31,7 +31,7 @@ namespace Odyssey.Sim.Construction
         /// different things — one sits on the floor and one 1.5 m up, facing opposite ways — and
         /// worldgen has always stamped them as two values, so a built stair carrying one value
         /// would be the odd one out for the mesher's partner scan, for <c>EdificeLabels</c> and for
-        /// the render mirror (U44, docs/design/28-stairs.md §4).</para>
+        /// the render mirror (U44, docs/design/60-stairs.md §4).</para>
         ///
         /// <para><b>A field rather than a special case in two helpers.</b>
         /// <see cref="BuildingForEdifice"/> and <c>EdificeFootprint.Cells</c> both resolve a
@@ -130,11 +130,150 @@ namespace Odyssey.Sim.Construction
         /// </summary>
         public int workToBuild = 135;
 
+        /// <summary>
+        /// How many stacks this thing holds, or 0 for anything that is not a store.
+        ///
+        /// <para>A field rather than a rule keyed off the edifice id, for the same reason
+        /// <see cref="needsClearCell"/> is one: it is a fact about the shape of the thing, and the
+        /// table is where facts about things live. It is also what makes a second, larger store one
+        /// row of content rather than a second code path.</para>
+        /// </summary>
+        public int storageSlots;
+
         /// <summary>Construction level a colonist needs before it may take the job. 0 for a wall.</summary>
         public int minSkill;
 
+        /// <summary>
+        /// Heat the finished thing pushes into its room each thermal pass, in centi-degree-cells
+        /// (design 28 §7): energy, not temperature, so the same campfire is an oven in a broom
+        /// cupboard and a warm corner in a hall. Zero for everything that is not a heat source,
+        /// which is everything until the campfire.
+        /// </summary>
+        public int heatPerPass;
+
+        /// <summary>
+        /// Is this a <b>power line</b> rather than a thing standing in the cell (design 32 §3)?
+        ///
+        /// <para>A line lives in its own per-cell layer, owned by <c>PowerGrid</c>, so it can run
+        /// through a wall or under a floor without taking the cell's one edifice slot. Everything a
+        /// player does to order one — arm, ghost, drag, place — is a build like any other, which is
+        /// why it is a row here at all; <c>ConstructionGrid.Place</c> is the one place that reads
+        /// this and hands the order on.</para>
+        /// </summary>
+        public bool conduit;
+
+        /// <summary>
+        /// A second payment, in one fixed item whatever the thing is made of — the scrap metal in a
+        /// generator's workings, or the whole of a power line (design 32 §14). -1 for anything
+        /// that is paid for in its material alone, which is everything before power.
+        ///
+        /// <para>Kept apart from <see cref="costCount"/> because the two answer different
+        /// questions: the material is the player's choice and the part is not. A site banks them
+        /// separately, is a frame only when both are in, and gives each back by its own rule.</para>
+        /// </summary>
+        public int partItem = -1;
+
+        /// <summary>Units of <see cref="partItem"/> a site swallows before work can start.</summary>
+        public int partCount;
+
+        /// <summary>Does this thing take a second, fixed payment besides its material?</summary>
+        public bool HasParts => partItem >= 0 && partCount > 0;
+
+        /// <summary>Watts this makes while it runs, or 0 for anything that is not a generator (design 32 §5).</summary>
+        public int powerOutputW;
+
+        /// <summary>Watts this wants while it is switched on, or 0 for anything that is not a consumer.</summary>
+        public int powerDrawW;
+
+        /// <summary>The <see cref="ItemHandle"/> this burns, or -1 for anything that burns nothing.</summary>
+        public int fuelItem = -1;
+
+        /// <summary>How many of <see cref="fuelItem"/> the hopper holds, in whole units.</summary>
+        public int fuelCapacity;
+
+        /// <summary>
+        /// Units of fuel a day <b>at full load</b>. The burn is in proportion to the load carried,
+        /// so this is the ceiling, not the rate (design 32 §6, decision 8).
+        /// </summary>
+        public int fuelPerDay;
+
+        /// <summary>Does a power net care about this — does it make power or spend it?</summary>
+        public bool IsPowered => powerOutputW > 0 || powerDrawW > 0;
+        /// How much warmer the thing's <b>own cell</b> is than the air around it, in
+        /// centi-degrees (design 36). Zero for everything that is not a heat source.
+        ///
+        /// <para><b>A different thing from <see cref="heatPerPass"/>, and the pair is the point.</b>
+        /// That one is energy pushed into the room's air — slow, shared by the whole room, and
+        /// the same campfire is an oven in a cupboard and a warm corner in a hall. This is
+        /// <i>radiance</i>: what a fire does to you by shining on you, which is immediate, local,
+        /// and no different in a cupboard than in a hall. Design 28 models the air and refuses to
+        /// store anything per cell; this is a pure function of how far away you are standing, so
+        /// it needs no storage at all.</para>
+        ///
+        /// <para>Tuning the two apart is why they are separate fields. Making one tile read hot by
+        /// raising <c>heatPerPass</c> would cook the whole hut.</para>
+        /// </summary>
+        public int radiantC;
+
         /// <summary>The registry key the interface names it by. Never a label, never a filename.</summary>
         public string iconKey = "";
+
+        /// <summary>
+        /// Hit points the finished thing has when it is struck (design 33 §4, C6), in whole points.
+        /// Nought for nothing. A building nobody has hit is at this and carries no row anywhere;
+        /// what is left of a struck one is <c>EdificeDamage</c>'s. INVENTED, per thing, before any
+        /// material scaling — C6's to tune. Claimed by the combat contracts step; the campfire,
+        /// conduit, generator and heater were given theirs by C6 (design 33 §13c). The pool is this
+        /// times <see cref="StuffDef.hitPointsFactorPerMille"/> (<c>BuildingTargets.MaxMilliOf</c>),
+        /// and only an edifice standing in a cell is ever struck, so a slab's and a line's number
+        /// is not read yet.
+        /// </summary>
+        public int maxHitPoints;
+
+        /// <summary>
+        /// What the finished thing is worth as cover to a pawn standing beside it, per mille
+        /// (design 53 §3): the base the angle, the shooter's distance and the descent then scale.
+        /// Nought for a thing that is not cover, or whose cover is the full-fill rule's (a wall is
+        /// worth <c>CombatDef.fullFillCoverPerMille</c> because it fills its cell, and says nothing
+        /// here). Read only through <c>Cover.BaseAt</c>, the one owner. INVENTED per thing.
+        /// </summary>
+        public int coverPerMille;
+
+        /// <summary>
+        /// Is it <b>tall</b> cover — a shot has to come down steeply to get over it — rather than
+        /// low? Design 53 §2b's two classes. False for every piece of furniture so far.
+        /// </summary>
+        public bool coverTall;
+
+        /// <summary>
+        /// Crossed but never stood on (design 53 §5, the owner): a pawn may walk over it at
+        /// <see cref="crossCost"/> and may never stop in its cell — rest, work, wait and aim all
+        /// happen beside it. The sandbag's and the barricade's rule, so cover is always beside a
+        /// pawn and never under her, and a line of it seals nobody in.
+        /// </summary>
+        public bool passThrough;
+
+        /// <summary>
+        /// What crossing the cell costs on top of the step, in the path's units (a step is 100, a
+        /// bush adds 50). Read by navigation through the cell's cost class, never directly.
+        /// </summary>
+        public int crossCost;
+
+        /// <summary>
+        /// The share of its cost left on the cell when fighting destroys it, per mille (design 53
+        /// §2e, the owner: a quarter). Nought for everything built before cover, which keeps
+        /// design 33's "a building destroyed in combat leaves nothing" for them.
+        /// </summary>
+        public int wreckRefundPerMille;
+
+        /// <summary>
+        /// The one material it is always built of, as a <see cref="StuffHandle"/>, or
+        /// <see cref="StuffHandle.None"/> for "the one the player chose". The sandbags' rule
+        /// (design 53 §4): filled bags are not a choice of wood or stone, and the placeholder
+        /// recipe is five stone. <c>ConstructionGrid.Place</c> takes this over whatever the order
+        /// named, so the palette need not offer a material at all.
+        /// </summary>
+        public int fixedStuff;
     }
 
     /// <summary>
@@ -183,15 +322,41 @@ namespace Odyssey.Sim.Construction
         /// <summary>
         /// The material's effect on how much punishment the finished thing takes, in thousandths.
         ///
-        /// <para><b>Factor-only, still, and deliberately.</b> U27 gave <see cref="workOffsetTicks"/>
-        /// a base stat to add to because <see cref="ConstructionContent.WorkFor"/> already turns
-        /// <see cref="BuildingDef.workToBuild"/> into a real number every tick. Hit points has no
-        /// such consumer yet — no <c>BuildingDef.maxHitPoints</c> exists and nothing gives a built
-        /// wall a damage state — so an offset here would be a second field with nothing to add to
-        /// and no test that could exercise it. It is next when a durability stat lands, not
-        /// invented ahead of it.</para>
+        /// <para><b>Read since C6</b> (design 33 §13c): a struck building's pool is its
+        /// <see cref="BuildingDef.maxHitPoints"/> times this, so a stone wall stands half as long
+        /// again as a wooden one. <b>Factor-only, still</b>: an offset beside it would be a second
+        /// number nobody has asked for, and U27's argument for the work offset — a flat cost the
+        /// factor cannot express — has no counterpart here yet.</para>
         /// </summary>
         public int hitPointsFactorPerMille = 1000;
+
+        /// <summary>
+        /// How hard a <b>sharp</b> blow bites a thing built of this, in thousandths of the blow's
+        /// rolled damage (design 33 §14d; the owner, 2026-09-24: blunt against stone, sharp against
+        /// wood). Read by <c>BuildingTargets.DamageFactorPerMille</c> and nothing else.
+        ///
+        /// <para><b>On the material, not the building row</b>, because the owner's rule is wood
+        /// against stone: a wooden door and a wooden wall answer a machete alike. Defaults to the
+        /// blow as it comes, which is every material the rule has no opinion on — the ruined
+        /// city's, left for now (§14a (b)).</para>
+        /// </summary>
+        public int sharpDamagePerMille = 1000;
+
+        /// <summary>As <see cref="sharpDamagePerMille"/>, for a <b>blunt</b> blow — a bat, a crowbar or fists.</summary>
+        public int bluntDamagePerMille = 1000;
+
+        /// <summary>
+        /// The material's effect on how much heat crosses a wall made of it, in thousandths of
+        /// the standard material's conductance (design 28 §6).
+        ///
+        /// <para><b>The one place building material changes the weather indoors.</b> The
+        /// reference's walls are all equally warm — a log cabin and a granite bunker hold heat
+        /// identically — and our stuff table already exists to make material a decision, so it
+        /// is a decision: wood insulates best of the buildables, stone is the standard the
+        /// numbers are quoted against, and the city's concrete and steel bleed heat, which is
+        /// the ruined city's problem and one day a salvage line's opportunity.</para>
+        /// </summary>
+        public int thermalConductancePerMille = 1_000;
 
         /// <summary>The registry key the interface names it by.</summary>
         public string iconKey = "";
@@ -348,6 +513,18 @@ namespace Odyssey.Sim.Construction
         /// edifice id rather than a building handle, because a standing thing is a
         /// <c>PlacedEdifice</c> and the handle it was ordered from is not kept.
         /// </summary>
+        /// <summary>
+        /// How many stacks the thing standing as this edifice holds, or 0 where it is not a store.
+        /// Asked by edifice id because that is what a cell carries.
+        /// </summary>
+        public static int SlotsOf(ushort edifice)
+        {
+            for (int i = 0; i < Buildings.Count; i++)
+                if (Buildings[i].edifice == edifice && Buildings[i].storageSlots > 0)
+                    return Buildings[i].storageSlots;
+            return 0;
+        }
+
         public static bool NeedsClearCell(ushort edifice)
         {
             for (int i = 0; i < Buildings.Count; i++)
@@ -358,7 +535,15 @@ namespace Odyssey.Sim.Construction
         public static readonly string[] BuildingOrder =
         {
             "Building_None", "Building_Wall", "Building_Floor", "Building_DeckPlate", "Building_Ladder",
-            "Building_Bed", "Building_Door", "Building_Pillar", "Building_Stair",
+            "Building_Bed", "Building_Door", "Building_Shelf", "Building_Campfire",
+            "Building_Conduit", "Building_Generator", "Building_Heater",
+            "Building_Galley",
+            // Cover (design 53 §4), BuildingHandle 13. The barricade that followed it was taken
+            // out on the owner's first look (design 53 §13); if it comes back it takes the next
+            // free handle, since 14 and 15 are the pillar and the stair.
+            "Building_Sandbags",
+            // Roofs and stairs (designs 59 and 60), BuildingHandle 14 and 15.
+            "Building_Pillar", "Building_Stair",
         };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
@@ -403,7 +588,7 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_Wall", label = "wall", edifice = CoreContent.EdificeWall,
                     blocking = true, costCount = 5, workToBuild = 135, minSkill = 0,
-                    iconKey = "ui.arch.tool.wall",
+                    iconKey = "ui.arch.tool.wall", maxHitPoints = 300,
                 },
 
                 // A slab at the cell's lower boundary rather than an edifice in the cell (U29), and
@@ -415,7 +600,7 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_Floor", label = "floor", edifice = CoreContent.EdificeNone,
                     slab = true, blocking = false, costCount = 4, workToBuild = 120, minSkill = 0,
-                    iconKey = "ui.arch.tool.roof",
+                    iconKey = "ui.arch.tool.roof", maxHitPoints = 250,
                 },
 
                 // Paving: the same slab, laid on ground that is already there (U42). `covering` is
@@ -427,7 +612,7 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_DeckPlate", label = "deck plate", edifice = CoreContent.EdificeNone,
                     slab = true, covering = true, blocking = false, costCount = 3, workToBuild = 60,
-                    minSkill = 0, iconKey = "ui.arch.tool.deckplate",
+                    minSkill = 0, iconKey = "ui.arch.tool.deckplate", maxHitPoints = 150,
                 },
 
                 // The way up (U43). An edifice like a wall, and `blocking = false` is what makes it
@@ -438,7 +623,7 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_Ladder", label = "ladder", edifice = CoreContent.EdificeLadder,
                     blocking = false, rotates = true, costCount = 4, workToBuild = 90, minSkill = 0,
-                    iconKey = "ui.arch.tool.ladder",
+                    iconKey = "ui.arch.tool.ladder", maxHitPoints = 80,
                 },
 
                 // The first furniture (docs/design/20-beds.md). Two cells, passable, rotatable at
@@ -452,7 +637,7 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Bed", label = "bed", edifice = CoreContent.EdificeBed,
                     blocking = false, footprint = 2, rotates = true, takesQuality = true,
                     needsClearCell = true, costCount = 5, workToBuild = 180, minSkill = 0,
-                    iconKey = "ui.arch.tool.bed",
+                    iconKey = "ui.arch.tool.bed", maxHitPoints = 120, coverPerMille = 300,
                 },
 
                 // The door. Edifice 2 is CoreContent.EdificeDoor. Passable, takes no quality,
@@ -461,10 +646,108 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_Door", label = "door", edifice = CoreContent.EdificeDoor,
                     blocking = false, rotates = true, costCount = 5, workToBuild = 135, minSkill = 0,
-                    iconKey = "ui.arch.tool.door",
+                    iconKey = "ui.arch.tool.door", maxHitPoints = 160,
                 },
 
-                // The support pillar (RF1, docs/design/27-roofs.md §5). A column in one cell that
+                // The shelf: one cell of furniture that holds an inventory rather than standing in
+                // the way of one (docs/design/26-storage.md). Passable like the bed, because a
+                // blocking shelf is a wall a player built by accident and every placement would be
+                // the 1.19 ms one-cell NavGraph.Rebuild the baseline audit measured. needsClearCell
+                // because the cell it stands in stops taking loose stacks the moment it is raised:
+                // what is at a shelf's cell is in the shelf. The bed's cost and work exactly — a
+                // shelf is joinery of the same order, and eight stacks for five wood is a trade a
+                // player can see the point of without it ending the storage game.
+                new BuildingDef
+                {
+                    defName = "Building_Shelf", label = "shelf", edifice = CoreContent.EdificeShelf,
+                    blocking = false, rotates = true, needsClearCell = true, storageSlots = 8,
+                    costCount = 5, workToBuild = 180, minSkill = 0, iconKey = "ui.arch.tool.shelf",
+                    maxHitPoints = 100, coverPerMille = 500,
+                },
+
+                // The first heat source (design 28 §7). Edifice 13, the next free id after the
+                // bed's. Blocking — nobody stands in a fire — and wanting a clear cell like the
+                // bed does, for the same reason with worse graphics. heatPerPass 1200 holds a
+                // 6×6 room comfortably above deepest Rime and overshoots in Wash, which is the
+                // brazier-in-a-broom-cupboard lesson arriving for free. 3 stuff and 60 ticks:
+                // kindling and a ring of stones. Fuel is a recorded hook — v1 burns steadily.
+                new BuildingDef
+                {
+                    defName = "Building_Campfire", label = "campfire", edifice = CoreContent.EdificeCampfire,
+                    blocking = true, needsClearCell = true, heatPerPass = 1_200, radiantC = 2_600,
+                    costCount = 3, workToBuild = 60, minSkill = 0,
+                    iconKey = "ui.arch.tool.campfire", maxHitPoints = 60, coverPerMille = 250,
+                },
+
+                // A power line (design 32 §3, §14). Not an edifice — `conduit` sends the order to
+                // the power grid and the line into a layer of its own — and all part: no material
+                // to choose, one scrap metal a cell, fetched and spent by the colonist who lays it.
+                // 40 ticks of work, a-07's 35 rounded to the table's tens.
+                new BuildingDef
+                {
+                    defName = "Building_Conduit", label = "conduit", edifice = CoreContent.EdificeNone,
+                    conduit = true, blocking = false, costCount = 0,
+                    partItem = ItemHandle.Salvage, partCount = 1, workToBuild = 40, minSkill = 0,
+                    iconKey = "ui.arch.tool.conduit", maxHitPoints = 40,
+                },
+
+                // The wood-fired generator (design 32 §6). a-07's output, hopper and full-load burn
+                // — 1,000 W, 75 wood (exactly one stack, so one trip fills it), 22 a day — with the
+                // burn in proportion to load, which is the owner's departure. Two cells because the
+                // footprint allows no more; blocking and wanting a clear cell like the campfire.
+                // heatPerPass is the heat at full load and scales with the load like the burn: the
+                // power grid owns it, never the thermal pass's per-def table. 30 stuff and 600
+                // ticks: the first expensive thing in the table.
+                new BuildingDef
+                {
+                    defName = "Building_Generator", label = "generator", edifice = CoreContent.EdificeGenerator,
+                    blocking = true, footprint = 2, rotates = true, needsClearCell = true,
+                    powerOutputW = 1_000, fuelItem = ItemHandle.Wood, fuelCapacity = 75, fuelPerDay = 22,
+                    heatPerPass = 400, costCount = 30, partItem = ItemHandle.Salvage, partCount = 20,
+                    workToBuild = 600, minSkill = 0,
+                    iconKey = "ui.arch.tool.generator", maxHitPoints = 300, coverPerMille = 500,
+                },
+
+                // The electric heater (design 32 §7): a-07's 175 W, and 1,000 heat a pass into its
+                // room only while powered and switched on — the campfire's shape behind a gate.
+                // One cell, blocking, wanting a clear cell; 10 stuff and 240 ticks. It rotates
+                // (§14c): the facing is drawing only, and backs on to a wall where there is one.
+                new BuildingDef
+                {
+                    defName = "Building_Heater", label = "heater", edifice = CoreContent.EdificeHeater,
+                    blocking = true, rotates = true, needsClearCell = true, powerDrawW = 175, heatPerPass = 1_000,
+                    costCount = 10, partItem = ItemHandle.Salvage, partCount = 5,
+                    workToBuild = 240, minSkill = 0,
+                    iconKey = "ui.arch.tool.heater", maxHitPoints = 100, coverPerMille = 400,
+                },
+
+                // The galley (design 48 §5): the electric cooker. a-18's 350 W, drawn whenever it is
+                // switched on, as the heater's is. One cell, blocking, rotating, wanting a clear
+                // cell; 15 stuff, 10 scrap and 300 ticks, the heater a little heavier.
+                new BuildingDef
+                {
+                    defName = "Building_Galley", label = "galley", edifice = CoreContent.EdificeGalley,
+                    blocking = true, rotates = true, needsClearCell = true, powerDrawW = 350,
+                    costCount = 15, partItem = ItemHandle.Salvage, partCount = 10,
+                    workToBuild = 300, minSkill = 0,
+                    iconKey = "ui.arch.tool.galley", maxHitPoints = 100, coverPerMille = 500,
+                },
+
+                // Sandbags (design 53 §4): the cheap, quick cover. One cell, dragged as a line like a
+                // wall, crossed at +150 and never stood on, 55 % low cover. Always stone — five, the
+                // placeholder the owner asked for until the recipes are decided — so the palette
+                // offers no material. The shelf's work; a quarter left behind when fighting destroys
+                // one. All INVENTED but the 55, which is the reference's.
+                new BuildingDef
+                {
+                    defName = "Building_Sandbags", label = "sandbags", edifice = CoreContent.EdificeSandbags,
+                    blocking = false, needsClearCell = true, passThrough = true, crossCost = 150,
+                    costCount = 5, fixedStuff = StuffHandle.Stone, workToBuild = 180, minSkill = 0,
+                    iconKey = "ui.arch.tool.sandbag", maxHitPoints = 300, coverPerMille = 550,
+                    wreckRefundPerMille = 250,
+                },
+
+                // The support pillar (RF1, docs/design/59-roofs.md §5). A column in one cell that
                 // holds up the slab above it, and the thing that makes a hall roofable: measured,
                 // a room with an 8-cell interior takes nine holes in its roof and a 10-cell one
                 // takes twenty-five, because support decays one per cell from a wall and a slab
@@ -489,10 +772,13 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Pillar", label = "support pillar",
                     edifice = CoreContent.EdificePillar, blocking = true,
                     costCount = 3, workToBuild = 90, minSkill = 0,
-                    iconKey = "ui.arch.tool.pillar",
+                    // INVENTED on merging combat (design 33 §4): two thirds of a wall's, since it is
+                    // a column rather than a panel. No coverPerMille: it fills its cell, so its
+                    // cover is the full-fill rule's, as a wall's is.
+                    iconKey = "ui.arch.tool.pillar", maxHitPoints = 200,
                 },
 
-                // The way up that carries something (docs/design/28-stairs.md). ONE cell, climbing
+                // The way up that carries something (docs/design/60-stairs.md). ONE cell, climbing
                 // a full 3.0 m layer to the floor above - owner, 2026-09-21, after playing the
                 // two-cell version: "It should be able to go up a flight in one square for ease -
                 // but it's not - it's not flush with the floor above either."
@@ -516,7 +802,9 @@ namespace Odyssey.Sim.Construction
                     edifice = CoreContent.EdificeStairFull,
                     rotates = true, blocking = false,
                     costCount = 6, workToBuild = 150, minSkill = 0,
-                    iconKey = "ui.arch.tool.stair",
+                    // INVENTED on merging combat (design 33 §4): sturdier than a ladder's 80, a bed's
+                    // worth. No cover: it is stood on, not behind.
+                    iconKey = "ui.arch.tool.stair", maxHitPoints = 120,
                 },
             };
         }
@@ -526,9 +814,9 @@ namespace Odyssey.Sim.Construction
             return new[]
             {
                 new StuffDef { defName = "Stuff_None", label = "nothing", stuff = CoreContent.StuffNone },
-                new StuffDef { defName = "Stuff_Concrete", label = "concrete", stuff = CoreContent.StuffConcrete },
-                new StuffDef { defName = "Stuff_Steel", label = "steel", stuff = CoreContent.StuffSteel },
-                new StuffDef { defName = "Stuff_Composite", label = "composite", stuff = CoreContent.StuffComposite },
+                new StuffDef { defName = "Stuff_Concrete", label = "concrete", stuff = CoreContent.StuffConcrete, thermalConductancePerMille = 1100 },
+                new StuffDef { defName = "Stuff_Steel", label = "steel", stuff = CoreContent.StuffSteel, thermalConductancePerMille = 1400 },
+                new StuffDef { defName = "Stuff_Composite", label = "composite", stuff = CoreContent.StuffComposite, thermalConductancePerMille = 800 },
 
                 // Wood carries no offset: nailing and lashing a plank into place has no separate
                 // fitting step for the factor to leave out, so the whole of wood's cost is the
@@ -538,6 +826,10 @@ namespace Odyssey.Sim.Construction
                     defName = "Stuff_Wood", label = "wood", stuff = NaturalContent.StuffWood,
                     item = ItemHandle.Wood, workFactorPerMille = 1000, workOffsetTicks = 0,
                     hitPointsFactorPerMille = 1000, iconKey = "ui.res.wood",
+                    thermalConductancePerMille = 600,
+                    // Design 33 §14d, INVENTED: an edge bites wood, a club does no better on it
+                    // than on anything else.
+                    sharpDamagePerMille = 1250, bluntDamagePerMille = 1000,
                 },
 
                 // 1.7x the work and 1.5x the hit points: the reference's own relation between a
@@ -557,6 +849,9 @@ namespace Odyssey.Sim.Construction
                     defName = "Stuff_Stone", label = "stone", stuff = NaturalContent.StuffStone,
                     item = ItemHandle.Stone, workFactorPerMille = 1700, workOffsetTicks = 15,
                     hitPointsFactorPerMille = 1500, iconKey = "ui.res.stone",
+                    thermalConductancePerMille = 1000,
+                    // Design 33 §14d, INVENTED: an edge turns on stone, a club breaks it.
+                    sharpDamagePerMille = 500, bluntDamagePerMille = 1250,
                 },
             };
         }

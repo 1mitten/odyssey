@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
+using Odyssey.Sim.Pathing;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -75,6 +76,15 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Per mille applied once per copy beyond the first.</summary>
         public int stackMultiplierPerMille = 750;
+
+        /// <summary>
+        /// Added again at its <see cref="stackLimit"/>, does the memory <b>renew</b> — the copy
+        /// that would lapse soonest pushed out to a full <see cref="durationTicks"/> from now — rather
+        /// than the repeat being dropped? False, the rule every thought had before it, unless the
+        /// content says otherwise (design 33 §14e: the friendly-fire memory, so the day runs from the
+        /// latest blow). Read by <see cref="Pawn.AddMemory"/> and nothing else.
+        /// </summary>
+        public bool renewsOnRepeat;
     }
 
     public static class ThoughtIndex
@@ -85,7 +95,33 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Rode a floor down when it collapsed (U29).</summary>
         public const int Fell = 3;
-        public const int Count = 4;
+
+        /// <summary>Woke from a night outside the temperature bands, cold side (design 28 §8).
+        /// Appended, as every thought is — an index rides every saved memory.</summary>
+        public const int SleptCold = 4;
+
+        /// <summary>The same, hot side.</summary>
+        public const int SleptHot = 5;
+
+        /// <summary>Hurt by a colonist's blow (design 33 §12, friendly fire). Given by
+        /// <c>FriendlyFireListener</c>; appended, as every thought is.</summary>
+        public const int AttackedByColonist = 6;
+
+        /// <summary>A colonist died; felt by every other colonist (design 33 §12).</summary>
+        public const int ColonistDied = 7;
+
+        // The kitchen (design 48 §4). What a colonist thinks of what she ate is the food's own
+        // (`ItemDef.ateThought`); AteMeal above is the cooked meal's, and these are the rest.
+
+        /// <summary>Ate a ration pack: filling, and nothing more.</summary>
+        public const int AteRation = 8;
+
+        /// <summary>Ate a meal the cook let burn.</summary>
+        public const int AteBurnt = 9;
+
+        /// <summary>Ate food raw: carrots from the pile, or worse.</summary>
+        public const int AteRaw = 10;
+        public const int Count = 11;
     }
 
     /// <summary>
@@ -137,7 +173,88 @@ namespace Odyssey.Sim.Pawns
         public const int Deconstruct = JobHandle.Deconstruct;
         public const int Sow = JobHandle.Sow;
         public const int Harvest = JobHandle.Harvest;
+        public const int DraftHold = JobHandle.DraftHold;
+        public const int Goto = JobHandle.Goto;
+        public const int LayConduit = JobHandle.LayConduit;
+        public const int RemoveConduit = JobHandle.RemoveConduit;
+        public const int Refuel = JobHandle.Refuel;
+        public const int AttackMelee = JobHandle.AttackMelee;
+        public const int Flee = JobHandle.Flee;
+        public const int Downed = JobHandle.Downed;
+        public const int Equip = JobHandle.Equip;
+        public const int Rescue = JobHandle.Rescue;
+        public const int Steal = JobHandle.Steal;
+        public const int Treat = JobHandle.Treat;
+        public const int Patient = JobHandle.Patient;
+        public const int Forage = JobHandle.Forage;
+        public const int Cook = JobHandle.Cook;
+        public const int AttackRanged = JobHandle.AttackRanged;
         public const int Count = JobHandle.Count;
+    }
+
+    /// <summary>
+    /// The kinds a pawn can be, as handles into <see cref="PawnContent.Kinds"/> (design 29 §1).
+    /// The order is a save contract: appended, never inserted.
+    /// </summary>
+    public static class PawnKindIndex
+    {
+        public const int Colonist = 0;
+        public const int MiddenHog = 1;
+        public const int DuctRat = 2;
+
+        /// <summary>
+        /// The debug-spawned hostile person (design 33 §1): a person species under the Hostile
+        /// faction. Claimed by the combat contracts step.
+        /// </summary>
+        public const int Bandit = 3;
+
+        /// <summary>
+        /// The bandit with a pistol (design 55 §8): its own kind so a raid mix can name it. Appended.
+        /// </summary>
+        public const int Gunman = 4;
+
+        /// <summary>The frog of the banks (design 30 §8): kind 5, species 3. Appended after the gunman.</summary>
+        public const int CulvertFrog = 5;
+
+        public const int Count = 6;
+    }
+
+    /// <summary>
+    /// Whose side a kind is on (design 33 §3): <b>hostility comes from the kind</b>, so no pawn
+    /// carries a saved field for it. The colony's own people are <see cref="Colony"/>; animals are
+    /// <see cref="Wild"/> until something tames one; a bandit is <see cref="Hostile"/> and fights
+    /// on sight.
+    /// </summary>
+    public enum Faction : byte
+    {
+        Colony = 0,
+        Wild = 1,
+        Hostile = 2,
+    }
+
+    /// <summary>
+    /// What a hostile came for, once there is nobody left standing to fight and nothing left to
+    /// break (design 33 §17; the owner, 2026-09-24: <i>"It will thieve items or kidnap people
+    /// depending on their motivation creating a negative event (but they could be rescued later) -
+    /// seam this later but for now - thieve items"</i>). On the kind, as its weapon and its way of
+    /// walking are. <b>Only <see cref="Loot"/> is acted on</b>: <see cref="Kidnap"/> does exactly
+    /// what <see cref="Loot"/> does today, and <c>TheftTests.AKidnapperStealsAsALooterDoes</c>
+    /// says so. Appended, never inserted: a content name, and the day a motive is rolled per pawn
+    /// it is saved.
+    /// </summary>
+    public enum Motive : byte
+    {
+        /// <summary>Came for nothing but the fight: with nobody to fight and nothing to break, it idles. Every kind but the bandit.</summary>
+        None = 0,
+
+        /// <summary>Carries off the nearest stack it can lift and leaves the board with it.</summary>
+        Loot = 1,
+
+        /// <summary>
+        /// Carries off a downed colonist, for the colony to get back later. <b>The seam, not built</b>:
+        /// today it loots, exactly as <see cref="Loot"/> does (design 33 §17f).
+        /// </summary>
+        Kidnap = 2,
     }
 
     /// <summary>A job names a driver; the driver runs toils. This is the naming half.</summary>
@@ -224,6 +341,18 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int Growing = WorkHandle.Growing;
 
+        /// <summary>
+        /// Carrying a downed colonist to a bed (design 33 §4, C4). Its giver is an emergency one,
+        /// so it scans ahead of everything else at the same priority.
+        /// </summary>
+        public const int Rescue = WorkHandle.Rescue;
+
+        /// <summary>Treating the hurt (design 37). An emergency giver, like rescue's.</summary>
+        public const int Doctor = WorkHandle.Doctor;
+
+        /// <summary>Working the bills at a galley or a campfire (design 48 §5).</summary>
+        public const int Cooking = WorkHandle.Cooking;
+
         public const int Count = WorkHandle.Count;
 
         /// <summary>
@@ -237,7 +366,7 @@ namespace Odyssey.Sim.Pawns
         /// than a missing aspect — which is why growing is in both or in neither.</para>
         /// </summary>
         public static readonly string[] Names =
-            { "haul", "cutting", "mining", "construction", "growing" };
+            { "haul", "cutting", "mining", "construction", "growing", "rescue", "doctor", "cooking" };
     }
 
     /// <summary>
@@ -255,7 +384,27 @@ namespace Odyssey.Sim.Pawns
         public const int Mining = 2;
         public const int Construction = 3;
         public const int Growing = 4;
-        public const int Count = 5;
+
+        /// <summary>
+        /// Close combat (design 33 §1): the attacker's level reads the hit curve and the
+        /// defender's the dodge curve, both in <see cref="CombatDef"/>, and every swing trains it.
+        /// Claimed by the combat contracts step.
+        /// </summary>
+        public const int Melee = 5;
+
+        /// <summary>Treating the hurt (design 37): buys speed at it and nothing else.</summary>
+        public const int Medicine = 6;
+
+        /// <summary>Cooking (design 48 §5): buys speed at the stove and keeps the meal from burning.</summary>
+        public const int Cooking = 7;
+        /// <summary>
+        /// Ranged combat (design 47 §2a): the shooter's level reads the per-cell accuracy curve in
+        /// <see cref="CombatDef"/>, raised to the distance in cells, and every shot trains it, hit
+        /// or miss. Claimed by the ranged line's contracts step, 8 after medical supplies' Medicine and the kitchen's Cooking; a colonist from a save older than
+        /// format 10 is dealt it once on load (<see cref="PawnRegistry.BackfillSkills"/>).
+        /// </summary>
+        public const int Shooting = 8;
+        public const int Count = 9;
 
         /// <summary>
         /// The names skills are published under, parallel to the indices above.
@@ -265,7 +414,7 @@ namespace Odyssey.Sim.Pawns
         /// assembly or sharing an enum with it. The prefix is the project's, the middle is this
         /// feature's, and the leaf is the value — the same shape as an icon key.</para>
         /// </summary>
-        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing" };
+        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee", "medicine", "cooking", "shooting" };
     }
 
     /// <summary>
@@ -495,6 +644,17 @@ namespace Odyssey.Sim.Pawns
         public const int IronOre = ItemHandle.IronOre;
         public const int Coal = ItemHandle.Coal;
         public const int Carrots = ItemHandle.Carrots;
+        public const int Bat = ItemHandle.Bat;
+        public const int Crowbar = ItemHandle.Crowbar;
+        public const int Machete = ItemHandle.Machete;
+        public const int ArcBlade = ItemHandle.ArcBlade;
+        public const int MedicalSupplies = ItemHandle.MedicalSupplies;
+        public const int Berries = ItemHandle.Berries;
+        public const int Mushrooms = ItemHandle.Mushrooms;
+        public const int CookedMeal = ItemHandle.CookedMeal;
+        public const int VegetableMeal = ItemHandle.VegetableMeal;
+        public const int BurntMeal = ItemHandle.BurntMeal;
+        public const int Pistol = ItemHandle.Pistol;
         public const int Count = ItemHandle.Count;
     }
 
@@ -521,6 +681,132 @@ namespace Odyssey.Sim.Pawns
         /// the harmless answer and the commonest one.</para>
         /// </summary>
         public ItemCategory category = ItemCategory.Materials;
+
+        /// <summary>
+        /// What it does in a hand, or null for anything that is not a weapon (design 33 §1, C3).
+        /// Read through <c>IWeaponRules</c>, never directly, so the lookup has one owner.
+        /// </summary>
+        public AttackDef? weapon;
+
+        /// <summary>
+        /// Hit points one unit restores when a doctor treats with it (design 37 §4), in whole
+        /// points. Zero means it is not medicine. Self-treatment and the treatment cap scale and
+        /// clamp it (<c>MedicalDef</c>); the amount itself is the item's, so a weaker item is one
+        /// Def row.
+        /// </summary>
+        public int healPerUnit;
+
+        /// <summary>
+        /// Which food a hungry colonist takes first (design 48 §8): lowest first, and the nearest
+        /// within a tier, so a cooked meal across the room beats a carrot at her feet. Read only
+        /// for things with <see cref="nutrition"/>. <see cref="LastResortTier"/> and above is
+        /// eaten only when nothing better can be reached.
+        /// </summary>
+        public int foodTier;
+
+        /// <summary>A tier this deep is food only for somebody with nothing else: raw meat (design 48 §8).</summary>
+        public const int LastResortTier = 4;
+
+        /// <summary>
+        /// May a cook put this in a pan (design 48 §5)? Raw food, which is carrots now and meat
+        /// once there is any. Its <see cref="nutrition"/> is what it is worth there.
+        /// </summary>
+        public bool rawIngredient;
+
+        /// <summary>
+        /// Is this meat, for the purpose of what a meal comes out as (design 48 §5): a pan with any
+        /// meat in it makes a meal, and one with none a vegetable meal.
+        /// </summary>
+        public bool meat;
+
+        /// <summary>
+        /// Ticks at the ordinary rate until a stack of this goes off, or 0 for never (design 48 §6).
+        /// Declared with the kitchen; nothing reads it until the cold store (K2).
+        /// </summary>
+        public int ticksToRot;
+
+        /// <summary>
+        /// The <see cref="ThoughtIndex"/> eating one adds, or -1 for none (design 48 §4). What a
+        /// colonist thinks of a meal is the food's, not the eater's, so a new food is one row.
+        /// </summary>
+        public int ateThought = -1;
+    }
+
+    /// <summary>
+    /// One thing a cooking station can make (design 48 §5): raw food in, by nutrition, and one
+    /// product out — which of three is decided by what went in and whether it burnt. Loaded from
+    /// <c>Recipes.xml</c>; a <see cref="RecipeHandle"/> is its index.
+    /// </summary>
+    public class RecipeDef : Def
+    {
+        /// <summary>Work at the standard pace, in ticks, before the station's own factor and the cook's speed.</summary>
+        public int workTicks = 300;
+
+        /// <summary>Raw food it takes, by nutrition: 500 is three carrots or ten pieces of meat.</summary>
+        public int ingredientNutrition = 500;
+
+        /// <summary>What comes out when there was meat in the pan, by item def name.</summary>
+        public string product = "";
+
+        /// <summary>What comes out when there was none.</summary>
+        public string productNoMeat = "";
+
+        /// <summary>What comes out when the cook let it catch.</summary>
+        public string burntProduct = "";
+
+        /// <summary>
+        /// Chance per mille that the meal burns, by the cook's skill level: the index is the level,
+        /// and a level past the end reads the last entry (design 48 §5, the owner's shape).
+        /// </summary>
+        public int[] burnPerMilleByLevel = System.Array.Empty<int>();
+
+        /// <summary>Where it can be made, and on what terms.</summary>
+        public System.Collections.Generic.List<RecipeStation> stations =
+            new System.Collections.Generic.List<RecipeStation>();
+
+        // Resolved at load from the names above: item def indices. Not fields a Def declares, so
+        // properties, which the binder never sees.
+        public int ProductItem { get; set; } = -1;
+        public int ProductNoMeatItem { get; set; } = -1;
+        public int BurntItem { get; set; } = -1;
+
+        /// <summary>The burn chance per mille at a skill level, before the station's factor.</summary>
+        public int BurnPerMille(int level)
+        {
+            if (burnPerMilleByLevel.Length == 0) return 0;
+            if (level < 0) level = 0;
+            if (level >= burnPerMilleByLevel.Length) level = burnPerMilleByLevel.Length - 1;
+            return burnPerMilleByLevel[level];
+        }
+
+        /// <summary>The terms at a building, or null where this recipe cannot be made there.</summary>
+        public RecipeStation? At(int building)
+        {
+            for (int i = 0; i < stations.Count; i++)
+                if (stations[i].building == building) return stations[i];
+            return null;
+        }
+    }
+
+    /// <summary>One place a <see cref="RecipeDef"/> can be made (design 48 §5).</summary>
+    public class RecipeStation
+    {
+        /// <summary>A <see cref="BuildingHandle"/> value.</summary>
+        public int building;
+
+        /// <summary>The recipe's work here, per mille: a campfire is 2,000, twice the galley's time.</summary>
+        public int workFactorPerMille = 1_000;
+
+        /// <summary>The burn chance here, per mille of the recipe's: a campfire is 1,500.</summary>
+        public int burnFactorPerMille = 1_000;
+
+        /// <summary>An item this station also swallows per meal — the campfire's one wood — or -1.</summary>
+        public int fuelItem = -1;
+
+        /// <summary>How many of <see cref="fuelItem"/>.</summary>
+        public int fuelCount;
+
+        public bool NeedsFuel => fuelItem >= 0 && fuelCount > 0;
     }
 
     /// <summary>Movement tuning. One unit of cost is 1/100 of a flat orthogonal cell crossing.</summary>
@@ -555,11 +841,206 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Estimated cost of a layer change, used to order candidates before pathing.</summary>
         public int layerChangeEstimate = 300;
+
+        /// <summary>
+        /// How fast a drafted colonist moves, per mille of her own pace (design 33 §2h, design 17
+        /// §4f): 2,000 — about 3 m/s at the standard pace, which the gait blend draws as a run.
+        /// The owner's call after the first draft playtest (2026-09-23): <i>"when you are drafted
+        /// you should walk faster/run as this would make sense with the urgency"</i>. It is the
+        /// first reason to run the game has, which is what §4f held the run for.
+        /// </summary>
+        public int draftedPacePerMille = 2_000;
+
+        /// <summary>
+        /// How often a well, unladen person's jump over a one-cell stream falls short, per mille
+        /// (design 46 §6): 30, one in thirty-three. INVENTED. A failed jump lands in the water
+        /// and costs a soaking and a few seconds; nothing is hurt until the health model can
+        /// carry an injury.
+        /// </summary>
+        public int jumpFailPerMille = 30;
+
+        /// <summary>
+        /// What carrying does to that chance, per mille of it: 2,000 doubles it. A load in the
+        /// arms, or a person being carried to a bed. INVENTED.
+        /// </summary>
+        public int jumpFailCarryingPerMille = 2_000;
+    }
+
+    /// <summary>
+    /// What a pawn <em>is</em> — the biology, as against <see cref="PawnKindDef"/>, which is
+    /// what spawns (design 29 §1, a-09 §1). The colonist is a species like any other, with
+    /// <see cref="person"/> set, and everything a person does that an animal does not — needs,
+    /// mood, skills, work, a schedule, a roster card — hangs off that one flag. The rest is what
+    /// walks: how it traverses, how fast against the colonist, how far it wanders and how long
+    /// it rests between legs.
+    ///
+    /// <para>Wildness, ecosystem weight and commonality are not here until something reads
+    /// them (design 29 §1).</para>
+    /// </summary>
+    public class SpeciesDef : Def
+    {
+        /// <summary>The registry key the interface names this species by.</summary>
+        public string labelKey = string.Empty;
+
+        /// <summary>The colonist's species, and nobody else's. See the class summary.</summary>
+        public bool person;
+
+        /// <summary>Nose to tail, for presentation to size a figure against. Not read by the simulation.</summary>
+        public int bodyLengthMm = 1_200;
+
+        /// <summary>
+        /// Pace relative to the colonist's standard walk, per mille: the last factor in
+        /// <see cref="Pawn.MoveRatePerMille"/>'s product. 1,000 is exact in integer arithmetic,
+        /// which is what keeps a person's speed where it was.
+        /// </summary>
+        public int movePerMille = 1_000;
+
+        /// <summary>
+        /// How this species traverses the graph — the mask every link and portal edge already
+        /// carries (design 29 §4). A hog is <see cref="TraverseMode.Animal"/>: no ladders and no
+        /// doors it must open. A rat climbs anything but does not swim, so it is
+        /// <see cref="TraverseMode.Climber"/>. A kind may override it
+        /// (<see cref="PawnKindDef.traverseMode"/>): the bandit does.
+        /// </summary>
+        public TraverseMode traverseMode = TraverseMode.Colonist;
+
+        /// <summary>Cells either side of where it stands that a wander may pick.</summary>
+        public int wanderRadius = 6;
+
+        /// <summary>The rest between legs, in ticks, jittered between these two (design 29 §3).</summary>
+        public int restTicksMin = 300;
+
+        public int restTicksMax = 900;
+
+        /// <summary>
+        /// Out at night and resting by day (design 30 §4). Off-hours an animal takes a quarter
+        /// as many legs and rests three times as long; the hours are the board clock's, 20:00 to
+        /// 06:00. A rat is nocturnal; a hog is not.
+        /// </summary>
+        public bool nocturnal;
+
+        /// <summary>
+        /// Keeps within this many cells of water, Chebyshev, or 0 for anywhere (design 30 §8): the
+        /// frog's bank. Every leg its mind picks ends this close to a water cell on its own layer
+        /// or the one below, and an animal that finds itself further out heads back to the
+        /// nearest bank it can reach. A world seeds it on the bank habitat.
+        /// </summary>
+        public int bankRadius;
+
+        /// <summary>
+        /// Stays out in the rain rather than heading for cover (design 43 §6, design 30 §8). The
+        /// shelter node's own flag, named in its summary for the day a species wanted it: a frog.
+        /// </summary>
+        public bool ignoresRain;
+
+        /// <summary>
+        /// Cells within which a new leg is turned away from its own kind's (design 30 §8e), or 0
+        /// for no such rule. A frog picking where to hop next looks at every other frog this close
+        /// that is already hopping somewhere and prefers a heading at least 60 degrees from all of
+        /// theirs (owner, 2026-09-26: a group's frogs "jump in different directions as some were
+        /// very similar"). A preference, never a refusal: where every open cell lies the same way,
+        /// the least alike is taken.
+        /// </summary>
+        public int divergeRadius;
+
+        /// <summary>The figure catalogue entry presentation draws this species with. Not read by the simulation.</summary>
+        public string figureKey = string.Empty;
+
+        // ---- combat (design 33 §1, §3) -----------------------------------------------------
+
+        /// <summary>
+        /// The hit-point pool, in whole points (owner, 2026-09-23: person 100, hog 60, rat 15).
+        /// A pawn carries its hit points in thousandths of these, <c>Pawn.HpMilli</c>, the
+        /// <c>Rates</c> convention, so a slow heal is exact without a float.
+        /// </summary>
+        public int healthPoints = 100;
+
+        /// <summary>
+        /// Dead at this fraction of the pool, per mille and negative (owner: dead at −50 %).
+        /// Downed at nought and below; dead at or below <c>healthPoints × this / 1000</c>.
+        /// </summary>
+        public int deathAtPerMille = -500;
+
+        /// <summary>
+        /// The chance, per mille, that a hurt animal turns on whoever hurt it rather than running
+        /// (owner: a hog usually turns, a rat usually runs). Rolled on every hit. Unread for a
+        /// person, whose answer is the faction's.
+        /// </summary>
+        public int revengePerMille;
+
+        /// <summary>
+        /// What it fights with when it holds nothing, or null for a person, whose bare hands are
+        /// <see cref="CombatDef.fists"/>. A hog's tusks, a rat's teeth.
+        /// </summary>
+        public AttackDef? naturalAttack;
+
+        /// <summary>
+        /// The melee level an animal fights at, 0–20, read on the same hit and dodge curves as a
+        /// colonist's skill. Animals have no skills to train (design 29 §2), so it is a constant
+        /// of the species. Unread for a person.
+        /// </summary>
+        public int meleeSkill;
+
+        // ---- health (design 43 §2) ---------------------------------------------------------
+
+        /// <summary>
+        /// The body this species has, by the <see cref="HealthDef"/>'s defName, or empty for none.
+        /// A species with no body keeps the hit-point pool alone and nothing else: no regions, no
+        /// injuries, no bleeding, no tending — every animal today (design 43 §8).
+        /// </summary>
+        public string health = string.Empty;
+
+        /// <summary>
+        /// The chance, per mille, that a bullet crossing this pawn's cell takes it (design 47 §2c),
+        /// before the dead zone near the shooter scales it. The reference's 40 % × body size,
+        /// clamped to 4–80 %.
+        /// </summary>
+        public int interceptPerMille = 400;
     }
 
     /// <summary>What a pawn starts life with.</summary>
     public class PawnKindDef : Def
     {
+        /// <summary>
+        /// The species this kind spawns as, by defName (design 29 §1). Resolved once, by name, in
+        /// <see cref="PawnContent.FromDefs"/>; a kind naming a species the content does not have
+        /// fails the load rather than the first tick.
+        /// </summary>
+        public string species = "Species_Person";
+
+        /// <summary>Whose side it is on (design 33 §3). See <see cref="Faction"/>.</summary>
+        public Faction faction = Faction.Colony;
+
+        /// <summary>
+        /// The weapons this kind may arrive holding, by item defName, or none for bare hands (design
+        /// 33 §1: the bandit is "debug-spawned, armed"). One is dealt per pawn by
+        /// <see cref="PawnContent.WeaponFor"/> — a crowbar or a bat for a bandit (owner,
+        /// 2026-09-24: <i>"not swords - not their style"</i>, <c>docs/design/42-bandits.md</c>).
+        /// Resolved once, by name, into <see cref="PawnContent.KindWeapons"/>; a kind naming an item
+        /// the content does not have, or one with no <see cref="ItemDef.weapon"/> block, fails the
+        /// load. What puts it in the hand is <see cref="IWeaponRules.ArmOnSpawn"/>, which the
+        /// registry calls for every pawn it spawns whose kind names one — so the colonist and the
+        /// two animals cost one comparison.
+        /// </summary>
+        public string[] weapons = System.Array.Empty<string>();
+
+        /// <summary>
+        /// How this kind traverses the graph, by <see cref="TraverseMode"/> name, when it is not
+        /// its species' way (design 33 §16); empty takes <see cref="SpeciesDef.traverseMode"/>. A
+        /// bandit is a person who does not open the colony's doors, so it is
+        /// <see cref="TraverseMode.Bandit"/> on the kind while its species stays the colonist's.
+        /// Resolved once, by name, into <see cref="PawnContent.KindMode"/>; a name the enum does not
+        /// have fails the load. Read through <see cref="Pawn.OwnMode"/>, never here.
+        /// </summary>
+        public string traverseMode = string.Empty;
+
+        /// <summary>
+        /// What a hostile of this kind came for (design 33 §17): <see cref="Motive.Loot"/> for the
+        /// bandit, <see cref="Motive.None"/> for everybody else. Resolved once into
+        /// <see cref="PawnContent.KindMotive"/>; read through <see cref="PawnContent.MotiveOf"/>.
+        /// </summary>
+        public Motive motive = Motive.None;
+
         public int startingMood = 600;
         public int[] startingNeeds = { 800, 800, 800 };
 
@@ -625,10 +1106,132 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// The numbers that belong to the pawn simulation as a whole rather than to any one need,
-    /// job or item. They were fields on <see cref="PawnContent"/>, which meant they were the one
-    /// part of the tuning that content could not reach.
+    /// How temperature feels and what it does to a colonist: the comfort band, the mood and
+    /// sleep bands around it, the work band, and the severity that builds past the safe bounds
+    /// (design 28 §8). Authored in <c>Defs/Core/Pawns/Temperature.xml</c>; every temperature is
+    /// centi-degrees and every factor is per-mille, like the rest of the model.
+    ///
+    /// <para><b>Bands, not curves.</b> Four of them each side of comfort — comfortable, mild,
+    /// bad, extreme — because a colonist who is a little cold and one who is freezing differ in
+    /// kind, and a smooth slope would hide the moment the player is deciding against. The band
+    /// edges are fields so a mod can widen comfort without rewriting the offsets.</para>
     /// </summary>
+    public class TemperatureDef : Def
+    {
+        /// <summary>The comfort band. Inside it, temperature does nothing at all.</summary>
+        public int comfortMinC = 1_600;
+        public int comfortMaxC = 2_600;
+
+        /// <summary>Width of the mild band beyond comfort: cool below, warm above.</summary>
+        public int mildBandC = 600;
+
+        /// <summary>The cold floor and the hot ceiling: past these the extreme band begins, and
+        /// past these severity builds.</summary>
+        public int coldFloorC = -300;
+        public int hotCeilingC = 3_500;
+
+        /// <summary>Situational mood offset in the mild band (cool or warm).</summary>
+        public int moodMildOffset = -10;
+
+        /// <summary>In the bad band (cold or hot).</summary>
+        public int moodBadOffset = -50;
+
+        /// <summary>In the extreme band (freezing or sweltering).</summary>
+        public int moodExtremeOffset = -120;
+
+        /// <summary>Rest effectiveness in each band, per-mille of the bed's own answer.</summary>
+        public int sleepMildPerMille = 900;
+        public int sleepBadPerMille = 750;
+        public int sleepExtremePerMille = 550;
+
+        /// <summary>The work band: outside it, work rate is scaled.</summary>
+        public int workMinC = 800;
+        public int workMaxC = 3_500;
+        public int workOutsidePerMille = 700;
+
+        /// <summary>Severity begins below this (hypothermia) and above <see cref="hotCeilingC"/>
+        /// (heatstroke) — which are the same edges as the mood bands' extremes, so what feels
+        /// worst is what first hurts.</summary>
+        public int hypothermiaC = -300;
+        public int heatstrokeC = 3_500;
+
+        /// <summary>
+        /// Severity per needs interval, per centi-degree of distance beyond the safe bound:
+        /// distance × this / 1000. 15 makes a Candle night at −13 °C (a thousand centi-degrees
+        /// past the floor) build 15 an interval — a full bar in 67 intervals, four game-hours —
+        /// and a cold snap's −33 °C fill it in an hour and a half, which is the "lethal
+        /// hypothermia within hours" the almanac already promises. It shipped as 300 for a day,
+        /// applied per centi-degree as the formula says, and filled the bar in fourteen
+        /// game-minutes while three comments promised hours (design 28 §12, F1).
+        /// </summary>
+        public int severitySlopePerMille = 15;
+
+        /// <summary>Severity drained per interval inside the safe bounds. One arrest, not a
+        /// cure: a frozen colonist warms through over a day, not a step.</summary>
+        public int severityRecoveryPerInterval = 5;
+
+        /// <summary>Body heat, in centi-degree-cells per pawn per thermal pass.</summary>
+        public int bodyHeatPerPass = 15;
+
+        /// <summary>No body heat at or above this — the crowded-room brake.</summary>
+        public int bodyHeatGateC = 4_000;
+
+        /// <summary>Which of the four bands a temperature falls in: 0 comfortable, 1 mild,
+        /// 2 bad, 3 extreme.</summary>
+        public int BandOf(int tempC)
+        {
+            if (tempC < coldFloorC || tempC > hotCeilingC) return 3;
+            if (tempC < comfortMinC - mildBandC || tempC > comfortMaxC + mildBandC) return 2;
+            if (tempC < comfortMinC || tempC > comfortMaxC) return 1;
+            return 0;
+        }
+
+        /// <summary>The situational mood offset at a temperature — recomputed, never stored, the
+        /// same answer the need bands give.</summary>
+        public int MoodOffset(int tempC)
+        {
+            switch (BandOf(tempC))
+            {
+                case 1: return moodMildOffset;
+                case 2: return moodBadOffset;
+                case 3: return moodExtremeOffset;
+                default: return 0;
+            }
+        }
+
+        /// <summary>Rest effectiveness at a temperature, per-mille of the bed's own answer.</summary>
+        public int SleepPerMille(int tempC)
+        {
+            switch (BandOf(tempC))
+            {
+                case 1: return sleepMildPerMille;
+                case 2: return sleepBadPerMille;
+                case 3: return sleepExtremePerMille;
+                default: return 1_000;
+            }
+        }
+
+        /// <summary>Work rate at a temperature, per-mille — the reference's own ×0.70 outside
+        /// its comfortable working band, carried as content rather than code.</summary>
+        public int WorkPerMille(int tempC) =>
+            tempC >= workMinC && tempC <= workMaxC ? 1_000 : workOutsidePerMille;
+
+        /// <summary>
+        /// Severity change this needs interval, signed: negative is hypothermia, positive
+        /// heatstroke, zero inside the safe bounds (recovery is the caller's, by the symmetric
+        /// drain, exactly as starvation recovers).
+        /// </summary>
+        public int SeverityDelta(int tempC)
+        {
+            if (tempC < hypothermiaC) return -((hypothermiaC - tempC) * severitySlopePerMille / 1_000);
+            if (tempC > heatstrokeC) return (tempC - heatstrokeC) * severitySlopePerMille / 1_000;
+            return 0;
+        }
+    }
+
+    /// <summary>The numbers that belong to the pawn simulation as a whole rather than to any one need,
+    /// job or item. They were fields on <see cref="PawnContent"/>, which meant they were the one
+    /// part of the tuning that content could not reach.</summary>
     public class PawnTuningDef : Def
     {
         public int needsIntervalTicks = 150;
@@ -636,12 +1239,12 @@ namespace Odyssey.Sim.Pawns
         public int thinkLoopLimit = 10;
         public int thinkLoopWindowTicks = 60;
         public int standDownTicks = 120;
-        public int woodPerTree = 27;
         public int stonePerRock = 8;
         public int stoneChanceOneIn = 1;
         public int orePerCell = 15;
         public int liftTicks = 48;
         public int liftGraspTicks = 24;
+        public int draftQuietTicks = 10_000;
     }
 
     /// <summary>
@@ -671,10 +1274,142 @@ namespace Odyssey.Sim.Pawns
         public WorkTypeDef[] WorkTypes = System.Array.Empty<WorkTypeDef>();
         public SkillDef[] Skills = System.Array.Empty<SkillDef>();
         public ItemDef[] Items = System.Array.Empty<ItemDef>();
+
+        /// <summary>
+        /// The item table slot of a def name, or -1 if the content has no such item. What a Def
+        /// that names its yield by <c>[DefReference]</c> is resolved through — a crop, a tree, a
+        /// bush — rather than each keeping a handle of its own: an item handle is a save contract,
+        /// and deriving one at load would be a second place to keep it in step. The table is a
+        /// dozen entries long and this is asked once a harvest.
+        /// </summary>
+        public int ItemIndexOf(string defName)
+        {
+            for (int i = 0; i < Items.Length; i++)
+                if (string.Equals(Items[i].defName, defName, System.StringComparison.Ordinal))
+                    return i;
+            return -1;
+        }
+        /// <summary>What a cooking station can make, in <see cref="RecipeHandle"/> order (design 48 §5).</summary>
+        public RecipeDef[] Recipes = System.Array.Empty<RecipeDef>();
         public MoodDef Mood = new MoodDef();
         public MentalBreakDef Break = new MentalBreakDef();
         public MovementDef Movement = new MovementDef();
+
+        /// <summary>The fight's numbers (design 33 §1): the curves, bare hands, healing, the windows.</summary>
+        public CombatDef Combat = new CombatDef();
+
+        /// <summary>
+        /// The colonist's kind — <see cref="Kinds"/>[0] once loaded. Kept as a field of its own
+        /// because every needs and rest rule reads its tuning through this name, and because a
+        /// <see cref="PawnContent"/> built in code rather than from Defs has no table at all.
+        /// </summary>
         public PawnKindDef Kind = new PawnKindDef();
+        public TemperatureDef Temperature = new TemperatureDef();
+
+        /// <summary>
+        /// Every kind a pawn can be, in handle order (design 29 §1). <b>Appended, never
+        /// inserted</b>: a pawn's kind is saved by this index, so its number is a save contract,
+        /// exactly as a job def index or an item handle is. The colonist is 0 and every pawn from
+        /// before this table existed reads as 0.
+        /// </summary>
+        public PawnKindDef[] Kinds = System.Array.Empty<PawnKindDef>();
+
+        /// <summary>Every species, in handle order. Reached through <see cref="SpeciesOf"/>.</summary>
+        public SpeciesDef[] Species = System.Array.Empty<SpeciesDef>();
+
+        /// <summary>The species each kind spawns as, by index into <see cref="Species"/>.</summary>
+        public int[] KindSpecies = System.Array.Empty<int>();
+
+        /// <summary>
+        /// The body each species has (<see cref="SpeciesDef.health"/>), by index into
+        /// <see cref="Species"/>, or null for none (design 43 §2). Read through <see cref="HealthOf"/>.
+        /// </summary>
+        public HealthDef?[] SpeciesHealth = System.Array.Empty<HealthDef?>();
+
+        /// <summary>
+        /// The body a pawn of this kind has, or null: its species' <see cref="HealthDef"/>, and
+        /// nothing for a content set built in code, which keeps the pool alone as it always did.
+        /// </summary>
+        public HealthDef? HealthOf(int kind)
+        {
+            if (Species.Length == 0 || (uint)kind >= (uint)KindSpecies.Length) return null;
+            int species = KindSpecies[kind];
+            return (uint)species < (uint)SpeciesHealth.Length ? SpeciesHealth[species] : null;
+        }
+
+        /// <summary>
+        /// The item defs each kind may arrive holding (<see cref="PawnKindDef.weapons"/>), empty
+        /// for bare hands. Read through <see cref="ArmsOnSpawn"/> and <see cref="WeaponFor"/>.
+        /// </summary>
+        public int[][] KindWeapons = System.Array.Empty<int[]>();
+
+        /// <summary>Whether a pawn of this kind is spawned holding anything — false for a content set with no table.</summary>
+        public bool ArmsOnSpawn(int kind) =>
+            (uint)kind < (uint)KindWeapons.Length && KindWeapons[kind].Length > 0;
+
+        /// <summary>
+        /// The item def this one pawn of this kind is spawned holding, or -1.
+        ///
+        /// <para><b>A pure hash of the pawn, never a draw from the world's random stream</b>
+        /// (<c>docs/design/42-bandits.md</c> §3). Drawing would move every roll after it, so a
+        /// colony that meets a bandit would diverge from one that does not in ways that have
+        /// nothing to do with the bandit. The id is unique per world and the roll seed is the
+        /// pawn's own, so two bandits side by side are dealt independently.</para>
+        /// </summary>
+        public int WeaponFor(int kind, int pawnId, uint rollSeed)
+        {
+            if (!ArmsOnSpawn(kind)) return -1;
+            int[] choices = KindWeapons[kind];
+            if (choices.Length == 1) return choices[0];
+            unchecked
+            {
+                uint h = rollSeed ^ 0x7F4A7C15u;
+                h ^= (uint)pawnId * 2654435761u;
+                h ^= h >> 16;
+                h *= 2246822519u;
+                h ^= h >> 13;
+                return choices[(int)(h % (uint)choices.Length)];
+            }
+        }
+
+        /// <summary>
+        /// The traverse mode each kind moves in: its own <see cref="PawnKindDef.traverseMode"/> where
+        /// it names one, else its species'. Read through <see cref="ModeOf"/>.
+        /// </summary>
+        public TraverseMode[] KindMode = System.Array.Empty<TraverseMode>();
+
+        /// <summary>
+        /// The traverse mode a pawn of this kind moves in (design 33 §16) — and its species' for a
+        /// content set with no table. The one owner of "how does this pawn walk between jobs, and in
+        /// every job it chooses for itself"; <see cref="Pawn.OwnMode"/> is how it is asked.
+        /// </summary>
+        public TraverseMode ModeOf(int kind) =>
+            (uint)kind < (uint)KindMode.Length ? KindMode[kind] : SpeciesOf(kind).traverseMode;
+
+        /// <summary>
+        /// What each kind came for (<see cref="PawnKindDef.motive"/>), copied out of the Defs into
+        /// this record's own array, so a test that wants a kidnapper sets it here and never writes
+        /// through a Def every other record shares. Read through <see cref="MotiveOf"/>.
+        /// </summary>
+        public Motive[] KindMotive = System.Array.Empty<Motive>();
+
+        /// <summary>What a pawn of this kind came for (design 33 §17) — <see cref="Motive.None"/> for a content set with no table.</summary>
+        public Motive MotiveOf(int kind) =>
+            (uint)kind < (uint)KindMotive.Length ? KindMotive[kind] : Motive.None;
+
+        /// <summary>
+        /// The one species a content set built in code has: a person. Content from Defs always
+        /// carries a table and never reaches this.
+        /// </summary>
+        public static readonly SpeciesDef PersonFallback = new SpeciesDef { defName = "Species_Person", person = true };
+
+        /// <summary>The kind by handle, or the colonist's for a content set with no table.</summary>
+        public PawnKindDef KindOf(int kind) =>
+            Kinds.Length == 0 ? Kind : Kinds[kind];
+
+        /// <summary>The species a kind spawns as, or the person for a content set with no table.</summary>
+        public SpeciesDef SpeciesOf(int kind) =>
+            Species.Length == 0 ? PersonFallback : Species[KindSpecies[kind]];
 
         /// <summary>The needs interval, in ticks. 150 is the cadence a-01-pawns.md measured.</summary>
         public int NeedsIntervalTicks = 150;
@@ -688,13 +1423,6 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Job starts allowed inside <see cref="ThinkLoopWindowTicks"/> before a stand-down.</summary>
         public int ThinkLoopLimit = 10;
-
-        /// <summary>
-        /// Wood a felled tree leaves on the ground: 27, the pine class's vanilla yield
-        /// (docs/research/a-08-plants-growing-food.md §1; the oak class gives 46). One stack of
-        /// 75, so a single haul clears it.
-        /// </summary>
-        public int WoodPerTree = 27;
 
         /// <summary>Stone a plain rock cell leaves. ASSUMED, like everything else here.</summary>
         public int StonePerRock = 8;
@@ -765,6 +1493,13 @@ namespace Odyssey.Sim.Pawns
         public int LiftGraspTicks = 24;
 
         /// <summary>
+        /// How long a drafted colonist with nothing to do stays drafted: 10,000 ticks, four
+        /// in-game hours, the reference's figure (a-10). Counted from the draft or the last order,
+        /// whichever is later (design 33 §2b).
+        /// </summary>
+        public int DraftQuietTicks = 10_000;
+
+        /// <summary>
         /// The Def types this content is made of, registered on a loader in one place so that a
         /// caller cannot load half of it. Adding a pawn Def type and forgetting to register it
         /// gives "unknown Def type" at load, which is the right failure but the wrong place to
@@ -777,11 +1512,16 @@ namespace Odyssey.Sim.Pawns
                 .Register<WorkTypeDef>()
                 .Register<SkillDef>()
                 .Register<ItemDef>()
+                .Register<RecipeDef>()
                 .Register<MoodDef>()
                 .Register<MentalBreakDef>()
                 .Register<MovementDef>()
                 .Register<PawnKindDef>()
-                .Register<PawnTuningDef>();
+                .Register<SpeciesDef>()
+                .Register<TemperatureDef>()
+                .Register<PawnTuningDef>()
+                .Register<CombatDef>()
+                .Register<HealthDef>();
 
         /// <summary>
         /// The same content, read from a loaded <see cref="DefDatabase"/> rather than built in
@@ -804,30 +1544,173 @@ namespace Odyssey.Sim.Pawns
 
             content.Needs = ByName<NeedDef>(defs, "Need_Food", "Need_Rest", "Need_Joy");
             content.Thoughts = ByName<ThoughtDef>(defs,
-                "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround", "Thought_Fell");
+                "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround", "Thought_Fell",
+                // Appended, never inserted: a thought index rides every saved memory.
+                "Thought_SleptCold", "Thought_SleptHot",
+                // Friendly fire (design 33 §12).
+                "Thought_AttackedByColonist", "Thought_ColonistDied",
+                // The kitchen (design 48 §4): what each food is thought of.
+                "Thought_AteRation", "Thought_AteBurnt", "Thought_AteRaw");
             content.Jobs = ByName<JobDef>(defs,
                 "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine",
                 "Job_Deliver", "Job_Build", "Job_Deconstruct",
                 // Appended, never inserted: a job def index rides every pawn's current job and
                 // every save taken with one running, so its number is a save contract.
-                "Job_Sow", "Job_Harvest");
+                "Job_Sow", "Job_Harvest",
+                // The draft (design 33 §2c).
+                "Job_DraftHold", "Job_Goto",
+                // Power (design 32), appended for the same reason.
+                "Job_LayConduit", "Job_RemoveConduit", "Job_Refuel",
+                // The combat line, claimed together by its contracts step (design 33 §5).
+                "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue",
+                // A bandit carrying something off the board (design 33 §17).
+                "Job_Steal",
+                // Medical supplies (design 37).
+                "Job_Treat", "Job_Patient",
+                // Picking a berry bush (design 45 §6), appended after medical supplies.
+                "Job_Forage",
+                // The kitchen (design 48 §5).
+                "Job_Cook",
+                // The ranged attack (design 47 §2d).
+                "Job_AttackRanged");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
-                "Work_Growing");
+                "Work_Growing",
+                // Appended with the combat line (design 33 §5): a pawn's priority array is indexed
+                // by this order, so it is a save contract like the rest.
+                "Work_Rescue",
+                // Medical supplies (design 37).
+                "Work_Doctor",
+                // The kitchen (design 48 §5).
+                "Work_Cooking");
             content.Skills = ByName<SkillDef>(defs,
                 "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction",
-                "Skill_Growing");
+                "Skill_Growing",
+                // Appended with the combat line (design 33 §5).
+                "Skill_Melee",
+                // Medical supplies (design 37).
+                "Skill_Medicine",
+                // The kitchen (design 48 §5).
+                "Skill_Cooking",
+                // Appended with the ranged line (design 47 §3a).
+                "Skill_Shooting");
             content.Items = ByName<ItemDef>(defs,
                 "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal",
                 // Appended, never inserted: an item handle is stored in every stack, every haul
                 // job and every stockpile's allow list, so its number is a save contract
                 // (docs/design/22-growing.md §2).
-                "Item_Carrots");
+                "Item_Carrots",
+                // The four melee weapons (design 33 §1, C3), appended together.
+                "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade",
+                // What a doctor treats with (design 37), appended.
+                "Item_MedicalSupplies",
+                // The wild foods (design 45 §6), appended together after medical supplies.
+                "Item_Berries", "Item_Mushrooms",
+                // The kitchen (design 48 §4), appended: the two meals and the burnt one.
+                "Item_CookedMeal", "Item_VegetableMeal", "Item_BurntMeal",
+                // The pistol (design 47), the first ranged weapon.
+                "Item_Pistol");
+            content.Recipes = ByName<RecipeDef>(defs, "Recipe_Meal");
+            for (int r = 0; r < content.Recipes.Length; r++)
+            {
+                RecipeDef recipe = content.Recipes[r];
+                recipe.ProductItem = ItemNamed(content, recipe.product, recipe.defName);
+                recipe.ProductNoMeatItem = ItemNamed(content, recipe.productNoMeat, recipe.defName);
+                recipe.BurntItem = ItemNamed(content, recipe.burntProduct, recipe.defName);
+            }
 
             content.Mood = One<MoodDef>(defs, "Mood_Default");
             content.Break = One<MentalBreakDef>(defs, "Break_Wander");
             content.Movement = One<MovementDef>(defs, "Movement_Colonist");
             content.Kind = One<PawnKindDef>(defs, "PawnKind_Colonist");
+            content.Temperature = One<TemperatureDef>(defs, "Temperature_Colonist");
+
+            // Kinds and species (design 29 §1). Appended, never inserted: a pawn's kind is saved
+            // as this index. The colonist is 0 so that every pawn from before the table reads
+            // as what it was.
+            content.Kinds = ByName<PawnKindDef>(defs,
+                "PawnKind_Colonist", "PawnKind_MiddenHog", "PawnKind_DuctRat",
+                // The debug-spawned hostile person (design 33 §1), appended.
+                "PawnKind_Bandit",
+                // The bandit with a pistol, a raid's second kind (design 55 §8), appended.
+                "PawnKind_Gunman",
+                // The frog of the banks (design 30 §8), appended after the gunman.
+                "PawnKind_CulvertFrog");
+            content.Species = ByName<SpeciesDef>(defs,
+                "Species_Person", "Species_MiddenHog", "Species_DuctRat", "Species_CulvertFrog");
+            content.KindSpecies = new int[content.Kinds.Length];
+            for (int k = 0; k < content.Kinds.Length; k++)
+            {
+                string wanted = content.Kinds[k].species;
+                int found = -1;
+                for (int s = 0; s < content.Species.Length; s++)
+                    if (content.Species[s].defName == wanted) { found = s; break; }
+                if (found < 0)
+                    throw new DefLoadException(
+                        $"PawnKindDef '{content.Kinds[k].defName}' names species '{wanted}', which the content does not have.");
+                content.KindSpecies[k] = found;
+            }
+
+            // The body each species has (design 43 §2), by name, once. A body of more regions
+            // than a ledger can hold fails the load rather than a fight.
+            content.SpeciesHealth = new HealthDef?[content.Species.Length];
+            for (int s = 0; s < content.Species.Length; s++)
+            {
+                string wanted = content.Species[s].health;
+                if (string.IsNullOrEmpty(wanted)) continue;
+                HealthDef body = One<HealthDef>(defs, wanted);
+                if (body.regions.Count == 0 || body.regions.Count > PawnHealth.MaxRecords / 3)
+                    throw new DefLoadException(
+                        $"HealthDef '{body.defName}' has {body.regions.Count} regions; a body has one to six.");
+                content.SpeciesHealth[s] = body;
+            }
+
+            // The weapon a kind arrives holding (design 33 §1), by name, once — after the items,
+            // which this reads. A name the content does not have, or an item that is not a weapon,
+            // fails the load rather than a spawn.
+            content.KindWeapons = new int[content.Kinds.Length][];
+            for (int k = 0; k < content.Kinds.Length; k++)
+            {
+                string[] wanted = content.Kinds[k].weapons ?? System.Array.Empty<string>();
+                var resolved = new int[wanted.Length];
+                for (int w = 0; w < wanted.Length; w++)
+                {
+                    resolved[w] = -1;
+                    for (int i = 0; i < content.Items.Length; i++)
+                        if (content.Items[i].defName == wanted[w]) { resolved[w] = i; break; }
+                    if (resolved[w] < 0)
+                        throw new DefLoadException(
+                            $"PawnKindDef '{content.Kinds[k].defName}' names weapon '{wanted[w]}', which the content does not have.");
+                    if (content.Items[resolved[w]].weapon == null)
+                        throw new DefLoadException(
+                            $"PawnKindDef '{content.Kinds[k].defName}' names weapon '{wanted[w]}', which has no weapon block.");
+                }
+                content.KindWeapons[k] = resolved;
+            }
+            // How each kind moves (design 33 §16): its own mode by name, or its species'. After the
+            // species, which this reads. A name the enum does not have fails the load.
+            content.KindMode = new TraverseMode[content.Kinds.Length];
+            for (int k = 0; k < content.Kinds.Length; k++)
+            {
+                string wanted = content.Kinds[k].traverseMode;
+                if (string.IsNullOrEmpty(wanted))
+                {
+                    content.KindMode[k] = content.Species[content.KindSpecies[k]].traverseMode;
+                    continue;
+                }
+                if (!System.Enum.TryParse(wanted, ignoreCase: false, out TraverseMode mode)
+                    || !System.Enum.IsDefined(typeof(TraverseMode), mode))
+                    throw new DefLoadException(
+                        $"PawnKindDef '{content.Kinds[k].defName}' names traverse mode '{wanted}', which is not one.");
+                content.KindMode[k] = mode;
+            }
+
+            // What each kind came for (design 33 §17), into the record's own array.
+            content.KindMotive = new Motive[content.Kinds.Length];
+            for (int k = 0; k < content.Kinds.Length; k++) content.KindMotive[k] = content.Kinds[k].motive;
+
+            if (!content.SpeciesOf(0).person)
+                throw new DefLoadException("kind 0 must be a person: it is what every pawn from before the kind table reads as.");
 
             var tuning = One<PawnTuningDef>(defs, "Tuning_Pawns");
             content.NeedsIntervalTicks = tuning.needsIntervalTicks;
@@ -835,14 +1718,24 @@ namespace Odyssey.Sim.Pawns
             content.ThinkLoopLimit = tuning.thinkLoopLimit;
             content.ThinkLoopWindowTicks = tuning.thinkLoopWindowTicks;
             content.StandDownTicks = tuning.standDownTicks;
-            content.WoodPerTree = tuning.woodPerTree;
             content.StonePerRock = tuning.stonePerRock;
             content.StoneChanceOneIn = tuning.stoneChanceOneIn;
             content.OrePerCell = tuning.orePerCell;
             content.LiftTicks = tuning.liftTicks;
             content.LiftGraspTicks = tuning.liftGraspTicks;
+            content.DraftQuietTicks = tuning.draftQuietTicks;
+
+            content.Combat = One<CombatDef>(defs, "Combat_Default");
 
             return content;
+        }
+
+        /// <summary>The index of the item def named <paramref name="name"/>, or a failed load naming who asked.</summary>
+        static int ItemNamed(PawnContent content, string name, string askedBy)
+        {
+            for (int i = 0; i < content.Items.Length; i++)
+                if (content.Items[i].defName == name) return i;
+            throw new DefLoadException($"'{askedBy}' names item '{name}', which the content does not have.");
         }
 
         static T[] ByName<T>(DefDatabase defs, params string[] names) where T : Def
@@ -871,6 +1764,14 @@ namespace Odyssey.Sim.Pawns
         public const uint MentalBreak = 0x9E37_79B1;
         public const uint Wander = 0x85EB_CA6B;
         public const uint Passion = 0xC2B2_AE35;
+
+        /// <summary>
+        /// An animal deciding between a leg and a rest, and how long the rest is (design 29 §3).
+        /// Its own stream, so an animal thinking on a tick cannot shift what a colonist on the
+        /// same tick wanders to. The salt is not one already in this list; two purposes sharing a
+        /// salt is two streams that agree.
+        /// </summary>
+        public const uint AnimalMind = 0x165667B1;
 
         /// <summary>
         /// Whether a rock cell gives up stone. Drawn from (world seed, <b>cell index</b>) rather
@@ -962,5 +1863,120 @@ namespace Odyssey.Sim.Pawns
         /// gone and distinct families read as the discipline they are.</para>
         /// </summary>
         public const uint MovePace = 0x428A_2F98;
+
+        /// <summary>
+        /// Whether an idle colonist heads for a fire or wanders (design 33).
+        ///
+        /// <para>Its own salt, and the reason is the one this file states twice: two purposes
+        /// sharing a salt is two streams that agree. Drawn on the same tick with the same pawn
+        /// id as <see cref="Wander"/>, a shared salt would make the fireside roll and the
+        /// wander's first coordinate the <i>same number</i> — so whether she went to the fire
+        /// and which way she would otherwise have drifted would be one decision wearing two
+        /// names. Nothing would ever report that; it would just look slightly wrong for ever.</para>
+        /// </summary>
+        public const uint Fireside = 0x846C_A68B;
+
+        // ---- combat (design 33 §3) -------------------------------------------------------------
+        //
+        // Claimed by the combat contracts step so that the two lanes that roll dice in a fight
+        // cannot pick the same salt on two branches — the fault StartingSkill and
+        // DeconstructRefund once had. SHA-256's round constants, continuing where MovePace (the
+        // first) and the two incident salts (the second and third) left off, so no value here is
+        // one already in use anywhere in the simulation.
+        //
+        // AnimalMind, above, is 0x165667B1 — the same value as DeconstructRefund. That collision
+        // predates combat and is recorded, not fixed here: changing either moves a golden, and
+        // the two streams are keyed differently (a pawn id against a cell) so they rarely meet.
+
+        /// <summary>Whether a swing lands, on the attacker's hit curve. Drawn from (seed, tick, attacker id).</summary>
+        public const uint MeleeHit = 0xE9B5_DBA5;
+
+        /// <summary>Whether a landed swing is dodged, on the defender's dodge curve.</summary>
+        public const uint MeleeDodge = 0x3956_C25B;
+
+        /// <summary>How hard it lands, within <see cref="CombatDef.damageSpreadPerMille"/> of the weapon's figure.</summary>
+        public const uint MeleeDamage = 0x59F1_11F1;
+
+        /// <summary>Whether a hurt animal turns on its attacker or runs (<see cref="SpeciesDef.revengePerMille"/>).</summary>
+        public const uint Revenge = 0x923F_82A4;
+
+        /// <summary>Whether a blunt blow stuns (<see cref="AttackDef.stunPerMille"/>).</summary>
+        public const uint Stun = 0xAB1C_5ED5;
+
+        /// <summary>
+        /// Whether a landing blow is critical (<see cref="CombatDef.critChancePerMille"/>, design 33
+        /// §9b). SHA-256's ninth round constant, next after <see cref="Stun"/>.
+        /// </summary>
+        public const uint MeleeCritical = 0xD807_AA98;
+
+        /// <summary>The debug menu's "Arm every colonist" (design 33 §9i): which weapon each colonist is dealt.</summary>
+        public const uint DebugArm = 0x243F_6A88;
+
+        /// <summary>
+        /// Whether a critical blow knocks its target back (<see cref="CombatDef.knockbackPerMille"/>).
+        /// SHA-256's tenth round constant.
+        /// </summary>
+        public const uint Knockback = 0x1283_5B01;
+
+        /// <summary>
+        /// Whether a jump over a stream falls short (design 46 §6). SHA-256's eleventh round
+        /// constant.
+        /// </summary>
+        public const uint Jump = 0x2431_85BE;
+
+        /// <summary>
+        /// Whether the meal in a pan will come out burnt (design 48 §5), rolled once when the
+        /// cooking starts. SHA-256's twelfth round constant.
+        /// </summary>
+        public const uint Burn = 0x550C_7DC3;
+        // The ranged line's four (design 47 §3a). SHA-256's thirteenth, fourteenth, seventeenth
+        // and eighteenth round constants: the eleventh is taken by the stream jump, the twelfth
+        // is cooking's Burn, and the fifteenth and sixteenth by the weather.
+
+        /// <summary>Whether a shot hits (design 47 §2a).</summary>
+        public const uint RangedHit = 0x72BE_5D74;
+
+        /// <summary>How hard a bullet strikes, within the spread — rolled for a miss too, because a stray still carries its weight.</summary>
+        public const uint RangedDamage = 0x80DE_B1FE;
+
+        /// <summary>Where a miss goes: the scatter cell round the target (design 47 §2c).</summary>
+        public const uint RangedScatter = 0xE49B_69C1;
+
+        /// <summary>Whether a bystander on the line takes the bullet, salted by the cell as well as the shooter.</summary>
+        public const uint RangedIntercept = 0xEFBE_4786;
+
+        /// <summary>
+        /// A weapon's quality when it is made (design 47 §11), salted by the thing's id. SHA-256's
+        /// nineteenth round constant.
+        /// </summary>
+        public const uint WeaponQuality = 0x0FC1_9DC6;
+
+        // ---- health (design 43) ----------------------------------------------------------------
+        // Built as the eleventh and twelfth, moved to the twelfth and thirteenth when the stream
+        // jump shipped first, and moved again when cooking (Burn) and ranged (RangedHit) shipped
+        // with those: two purposes on one stream would let a cooking or shooting roll decide
+        // where a blow lands. The twentieth and twenty-first are free; cover took the next three.
+
+        /// <summary>
+        /// Which region a hit lands on, by coverage (design 43 §2). SHA-256's twentieth round
+        /// constant. Its own stream, so the body can move no roll a fight made before it existed.
+        /// </summary>
+        public const uint HitRegion = 0x240C_A1CC;
+
+        /// <summary>How a fall's damage is split into hits and spread (design 43 §7). The twenty-first.</summary>
+        public const uint FallSplit = 0x2DE9_2C6F;
+
+        // Cover's three (design 53 §2d, §2e). SHA-256's twenty-second, twenty-third and
+        // twenty-fourth round constants. Built on the twentieth to the twenty-second, moved when
+        // health (design 43) shipped first on the twentieth and twenty-first.
+
+        /// <summary>Whether cover defeats a shot whose aim roll hit (design 53 §2d).</summary>
+        public const uint RangedCover = 0x4A74_84AA;
+
+        /// <summary>Which piece of cover a defeated shot is fired into, weighted by what each gave.</summary>
+        public const uint RangedCoverPick = 0x5CB0_A9DC;
+
+        /// <summary>Whether a stray crossing a cover cell is caught by it, salted by the cell as well as the shooter.</summary>
+        public const uint RangedCoverIntercept = 0x76F9_88DA;
     }
 }

@@ -144,7 +144,192 @@ namespace Odyssey.Tests.Sim
         // starting zone moving to a real `StorageZones` does move them, and that is measured
         // separately. The day a golden window includes a zone, the curve will move a hash and that
         // will be correct.
-        const ulong ContentFingerprint = 9529039565603056167UL;
+        //
+        // Moved a twelfth time, 2026-09-22, by animals (design 29 §1): SpeciesDef arrived with
+        // three rows — the person, the midden hog and the duct rat — and PawnKindDef gained
+        // `species`, with two animal kinds beside the colonist's. Taken from a freshly loaded
+        // pack. Every Simulated AND Generated golden moved with it, and not for this: the pawn's
+        // kind entered the hash the same day (§6), and the golden colony probe run on both
+        // branches diffs clean in every number — the hash sees one more zero per colonist.
+        //
+        // Moved a thirteenth time, 2026-09-22, the same day: the midden hog's movePerMille went
+        // 700 to 600 after the owner's first look at the trot ("way too fast"). No golden moved:
+        // no golden world has an animal in it.
+        //
+        // Moved a fourteenth time, 2026-09-22: the duct rat's traverseMode went Colonist to the
+        // new Climber, which climbs anything a colonist can and does not swim (owner: "animals
+        // can't swim by default"). No golden moved.
+        // 2026-09-23: SpeciesDef gained `nocturnal` and the duct rat sets it (design 30 §4).
+        //
+        // Moved a fifteenth time, 2026-09-23, by the draft (design 33 §2c): Job_DraftHold and
+        // Job_Goto at drivers 12 and 13, and PawnTuningDef gained draftQuietTicks (10,000 — four
+        // in-game hours, the reference's auto-undraft). Taken from a freshly loaded pack.
+        //
+        // Moved a sixteenth time, 2026-09-23, after the first draft playtest: MovementDef gained
+        // draftedPacePerMille (2,000 — a drafted colonist runs; owner: "when you are drafted you
+        // should walk faster/run"). No golden moved: nobody in a golden window is drafted.
+        //
+        // Moved again, 2026-09-23, merging temperature into a main that had taken combat and
+        // wildlife. Neither side's number covers the merged pack - main's has the combat and
+        // wildlife tuning, this branch's has TemperatureDef - so it is re-taken from a freshly
+        // loaded pack rather than adopted from either. Third pass of the same resolution in one
+        // day; main is moving under this branch faster than it is being reviewed.
+        //
+        // 2026-09-23, power (design 32): three JobDefs appended — Job_LayConduit (driver 14),
+        // Job_RemoveConduit (15) and Job_Refuel (16), after the draft's two. The first two train construction and settle
+        // as building does; refuelling trains hauling. Every golden moved with them, because the
+        // job system hashes a completed and failed counter for every def — measured to be those
+        // six zeros and nothing else (Golden.cs).
+        //
+        // 2026-09-23, the same branch's second interview (design 32 §14): Item_Salvage is scrap
+        // metal now — labelled so, and stacking to 50 where it lay one to a cell — because power
+        // lines and machines are built from it. No golden moved: the starting kit's scatter still
+        // places one piece to an empty cell, which is what it always placed.
+        //
+        // Moved again, 2026-09-24, merging main (combat, wildlife, temperature) into power: the
+        // draft's two jobs keep drivers 12 and 13 and power's three follow at 14-16. Neither
+        // side's number covers the merged pack, so it is re-taken from a freshly loaded pack.
+        // Moved a seventeenth time, 2026-09-23, by the combat contracts step (design 33 §5), which
+        // claims every handle the combat line needs at once: five jobs (Job_AttackMelee, Job_Flee,
+        // Job_Downed, Job_Equip, Job_Rescue at drivers 14 to 18), Skill_Melee, Work_Rescue, four
+        // weapons (Item_Bat, Item_Crowbar, Item_Machete, Item_ArcBlade, each with a weapon block),
+        // PawnKind_Bandit with PawnKindDef.faction (the two animal kinds Wild), SpeciesDef's
+        // combat fields with the owner's pools (person 100, hog 60, rat 15), death at -500 per mille,
+        // revenge (hog 700, rat 50) and the two natural attacks, and a new CombatDef carrying the
+        // owner's hit and dodge curves and fists. Taken from a freshly loaded pack. The goldens
+        // moved in the same commit, and not for any of the numbers: see Golden.cs.
+        //
+        // Moved an eighteenth time, 2026-09-23, by the seam review of the same step: PawnKindDef
+        // gained `weapon` and PawnKind_Bandit names Item_Machete (design 33 §1: "debug-spawned,
+        // armed"; IWeaponRules.ArmOnSpawn puts it in the hand). No golden moved: no golden spawns
+        // a bandit.
+        //
+        // Moved a nineteenth time, 2026-09-23, at the C2/C3 integration: CombatDef gained
+        // `rechooseTicks` (300), lane A's constant on the attack driver, proposed for the Def in its
+        // hand-over because Defs were frozen while the lanes ran. Same value, so no behaviour and no
+        // golden moved.
+        //
+        // Moved a twentieth time, 2026-09-24, by the third playtest's round (design 33 §9b): CombatDef
+        // gained the owner's critical and knockback numbers — critChancePerMille 100,
+        // critPerMillePerFourLevels 10, critDamagePerMille 1,500, knockbackPerMille 500,
+        // knockbackBluntPerMille 750 — and knockedDownTicks 90. No golden moved: no golden window
+        // fights, so no swing is ever decided in one.
+        //
+        // Moved again, 2026-09-24, merging main (power, research) into the combat line: power's three
+        // jobs keep drivers 14-16, so the combat five move from 14-18 to 17-21 (nothing combat shipped
+        // had saved them). Neither side's number covers the merged pack, so it is re-taken from a
+        // freshly loaded pack rather than adopted from either.
+        //
+        // Moved again, 2026-09-24, by medical supplies (design 37, MD1): Item_MedicalSupplies appended
+        // at item 11 (Medicine, stackLimit 10, healPerUnit 40), and ItemDef gained healPerUnit, zero
+        // on every other item. Taken from a freshly loaded pack.
+        //
+        // And again the same day by MD2 (design 37): Skill_Medicine, Work_Doctor (rateSkill 6 on
+        // growing's curve), Job_Treat and Job_Patient, and CombatDef's eight treatment integers.
+        // Taken from a freshly loaded pack.
+        //
+        // Moved a twenty-first time, 2026-09-24, by C5, friendly fire (design 33 §12): two thoughts
+        // appended at indices 6 and 7 — Thought_AttackedByColonist (-80, one day, once) and
+        // Thought_ColonistDied (-60, three days, three deep), the owner's -8 and -6 on our scale of
+        // thousandths. No golden moved: no golden window has a colonist hurt by a colonist or a
+        // death, and a memory is hashed only once a pawn has one.
+        //
+        // Moved a twenty-second time, deliberately, 2026-09-24, by the owner's answers to Phase 4
+        // (design 33 §14e): ThoughtDef gained renewsOnRepeat, false everywhere but
+        // Thought_AttackedByColonist, so a second swing renews the day rather than being dropped.
+        // No golden moved: no other thought renews, and no golden window has friendly fire.
+        //
+        // Moved a twenty-third time, deliberately, 2026-09-24, by drafted colonists helping (design
+        // 33 §15): CombatDef gained helpRadiusCells (8, INVENTED), how near another colonist's
+        // fight must be for a drafted colonist on her hold to join it. No golden moved: no golden
+        // window drafts anybody.
+        // And a twenty-fourth, the same day, by doors holding bandits out (design 33 §16):
+        // PawnKindDef gained traverseMode, empty everywhere but PawnKind_Bandit (Bandit), and
+        // PawnContent the resolved KindMode table. No golden moved: no golden has a bandit, and
+        // every other kind resolves to its species' mode exactly as before. The value below is the
+        // two together, measured on the merge rather than taken from either side.
+        //
+        // Moved a twenty-fifth time, deliberately, 2026-09-24, by bandits stealing (design 33
+        // §17): Job_Steal appended at 22, PawnKindDef gained motive (None everywhere but
+        // PawnKind_Bandit, Loot), and PawnContent the KindMotive table. No golden moved: no
+        // golden has a bandit, and the job system hashes a job appended after the combat line's
+        // only once it has run (JobSystem.HashedAlways).
+        //
+        // Moved a twenty-sixth time, deliberately, 2026-09-24, by the bandit (design 42): the kind
+        // renamed PawnKind_Bandit -> PawnKind_Bandit (index 3 unchanged, so no save moves), its
+        // traverse mode likewise, and PawnKindDef.weapon became weapons, the bandit's being a
+        // crowbar or a bat where it was a machete. No golden moved: no golden has a bandit.
+        //
+        // Moved a twenty-seventh time, 2026-09-25, at the merge of medical supplies (design 37)
+        // with main: Job_Treat and Job_Patient renumbered 22-23 -> 23-24, after Job_Steal, since
+        // bandits shipped first. Neither side's number covers the merged pack, so it is re-taken
+        // from a freshly loaded pack rather than adopted from either.
+        //
+        // 2026-09-25, design 46 §6: MovementDef gained jumpFailPerMille (30) and
+        // jumpFailCarryingPerMille (2,000) — the jump over a one-cell stream falling short.
+        //
+        // Moved a twenty-eighth time, 2026-09-25, at the merge with main (weather, the stream
+        // jump): neither side's number covers the merged pack, re-taken fresh.
+        // Moved again, 2026-09-25, by design 45 (the scenery made real): the tuning's woodPerTree
+        // is gone, because what a felled tree yields is its species' own now, in
+        // World/WildPlants.xml. Taken from a freshly loaded pack.
+        // 2026-09-25, design 46 §6: MovementDef gained jumpFailPerMille (30) and
+        // jumpFailCarryingPerMille (2,000) — the jump over a one-cell stream falling short.
+        // Both, 2026-09-25, on merging main into the scenery line: re-taken from the merged pack.
+        //
+        // And again the same day by M13 (design 45 §6): Job_Forage appended at 23, and
+        // Item_Berries and Item_Mushrooms at 11 and 12 (Food, 60 and 70, stacks of 75). Taken from
+        // a freshly loaded pack.
+        // M13 on the merged line, 2026-09-25: re-taken from the merged pack.
+        // The scenery line merged with medical supplies, 2026-09-25: Job_Forage renumbered 23 -> 25
+        // and Item_Berries/Item_Mushrooms 11-12 -> 12-13, after main's. Re-taken from the merged pack.
+        //
+        // Moved a twenty-ninth time, deliberately, 2026-09-25, by the kitchen (design 48 §4-§5):
+        // Skill_Cooking, Work_Cooking and Job_Cook appended; the three meals appended as items;
+        // Recipe_Meal the first RecipeDef; ItemDef gained foodTier, rawIngredient, meat, ticksToRot
+        // and ateThought, set on the ration pack and the carrots; Thought_AteMeal went from +20 to
+        // +50 as the cooked meal's, and AteRation (+20), AteBurnt (-40) and AteRaw (-50) were
+        // appended; and the work types' scan ranks moved to put cooking between growing and
+        // cutting. Every golden moves with it, measured in the same commit.
+        // Both lines together, 2026-09-25: the kitchen merged with the wild foods; Job_Cook
+        // renumbered 25 -> 26 and the meals 12-14 -> 14-16. Re-taken from the merged pack.
+        // 2026-09-25, design 47 §3 (R0, the ranged line's contracts): Job_AttackRanged, Skill_Shooting
+        // and Item_Pistol appended; AttackDef gained a ranged block, CombatDef the shooting numbers
+        // (the per-cell curve, the floor, cover, the dead zone, the scatter, the scan cadence) and
+        // SpeciesDef interceptPerMille (person 400, hog 500, rat 40).
+        // 2026-09-25, design 47 on the owner's first play ("keep it more accurate"): shootingPerCell
+        // 876/943/983 and the pistol's bands 950/850/650/450; the pistol's label "pistol" (was sidearm).
+        // 2026-09-25, design 47 §12: the pistol's ranged block gained its own melee blow (blunt, 5,
+        // the fists' cadence) — an enemy within reach is clubbed, never shot.
+        // The ranged line merged with main (medical supplies, the scenery), 2026-09-25: re-taken from the merged pack.
+        // And merged with the kitchen (design 48), 2026-09-25: the ranged handles to 27 / 17 / 8; re-taken.
+        //
+        // Health (design 43), merged onto all of that, 2026-09-25: a new HealthDef, Health_Person,
+        // carrying the six regions and the pain, blood, tend and fall numbers, named by
+        // Species_Person's new `health` field. Its own Job_Tend, Item_Medkit and Doctor and
+        // Medicine rows were dropped for design 37's (design 43 §15), so no handle moved. No golden
+        // moved: the ledger is hashed only while a pawn has anything on it. Re-taken from the
+        // merged pack.
+        // 2026-09-25, design 53 §2-§3 (cover, CV1): CombatDef's coverPerMille slot deleted, and the cover
+        // numbers added — fullFillCoverPerMille 750, the low and tall descent tangents 176/700 and 577/1732,
+        // coverInterceptPerMille 500, coverCrouchPerMille 200; WildPlantDef coverPerMille and coverTall
+        // (trees 250 tall, bushes 150 low).
+        // Cover merged onto health, 2026-09-25: its three streams moved to the 22nd-24th; re-taken.
+        //
+        // 2026-09-25, raids (design 55 §8): PawnKind_Gunman appended at kind 4 — a hostile person
+        // armed from a table of one, Item_Pistol, with the bandit's traverse mode and motive. No
+        // golden moved: no golden spawns a hostile.
+        // Raids merged onto cover, 2026-09-26: re-taken from the merged pack.
+        // 2026-09-25, the culvert frog (design 30 §8): Species_CulvertFrog and PawnKind_CulvertFrog
+        // appended (kind 4, species 3; kind 5 since the merge with raids), and SpeciesDef gained bankRadius and ignoresRain, both
+        // nought/false on every other species. Taken from a freshly loaded pack.
+        // 2026-09-26, the owner's first ask on the frog: bodyLengthMm 400 -> 870 and movePerMille
+        // 800 -> 1,000, so the bigger frog hops a body and a half. Taken from a freshly loaded pack.
+        // And SpeciesDef gained divergeRadius (frog 6; design 30 §8e), the same day.
+        // The frog merged with cover, 2026-09-26: re-taken from the merged pack.
+        // The frog merged with raids, 2026-09-26: the gunman keeps kind 4 and the frog moves to 5;
+        // re-taken from the merged pack.
+        const ulong ContentFingerprint = 11744128507824195914UL;
 
 
         [Test]

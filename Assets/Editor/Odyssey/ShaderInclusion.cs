@@ -62,6 +62,39 @@ namespace Odyssey.EditorTools
             "Odyssey/Water",
             "Odyssey/Outline",
 
+            // The power lines (design 32 §9), drawn over everything. Found by name like the rest.
+            "Odyssey/PowerLine",
+
+            // The selection highlight (design 44): its mask and its composite, both found by
+            // name from the renderer feature. Without them a player falls back to the brackets.
+            "Odyssey/SelectionMask",
+            "Odyssey/SelectionComposite",
+
+            // The draft's marks and the selection brackets (design 33 §23), seen through what
+            // stands in front of them.
+            "Odyssey/SeeThroughMark",
+
+            // Meadow foliage (design 38 §4). Without it a player strips the shader and the cache
+            // falls back to the pack's own, so the meadow draws but its wind runs on wall time.
+            "Odyssey/Foliage",
+
+            // The painted meadow floor (design 38 §17). Without it a player strips the shader and
+            // the grass terrain falls back to the pack's single tiled texture.
+            "Odyssey/MeadowGround",
+
+            // Rain (the rain-look prototype): streaks and splashes drawn procedurally.
+            "Odyssey/Rain",
+
+            // The ambient birds (design 50): one instanced call a species, flapped in the shader.
+            "Odyssey/Bird",
+            // The butterflies (design 52): wings and glow, drawn procedurally from a buffer.
+            "Odyssey/Butterfly",
+
+            // A bullet's streak and a muzzle's flash (design 47 §4c), drawn instanced by
+            // ProjectileDirector. The shader reads its shape out of the instance matrix, so there
+            // is no fallback that draws it: without this row a player fires invisible bullets.
+            "Odyssey/Tracer",
+
             // The sky, and it was not on the first draft of this list — `ShaderInclusionTests`
             // found it on the run that was meant to confirm the fix, along with `Standard` below.
             // Worth recording rather than quietly adding: a list of runtime-found shaders

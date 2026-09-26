@@ -42,6 +42,93 @@ namespace Odyssey.Tests.PlayMode
             for (int frame = 0; frame < 8; frame++) yield return null;
         }
 
+        static VisualElement? Focused(UIDocument doc) =>
+            doc.rootVisualElement.panel.focusController.focusedElement as VisualElement;
+
+        /// <summary>
+        /// The title screen is a dock (design 40): 560 wide, flush left, the full height of the
+        /// screen with a 1 px right edge, the mark and the wordmark on one row inside its 464 px of
+        /// content, four buttons, and New game focused so Enter starts a game. Exit game asks
+        /// through the leave prompt's no-colony form, with nothing to save.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheTitleScreenIsADockFlushLeft()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell shell, buildOnPlay: false);
+            try
+            {
+                yield return Settle();
+                yield return new WaitForSecondsRealtime(0.1f);
+                yield return Settle();
+                var doc = boot.GetComponent<UIDocument>();
+                VisualElement dock = Screen(doc)!;
+                Rect canvas = doc.rootVisualElement.worldBound;
+                Rect box = dock.worldBound;
+
+                // Within a physical pixel: at the runner's small game view the panel is scaled well
+                // below 1, and the layout is rounded to the physical grid (design 34 §5b).
+                float pixel = 1f / doc.rootVisualElement.panel.scaledPixelsPerPoint + 0.01f;
+                Assert.That(dock.layout.width, Is.EqualTo(TitleLayout.DockWidth).Within(pixel), "the dock is not 560 wide");
+                Assert.That(box.xMin, Is.EqualTo(canvas.xMin).Within(pixel), "the dock is not flush left");
+                Assert.That(box.yMin, Is.EqualTo(canvas.yMin).Within(pixel), "the dock does not reach the top");
+                Assert.That(box.yMax, Is.EqualTo(canvas.yMax).Within(pixel), "the dock does not reach the bottom");
+                // One physical pixel at least, which on the runner's scaled panel is more than one
+                // point; the authored 1 px is pinned by HudStyleSheetTests.
+                Assert.That(dock.resolvedStyle.borderRightWidth, Is.GreaterThan(0f).And.LessThanOrEqualTo(Mathf.Max(1f, pixel)),
+                    "the dock has no right edge");
+                Assert.That(dock.Q(className: "panel__hdr"), Is.Null, "the old card's header is still there");
+
+                VisualElement logo = dock.Q(className: "title__logo")!;
+                VisualElement word = dock.Q(className: "title__wordmark")!;
+                Assert.That(word.layout.xMax, Is.LessThanOrEqualTo(TitleLayout.ContentWidth + pixel),
+                    $"the wordmark ends at {word.layout.xMax}, past the dock's {TitleLayout.ContentWidth} px of content");
+                Assert.That(word.layout.height, Is.LessThan(TitleLayout.WordmarkSize * 2.5f), "the wordmark wrapped");
+                Debug.Log($"[TitleScreen] logo {logo.layout.width:0} px wide, wordmark {word.layout.width:0} px, " +
+                          $"tracking {word.resolvedStyle.letterSpacing:0.0} px, logo top {logo.layout.y:0} of {dock.layout.height:0}");
+
+                Assert.That(dock.Query(className: "title__btn").ToList(), Has.Count.EqualTo(4));
+                Assert.That(dock.Query<IconBadge>().ToList(), Is.Empty, "a placeholder box is still drawn on the title screen");
+                Assert.That(Focused(doc)?.ClassListContains("title__btn--good"), Is.True,
+                    "New game does not have focus on load, so Enter starts nothing");
+
+                // Focus lights the button the way hover does (the name in its colour, the edge on its
+                // left) and shows the keyboard's ring, which is the button's own child and so stands
+                // round the button wherever the layout has put it — it was one element placed by
+                // coordinates, and the logo's late offset left it round the gap below New game.
+                VisualElement newGame = Focused(doc)!;
+                Color lit = newGame.Q(className: "title__name")!.resolvedStyle.color;
+                Assert.That(((Vector4)(lit - HudTokens.Convert(HudTheme.Good))).magnitude, Is.LessThan(0.01f),
+                    $"the focused button does not light its name (it is {lit})");
+                Assert.That(newGame.Q(className: "title__edge")!.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex),
+                    "the focused button shows no edge");
+                VisualElement ring = newGame.Q(className: "title__ring")!;
+                Assert.That(ring.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex), "the focused button shows no ring");
+                Assert.That(ring.worldBound.center.y, Is.EqualTo(newGame.worldBound.center.y).Within(pixel),
+                    "the ring is not round the button it belongs to");
+                foreach (VisualElement other in dock.Query(className: "title__btn").ToList())
+                    if (other != newGame)
+                        Assert.That(other.Q(className: "title__ring")!.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                            "a button without focus shows a ring");
+
+                // Exit game: the prompt, with nothing to save.
+                shell.Menu.Choose(SessionCommands.QuitKey);
+                yield return Settle();
+                Assert.That(shell.LeavePromptOpen, Is.True, "Exit game closed nothing and asked nothing");
+                VisualElement prompt = doc.rootVisualElement.Q("leaveprompt")!;
+                Assert.That(prompt.Q(className: "prompt__answer--save")!.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                    "the title screen's exit offers to save a colony that does not exist");
+                shell.CancelLeavePrompt();
+                yield return Settle();
+                Assert.That(shell.LeavePromptOpen, Is.False);
+                Assert.That(Shown(dock), Is.True, "cancelling the exit took the title screen away");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
         /// <summary>
         /// Press Play, and there is a screen rather than a colony.
         ///
@@ -64,6 +151,55 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(Shown(Screen(doc)), Is.True, "the start screen is not on screen");
                 Assert.That(Shown(Scrim(doc)), Is.True,
                     "the scrim is not up, so the screen is not a modal and the world is still clickable");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// A new world is drawn behind a cover for <see cref="HudShell.CurtainFrames"/> frames
+        /// before it is shown (design 38 §25).
+        ///
+        /// <para>The M10 tour measured the frame after the world first appeared at 102.5 ms — the
+        /// driver and the GPU meeting it for the first time — and the one after at 18.7. The curtain
+        /// pays those behind the start screen's own picture. The hand-over itself happens when the
+        /// world is built — the interface is up under the cover — because deferring it moved the
+        /// interface's first layout onto the reveal frame (43 ms). Asserted: the cover is up and the
+        /// interface already behind it on the build frame, and the cover is gone once it lifts. A
+        /// second press cannot build a second world.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ANewWorldIsDrawnBehindACurtainBeforeItIsShown()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell shell, buildOnPlay: false);
+            try
+            {
+                yield return Settle();
+                var doc = boot.GetComponent<UIDocument>();
+                Assert.That(Shown(doc.rootVisualElement.Q("curtain")), Is.False, "the curtain is up over the title screen");
+                shell.Menu.Choose(SessionCommands.NewGameKey);
+                yield return Settle();
+
+                Assert.That(shell.Menu.Start(), Is.True);
+                Assert.That(boot.HasSession, Is.True, "Start built no world");
+                var built = boot.World;
+                Assert.That(shell.CurtainUp, Is.True, "the new world was shown at once, with no frames behind a cover");
+                Assert.That(Shown(doc.rootVisualElement.Q("curtain")), Is.True, "the curtain is not on screen");
+                Assert.That(Shown(doc.rootVisualElement.Q("world-ui")), Is.True,
+                    "the interface is not up under the curtain, so its first layout lands on the reveal");
+
+                shell.Menu.Start();
+                Assert.That(boot.World, Is.SameAs(built), "a second press built a second world");
+
+                for (int frame = 0; frame < HudShell.CurtainFrames + 1; frame++) yield return null;
+
+                Assert.That(shell.CurtainUp, Is.False, "the curtain never lifted");
+                Assert.That(Shown(doc.rootVisualElement.Q("curtain")), Is.False, "the curtain is still up over the colony");
+                Assert.That(Shown(doc.rootVisualElement.Q("backdrop")), Is.False,
+                    "the start screen is still up after the curtain");
             }
             finally
             {
@@ -274,7 +410,11 @@ namespace Odyssey.Tests.PlayMode
                 // And the colony is the three that were on the setup page — the same
                 // claim one level up, and the one no fast-tier test can make because it spans the
                 // screen, the director, the bootstrap and ColonyRequest.
-                Assert.That(boot.Colony!.Pawns.Pawns.Count, Is.EqualTo(ColonistSelect.Slots),
+                // The people, not the pawns: the world seeds its own animals beside them
+                // (design 30), and none of those was on the setup page.
+                int people = 0;
+                foreach (Odyssey.Sim.Pawns.Pawn pawn in boot.Colony!.Pawns.Pawns.All) if (pawn.IsPerson) people++;
+                Assert.That(people, Is.EqualTo(ColonistSelect.Slots),
                     "the colony is not the size the screen offered");
             }
             finally
@@ -614,13 +754,29 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(Shown(doc.rootVisualElement.Q("settings")), Is.True,
                     "Options opened nothing, so the preferences are still session-shaped");
 
-                // The owner's report: the two panels stacked, because both are centred. Settings
-                // stands in the menu's place now — the menu goes, the scrim stays, because the
-                // state is still modal and there is still no world behind any of it.
-                Assert.That(Shown(Screen(doc)), Is.False,
-                    "the menu is still under the settings panel, which is the stack the owner saw");
+                // Settings opens over the title screen's dock (design 40). The stack the owner
+                // reported on 2026-09-17 was two centred boxes; the dock is flush left and the
+                // window centred, and the window's own scrim dims the dock under it.
+                Assert.That(Shown(Screen(doc)), Is.True, "the dock went away under the settings window");
                 Assert.That(Shown(Scrim(doc)), Is.True,
                     "the scrim went with the menu, so the settings panel is no longer modal");
+
+                // And it can be clicked. The menu's scrim is built after the settings window, so
+                // unless the window is raised over it every click lands on the scrim and the
+                // window shown on top does nothing (owner, 2026-09-24). Picked at the centre and
+                // at a rail tab, the way a pointer would be.
+                VisualElement settings = doc.rootVisualElement.Q("settings")!;
+                foreach (Vector2 at in new[]
+                         {
+                             settings.worldBound.center,
+                             settings.Q(className: "sw__tab")!.worldBound.center,
+                         })
+                {
+                    VisualElement? hit = settings.panel.Pick(at);
+                    Assert.That(hit != null && (hit == settings || settings.Contains(hit)), Is.True,
+                        $"a click on the settings window at {at} landed on {hit?.name ?? "nothing"} " +
+                        $"({(hit == null ? "" : string.Join(" ", hit.GetClasses()))}), not on the window");
+                }
 
                 // And back, by the panel's own close — not by the row that opened it, because the
                 // ways out of that panel already existed and this has to be all of them.
@@ -630,6 +786,10 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(Shown(Screen(doc)), Is.True,
                     "closing settings left no menu to come back to");
                 Assert.That(shell.Menu.Screen, Is.EqualTo(MenuScreen.Root));
+                yield return new WaitForSecondsRealtime(0.1f);
+                yield return Settle();
+                Assert.That(Focused(doc)?.ClassListContains("title__btn--violet"), Is.True,
+                    "closing Settings did not hand focus back to the Settings button");
             }
             finally
             {

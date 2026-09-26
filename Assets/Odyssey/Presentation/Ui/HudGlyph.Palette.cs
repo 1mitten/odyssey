@@ -233,6 +233,25 @@ namespace Odyssey.Presentation.Ui
                     Polyline(painter, true, p(4, 15), p(20, 15));
                     return;
 
+                // A campfire: a flame over two crossed logs.
+                //
+                // Drawn rather than borrowed, unlike the bed above. The bed can wear the bunk's
+                // shape because a bunk IS a bed and the lie is only about which kind; there is
+                // nothing on this palette a fire could borrow from without saying something
+                // false. The two logs carry the reading at 17 px more than the flame does —
+                // a flame alone is a leaf — so they are the wider, more separated pair of
+                // strokes and the flame sits clear above them.
+                case HudGlyphKind.ToolCampfire:
+                    Polyline(painter, true, p(4, 17), p(20, 21));
+                    Polyline(painter, true, p(4, 21), p(20, 17));
+                    painter.BeginPath();
+                    painter.MoveTo(p(12, 3));
+                    painter.BezierCurveTo(p(17, 8), p(16.5f, 12), p(12, 14.5f));
+                    painter.BezierCurveTo(p(7.5f, 12), p(7, 8), p(12, 3));
+                    painter.ClosePath();
+                    painter.Stroke();
+                    return;
+
                 // ------------------------------------------------------ power
 
                 // A conduit: a run with a junction box on it.
@@ -240,6 +259,15 @@ namespace Odyssey.Presentation.Ui
                     Polyline(painter, true, p(3, 12), p(9, 12));
                     Polyline(painter, true, p(15, 12), p(21, 12));
                     Rect(painter, p(9, 8), p(15, 16));
+                    return;
+
+                // Taking a conduit up (design 32 §10): the conduit's own run and box, cut by a
+                // slash, so the tool reads as the conduit's undoing rather than as a new thing.
+                case HudGlyphKind.ToolUnwire:
+                    Polyline(painter, true, p(3, 12), p(9, 12));
+                    Polyline(painter, true, p(15, 12), p(21, 12));
+                    Rect(painter, p(9, 8), p(15, 16));
+                    Polyline(painter, true, p(5, 20), p(19, 4));
                     return;
 
                 // A battery: a cell with a terminal and a charge bar.
@@ -257,6 +285,14 @@ namespace Odyssey.Presentation.Ui
                         p(11, 17), p(15, 12), p(12, 12));
                     painter.ClosePath();
                     painter.Stroke();
+                    return;
+
+                // A heater (design 32 §7): a squat housing with heat rising off it in two waves.
+                case HudGlyphKind.ToolHeater:
+                    Rect(painter, p(4, 13), p(20, 20));
+                    Polyline(painter, true, p(8, 16.5f), p(16, 16.5f));
+                    Polyline(painter, true, p(9, 10.5f), p(10.5f, 8.5f), p(9, 6.5f), p(10.5f, 4.5f));
+                    Polyline(painter, true, p(14, 10.5f), p(15.5f, 8.5f), p(14, 6.5f), p(15.5f, 4.5f));
                     return;
 
                 // A reactor: a core with a ring around it.
@@ -289,6 +325,15 @@ namespace Odyssey.Presentation.Ui
                     Polyline(painter, true, p(3, 16), p(21, 16));
                     Polyline(painter, true, p(7, 5), p(7, 20));
                     Polyline(painter, true, p(17, 5), p(17, 20));
+                    return;
+
+                // Sandbags (design 53 §4): bags laid like bricks, three below and two above.
+                case HudGlyphKind.ToolSandbag:
+                    Rect(painter, p(2.5f, 14), p(8.5f, 19.5f));
+                    Rect(painter, p(9, 14), p(15, 19.5f));
+                    Rect(painter, p(15.5f, 14), p(21.5f, 19.5f));
+                    Rect(painter, p(5.75f, 8), p(11.75f, 13.5f));
+                    Rect(painter, p(12.25f, 8), p(18.25f, 13.5f));
                     return;
 
                 // ------------------------------------------------------ floors
@@ -383,6 +428,18 @@ namespace Odyssey.Presentation.Ui
                     Polyline(painter, true, p(12, 19), p(12, 7));
                     Polyline(painter, true, p(12, 12), p(7.5f, 8));
                     Polyline(painter, true, p(12, 12), p(16.5f, 8));
+                    return;
+
+                // Harvest (design 45 §6): a cluster of three berries under a leaf, the thing the
+                // order is for rather than a tool, because picking is done by hand.
+                case HudGlyphKind.ToolHarvest:
+                    Circle(painter, p(8.5f, 14.5f), 3.2f * scale);
+                    Circle(painter, p(15.5f, 14.5f), 3.2f * scale);
+                    Circle(painter, p(12, 19), 3.2f * scale);
+                    Polyline(painter, true, p(12, 11), p(12, 5));
+                    Polyline(painter, false, p(12, 7), p(17, 3.5f), p(19, 7.5f));
+                    painter.ClosePath();
+                    painter.Stroke();
                     return;
 
                 // Stockpile: a crate with its lid seam. The tools in this category answer "where
@@ -495,15 +552,19 @@ namespace Odyssey.Presentation.Ui
             { "ui.arch.tool.table", HudGlyphKind.ToolTable },
             { "ui.arch.tool.lamp", HudGlyphKind.ToolLamp },
             { "ui.arch.tool.shelf", HudGlyphKind.ToolShelf },
+            { "ui.arch.tool.campfire", HudGlyphKind.ToolCampfire },
 
             { "ui.arch.tool.conduit", HudGlyphKind.ToolConduit },
+            { "ui.arch.tool.unwire", HudGlyphKind.ToolUnwire },
             { "ui.arch.tool.battery", HudGlyphKind.ToolBattery },
             { "ui.arch.tool.generator", HudGlyphKind.ToolGenerator },
+            { "ui.arch.tool.heater", HudGlyphKind.ToolHeater },
             { "ui.arch.tool.reactor", HudGlyphKind.ToolReactor },
 
             { "ui.arch.tool.turret", HudGlyphKind.ToolTurret },
             { "ui.arch.tool.trap", HudGlyphKind.ToolTrap },
             { "ui.arch.tool.barricade", HudGlyphKind.ToolBarricade },
+            { "ui.arch.tool.sandbag", HudGlyphKind.ToolSandbag },
 
             { "ui.arch.tool.deckplate", HudGlyphKind.ToolDeckplate },
             { "ui.arch.tool.grating", HudGlyphKind.ToolGrating },
@@ -514,6 +575,7 @@ namespace Odyssey.Presentation.Ui
             { "ui.arch.tool.planter", HudGlyphKind.ToolPlanter },
 
             { PaletteTools.Fell, HudGlyphKind.ToolFell },
+            { PaletteTools.Harvest, HudGlyphKind.ToolHarvest },
             { PaletteTools.Mine, HudGlyphKind.ToolMine },
             { PaletteTools.Deconstruct, HudGlyphKind.ToolDeconstruct },
             { PaletteTools.Cancel, HudGlyphKind.ToolCancel },

@@ -133,8 +133,12 @@ namespace Odyssey.Tests.Hud
         public void TheGridDrawsTheDesignsTwentyTwoAndNotTheSimulationsFive()
         {
             Assert.That(WorkCatalogue.All.Count, Is.EqualTo(22));
-            Assert.That(WorkCatalogue.LiveCount, Is.EqualTo(5),
-                "Construction, Chopping, Mining, Hauling and Growing are what WorkTypes.xml runs.");
+            // Six since the combat contracts step (design 33 §5): Rescue's column went live with
+            // Work_Rescue, whose giver answers no until C4 fills it.
+            // Seven since medical supplies (design 37): Doctor's column went live with Work_Doctor.
+            // Eight since the kitchen (design 48): Cooking's column went live with Work_Cooking.
+            Assert.That(WorkCatalogue.LiveCount, Is.EqualTo(8),
+                "Construction, Chopping, Mining, Hauling, Growing, Rescue, Doctor and Cooking are what WorkTypes.xml runs.");
 
             // And every one the simulation runs has a column: the two counts are the same list
             // seen from two sides, so a fifth work type with no column is this test failing.
@@ -179,14 +183,16 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void HaulingIsTheOneWorkTypeWithNoSkill()
+        public void HaulingAndRescueAreTheWorkTypesWithNoSkill()
         {
+            // Rescue joined hauling with the combat contracts step (design 33 §5): carrying a body
+            // is a walk, priced by the pawn's pace, as a haul is.
             foreach (WorkCatalogue.Entry entry in WorkCatalogue.All)
             {
                 if (!entry.Live) continue;
-                bool isHaul = entry.Key == "ui.work.hauling";
-                Assert.That(entry.HasSkill, Is.EqualTo(!isHaul),
-                    entry.Key + " — WorkTypes.xml gives only Work_Haul no rateSkill.");
+                bool noSkill = entry.Key == "ui.work.hauling" || entry.Key == "ui.work.rescue";
+                Assert.That(entry.HasSkill, Is.EqualTo(!noSkill),
+                    entry.Key + " — WorkTypes.xml gives only Work_Haul and Work_Rescue no rateSkill.");
             }
         }
 

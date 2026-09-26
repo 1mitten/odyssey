@@ -73,13 +73,21 @@ namespace Odyssey.Hud
         /// <summary>The cell the last world pick landed on, or none. Never above the active layer.</summary>
         public CellRef? Cell { get; private set; }
 
+        /// <summary>
+        /// The selected corpse, as a <see cref="CorpseView.Id"/>, or 0 for none (design 33 §5f). A
+        /// single subject, like <see cref="Thing"/>: set only by <see cref="ChooseCorpse"/>, and
+        /// cleared by every other choice. What lane B's cursor brackets and lane C's pane shows.
+        /// </summary>
+        public int Corpse { get; private set; }
+
         public bool HasPawn => _pawns.Count > 0;
         public bool HasThing => Thing.IsValid;
+        public bool HasCorpse => Corpse != 0;
 
         /// <summary>True when several colonists are selected at once, for panes that summarise.</summary>
         public bool HasMultiple => _pawns.Count > 1;
 
-        public bool IsEmpty => !HasPawn && !HasThing && !Cell.HasValue;
+        public bool IsEmpty => !HasPawn && !HasThing && !Cell.HasValue && !HasCorpse;
 
         /// <summary>
         /// Raised after every change, inside the call that made it, so the pane and the cursor
@@ -144,6 +152,7 @@ namespace Odyssey.Hud
             Cell = cell;
             Thing = ThingId.None;
             ThingDef = -1;
+            Corpse = 0;
             if (Cell.HasValue)
             {
                 ThingAt(snapshot, Cell.Value, out ThingId thing, out int def);
@@ -188,6 +197,22 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
+        /// Select a cell outright, without a pick and without the thing lying in it: the Inventory
+        /// tab's Go (design 35). A pick on a stockpile cell selects the pile first, because that
+        /// is what a click there usually means; Go is asking for the <i>store</i>, and the pane
+        /// leads with the store only when the subject is the cell.
+        /// </summary>
+        public void ChooseCell(CellRef cell)
+        {
+            _pawns.Clear();
+            Cell = cell;
+            Thing = ThingId.None;
+            ThingDef = -1;
+            _missingFrames = 0;
+            Changed?.Invoke(SelectionChange.Chosen);
+        }
+
+        /// <summary>
         /// Shift-click: the colonist goes in if they were out and out if they were in. Removing
         /// the last colonist empties the selection — the same click that builds it has to be able
         /// to take it apart again.
@@ -201,11 +226,26 @@ namespace Odyssey.Hud
             Changed?.Invoke(SelectionChange.Toggled);
         }
 
+        /// <summary>
+        /// Select a corpse outright (design 33 §5f): lane B's hit-test finds it under the pointer,
+        /// and <c>HudDirectors.ChooseCorpse</c> (lane C) checks it is in the frame and calls this.
+        /// Replaces the whole selection — a corpse is a single subject, like a pile.
+        /// </summary>
+        public void ChooseCorpse(int corpseId)
+        {
+            _pawns.Clear();
+            ClearCellTier();
+            Corpse = corpseId > 0 ? corpseId : 0;
+            _missingFrames = 0;
+            Changed?.Invoke(SelectionChange.Chosen);
+        }
+
         void ClearCellTier()
         {
             Cell = null;
             Thing = ThingId.None;
             ThingDef = -1;
+            Corpse = 0;
         }
 
         public void Clear(SelectionChange reason = SelectionChange.Cleared)
@@ -265,7 +305,29 @@ namespace Odyssey.Hud
                 }
                 _missingFrames++;
                 if (_missingFrames > GraceFrames) Clear(SelectionChange.Died);
+                return;
             }
+
+            // A corpse stays where it fell (the C2 default), so this is for the day something
+            // takes one away — a load into another world, a haul — on the pile's terms.
+            if (HasCorpse)
+            {
+                if (CorpsePresent(snapshot, Corpse))
+                {
+                    _missingFrames = 0;
+                    return;
+                }
+                _missingFrames++;
+                if (_missingFrames > GraceFrames) Clear(SelectionChange.Died);
+            }
+        }
+
+        static bool CorpsePresent(WorldSnapshot snapshot, int id)
+        {
+            var corpses = snapshot.Corpses;
+            for (int i = 0; i < corpses.Length; i++)
+                if (corpses[i].Id == id) return true;
+            return false;
         }
 
         static bool ThingPresent(WorldSnapshot snapshot, ThingId id)
@@ -289,10 +351,15 @@ namespace Odyssey.Hud
         /// </summary>
         static void ThingAt(WorldSnapshot snapshot, CellRef cell, out ThingId id, out int def)
         {
+            // **Contained things are not click targets.** They are published at their store's own
+            // cell so that every count of what the colony holds stays right without being taught
+            // anything — but a click on a shelf means the shelf, not whichever of its eight stacks
+            // happens to come first in id order, which is a choice no player made. The same rule a
+            // bed follows: clicking one selects the bed and not the sleeper.
             var things = snapshot.Things;
             for (int i = 0; i < things.Length; i++)
             {
-                if (things[i].Cell != cell) continue;
+                if (things[i].Contained || things[i].Cell != cell) continue;
                 id = things[i].Id;
                 def = things[i].DefIndex;
                 return;
@@ -303,7 +370,7 @@ namespace Odyssey.Hud
                 CellRef above = cell.Above;
                 for (int i = 0; i < things.Length; i++)
                 {
-                    if (things[i].Cell != above) continue;
+                    if (things[i].Contained || things[i].Cell != above) continue;
                     id = things[i].Id;
                     def = things[i].DefIndex;
                     return;

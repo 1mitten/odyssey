@@ -117,4 +117,44 @@
     <label>growing</label>
   </SkillDef>
 
+  <!--
+    Close combat (design 33 section 1), live from the combat contracts step: the Skills row stops
+    being greyed out, and the starting roll deals every colonist a level in it. The attacker's
+    level reads Combat.xml's hit curve and the defender's its dodge curve; every swing trains it,
+    by the weapon's experiencePerSwing. The parent's curve, cap and ladder, like every skill.
+  -->
+  <SkillDef ParentName="SkillBase">
+    <defName>Skill_Melee</defName>
+    <label>melee</label>
+  </SkillDef>
+
+  <!--
+    Treating the hurt (design 37). Buys speed only: Work_Doctor's rateSkill reads it, and the heal
+    a treatment gives is the supplies' and the MedicalDef's, never the doctor's (owner, 2026-09-24).
+    Treating trains it, and so does treating yourself.
+  -->
+  <SkillDef ParentName="SkillBase">
+    <defName>Skill_Medicine</defName>
+    <label>medicine</label>
+  </SkillDef>
+
+  <!--
+    Cooking (design 48 section 5). Buys speed at the stove through Work_Cooking's curve, and keeps
+    the meal from burning through Recipe_Meal's table. Cooking trains it, at every station.
+  -->
+  <SkillDef ParentName="SkillBase">
+    <defName>Skill_Cooking</defName>
+    <label>cooking</label>
+  </SkillDef>
+
+  <!--
+    Shooting (design 47 section 2a): the per-cell accuracy curve in Combat.xml reads it, and
+    every shot trains it, hit or miss. Appended with the ranged line; a colonist from a save
+    older than format 10 is dealt it once on load.
+  -->
+  <SkillDef ParentName="SkillBase">
+    <defName>Skill_Shooting</defName>
+    <label>shooting</label>
+  </SkillDef>
+
 </Defs>

@@ -28,7 +28,43 @@ namespace Odyssey.Sim.Pawns
             Items = new ColonyItems(content);
             Reservations = new ReservationManager();
             Pawns = new PawnRegistry(this);
+            Corpses = new CorpseRegistry(cells.Size, content);
+            Projectiles = new Projectiles(cells.Size);
         }
+
+        // ---- the fight's seams (design 33 §5) ---------------------------------------------------
+        //
+        // Built here rather than by the composition, like the items and the reservations, so that
+        // a bare pawn fixture has them too: a test that spawns two pawns and makes one hit the
+        // other should not have to assemble a colony first. The composition registers the ones that
+        // are saved, hashed or published (ColonyComposition.AddColony).
+
+        /// <summary>Who lands, who dodges, how hard (lane A). Settable so a test or a mod can swap it.</summary>
+        public IMeleeRules MeleeRules { get; set; } = new MeleeRules();
+
+        /// <summary>What a pawn swings with, and whether it may take a weapon up (lane D).</summary>
+        public IWeaponRules WeaponRules { get; set; } = new WeaponRules();
+
+        /// <summary>Whether a shot is aimed true, how hard, where a miss goes (design 47). Settable so a test or a mod can swap it.</summary>
+        public IRangedRules RangedRules { get; set; } = new RangedRules();
+
+        /// <summary>Damage, downed and died, heard by whoever registered (C3, C4, C5).</summary>
+        public CombatHooks CombatHooks { get; } = new CombatHooks();
+
+        /// <summary>The telling of every fight, for presentation. Not state.</summary>
+        public CombatLog CombatLog { get; } = new CombatLog();
+
+        /// <summary>The dead. Saved and hashed while there are any.</summary>
+        public CorpseRegistry Corpses { get; }
+
+        /// <summary>What is left of each struck building (C6). Saved and hashed while there is any.</summary>
+        public EdificeDamage EdificeDamage { get; } = new EdificeDamage();
+
+        /// <summary>Every bullet in flight (design 47 §2c). Saved, and hashed while there is any.</summary>
+        public Projectiles Projectiles { get; }
+
+        /// <summary>The fight's own pass, when the world has one. Null in a bare pawn fixture.</summary>
+        public CombatSystem? Combat { get; set; }
 
         public CellGrid Cells { get; }
         public NavGraph Nav { get; }
@@ -45,8 +81,37 @@ namespace Odyssey.Sim.Pawns
 
         public uint Seed { get; internal set; }
 
+        /// <summary>
+        /// The debug menu's <i>Jumps always fail</i> (design 46 §6): every jump over a stream falls
+        /// short while it is set, because a one-in-thirty event is not something a playtest can
+        /// wait for. <b>Debug only: unsaved and unhashed</b>, like the rest of the menu's switches —
+        /// a run that used it is not a run anybody compares against.
+        /// </summary>
+        public bool DebugJumpsAlwaysFail { get; set; }
+
         /// <summary>The standing orders, when the world has them. Null in a bare pawn fixture.</summary>
-        public DesignationGrid? Designations { get; set; }
+        public DesignationGrid? Designations
+        {
+            get => _designations;
+            set
+            {
+                _designations = value;
+                // The items learn where the trees are from the same place (design 23 §11): nothing
+                // is put down in a cell a tree stands in, and the grid of standing orders is the
+                // one thing that can say which handles are trees.
+                Items.Trees = value;
+            }
+        }
+
+        DesignationGrid? _designations;
+
+        /// <summary>
+        /// Whether a tree stands in the cell — the one question a pawn asks before lying down or
+        /// settling somewhere (owner, 2026-09-25: *"colonists sometimes sleep through trees"*).
+        /// A tree blocks nothing, so walkability cannot answer it. False in a bare fixture, which
+        /// has no trees to ask about.
+        /// </summary>
+        public bool TreeAt(int cell) => _designations != null && _designations.IsTree(cell);
 
         /// <summary>
         /// The building sites, when the world has them. Null in a bare pawn fixture, exactly as
@@ -78,6 +143,37 @@ namespace Odyssey.Sim.Pawns
         public World.EnclosureGrid? Enclosure { get; set; }
 
         /// <summary>
+        /// The thermal pass (design 28), when the world has one. Null in a bare pawn fixture,
+        /// exactly as <see cref="Enclosure"/> is — a fixture that never meant to be cold reads
+        /// the outdoor curve and nothing here is the wiser.
+        /// </summary>
+        public Temperature.TemperatureSystem? Temperature { get; set; }
+
+        /// <summary>The sky (design 43). Null in a bare pawn fixture, which is a world without weather.</summary>
+        public Weather.WeatherSystem? Weather { get; set; }
+
+        /// <summary>
+        /// Where the rain stops, column by column: the one owner of "is this cell under cover"
+        /// (design 43 §6). Pace, growth and an animal looking for cover all ask it. Null in a bare
+        /// pawn fixture, where nothing is under cover and there is no weather to be under.
+        /// </summary>
+        public World.SkyColumns? Sky { get; set; }
+
+        /// <summary>
+        /// The power grid (design 32): lines, the orders for them, the buildings that make and
+        /// spend power, and the nets between. Null in a bare pawn fixture, exactly as
+        /// <see cref="Temperature"/> is — a fixture that never meant to wire anything has nothing
+        /// to lay and nothing to refuel.
+        /// </summary>
+        public Power.PowerGrid? Power { get; set; }
+
+        /// <summary>
+        /// The kitchen (design 48 §5): every cooking station's bills and pan. Null in a bare pawn
+        /// fixture, which has nothing to cook on.
+        /// </summary>
+        public Cooking.Kitchen? Kitchen { get; set; }
+
+        /// <summary>
         /// The structure of this cell changed, so the boundary above it has to be re-judged.
         ///
         /// <para>Both the cell and the one above it, always, because they are two different
@@ -99,8 +195,10 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// The presentation chunk grid, when a renderer is attached, so a job that edits the world
-        /// can say which chunk to re-mesh. Null for a purely headless run.
+        /// The chunk grid a job that edits the world tells which cell changed: the drawing re-meshes
+        /// the chunk, and the sky map (<see cref="Sky"/>) recomputes the column. Every colony has
+        /// one — <c>ColonyWorld.Build</c> makes its own when no renderer hands one in, because
+        /// since design 43 the simulation reads it too. Null only in a bare pawn fixture.
         /// </summary>
         public ChunkGrid? Chunks { get; set; }
 
@@ -121,12 +219,65 @@ namespace Odyssey.Sim.Pawns
         public Growing.GrowingZones? Growing { get; set; }
 
         /// <summary>
+        /// The wild between orders (design 45 §6): berry bushes growing back and mushrooms coming
+        /// up. Null in a bare pawn fixture, so the forage giver answers no there.
+        /// </summary>
+        public NatureSystem? Nature { get; set; }
+
+        /// <summary>
         /// Where the colony puts things down, or null in a world that has none — a bare test
         /// fixture, or a board before the composition root has wired one. Every read here is
         /// null-guarded for that reason and not out of habit: the haul giver answers "no
         /// destination" rather than throwing, which is what a colony with no zones actually means.
         /// </summary>
         public Storage.StorageZones? Storage { get; set; }
+
+        /// <summary>
+        /// The colony's built stores — shelves — or null where it has none and in a bare fixture.
+        /// Null-guarded at every read, exactly as <see cref="Storage"/> is, so a colony that was
+        /// never given one simply has no containers rather than throwing.
+        /// </summary>
+        public Storage.StorageUnits? StorageUnits { get; set; }
+
+        /// <summary>
+        /// The colony's home (design 43): everything placed, grown by five cells. Null in a bare
+        /// fixture that assembles no colony, where nothing is ever restricted.
+        /// </summary>
+        public World.HomeArea? Home { get; set; }
+
+        /// <summary>The campfire home is centred on (design 43 §3f). Null in a bare fixture.</summary>
+        public World.Hearth? Hearth { get; set; }
+
+        /// <summary>
+        /// Every raid on the board and the clock that runs them (design 55). Set by the composition
+        /// root; null only in a hand-built context, where no raid can fire.
+        /// </summary>
+        public Events.RaidSystem? Raids { get; set; }
+
+        /// <summary>
+        /// Where the colony started — the generator's start cell — or null where there was none (a
+        /// hand-built test board). What a raid makes for with no hearth (design 55 §5). Derived:
+        /// set at every build, so a load has it as the new game did, and neither saved nor hashed.
+        /// </summary>
+        public CellRef? ColonyStart { get; set; }
+
+        /// <summary>
+        /// Where a thing is, as a cell a colonist can walk to: its own cell, the cell of the store
+        /// holding it, or -1 while it is in a pair of hands.
+        ///
+        /// <para><b>One owner, because five scans want it.</b> Every one of them used to write
+        /// <c>item.Cell</c> and mean "where is it", and that was true while a thing was either on
+        /// the floor or carried. With a third home the expression is wrong in a way that reads as
+        /// right — a contained thing answers -1, so a distance to it is garbage and a reachability
+        /// test against it is nonsense — and five copies of a wrong expression is five places to
+        /// fix it.</para>
+        /// </summary>
+        public int WhereIs(ColonyItem item)
+        {
+            if (item.Cell >= 0) return item.Cell;
+            if (item.ContainerId == 0) return -1;
+            return StorageUnits?.CellOfContainer(item.ContainerId) ?? -1;
+        }
 
 
         /// <summary>The def <see cref="OpenGroundFor"/> was last asked about.</summary>
@@ -175,6 +326,16 @@ namespace Odyssey.Sim.Pawns
             World.Defer(action);
         }
 
+        /// <summary>
+        /// <see cref="Defer"/>, but inside the deferred phase it runs this tick
+        /// (<see cref="SimWorld.DeferThisTick"/>): a death that happens during a collapse.
+        /// </summary>
+        public void DeferThisTick(System.Action<SimWorld> action)
+        {
+            if (World == null) throw new System.InvalidOperationException("no world is being ticked");
+            World.DeferThisTick(action);
+        }
+
         internal void Sync(SimWorld world)
         {
             World = world;
@@ -187,15 +348,43 @@ namespace Odyssey.Sim.Pawns
             ColonyItems.Distance(a, b, Size, Content.Movement.layerChangeEstimate);
 
         /// <summary>
-        /// Can this pawn get there at all? Two array reads and an integer comparison — never a
-        /// search. A work-giver scan asks this thousands of times per tick against candidate
-        /// targets, and it is the reason the district table exists.
+        /// May this pawn take this cell as the place a job acts on or is done from? It can get
+        /// there (<see cref="CanTravel(Pawn, int, TraverseMode)"/>) and it may work there
+        /// (<see cref="MayWork"/>). Two array reads and an integer comparison for anybody not kept
+        /// home — never a search. A work-giver scan asks this thousands of times per tick against
+        /// candidate targets, and it is the reason the district table exists.
+        ///
+        /// <para><b>This is the question every work giver asks</b>, which is why the home gate is
+        /// in it (design 43 §4b): a giver written next month is gated without knowing it. A
+        /// question that is purely physical — the fight, the flight, the walk of a job already
+        /// begun — asks <see cref="CanTravel(Pawn, int, TraverseMode)"/> instead, or a colonist
+        /// kept home would stop defending herself at the edge of home.</para>
         /// </summary>
         public bool Reachable(Pawn pawn, int cell) => Reachable(pawn, cell, pawn.Mode);
 
         public bool Reachable(Pawn pawn, int cell, TraverseMode mode) =>
+            CanTravel(pawn, cell, mode) && MayWork(pawn, cell);
+
+        /// <summary>Can this pawn get there at all? Physical only: no setting is asked.</summary>
+        public bool CanTravel(Pawn pawn, int cell) => CanTravel(pawn, cell, pawn.Mode);
+
+        public bool CanTravel(Pawn pawn, int cell, TraverseMode mode) =>
             (uint)cell < (uint)Size.CellCount &&
             Nav.Grid.CanEnter(cell, mode) &&
             Nav.Reachable(pawn.Cell, cell, mode);
+
+        /// <summary>
+        /// May she work in this cell (design 43 §4b)? Yes unless she is a colonist kept home,
+        /// undrafted, and the cell is outside a home that exists. <b>The only reader of
+        /// <see cref="Pawn.Area"/></b> apart from the walk home; a giver that asks the setting
+        /// itself is a second owner of the rule. One byte comparison for a colonist at the default.
+        /// </summary>
+        public bool MayWork(Pawn pawn, int cell) =>
+            pawn.Area == PawnArea.Anywhere
+            || pawn.Drafted
+            || !pawn.IsColonist
+            || Home == null
+            || Home.IsEmpty
+            || Home.Contains(cell);
     }
 }

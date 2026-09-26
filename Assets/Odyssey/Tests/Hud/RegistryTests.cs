@@ -16,6 +16,22 @@ namespace Odyssey.Tests.Hud
     /// </summary>
     public class RegistryTests
     {
+        /// <summary>
+        /// A weapon is named with how well it was made (design 47 §11), both words the registry's; a
+        /// thing with no tier is its bare name. And the pistol is "Pistol" (owner, 2026-09-25: rename
+        /// "sidearm" to "Pistol").
+        /// </summary>
+        [Test]
+        public void AWeaponIsNamedWithItsQuality()
+        {
+            Assert.That(ItemLabels.Label(ItemHandle.Pistol), Is.EqualTo("Pistol"));
+            Assert.That(ItemLabels.Label(ItemHandle.Pistol, QualityHandle.Decent),
+                Is.EqualTo("Pistol (" + Registry.Label("ui.quality.decent") + ")"));
+            Assert.That(ItemLabels.Label(ItemHandle.Machete, QualityHandle.Epic),
+                Is.EqualTo(Registry.Label("ui.item.machete") + " (" + Registry.Label("ui.quality.epic") + ")"));
+            Assert.That(ItemLabels.Label(ItemHandle.Wood, 0), Is.EqualTo(ItemLabels.Label(ItemHandle.Wood)), "no tier, no brackets");
+        }
+
         [Test]
         public void EveryJobKeyIsARegisteredName()
         {
@@ -45,6 +61,8 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void EveryDebugKeyIsARegisteredName()
         {
+            foreach (string key in WeatherLabels.IconKeys)
+                Assert.That(Registry.Label(key), Is.Not.Empty, key);
             foreach (string key in DebugDirector.IconKeys)
                 Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
         }
@@ -79,6 +97,8 @@ namespace Odyssey.Tests.Hud
             foreach (string key in ScheduleCatalogue.IconKeys)
                 Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
             foreach (string key in WorkDirector.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+            foreach (string key in AnimalsDirector.IconKeys)
                 Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
 
             // And the two lists are the ones the panel actually draws from, not copies of them:
@@ -130,6 +150,47 @@ namespace Odyssey.Tests.Hud
                 "IncidentLabels.Keys and the Defs' bulletinKeys are two spellings of one list");
         }
 
+        /// <summary>
+        /// A raid's mix is carried as an index (design 55 §8): the debug dropdown sends one and the
+        /// Events row and the alert name one. <see cref="RaidMixLabels"/> spells the keys in index
+        /// order because this assembly cannot import the Defs, so the order is read here off the
+        /// disk: <c>IncidentContent.MixOrder</c> for which mix is which index, and the mix Defs for
+        /// each one's <c>labelKey</c>. Reorder either and this fails rather than the dropdown
+        /// quietly sending the wrong band.
+        /// </summary>
+        [Test]
+        public void TheRaidMixKeysAreTheDefsInTheContentsOrder()
+        {
+            string? events = Find(Path.Combine("Assets", "Odyssey", "Defs", "Core", "Events"));
+            string? sim = Find(Path.Combine("Assets", "Odyssey", "Sim", "Events"));
+            Assert.That(events, Is.Not.Null, "the incident Defs were not found above the test assembly");
+            Assert.That(sim, Is.Not.Null, "the simulation's events folder was not found above the test assembly");
+
+            string source = File.ReadAllText(Path.Combine(sim!, "IncidentContent.cs"));
+            Match order = Regex.Match(source, @"MixOrder\s*=\s*\{([^}]*)\}");
+            Assert.That(order.Success, Is.True, "IncidentContent.MixOrder was not found");
+            var names = new List<string>();
+            foreach (Match name in Regex.Matches(order.Groups[1].Value, "\"([^\"]+)\""))
+                names.Add(name.Groups[1].Value);
+
+            string xml = File.ReadAllText(Path.Combine(events!, "RaidMixes.xml"));
+            var keyOf = new Dictionary<string, string>();
+            foreach (Match def in Regex.Matches(xml, @"<RaidMixDef>(.*?)</RaidMixDef>", RegexOptions.Singleline))
+            {
+                string defName = Regex.Match(def.Groups[1].Value, @"<defName>\s*([^<\s]+)\s*</defName>").Groups[1].Value;
+                keyOf[defName] = Regex.Match(def.Groups[1].Value, @"<labelKey>\s*([^<\s]+)\s*</labelKey>").Groups[1].Value;
+            }
+
+            Assert.That(names, Is.Not.Empty, "MixOrder names no mix");
+            var expected = new List<string>();
+            foreach (string name in names)
+            {
+                Assert.That(keyOf, Does.ContainKey(name), $"{name} is in MixOrder and not in RaidMixes.xml");
+                expected.Add(keyOf[name]);
+            }
+            Assert.That(RaidMixLabels.Keys, Is.EqualTo(expected), "RaidMixLabels.Keys is not the Defs' labelKeys in MixOrder");
+        }
+
         [Test]
         public void EverySettingsKeyIsARegisteredName()
         {
@@ -138,6 +199,10 @@ namespace Odyssey.Tests.Hud
             foreach (GraphicsOption option in SettingsDirector.All)
                 Assert.That(SettingsDirector.IconKeys, Does.Contain(SettingsDirector.KeyOf(option)),
                     "an option the panel can draw but the registry test does not cover is a label nobody checks");
+            foreach (GraphicsLadder ladder in SettingsDirector.AllLadders)
+                Assert.That(SettingsDirector.IconKeys, Does.Contain(SettingsDirector.KeyOf(ladder)),
+                    "a ladder the panel can draw but the registry test does not cover is a label nobody checks");
+            Assert.That(SettingsDirector.IconKeys, Does.Contain(SettingsDirector.QualityKey));
         }
 
         /// <summary>
@@ -319,12 +384,14 @@ namespace Odyssey.Tests.Hud
             // The words the playtest reports were about: a pile of wood is Wood and counted, a
             // rock is Rock, water is water at the speed it is crossed at.
             Assert.That(ItemLabels.Label(ItemHandle.Wood), Is.EqualTo("Wood"));
-            Assert.That(ItemLabels.Label(ItemHandle.Salvage), Is.EqualTo("Scrap"),
+            Assert.That(ItemLabels.Label(ItemHandle.Salvage), Is.EqualTo("Scrap metal"),
                 "salvage is scrap: the ledger settled the word, and the pane had hard-coded the other one");
             Assert.That(TerrainLabels.Label(TerrainHandle.Rock), Is.EqualTo("Rock"));
             Assert.That(TerrainLabels.Label(TerrainHandle.ShallowWater), Is.EqualTo("Shallow Water"));
             Assert.That(TerrainLabels.Label(TerrainHandle.IronOre), Is.EqualTo("Iron ore"));
-            Assert.That(EdificeLabels.Title(EdificeHandle.TreeConifer), Is.EqualTo("Conifer"));
+            Assert.That(EdificeLabels.Title(EdificeHandle.TreeBirch), Is.EqualTo("Birch"));
+            Assert.That(EdificeLabels.Title(EdificeHandle.TreeGiant), Is.EqualTo("Giant tree"));
+            Assert.That(EdificeLabels.Title(EdificeHandle.BerryBush), Is.EqualTo("Berry bush"));
         }
 
         [Test]
@@ -425,6 +492,44 @@ namespace Odyssey.Tests.Hud
                 "Two copies of one name drift, and the symptom is the screen and the wiki calling " +
                 "one thing two things. Call Registry.Label(key) instead:\n  " +
                 string.Join("\n  ", offences));
+        }
+
+        /// <summary>
+        /// The inspect pane names what a pawn is — colonist, hostile, animal — on the living pane
+        /// and on the corpse's, and both words come from <c>ui.pawn.*</c>. <b>Ignoring case</b>,
+        /// because the pane says them lower-cased, which is exactly how the corpse pane's three
+        /// literals got past <see cref="NoPlayerFacingNameIsWrittenInCSharp"/> (review,
+        /// 2026-09-23): renaming <c>ui.pawn.hostile</c> would have renamed the wiki and left the
+        /// pane saying "hostile". One file rather than the namespace everywhere, because "Corpse"
+        /// is also a GameObject's name and "colonist" a USS class, and neither is a word a player
+        /// reads.
+        /// </summary>
+        [Test]
+        public void TheInspectPaneWritesNoPawnKindItself()
+        {
+            var kinds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (KeyValuePair<string, string> entry in Registry.Labels)
+                if (entry.Key.StartsWith("ui.pawn.", StringComparison.Ordinal) && entry.Value.Length > 0
+                    && !kinds.ContainsKey(entry.Value))
+                    kinds[entry.Value] = entry.Key;
+            Assert.That(kinds.Count, Is.GreaterThan(5), "the registry lost the pawn kinds, so this watches nothing");
+
+            string? hud = Find("Assets/Odyssey/Hud");
+            Assert.That(hud, Is.Not.Null, "the HUD sources were not found");
+            string[] lines = File.ReadAllLines(Path.Combine(hud!, "InspectModel.cs"));
+            var literal = new Regex("\"([^\"\\\\]*)\"");
+            var offences = new List<string>();
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].TrimStart().StartsWith("//", StringComparison.Ordinal)) continue;
+                foreach (Match match in literal.Matches(lines[i]))
+                    if (kinds.TryGetValue(match.Groups[1].Value, out string? key))
+                        offences.Add($"InspectModel.cs:{i + 1} writes \"{match.Groups[1].Value}\", which is {key}");
+            }
+
+            Assert.That(offences, Is.Empty,
+                "the pane writes a pawn kind's name itself; say Registry.Label(key), lower-cased if " +
+                "the pane wants it so:\n  " + string.Join("\n  ", offences));
         }
 
         /// <summary>

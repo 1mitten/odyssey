@@ -1,7 +1,6 @@
 #nullable enable
 using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
-using Odyssey.Sim.Pathing;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -28,38 +27,6 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Before <see cref="BuildWorkGiver"/>: a site cannot be worked until it is fed.</summary>
         public override int IntraPriority => 0;
 
-        /// <summary>
-        /// <b>Building material goes wherever a colonist goes, ladders included</b> (owner,
-        /// 2026-09-21: <i>"Ladders are fine as they are - we should be able to be build a storey
-        /// as long as there is room above - this would make it much easier to stack
-        /// ladders/platforms."</i>).
-        ///
-        /// <para><b>U44 set this to <see cref="TraverseMode.Hauler"/> and it was reversed after one
-        /// playtest.</b> The reasoning was that carrying a plank is carrying something, so a
-        /// hauler's ladder exclusion should cover construction delivery too — and the consequence,
-        /// stated plainly in the design at the time, was that a ladder-only upper storey stops
-        /// being buildable. That consequence is a <b>bootstrap deadlock</b>: the stair meant to
-        /// replace the ladder is itself a building order, so it needs material delivered to a
-        /// storey that, by the new rule, nothing may deliver to. A player who has climbed up a
-        /// ladder and wants a floor has no move at all.</para>
-        ///
-        /// <para>Measured on the owner's own save (<c>ffdsf.odyssey</c>, day 2): the construction
-        /// pocket around their stair order held <b>81 walkable cells in Colonist mode and 20 in
-        /// Hauler mode</b> — the whole upper platform fell out of reach of delivery the moment the
-        /// mode changed, and the stair sat at 3 of 6 wood for the rest of the day.</para>
-        ///
-        /// <para>So delivery is a colonist's errand again, and <c>HaulWorkGiver</c> keeps the
-        /// ladder exclusion for stockpile hauling, where it means what it was written to mean: a
-        /// bulky load being tidied away is not worth a one-handed climb, while the five planks
-        /// that make the floor you are standing on are.</para>
-        ///
-        /// <para>The mode is still fixed for the whole job and the scan still tests reachability in
-        /// the same mode the job will walk in — <c>HaulWorkGiver</c>'s rule, and for its reason: a
-        /// scan that tested a laxer mode would hand out jobs that fail on their first step. Only
-        /// the mode chosen has changed.</para>
-        /// </summary>
-        const TraverseMode Mode = TraverseMode.Colonist;
-
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
             var sites = ctx.Construction;
@@ -72,8 +39,16 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < cells.Count; i++)
             {
                 int site = cells[i];
-                int outstanding = sites.Outstanding(site);
-                if (outstanding <= 0) continue;
+
+                // The material first, then the parts (design 32 §14): a site wants its thirty wood
+                // before its twenty scrap metal, and a colonist carries one of them at a time.
+                int wanted;
+                if (sites.Outstanding(site) > 0)
+                    wanted = ConstructionContent.StuffAt(sites.StuffAt(site)).item;
+                else if (sites.OutstandingParts(site) > 0)
+                    wanted = ConstructionContent.BuildingAt(sites.At(site)).partItem;
+                else
+                    continue;
 
                 // One deliverer per site. Without it two colonists each fetch a full stack for a
                 // wall that wants five, and the second one walks the length of the map to put
@@ -85,14 +60,13 @@ namespace Odyssey.Sim.Pawns
                 int distance = ctx.Distance(pawn.Cell, site);
                 if (distance >= bestDistance) continue;
 
-                int wanted = ConstructionContent.StuffAt(sites.StuffAt(site)).item;
                 if (wanted < 0) continue;
 
-                ColonyItem? load = NearestLoad(pawn, ctx, wanted, Mode);
+                ColonyItem? load = NearestLoad(pawn, ctx, wanted);
                 if (load == null) continue;
 
                 int stand = BuildWorkGiver.StandToBuild(
-                    ctx, pawn, site, ConstructionContent.BuildingAt(sites.At(site)).slab, Mode);
+                    ctx, pawn, site, ConstructionContent.BuildingAt(sites.At(site)).slab);
                 if (stand < 0) continue;
 
                 bestDistance = distance;
@@ -104,10 +78,10 @@ namespace Odyssey.Sim.Pawns
             if (bestSite < 0 || bestLoad == null) return false;
 
             job.Reset(JobIndex.Deliver);
-            // After Reset, which puts it back to Colonist.
-            job.Mode = Mode;
             job.TargetItem = bestLoad.Id;
-            job.TargetCell = bestLoad.Cell;
+            // Where the load is, which is the store's cell when it is on a shelf rather than on
+            // the floor. Both ends of a delivery are named by a cell, as both ends of a haul are.
+            job.TargetCell = ctx.WhereIs(bestLoad);
             job.DestCell = bestSite;
             // Where to stand to put it down. The site itself is walkable right up until the moment
             // the wall goes up in it, so standing in it would work for a delivery and be exactly
@@ -123,7 +97,7 @@ namespace Odyssey.Sim.Pawns
         /// refusing to take wood out of one would mean a colony that can only build from wood it
         /// has not tidied away yet.</para>
         /// </summary>
-        static ColonyItem? NearestLoad(Pawn pawn, PawnContext ctx, int defIndex, TraverseMode mode)
+        internal static ColonyItem? NearestLoad(Pawn pawn, PawnContext ctx, int defIndex)
         {
             ColonyItem? best = null;
             int bestDistance = int.MaxValue;
@@ -135,19 +109,26 @@ namespace Odyssey.Sim.Pawns
                 if (item.Despawned || item.Forbidden) continue;
                 if (item.DefIndex != defIndex) continue;
 
-                // On the floor, which is Cell >= 0 and nothing else. NOT CarriedBy: that field
-                // defaults to 0 and 0 is a plausible pawn id, so "CarriedBy >= 0" reads as "in
-                // somebody's arms" for every stack in the game and this giver silently found
-                // nothing at all. Being carried is expressed by having no cell, which is the test
-                // HaulWorkGiver has always used.
-                if (item.Cell < 0) continue;
+                // Somewhere a colonist can go and get it: its own cell, or the cell of the store
+                // holding it.
+                //
+                // NOT CarriedBy: that field defaults to 0 and 0 is a plausible pawn id, so
+                // "CarriedBy >= 0" reads as "in somebody's arms" for every stack in the game and
+                // this giver silently found nothing at all.
+                //
+                // And no longer `Cell < 0` either, which is the half of that sentence shelves
+                // invalidated: being carried is no longer the only way to have no cell, and wood
+                // on a shelf that construction cannot reach is a trap — the colony tidies its
+                // timber away and then cannot build with it.
+                int at = ctx.WhereIs(item);
+                if (at < 0) continue;
 
                 long key = ReservationManager.Key(ReservationTargetKind.Item, item.Id.Value);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
 
-                int distance = ctx.Distance(pawn.Cell, item.Cell);
+                int distance = ctx.Distance(pawn.Cell, at);
                 if (distance >= bestDistance) continue;
-                if (!ctx.Reachable(pawn, item.Cell, mode)) continue;
+                if (!ctx.Reachable(pawn, at)) continue;
 
                 bestDistance = distance;
                 best = item;
@@ -286,24 +267,24 @@ namespace Odyssey.Sim.Pawns
         /// existing floor still prefers the stance on that floor, because <c>StandBeside</c> is
         /// asked first and answers whenever there is anything up there to stand on.</para>
         /// </summary>
-        public static int StandToBuild(PawnContext ctx, Pawn pawn, int site, bool slab,
-            TraverseMode? mode = null)
+        public static int StandToBuild(PawnContext ctx, Pawn pawn, int site, bool slab)
         {
-            int beside = FellJobDriver.StandBeside(ctx, pawn, site, mode);
+            // The site itself first (design 43 §4c): the stances below and beneath it may be home
+            // through the vertical margin when the site is not.
+            if (!ctx.MayWork(pawn, site)) return -1;
+            int beside = FellJobDriver.StandBeside(ctx, pawn, site);
             if (beside >= 0 || !slab) return beside;
 
             int below = site - ctx.Size.LayerStride;
             if (below < 0) return -1;
 
-            int besideBelow = FellJobDriver.StandBeside(ctx, pawn, below, mode);
+            int besideBelow = FellJobDriver.StandBeside(ctx, pawn, below);
             if (besideBelow >= 0) return besideBelow;
 
             // Directly under it, last: a colonist that floors over its own head is walled in only
             // if it has also walled itself in, and refusing the stance would refuse the first
             // ceiling of every room built from the inside.
-            return ctx.Cells.IsWalkable(below)
-                && (mode is TraverseMode m ? ctx.Reachable(pawn, below, m) : ctx.Reachable(pawn, below))
-                ? below : -1;
+            return ctx.Cells.IsWalkable(below) && ctx.Reachable(pawn, below) ? below : -1;
         }
 
         /// <summary>
@@ -335,8 +316,9 @@ namespace Odyssey.Sim.Pawns
             if (sites == null) return false;
 
             var item = ctx.Items.Get(Job.TargetItem);
-            if (item == null || item.Cell < 0) return false;
-            if (Job.DestCell < 0 || sites.Outstanding(Job.DestCell) <= 0) return false;
+            if (item == null || ctx.WhereIs(item) < 0) return false;
+            if (Job.DestCell < 0) return false;
+            if (sites.Outstanding(Job.DestCell) <= 0 && sites.OutstandingParts(Job.DestCell) <= 0) return false;
 
             long itemKey = ReservationManager.Key(ReservationTargetKind.Item, Job.TargetItem.Value);
             long siteKey = ReservationManager.Key(ReservationTargetKind.Cell, Job.DestCell);
@@ -361,14 +343,15 @@ namespace Odyssey.Sim.Pawns
             // somebody else while this colonist walked. Checked every tick rather than on arrival,
             // so a cancelled order stops a colonist crossing the map for it.
             if (sites.At(Job.DestCell) == BuildingHandle.None) return JobStatus.Failed;
-            if (ConstructionContent.StuffAt(sites.StuffAt(Job.DestCell)).item != item.DefIndex)
-                return JobStatus.Failed;
+            bool material = ConstructionContent.StuffAt(sites.StuffAt(Job.DestCell)).item == item.DefIndex;
+            bool part = ConstructionContent.BuildingAt(sites.At(Job.DestCell)).partItem == item.DefIndex;
+            if (!material && !part) return JobStatus.Failed;
 
             switch (ToilIndex)
             {
                 case 0:
                 {
-                    if (item.Cell != Job.TargetCell) return JobStatus.Failed;
+                    if (!StillAt(ctx, item, Job.TargetCell)) return JobStatus.Failed;
                     JobStatus walk = GotoCell(ctx, Job.TargetCell);
                     if (walk == JobStatus.Succeeded) NextToil();
                     return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
@@ -389,11 +372,13 @@ namespace Odyssey.Sim.Pawns
 
                 default:
                 {
-                    int wanted = sites.Outstanding(Job.DestCell);
+                    // Into whichever payment this load is: the material, or the parts.
+                    int wanted = material ? sites.Outstanding(Job.DestCell) : sites.OutstandingParts(Job.DestCell);
                     if (wanted <= 0) return JobStatus.Failed;
 
                     int given = item.Stack < wanted ? item.Stack : wanted;
-                    sites.Deliver(Job.DestCell, given);
+                    if (material) sites.Deliver(Job.DestCell, given);
+                    else sites.DeliverParts(Job.DestCell, given);
                     item.Stack -= given;
 
                     // The stoop is the same motion whether the load goes on the floor or into a
@@ -486,6 +471,19 @@ namespace Odyssey.Sim.Pawns
             }
 
             int rate = Pawn.WorkRatePerMille(WorkTypeIndex.Construction);
+
+            // **The hammer is held while somebody is crossing the cell.** A wall raised on a
+            // colonist's head sealed them in (owner, 2026-09-21); `ConstructionGrid.Raise` is
+            // what guarantees it cannot, and this is what makes the guarantee cost nothing. The
+            // check is here — before the work lands and before the success roll — because a
+            // raise refused *after* the roll would mean rolling for the same wall twice, and a
+            // colony that waits a second for a passer-by should not be paying for the privilege
+            // in botched walls. A colonist merely standing in the cell is not waited for: they
+            // are moved aside when the wall goes up, which is `MakeRoom`'s other half.
+            if (sites.WorkDone(cell) + rate >= sites.WorkFor(cell) * Rates.Scale
+                && !sites.CanRaiseNow(ctx, cell))
+                return JobStatus.Ongoing;
+
             ToilProgress += rate;
             Work(ctx);
             if (sites.AddWork(cell, rate) < sites.WorkFor(cell) * Rates.Scale) return JobStatus.Ongoing;
@@ -519,7 +517,12 @@ namespace Odyssey.Sim.Pawns
                     quality = QualityContent.Roll(Pawn.SkillLevel(SkillIndex.Construction), rng);
                 }
 
-                ctx.Defer(_ => grid.Raise(ctx, cell, quality));
+                // RaiseWhenClear rather than Raise: the check above is made in the pawn phase
+                // and this runs at the end of the tick, so somebody can step into the cell in
+                // between. It keeps asking rather than letting the site sit finished and
+                // unraised, which would cost a second success roll on work already done.
+                int ordered = sites.At(cell);
+                ctx.Defer(_ => grid.RaiseWhenClear(ctx, cell, ordered, quality));
 
                 // The wall goes up now; the builder straightens up before walking off.
                 NextToil();

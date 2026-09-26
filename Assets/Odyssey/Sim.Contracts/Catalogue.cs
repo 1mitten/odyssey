@@ -34,7 +34,84 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Cut a ripe crop and gather what it yields.</summary>
         public const int Harvest = 11;
 
-        public const int Count = 12;
+        /// <summary>A drafted colonist standing where it was put (design 33 §2c).</summary>
+        public const int DraftHold = 12;
+
+        /// <summary>A drafted colonist walking to the cell the player named (design 33 §2c).</summary>
+        public const int Goto = 13;
+
+        /// <summary>Fetch one wood and lay an ordered power line with it (design 32 §3).</summary>
+        public const int LayConduit = 14;
+
+        /// <summary>Take up a power line marked for removal.</summary>
+        public const int RemoveConduit = 15;
+
+        /// <summary>Carry fuel to a generator below half and fill it (design 32 §6).</summary>
+        public const int Refuel = 16;
+
+        // The combat line's five (design 33 §5), claimed together by the contracts step so that
+        // no two lanes could each append a job and both call it 14. **Renumbered 14-18 -> 17-21 at
+        // the merge with main (2026-09-24)**: power's three shipped first and a shipped handle is a
+        // save contract, so the unshipped ones moved. Saves taken on the combat branches before this
+        // merge do not load; no save from main is affected.
+
+        /// <summary>Close on a target and swing at it until one of the two goes down (C2).</summary>
+        public const int AttackMelee = 17;
+
+        /// <summary>Run from whatever hurt it (C2): an animal that did not turn on its attacker.</summary>
+        public const int Flee = 18;
+
+        /// <summary>Lying where it fell, at nought hit points or less, until healed, rescued or dead (C2).</summary>
+        public const int Downed = 19;
+
+        /// <summary>Walk to a weapon and take it into the hand (C3).</summary>
+        public const int Equip = 20;
+
+        /// <summary>Carry a downed colonist to a bed (C4).</summary>
+        public const int Rescue = 21;
+
+        /// <summary>
+        /// A bandit with nobody to fight and nothing to break lifts the nearest stack and walks
+        /// off the board with it (design 33 §17). Appended after the combat line's five; the job
+        /// system hashes its counters only once one has run, so no golden moved for it.
+        /// </summary>
+        public const int Steal = 22;
+
+        // Medical (design 37), claimed after Steal at the merge with main (2026-09-25): bandits
+        // shipped first and a shipped handle is a save contract, so the unshipped pair moved from
+        // 22-23 to 23-24. No save with a Treat or Patient job in it has left this branch.
+
+        /// <summary>Treat a patient, with medical supplies or without, or treat yourself (design 37).</summary>
+        public const int Treat = 23;
+
+        /// <summary>A hurt colonist lying in a bed until she is well enough to get up (design 37).</summary>
+        public const int Patient = 24;
+
+
+        /// <summary>Pick a ripe berry bush (design 45 §6): the Harvest order, worked as growing.
+        /// 25, after medical supplies' Treat and Patient: they reached main first, and a shipped
+        /// handle is a save contract. It was 23 on its branch; no save with it had left.</summary>
+        public const int Forage = 25;
+
+        /// <summary>
+        /// Work at an electric cooker or a campfire (design 48 §5). 26, after the forager's 25:
+        /// nature reached main first, and a shipped handle is a save contract.
+        /// Formerly: work at a galley or a campfire: either fetch one load of raw food into
+        /// the station's pan, or cook what the pan holds into a meal. One job and one driver for
+        /// both, because they are one bill being worked.
+        /// </summary>
+        public const int Cook = 26;
+
+
+        /// <summary>
+        /// Stand where the line to a target is open and shoot at it (design 47 §2d): the ranged
+        /// attack, claimed by the ranged line's contracts step (R0); 27, after medical supplies' Treat and Patient, the forager's Forage and the kitchen's Cook, which reached main first. Above
+        /// <c>JobSystem.HashedAlways</c>, so its counters reach the hash only once one has run and
+        /// its registration moved no golden.
+        /// </summary>
+        public const int AttackRanged = 27;
+
+        public const int Count = 28;
     }
 
     /// <summary>
@@ -80,7 +157,20 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Growing = 4;
 
-        public const int Count = 5;
+        /// <summary>
+        /// Carrying a downed colonist to a bed (design 33 §4, C4). Claimed by the combat
+        /// contracts step with the rest of the line's handles; its giver is an emergency one and
+        /// answers no until C4 fills it.
+        /// </summary>
+        public const int Rescue = 5;
+
+        /// <summary>Treating the hurt (design 37): the ui.work.doctor column. An emergency giver.</summary>
+        public const int Doctor = 6;
+
+        /// <summary>Working the bills at a galley or a campfire (design 48 §5): the ui.work.cooking column.</summary>
+        public const int Cooking = 7;
+
+        public const int Count = 8;
 
         /// <summary>What a work type the simulation does not run answers to. Never sent.</summary>
         public const int None = -1;
@@ -139,7 +229,84 @@ namespace Odyssey.Sim.Contracts
         /// handle order is the save contract.
         /// </summary>
         public const int Carrots = 6;
-        public const int Count = 7;
+
+        // The four melee weapons (design 33 §1, C3), appended together by the combat contracts
+        // step. Real items: one to a stack, category Weapons, each with a weapon block in its Def.
+
+        /// <summary>Blunt, and a chance to stun.</summary>
+        public const int Bat = 7;
+
+        /// <summary>Blunt, heavier, and a better chance to stun.</summary>
+        public const int Crowbar = 8;
+
+        /// <summary>Sharp and quick.</summary>
+        public const int Machete = 9;
+
+        /// <summary>Sharp, and the best thing a colonist can hold.</summary>
+        public const int ArcBlade = 10;
+
+        /// <summary>
+        /// A box of dressings and drugs: what a doctor treats with (design 37). Category
+        /// Medicine, ten to a stack, so a stack is one shelf bay.
+        /// </summary>
+        public const int MedicalSupplies = 11;
+
+
+        /// <summary>Wild berries, picked from a berry bush (design 45 §6). Raw food. 12, after
+        /// medical supplies at the merge with main (it was 11 on its branch).</summary>
+        public const int Berries = 12;
+
+        /// <summary>Mushrooms, found under trees (design 45 §6). Raw food.</summary>
+        public const int Mushrooms = 13;
+
+
+        // The kitchen (design 48 §4), 14 to 16 after the wild foods, which reached main
+        // first. Handle 0 stays the ration pack it always was; the cooked
+        // meal is new, and takes back the ui.res.meal name the ration pack had borrowed.
+
+        /// <summary>A cooked meal with meat in it. The best food there is.</summary>
+        public const int CookedMeal = 14;
+
+        /// <summary>A cooked meal with no meat in it: carrots and whatever else grows. As good.</summary>
+        public const int VegetableMeal = 15;
+
+        /// <summary>A meal the cook let catch: edible, less filling, and nobody enjoys it.</summary>
+        public const int BurntMeal = 16;
+
+
+        /// The pistol (design 47): the first ranged weapon, appended by the ranged line's contracts
+        /// step; 17, after medical supplies, the wild foods and the kitchen's meals, which reached main first. Code says <c>Pistol</c>; every screen says what <c>ui.item.pistol</c> says.
+        /// </summary>
+        public const int Pistol = 17;
+
+        public const int Count = 18;
+    }
+
+    /// <summary>
+    /// See <see cref="JobHandle"/>: recipes, as a bill carries one and the bill intent names one
+    /// (design 48 §5). The order is <c>PawnContent.Recipes</c>'s.
+    /// </summary>
+    public static class RecipeHandle
+    {
+        /// <summary>Any raw food, 500 of it by nutrition, into one meal.</summary>
+        public const int Meal = 0;
+
+        public const int Count = 1;
+    }
+
+    /// <summary>How a bill decides it is finished (design 48 §5, a-14's three modes).</summary>
+    public static class BillModeHandle
+    {
+        /// <summary>Stop while the colony holds the target number of meals; start again below it. The default.</summary>
+        public const int UntilYouHave = 0;
+
+        /// <summary>Make the target number, then stop.</summary>
+        public const int Times = 1;
+
+        /// <summary>Never stop.</summary>
+        public const int Forever = 2;
+
+        public const int Count = 3;
     }
 
     /// <summary>
@@ -201,7 +368,26 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A stack of meals falling out of the sky on to whatever is under it.</summary>
         public const int SupplyDrop = 0;
 
-        public const int Count = 1;
+        /// <summary>A stack of scrap metal falling out of the sky (design 32 §14): the supply drop's worker, another cargo.</summary>
+        public const int ScrapDrop = 1;
+
+        /// <summary>
+        /// A bandit carried a stack off the board (design 33 §17). Written down by the world when
+        /// it happens and never fired: the bulletin carries the item and the amount.
+        /// </summary>
+        public const int Theft = 2;
+
+        /// <summary>A bandit with nothing to fight, break or take walked off the board empty-handed (design 33 §17).</summary>
+        public const int BanditLeft = 3;
+
+        /// <summary>Medical supplies from the sky (design 37 §5): the supply drop's worker, another cargo.
+        /// After <see cref="BanditLeft"/> at the merge with main (2026-09-25); bandits shipped first.</summary>
+        public const int MedicalDrop = 4;
+
+        /// <summary>A band of hostiles walks in from one edge, gathers, probes, and assaults (design 55).</summary>
+        public const int Raid = 5;
+
+        public const int Count = 6;
     }
 
     /// <summary>
@@ -260,8 +446,13 @@ namespace Odyssey.Sim.Contracts
         public const int VaultWall = 8;
         public const int UtilityTap = 9;
 
-        public const int TreeConifer = 10;
-        public const int TreeBroadleaf = 11;
+        /// <summary>The birch: small, quick to fell, little wood (design 45 §2). It was the
+        /// conifer until the species became the simulation's; an old save's conifers load as
+        /// birches, which is what the art had drawn them as since the Meadow look pass.</summary>
+        public const int TreeBirch = 10;
+
+        /// <summary>The meadow tree, the medium broadleaf. Was the broadleaf (design 45 §2).</summary>
+        public const int TreeMeadow = 11;
 
         /// <summary>
         /// The bed, and the first edifice id the interface names that no generator stamps: 12,
@@ -271,13 +462,60 @@ namespace Odyssey.Sim.Contracts
         public const int Bed = 12;
 
         /// <summary>
+        /// The shelf: the second edifice the interface names that no generator stamps, and the
+        /// colony's first buildable store. See <c>CoreContent.EdificeShelf</c>.
+        /// </summary>
+        public const int Shelf = 13;
+
+        /// <summary>The campfire, the third id the interface names that no generator stamps:
+        /// 14, after the shelf, and like it the reason <c>CoreContent.EdificeCampfire</c> spells
+        /// the literal beside the ones it must not collide with (design 28 §7).</summary>
+        public const int Campfire = 14;
+
+        /// <summary>The wood-fired generator (design 32 §6): two cells, the first thing that makes
+        /// power. 15, after the campfire; see <c>CoreContent.EdificeGenerator</c>.</summary>
+        public const int Generator = 15;
+
+        /// <summary>The electric heater (design 32 §7): one cell, the first thing that spends
+        /// power. See <c>CoreContent.EdificeHeater</c>.</summary>
+        public const int Heater = 16;
+
+        // The wild things (design 45 §2), after the heater because edifice ids are one space
+        // shared with the buildings: the trees' ten and eleven were never a range to extend.
+
+        /// <summary>A fruit tree: medium, its fruit deferred.</summary>
+        public const int TreeFruit = 17;
+
+        /// <summary>The giant meadow tree: rare, slow to fell, a great deal of wood.</summary>
+        public const int TreeGiant = 18;
+
+        /// <summary>A bush: walked through slowly, cleared before anything is built on it.</summary>
+        public const int Bush = 19;
+
+        /// <summary>A berry bush with its berries on.</summary>
+        public const int BerryBush = 20;
+
+        /// <summary>A berry bush that has been picked and is growing its berries back.</summary>
+        public const int BerryBushPicked = 21;
+
+
+        /// <summary>The galley (design 48 §5), the Electric Cooker: 22, after the wild things of
+        /// design 45, which reached main first. See <c>CoreContent.EdificeGalley</c>.</summary>
+        public const int Galley = 22;
+
+        /// <summary>Sandbags (design 53 §4): low cover, crossed but never stood on. See <c>CoreContent.EdificeSandbags</c>.</summary>
+        public const int Sandbags = 23;
+
+        /// <summary>
         /// The colony-built stair: one cell, one full layer (2026-09-21). Worldgen's stamped
         /// stairwells keep <see cref="StairLower"/> and <see cref="StairUpper"/> and are a
         /// different thing; see <c>CoreContent.EdificeStairFull</c> for why they are not unified.
+        /// 24, not 13: it was written as 13 and the shelf, the campfire, power, the wild things,
+        /// the galley and sandbags all reached main first.
         /// </summary>
-        public const int StairFull = 13;
+        public const int StairFull = 24;
 
-        public const int Count = 14;
+        public const int Count = 25;
     }
 
     /// <summary>
@@ -326,8 +564,53 @@ namespace Odyssey.Sim.Contracts
         public const int Door = 6;
 
         /// <summary>
+        /// A shelf: one cell of furniture that holds an inventory rather than standing in the way
+        /// of one (docs/design/26-storage.md, the S2 branch of the storage line).
+        ///
+        /// <para><b>The colony's first buildable store.</b> A stockpile is painted and a shelf is
+        /// raised, and the difference underneath is where the things go: a zone leaves them on the
+        /// floor one stack to a cell, while a shelf holds eight stacks in an inventory of its own.
+        /// The ground's one-stack-per-cell rule is therefore never touched — six write paths throw
+        /// on a second stack and all six are left alone.</para>
+        ///
+        /// <para>Seven because the door reached main first and took six. Handle order is the save
+        /// contract and positions are append-only.</para>
+        /// </summary>
+        public const int Shelf = 7;
+
+        /// <summary>The first heat source (design 28 §7): one cell, blocking, and the one
+        /// building whose <c>heatPerPass</c> is not zero.
+        ///
+        /// <para>Eight because the shelf reached main first and took seven, the same
+        /// rule the shelf's own note records against the door. Handle order is the save
+        /// contract and positions are append-only.</para>
+        /// </summary>
+        public const int Campfire = 8;
+
+        /// <summary>
+        /// A power line (design 32 §3). <b>Not an edifice</b>: a line lives in its own per-cell
+        /// layer, so it can run through a wall or under a floor, and the order for one is handed
+        /// to the power grid rather than taking a construction site of its own. It is a building
+        /// handle all the same because it is armed, ghosted, dragged and ordered exactly as a wall
+        /// is — one intent, one cursor, one palette row.
+        /// </summary>
+        public const int Conduit = 9;
+
+        /// <summary>The wood-fired generator (design 32 §6).</summary>
+        public const int Generator = 10;
+
+        /// <summary>The electric heater (design 32 §7).</summary>
+        public const int Heater = 11;
+
+        /// <summary>The galley (design 48 §5): one cell, powered, where meals are cooked from bills.</summary>
+        public const int Galley = 12;
+
+        /// <summary>Sandbags (design 53 §4): cheap low cover, always stone, dragged as a line.</summary>
+        public const int Sandbags = 13;
+
+        /// <summary>
         /// A support pillar: a column in one cell whose only job is to hold up the slab above it
-        /// (docs/design/27-roofs.md §5).
+        /// (docs/design/59-roofs.md §5).
         ///
         /// <para><b>The solver has trusted one since M1 and nothing could build it.</b>
         /// <c>SupportSolver.IsGrounded</c> ends at <c>Edifice[below] >= 0</c>, so any edifice
@@ -336,15 +619,16 @@ namespace Odyssey.Sim.Contracts
         ///
         /// <para>Appended, as every handle before it was. Handle order is the save contract and a
         /// value inserted in the middle would compile silently and mean something else in every
-        /// save already written. <b>Seven, not six:</b> the door reached main first and took 6,
-        /// so this branch moved down by one, exactly as the bed did before it. Safe only because
-        /// no save with a pillar or a stair in it has ever left this branch.</para>
+        /// save already written. <b>Fourteen, not seven:</b> it was written as 7 and moved twice
+        /// as the door, then the shelf, the campfire, power, the galley and sandbags reached main
+        /// first. Safe only because no save with a pillar or a stair in it has ever left this
+        /// branch.</para>
         /// </summary>
-        public const int Pillar = 7;
+        public const int Pillar = 14;
 
         /// <summary>
         /// A stair: <b>one</b> cell, climbing one full layer to the floor above
-        /// (docs/design/28-stairs.md §10).
+        /// (docs/design/60-stairs.md §10).
         ///
         /// <para><b>It was two cells for one day.</b> U44 built it as the bed's footprint — two
         /// adjacent cells on one layer rising 1.5 m each — because the half-flight was the art the
@@ -355,12 +639,11 @@ namespace Odyssey.Sim.Contracts
         /// and never taken.</para>
         ///
         /// <para>So one cell, one record, one edifice value — <c>CoreContent.EdificeStairFull</c>.
-        /// Worldgen's stamped two-cell stairwells are untouched and stay a different thing; the
-        /// handle keeps its number because handle order is the save contract.</para>
+        /// Worldgen's stamped two-cell stairwells are untouched and stay a different thing.</para>
         /// </summary>
-        public const int Stair = 8;
+        public const int Stair = 15;
 
-        public const int Count = 9;
+        public const int Count = 16;
     }
 
     /// <summary>

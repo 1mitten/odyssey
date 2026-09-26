@@ -63,6 +63,8 @@ namespace Odyssey.Tests.Sim
             int tree = NearestTree(colony);
             Assume.That(tree, Is.GreaterThanOrEqualTo(0), "the wooded board has a tree to fell");
             CellRef cell = Size.FromIndex(tree);
+            // What the tree yields is its species' (design 45 §2), read before it comes down.
+            WildPlantDef species = colony.Designations.WildPlantAt(tree)!;
 
             colony.World.Intents.Submit(new Intent(IntentKind.Designate, cell, (int)DesignationKind.Fell));
             colony.World.Tick();
@@ -78,7 +80,7 @@ namespace Odyssey.Tests.Sim
 
             Assert.That(felledAt, Is.GreaterThan(0), "the tree was never felled");
             Assert.That(colony.Designations.At(tree), Is.EqualTo(DesignationKind.None), "the order is cleared once carried out");
-            Assert.That(WoodOnTheGround(colony), Is.EqualTo(colony.Pawns.Pawns.All[0].Content.WoodPerTree), "one tree, one stack of wood");
+            Assert.That(WoodOnTheGround(colony), Is.EqualTo(species.clearYieldCount), "one tree, one stack of its own wood");
             Assert.That(colony.Grid.IsWalkable(tree), Is.True, "the cell is open ground afterwards");
         }
 

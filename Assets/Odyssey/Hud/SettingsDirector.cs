@@ -5,6 +5,20 @@ using System.Collections.Generic;
 namespace Odyssey.Hud
 {
     /// <summary>
+    /// How the selected thing is marked in the world (<c>docs/design/44-selection-highlight.md</c>):
+    /// lit at its own edges, or the corner brackets it had before. Stored as its number, so the
+    /// order is the storage format — add at the end.
+    /// </summary>
+    public enum SelectionStyle
+    {
+        /// <summary>A line round the thing's own silhouette, a lift over it, a wash over a tile.</summary>
+        Highlight = 0,
+
+        /// <summary>The corner-bracket cursor, as it was before 2026-09-25.</summary>
+        Brackets = 1,
+    }
+
+    /// <summary>
     /// The graphics levers the panel can throw. The order is the order they are drawn in.
     ///
     /// <para>Every one of these is <b>decoration</b>: none is a cell, none is in the save and none
@@ -16,7 +30,6 @@ namespace Odyssey.Hud
     {
         Shadows,
         Surround,
-        GrassTufts,
         GroundRelief,
         SeeThrough,
 
@@ -31,6 +44,38 @@ namespace Odyssey.Hud
         /// changing depth is the specialist one, so it is the specialist that asks.</para>
         /// </summary>
         CutAwayCeiling,
+
+        /// <summary>
+        /// Whether grass casts shadows. **Off by default, and off is how it has always shipped**
+        /// (<c>ChunkRenderer.FoliageCastsShadows</c>): a meadow is tens of thousands of clumps,
+        /// each drawn again into every shadow cascade to cast a shadow centimetres long onto grass
+        /// of the same colour (design 38 §2, §13). A lever for a machine with room to spare.
+        ///
+        /// <para>Replaced the grass-tufts toggle in the enum on 2026-09-24 (M6): whether grass is
+        /// drawn at all is now the <see cref="GraphicsLadder.VegetationDensity"/> ladder's Off rung,
+        /// so there is one control for how grassy the board is rather than two that could
+        /// disagree.</para>
+        /// </summary>
+        FoliageShadows,
+
+        /// <summary>
+        /// Lower the walls to a stump and hide the upper storeys above the slice, so a player can
+        /// see who is inside a building and what they are doing (design 42).
+        ///
+        /// <para><b>On by default</b> (owner, 2026-09-24), and overruled while the player is
+        /// building: <see cref="WallsView.Lowered"/> is the whole rule. Drawn, never simulated,
+        /// like everything else here.</para>
+        /// </summary>
+        WallsDown,
+
+        /// <summary>
+        /// Trees fade for every colonist on screen, not only the selected ones (design 38 §19,
+        /// §27). <b>Off by default</b> (owner, 2026-09-25): on, the trees cleared round the colony
+        /// with nothing selected at all, which read as the woods thinning rather than as the
+        /// camera helping. Off, only a selected colonist's line fades anything. Subordinate to
+        /// <see cref="SeeThrough"/>: with that off, nothing fades for anyone.
+        /// </summary>
+        FadeForEveryColonist,
     }
 
     /// <summary>
@@ -76,6 +121,48 @@ namespace Odyssey.Hud
 
         /// <summary>Fullscreen, borderless or a window. <c>UnityEngine.FullScreenMode</c>.</summary>
         DisplayMode,
+
+        /// <summary>
+        /// How thick the grass is strewn, in tufts per hundred grass cells —
+        /// <c>ChunkRenderer.ScatterDensity</c>'s own number, so the presenter hands it over
+        /// unchanged. Zero is bare ground and is what the grass-tufts toggle's Off used to mean;
+        /// the top rung is <c>GroundScatter.MaxPerCell</c> on every cell, full cover (design 38
+        /// §13: about a millisecond of GPU at 4K on the owner's machine, shipped or full).
+        /// Baked into the chunks, so moving it re-meshes the board under the meshing budget.
+        /// </summary>
+        VegetationDensity,
+
+        /// <summary>
+        /// How far from the camera grass is still drawn, in metres, with <see cref="Unlimited"/>
+        /// for everywhere. <c>ChunkRenderer.FoliageDrawDistance</c>; read as the frame is
+        /// submitted, so it costs nothing to move. Past it the ground texture carries the field.
+        /// </summary>
+        GrassDistance,
+
+        /// <summary>
+        /// How many butterflies the meadow near the camera may hold (design 52 §8) — the
+        /// <c>ButterflyMeadow</c>'s capacity, handed over unchanged. Off draws and steps nothing.
+        /// Appended last so no stored rung moves. Read as the frame is drawn, so it costs no
+        /// re-mesh: a press resizes a few arrays, once.
+        /// </summary>
+        Butterflies,
+    }
+
+    /// <summary>
+    /// A whole-page setting of the graphics levers, Low to Ultra, or <see cref="Custom"/> once any
+    /// lever a preset owns has been moved on its own (design 38 §9, M6).
+    ///
+    /// <para><b>Not stored.</b> The preset is read off the levers every time it is asked for, so it
+    /// can never disagree with them: a player who picks High and then turns the shadows off is on
+    /// Custom because that is what the levers say, not because a flag was remembered.</para>
+    /// </summary>
+    public enum QualityPreset
+    {
+        Low,
+        Medium,
+        High,
+        Ultra,
+        Custom,
     }
 
     /// <summary>
@@ -99,10 +186,22 @@ namespace Odyssey.Hud
         /// </summary>
         CloseWork,
 
+        /// <summary>Close the Animals tab, which docks where the Work tab docks and unwinds at its rung.</summary>
+        CloseAnimals,
+
         /// <summary>
         /// Close the Almanac reference browser (F9), which fills the screen above the bar.
         /// </summary>
         CloseAlmanac,
+
+        /// <summary>Close the Inventory tab, which docks where the Work tab docks and unwinds at its rung.</summary>
+        CloseInventory,
+
+        /// <summary>Close the Research tab, likewise.</summary>
+        CloseResearch,
+
+        /// <summary>Close the Assign tab (design 43 §6), likewise.</summary>
+        CloseAssign,
 
         /// <summary>Close the Menu popover.</summary>
         CloseMenu,
@@ -110,8 +209,38 @@ namespace Odyssey.Hud
         /// <summary>Close the settings panel.</summary>
         ClosePanel,
 
+        /// <summary>
+        /// Back out of the main screen's Load or New game screen to its root column.
+        ///
+        /// <para>Added 2026-09-21 on the owner's report: *"On the main menu when I go to load game
+        /// or character screen and push escape — it doesn't close down menus and it gets
+        /// confused."* The start screen's own screens had no rung here at all, so Escape fell
+        /// through to <see cref="OpenPanel"/> and dropped the settings window on top of the load
+        /// list — two screens at once, which is the exact stack `17-start-flow.md` §4 exists to
+        /// avoid.</para>
+        /// </summary>
+        MenuBack,
+
         /// <summary>Nothing is open and nothing is held, so Escape is the way into the menu.</summary>
         OpenPanel,
+
+        /// <summary>
+        /// Escape means nothing here, and doing nothing is the answer.
+        ///
+        /// <para>The main screen's root column is the one place in the game with no "behind" to go
+        /// to. Opening the settings panel over it would be wrong — Options is a row on that column
+        /// already — and closing it is not possible, so the honest answer is a rung that says so
+        /// rather than a fall-through somebody has to read the order to predict.</para>
+        /// </summary>
+        Nothing,
+
+        /// <summary>
+        /// Close the context menu a right-click opened (design 33 §7a). The top rung: it is the
+        /// last thing the player raised, it stands over everything else at the pointer, and it
+        /// cannot be open while a tool is held, because a right-click with a tool armed puts the
+        /// tool down instead. Appended rather than placed by rung so no value moves.
+        /// </summary>
+        CloseContextMenu,
     }
 
     /// <summary>
@@ -163,6 +292,17 @@ namespace Odyssey.Hud
         Graphics,
         Audio,
         Keys,
+
+        /// <summary>
+        /// What the <em>game</em> does rather than what the machine does: at the moment, the
+        /// autosave and nothing else (2026-09-21).
+        ///
+        /// <para><b>Last in the enum, and that is deliberate.</b> The order here is the order of
+        /// the tab strip and the first member is what the panel opens on, so a new tab at the
+        /// front would quietly move the page every player already knows. It joins the end until
+        /// there is a reason to rank it.</para>
+        /// </summary>
+        Gameplay,
     }
 
     /// <summary>
@@ -229,6 +369,9 @@ namespace Odyssey.Hud
         /// <summary>The registry key naming the Build-palette layout row.</summary>
         public const string BuildLayoutKey = "ui.settings.buildlayout";
 
+        /// <summary>The registry key naming the selection-style row, and the key it is stored under.</summary>
+        public const string SelectionStyleKey = "ui.settings.selectionstyle";
+
         /// <summary>The registry key naming the exit row.</summary>
         /// <summary>The heading over the levers that decide how the frame is paced and drawn.</summary>
         public const string DisplayGroupKey = "ui.settings.display";
@@ -242,14 +385,49 @@ namespace Odyssey.Hud
 
         public const string ExitKey = "ui.settings.exit";
 
+        /// <summary>The registry key naming the quality preset row.</summary>
+        public const string QualityKey = "ui.settings.quality";
+
+        /// <summary>The registry key naming the vegetation ladder, and the key it is stored
+        /// under.</summary>
+        public const string VegetationKey = "ui.settings.vegetation";
+
+        /// <summary>The butterflies' row (design 52 §8), and the key its rung is stored under.</summary>
+        public const string ButterfliesKey = "ui.settings.butterflies";
+
+        /// <summary>
+        /// Where the grass-tufts toggle kept its yes or no until 2026-09-24. Read once, by
+        /// <see cref="UseStore"/>, so a player who had the grass off still has it off: the new
+        /// ladder is stored under its own key, because a stored 1 read as a density would snap to
+        /// bare ground and turn the grass off for everybody who had it on.
+        /// </summary>
+        public const string LegacyGrassKey = "ui.settings.grass";
+
+        /// <summary>The registry key naming the gameplay section.</summary>
+        public const string GameplayKey = "ui.settings.gameplay";
+
+        /// <summary>The registry key naming the autosave row. Deliberately
+        /// <see cref="AutosaveClock.SettingKey"/> rather than a second spelling of it: the rungs,
+        /// their words and the preference are one thing and the clock owns it.</summary>
+        public const string AutosaveKey = AutosaveClock.SettingKey;
+
+        /// <summary>The registry key naming the walls-down option, which the depth rail's button
+        /// is labelled with as well as the settings row (design 42 §7).</summary>
+        public const string WallsDownKey = "ui.settings.wallsdown";
+
+        /// <summary>The registry key naming the trees-fade-for-everyone option (2026-09-25).</summary>
+        public const string FadeForEveryColonistKey = "ui.settings.seethroughall";
+
         static readonly GraphicsOption[] Order =
         {
             GraphicsOption.Shadows,
+            GraphicsOption.FoliageShadows,
             GraphicsOption.Surround,
-            GraphicsOption.GrassTufts,
             GraphicsOption.GroundRelief,
             GraphicsOption.SeeThrough,
+            GraphicsOption.FadeForEveryColonist,
             GraphicsOption.CutAwayCeiling,
+            GraphicsOption.WallsDown,
         };
 
         /// <summary>
@@ -267,13 +445,15 @@ namespace Odyssey.Hud
             CamSpeedKey,
             DeveloperKey,
             BuildLayoutKey,
+            SelectionStyleKey,
             ExitKey,
             "ui.settings.shadows",
             "ui.settings.surround",
-            "ui.settings.grass",
             "ui.settings.relief",
             "ui.settings.seethrough",
             "ui.settings.cutaway",
+            WallsDownKey,
+            FadeForEveryColonistKey,
             "ui.settings.volume.master",
             "ui.settings.volume.music",
             "ui.settings.volume.ambience",
@@ -288,6 +468,11 @@ namespace Odyssey.Hud
             "ui.settings.antialias",
             "ui.settings.shadowdist",
             "ui.settings.displaymode",
+            QualityKey,
+            VegetationKey,
+            "ui.settings.grassdist",
+            ButterfliesKey,
+            "ui.settings.foliageshadows",
         };
 
         /// <summary>The registry key naming one volume row.</summary>
@@ -308,6 +493,7 @@ namespace Odyssey.Hud
             SettingsTab.Graphics => GraphicsKey,
             SettingsTab.Audio => AudioKey,
             SettingsTab.Keys => HotkeyDirector.KeysKey,
+            SettingsTab.Gameplay => GameplayKey,
             _ => PanelKey,
         };
 
@@ -343,7 +529,7 @@ namespace Odyssey.Hud
         /// one a player comes looking for, and the frame cap follows it because the cap means
         /// nothing until VSync is off (<see cref="FrameCapIsLive"/>).
         /// </summary>
-        static readonly GraphicsLadder[] LadderOrder =
+        static readonly GraphicsLadder[] DisplayOrder =
         {
             GraphicsLadder.VSync,
             GraphicsLadder.FrameCap,
@@ -353,8 +539,33 @@ namespace Odyssey.Hud
             GraphicsLadder.DisplayMode,
         };
 
-        /// <summary>The ladders, in the order they are drawn.</summary>
+        /// <summary>The ladders that decide what the board is drawn with, in the order the Detail
+        /// group draws them, above its toggles.</summary>
+        static readonly GraphicsLadder[] DetailOrder =
+        {
+            GraphicsLadder.VegetationDensity,
+            GraphicsLadder.GrassDistance,
+            GraphicsLadder.Butterflies,
+        };
+
+        static readonly GraphicsLadder[] LadderOrder = Concat(DisplayOrder, DetailOrder);
+
+        static GraphicsLadder[] Concat(GraphicsLadder[] a, GraphicsLadder[] b)
+        {
+            var all = new GraphicsLadder[a.Length + b.Length];
+            a.CopyTo(all, 0);
+            b.CopyTo(all, a.Length);
+            return all;
+        }
+
+        /// <summary>Every ladder: the Display group's, then the Detail group's.</summary>
         public static IReadOnlyList<GraphicsLadder> AllLadders => LadderOrder;
+
+        /// <summary>The Display group's ladders, in the order they are drawn.</summary>
+        public static IReadOnlyList<GraphicsLadder> DisplayLadders => DisplayOrder;
+
+        /// <summary>The Detail group's ladders, in the order they are drawn.</summary>
+        public static IReadOnlyList<GraphicsLadder> DetailLadders => DetailOrder;
 
         // Unity's own numbers wherever Unity has one, so the presenter casts rather than
         // translates. See the enum's remarks for the two that are not.
@@ -364,6 +575,28 @@ namespace Odyssey.Hud
         static readonly int[] AntiAliasRungs = { 1, 2, 4, 8 };
         static readonly int[] ShadowDistanceRungs = { 30, 60, 120 };
         static readonly int[] DisplayModeRungs = { ExclusiveFullScreen, BorderlessWindow, Windowed };
+
+        // Tufts per hundred grass cells. 60 is what the game has shipped at since the meadow was
+        // first strewn; 300 is GroundScatter.MaxPerCell (3) on every cell, which an EditMode test
+        // holds to the scatter's own constant because this assembly cannot see it.
+        static readonly int[] VegetationRungs = { 0, 30, 60, 150, 300 };
+        static readonly int[] GrassDistanceRungs = { 60, 120, 250, Unlimited };
+
+        // Butterflies the meadow near the camera may hold (owner, 2026-09-25: Off / Few / Many /
+        // Swarm, "lively, about 150-300" at the default). A cap, not a count: the grass in view,
+        // the zoom, the season and the weather all thin it (design 52 §3).
+        static readonly int[] ButterflyRungs = { 0, 80, ShippedButterflies, 500 };
+
+        /// <summary>The butterflies the game ships with, and the rung the Medium and High presets keep.</summary>
+        public const int ShippedButterflies = 200;
+
+        /// <summary>The grass density the game ships with, and the rung the Medium and High
+        /// presets keep.</summary>
+        public const int ShippedVegetation = 60;
+
+        /// <summary>The grass-distance rung meaning "wherever the camera can see". <c>0</c> for the
+        /// same reason <see cref="Uncapped"/> is: it sorts to the end of the ladder.</summary>
+        public const int Unlimited = 0;
 
         /// <summary><c>FullScreenMode.ExclusiveFullScreen</c>. Named rather than written as 0,
         /// because a bare integer here is a number nobody can check against the API.</summary>
@@ -390,6 +623,9 @@ namespace Odyssey.Hud
             GraphicsLadder.AntiAliasing => AntiAliasRungs,
             GraphicsLadder.ShadowDistance => ShadowDistanceRungs,
             GraphicsLadder.DisplayMode => DisplayModeRungs,
+            GraphicsLadder.VegetationDensity => VegetationRungs,
+            GraphicsLadder.GrassDistance => GrassDistanceRungs,
+            GraphicsLadder.Butterflies => ButterflyRungs,
             _ => VSyncRungs,
         };
 
@@ -413,6 +649,9 @@ namespace Odyssey.Hud
             GraphicsLadder.AntiAliasing => 1,
             GraphicsLadder.ShadowDistance => 60,
             GraphicsLadder.DisplayMode => BorderlessWindow,
+            GraphicsLadder.VegetationDensity => ShippedVegetation,
+            GraphicsLadder.GrassDistance => Unlimited,
+            GraphicsLadder.Butterflies => ShippedButterflies,
             _ => 0,
         };
 
@@ -425,6 +664,9 @@ namespace Odyssey.Hud
             GraphicsLadder.AntiAliasing => "ui.settings.antialias",
             GraphicsLadder.ShadowDistance => "ui.settings.shadowdist",
             GraphicsLadder.DisplayMode => "ui.settings.displaymode",
+            GraphicsLadder.VegetationDensity => VegetationKey,
+            GraphicsLadder.GrassDistance => "ui.settings.grassdist",
+            GraphicsLadder.Butterflies => ButterfliesKey,
             _ => GraphicsKey,
         };
 
@@ -447,13 +689,31 @@ namespace Odyssey.Hud
             },
             GraphicsLadder.FrameCap => rung == Uncapped ? "Uncapped" : rung.ToString(),
             GraphicsLadder.RenderScale => rung + "%",
-            GraphicsLadder.AntiAliasing => rung <= 1 ? "Off" : rung + "\u00d7",
+            // "x" rather than the multiplication sign: every string in the settings window is
+            // ASCII (design 39 \u00a72), so nothing on it depends on what a face happens to carry.
+            GraphicsLadder.AntiAliasing => rung <= 1 ? "Off" : rung + "x",
             GraphicsLadder.ShadowDistance => rung + " m",
             GraphicsLadder.DisplayMode => rung switch
             {
                 ExclusiveFullScreen => "Fullscreen",
                 Windowed => "Windowed",
                 _ => "Borderless",
+            },
+            GraphicsLadder.VegetationDensity => rung switch
+            {
+                0 => "Off",
+                30 => "Sparse",
+                ShippedVegetation => "Meadow",
+                150 => "Lush",
+                _ => "Full",
+            },
+            GraphicsLadder.GrassDistance => rung == Unlimited ? "All" : rung + " m",
+            GraphicsLadder.Butterflies => rung switch
+            {
+                0 => "Off",
+                80 => "Few",
+                ShippedButterflies => "Many",
+                _ => "Swarm",
             },
             _ => rung.ToString(),
         };
@@ -491,8 +751,153 @@ namespace Odyssey.Hud
                 Windowed => "A window you can size and move",
                 _ => "Fills the screen with no border. Alt-tabs instantly",
             },
+            GraphicsLadder.VegetationDensity => rung switch
+            {
+                0 => "Bare ground. The meadow's colour is carried by the ground texture alone",
+                30 => "Half the shipped grass. For a machine that is short of time",
+                ShippedVegetation => "The grass the game has always shipped with",
+                150 => "Two and a half times the shipped grass",
+                _ => "Grass on every cell. About a millisecond of GPU at 4K on a fast card",
+            },
+            GraphicsLadder.GrassDistance => rung == Unlimited
+                ? "Grass wherever the camera can see"
+                : $"Grass to {rung} m from the camera. Past it the ground carries the field",
+            GraphicsLadder.Butterflies => rung switch
+            {
+                0 => "No butterflies. Nothing is stepped or drawn",
+                80 => "A scattering over the grass near the camera. For a machine that is short of time",
+                ShippedButterflies => "A lively meadow, and a spectacle at night. What the game ships with",
+                _ => "Clouds of them, and a night full of lights. The dearest rung",
+            },
             _ => string.Empty,
         };
+
+        /// <summary>
+        /// Whether moving this ladder re-meshes the board — the ladder counterpart of
+        /// <see cref="NeedsRedraw(GraphicsOption)"/>. Only the grass density: it is baked into
+        /// the chunks. The re-mesh goes through the meshing budget, so it arrives over a few
+        /// frames rather than in one.
+        /// </summary>
+        public static bool NeedsRedraw(GraphicsLadder ladder) => ladder == GraphicsLadder.VegetationDensity;
+
+        // ==================================================================== the presets
+
+        /// <summary>The presets a player can choose, in the order the row draws them. Custom is
+        /// drawn too, lit when it is true, but is not a thing anybody can pick.</summary>
+        public static readonly QualityPreset[] Presets =
+        {
+            QualityPreset.Low, QualityPreset.Medium, QualityPreset.High, QualityPreset.Ultra, QualityPreset.Custom,
+        };
+
+        /// <summary>The toggles a preset sets. The rest — relief, see-through, the cut-away — are
+        /// how a player likes to look at the board, not what the machine can afford.</summary>
+        public static readonly GraphicsOption[] PresetOptions =
+        {
+            GraphicsOption.Shadows, GraphicsOption.Surround, GraphicsOption.FoliageShadows,
+        };
+
+        /// <summary>The ladders a preset sets. VSync, the frame cap, the display mode and the
+        /// resolution are the screen's business and a preset leaves them alone.</summary>
+        public static readonly GraphicsLadder[] PresetLadders =
+        {
+            GraphicsLadder.ShadowDistance, GraphicsLadder.RenderScale, GraphicsLadder.AntiAliasing,
+            GraphicsLadder.VegetationDensity, GraphicsLadder.GrassDistance, GraphicsLadder.Butterflies,
+        };
+
+        /// <summary>
+        /// Where a preset puts a toggle.
+        ///
+        /// <para><b>Shadows are on at every tier</b>, because a shadow is what tells the eye where
+        /// a colonist is standing; Low buys its time back from their distance instead. The
+        /// surround is off on Low only: it is a flat ~0.6 ms of submission on every board
+        /// (<c>06-rendering-and-camera.md</c> §6c.4), which is a tenth of a laptop's budget and
+        /// none of the colony. Grass shadows stay off everywhere, as they always have — nothing
+        /// has measured what they cost, and at full cover they are the most expensive lever on
+        /// the page.</para>
+        /// </summary>
+        public static bool PresetOn(QualityPreset preset, GraphicsOption option) => option switch
+        {
+            GraphicsOption.Shadows => true,
+            GraphicsOption.Surround => preset != QualityPreset.Low,
+            GraphicsOption.FoliageShadows => false,
+            _ => DefaultOn(option),
+        };
+
+        /// <summary>
+        /// Where a preset puts a ladder (design 38 §9, M6).
+        ///
+        /// <para><b>High is exactly what the game ships with</b> — the pipeline asset's shadow
+        /// distance, full render scale, no multisampling, the shipped grass drawn everywhere — so a
+        /// machine that has never been told reads as High and choosing it changes nothing.
+        /// <b>Ultra is High with grass on every cell</b>, the one step up that is measured: full
+        /// cover cost 0.8–1.9 ms at 3840 × 2160 on the RTX 5070 Ti against a 16.7 ms frame (§13).
+        /// Anti-aliasing stays off on Ultra until something measures it; it is the dearest lever
+        /// on the page and the camera already runs SMAA in post.</para>
+        ///
+        /// <para><b>Medium and Low only ever take things away</b>, so they cannot break a bar the
+        /// tier above holds: Medium draws at 85% and keeps grass to 120 m; Low draws at 70% with
+        /// FSR, halves the grass and keeps it to 60 m, pulls shadows in to 30 m and drops the
+        /// surround. Whether Low holds 60 fps at 1080p on an RTX 3050/3060 laptop is owed to a
+        /// laptop — nothing here can measure one.</para>
+        /// </summary>
+        public static int PresetRung(QualityPreset preset, GraphicsLadder ladder) => ladder switch
+        {
+            GraphicsLadder.ShadowDistance => preset switch
+            {
+                QualityPreset.Low => 30,
+                QualityPreset.Medium => 60,
+                _ => 120,
+            },
+            GraphicsLadder.RenderScale => preset switch
+            {
+                QualityPreset.Low => 70,
+                QualityPreset.Medium => 85,
+                _ => 100,
+            },
+            GraphicsLadder.AntiAliasing => 1,
+            GraphicsLadder.VegetationDensity => preset switch
+            {
+                QualityPreset.Low => 30,
+                QualityPreset.Ultra => 300,
+                _ => ShippedVegetation,
+            },
+            GraphicsLadder.GrassDistance => preset switch
+            {
+                QualityPreset.Low => 60,
+                QualityPreset.Medium => 120,
+                _ => Unlimited,
+            },
+            // Provisional until design 52 §9's measurement: a rung that costs more than its preset
+            // can afford moves down, and the reason goes there.
+            GraphicsLadder.Butterflies => preset switch
+            {
+                QualityPreset.Low => 80,
+                QualityPreset.Ultra => 500,
+                _ => ShippedButterflies,
+            },
+            _ => DefaultOf(ladder),
+        };
+
+        /// <summary>What one preset says on its face.</summary>
+        public static string PresetLabel(QualityPreset preset) => preset switch
+        {
+            QualityPreset.Low => "Low",
+            QualityPreset.Medium => "Medium",
+            QualityPreset.High => "High",
+            QualityPreset.Ultra => "Ultra",
+            _ => "Custom",
+        };
+
+        /// <summary>What one preset costs or buys, said on hover.</summary>
+        public static string PresetTooltip(QualityPreset preset) => preset switch
+        {
+            QualityPreset.Low => "For a laptop. Drawn at 70%, half the grass, near shadows, no surrounding land, fewer butterflies",
+            QualityPreset.Medium => "Drawn at 85%, grass to 120 m, shadows over the working area",
+            QualityPreset.High => "What the game ships with",
+            QualityPreset.Ultra => "High with grass on every cell and a swarm of butterflies",
+            _ => "Set by hand. Pick a preset to put every lever back on one",
+        };
+
 
         /// <summary>
         /// Whether throwing this lever makes the renderer throw its buffers away and build new
@@ -621,7 +1026,9 @@ namespace Odyssey.Hud
         /// ceiling cut-away is the first that is not: it <em>removes</em> something, and removing
         /// the floor a player has just built is the surprise it was reported as.</para>
         /// </summary>
-        public static bool DefaultOn(GraphicsOption option) => option != GraphicsOption.CutAwayCeiling;
+        public static bool DefaultOn(GraphicsOption option) =>
+            option != GraphicsOption.CutAwayCeiling && option != GraphicsOption.FoliageShadows
+            && option != GraphicsOption.FadeForEveryColonist;
 
         /// <summary>The options, in the order they are drawn.</summary>
         public static IReadOnlyList<GraphicsOption> All => Order;
@@ -654,6 +1061,17 @@ namespace Odyssey.Hud
         /// write one value or the second one a player touches will appear to undo the first.</para>
         /// </summary>
         public BuildPaletteLayout BuildPaletteLayout { get; private set; } = BuildPaletteModel.Default;
+
+        /// <summary>How a selection is marked in the world. The highlight unless the player chose the brackets.</summary>
+        public SelectionStyle SelectionStyle { get; private set; } = DefaultSelectionStyle;
+
+        public const SelectionStyle DefaultSelectionStyle = SelectionStyle.Highlight;
+
+        /// <summary>The two rungs, in the order they are drawn.</summary>
+        public static readonly SelectionStyle[] SelectionStyles = { SelectionStyle.Highlight, SelectionStyle.Brackets };
+
+        public static bool IsSelectionStyle(int value) =>
+            value >= (int)SelectionStyle.Highlight && value <= (int)SelectionStyle.Brackets;
 
         /// <summary>
         /// The session row that has been clicked once and is asking to be sure, or null.
@@ -700,6 +1118,9 @@ namespace Odyssey.Hud
         /// <summary>Raised when the Build-palette layout changes, whichever control changed it.</summary>
         public event Action<BuildPaletteLayout>? BuildPaletteLayoutChanged;
 
+        /// <summary>Raised when the selection style changes.</summary>
+        public event Action<SelectionStyle>? SelectionStyleChanged;
+
         /// <summary>Raised when one bus's volume changes, with the bus that changed.</summary>
         public event Action<SettingsBus>? BusDbChanged;
 
@@ -728,17 +1149,19 @@ namespace Odyssey.Hud
         /// an instance matrix, false for anything read as the frame is drawn.
         /// </summary>
         public static bool NeedsRedraw(GraphicsOption option) =>
-            option is GraphicsOption.GrassTufts or GraphicsOption.GroundRelief;
+            option is GraphicsOption.GroundRelief;
 
         /// <summary>The registry key naming this option. Never a word: words live in the CSV.</summary>
         public static string KeyOf(GraphicsOption option) => option switch
         {
             GraphicsOption.Shadows => "ui.settings.shadows",
             GraphicsOption.Surround => "ui.settings.surround",
-            GraphicsOption.GrassTufts => "ui.settings.grass",
             GraphicsOption.GroundRelief => "ui.settings.relief",
             GraphicsOption.SeeThrough => "ui.settings.seethrough",
             GraphicsOption.CutAwayCeiling => "ui.settings.cutaway",
+            GraphicsOption.FoliageShadows => "ui.settings.foliageshadows",
+            GraphicsOption.WallsDown => WallsDownKey,
+            GraphicsOption.FadeForEveryColonist => FadeForEveryColonistKey,
             _ => "ui.settings.panel",
         };
 
@@ -806,7 +1229,120 @@ namespace Odyssey.Hud
 
         public void Toggle(GraphicsOption option) => Set(option, !IsOn(option));
 
+        /// <summary>
+        /// Where the interface scale goes back to on a reset. The screen's own answer
+        /// (<see cref="DefaultScaleFor"/>), told by the presenter that can see the screen; 100
+        /// until it is.
+        /// </summary>
+        public int DefaultUiScale { get; set; } = 100;
+
+        /// <summary>
+        /// Put one tab's settings back where they ship (design 39 §5): the footer's
+        /// "Reset &lt;tab&gt; to defaults".
+        ///
+        /// <para><b>Through the same setters a press uses</b>, so every lever that moves raises its
+        /// own event and writes its own preference, and one that is already at its default says
+        /// nothing. The resolution is left alone: its rungs are the machine's and there is no
+        /// default to go back to. Keys are the hotkey director's, which has had its own reset since
+        /// the Keys tab landed; this does not reach into it.</para>
+        /// </summary>
+        public void ResetTab(SettingsTab tab)
+        {
+            switch (tab)
+            {
+                case SettingsTab.Interface:
+                    SetUiScale(DefaultUiScale);
+                    SetCameraSpeed(100);
+                    SetBuildPaletteLayout(BuildPaletteModel.Default);
+                    SetSelectionStyle(DefaultSelectionStyle);
+                    break;
+                case SettingsTab.Graphics:
+                    foreach (GraphicsLadder ladder in LadderOrder) SetValue(ladder, DefaultOf(ladder));
+                    foreach (GraphicsOption option in Order) Set(option, DefaultOn(option));
+                    break;
+                case SettingsTab.Audio:
+                    foreach (SettingsBus bus in Buses) SetBusDb(bus, UnityDb);
+                    break;
+                case SettingsTab.Gameplay:
+                    SetAutosaveDays(AutosaveClock.DefaultDays);
+                    break;
+            }
+        }
+
+        // ======================================================================== the autosave
+
+        /// <summary>
+        /// How many game days between autosaves, or zero for none. Always a rung
+        /// <see cref="AutosaveClock.DayRungs"/> offers, whatever was stored.
+        /// </summary>
+        public int AutosaveDays { get; private set; } = AutosaveClock.DefaultDays;
+
+        /// <summary>Raised when the autosave interval changes, with the new number of days.</summary>
+        public event Action<int>? AutosaveDaysChanged;
+
+        /// <summary>
+        /// Set the autosave interval. Snapped to a rung for the reason every ladder here is
+        /// snapped: a value stored by a build with different rungs must never leave the panel
+        /// showing a number none of its own buttons can reproduce.
+        /// </summary>
+        public void SetAutosaveDays(int days)
+        {
+            int snapped = Nearest(AutosaveClock.DayRungs, days);
+            if (AutosaveDays == snapped) return;
+            AutosaveDays = snapped;
+            _store?.WriteInt(AutosaveKey, snapped);
+            AutosaveDaysChanged?.Invoke(snapped);
+        }
+
         // ==================================================================== the number ladders
+
+        /// <summary>
+        /// The preset the levers are on, or <see cref="QualityPreset.Custom"/> when they match
+        /// none. Read off the levers every time, never remembered (see <see cref="QualityPreset"/>).
+        /// </summary>
+        public QualityPreset Preset
+        {
+            get
+            {
+                for (int p = 0; p < Presets.Length; p++)
+                {
+                    QualityPreset preset = Presets[p];
+                    if (preset == QualityPreset.Custom) continue;
+                    if (Matches(preset)) return preset;
+                }
+                return QualityPreset.Custom;
+            }
+        }
+
+        bool Matches(QualityPreset preset)
+        {
+            foreach (GraphicsOption option in PresetOptions)
+                if (IsOn(option) != PresetOn(preset, option)) return false;
+            foreach (GraphicsLadder ladder in PresetLadders)
+                if (Value(ladder) != Nearest(RungsOf(ladder), PresetRung(preset, ladder))) return false;
+            return true;
+        }
+
+        /// <summary>
+        /// Put every lever a preset owns where the preset says. Each lever goes through its own
+        /// setter, so each is written down and announced exactly as if the player had pressed it —
+        /// one rule for a change however it was asked for. Custom is not a thing to choose, and
+        /// asking for it does nothing.
+        /// </summary>
+        public void ApplyPreset(QualityPreset preset)
+        {
+            if (preset == QualityPreset.Custom) return;
+            foreach (GraphicsOption option in PresetOptions) Set(option, PresetOn(preset, option));
+            foreach (GraphicsLadder ladder in PresetLadders) SetValue(ladder, PresetRung(preset, ladder));
+        }
+
+        /// <summary>
+        /// Whether a store is attached, which is to say whether these preferences are the player's
+        /// rather than a scene's defaults. The composition root asks before it builds a session's
+        /// renderer from them: a test harness with no settings presenter never attaches one, and its
+        /// own fields must win.
+        /// </summary>
+        public bool HasStore => _store != null;
 
         /// <summary>Which rung a ladder rests on. Always a member of its own
         /// <see cref="RungsOf"/>, whatever was stored.</summary>
@@ -997,6 +1533,14 @@ namespace Odyssey.Hud
         /// a switcher of three, and <see cref="BuildPaletteModel"/> rejects an ordinal outside the
         /// set rather than trusting the file.
         /// </summary>
+        public void SetSelectionStyle(SelectionStyle style)
+        {
+            if (SelectionStyle == style) return;
+            SelectionStyle = style;
+            _store?.WriteInt(SelectionStyleKey, (int)style);
+            SelectionStyleChanged?.Invoke(style);
+        }
+
         public void SetBuildPaletteLayout(BuildPaletteLayout layout)
         {
             if (BuildPaletteLayout == layout) return;
@@ -1036,13 +1580,18 @@ namespace Odyssey.Hud
         public int BusDb(SettingsBus bus) => _db[bus];
 
         /// <summary>
-        /// The exit row: click once to arm, twice to leave.
+        /// The exit row.
         ///
-        /// <para>Two clicks because nothing is saved — there is no save system yet — so the
-        /// row must not be a key the player can hit by reaching past it for the close button.
-        /// No timeout, because a clock the director does not have would be a clock it could
-        /// not test; the armed row says what it wants and the panel closing stands it
-        /// down.</para>
+        /// <para><b>It used to arm on the first click and leave on the second</b>, because nothing
+        /// was saved and the row must not be a key the player can hit while reaching past it for
+        /// the close button. Since 2026-09-21 it asks properly instead: in game the shell raises
+        /// <c>LeavePrompt</c> off this row, which asks the same question and offers to save first.
+        /// Whether it still arms is <see cref="SessionCommands"/>'s to say, as it has been since
+        /// U38, and there it now says no — a row that opens a question should not ask one of its
+        /// own before it.</para>
+        ///
+        /// <para>The main screen's Quit row is a different placement and still arms twice: there
+        /// is no colony there, so there is nothing to offer to save and no prompt to raise.</para>
         /// </summary>
         public void RequestExit() => Request(ExitKey);
 
@@ -1148,6 +1697,13 @@ namespace Odyssey.Hud
             bool? developer = store.Read(DeveloperKey);
             if (developer.HasValue) SetDeveloperOverlay(developer.Value);
 
+            int? autosave = store.ReadInt(AutosaveKey);
+            if (autosave.HasValue) SetAutosaveDays(autosave.Value);
+
+            int? style = store.ReadInt(SelectionStyleKey);
+            if (style.HasValue && IsSelectionStyle(style.Value))
+                SetSelectionStyle((SelectionStyle)style.Value);
+
             int? layout = store.ReadInt(BuildLayoutKey);
             if (layout.HasValue && BuildPaletteModel.IsLayout(layout.Value))
                 SetBuildPaletteLayout((BuildPaletteLayout)layout.Value);
@@ -1157,6 +1713,12 @@ namespace Odyssey.Hud
                 int? rung = store.ReadInt(KeyOf(ladder));
                 if (rung.HasValue) SetValue(ladder, rung.Value);
             }
+
+            // The grass-tufts toggle's answer, carried over once: off becomes bare ground. An old
+            // "on" needs nothing — the ladder already starts where the grass was — and a density
+            // this machine has stored since outranks it.
+            if (!store.ReadInt(VegetationKey).HasValue && store.Read(LegacyGrassKey) == false)
+                SetValue(GraphicsLadder.VegetationDensity, 0);
 
             Mode? mode = ParseMode(store.ReadString(ResolutionKey));
             if (mode.HasValue) SetResolution(mode.Value);
@@ -1218,14 +1780,92 @@ namespace Odyssey.Hud
         /// from the info button on an inspect card). Like the Work tab, "every window can be
         /// escaped", and it unwinds before the options panel behind it.</para>
         /// </summary>
-        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen, bool almanacOpen)
+        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen, bool almanacOpen) =>
+            Escape(toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, startScreen: null);
+
+        /// <summary>
+        /// The same rule with the main screen in it as well.
+        ///
+        /// <para><paramref name="startScreen"/> is the screen the main menu is showing, or null
+        /// when the main menu is not up — which is to say, when a colony is running. It is a
+        /// nullable screen rather than a sixth bool because "in game" and "on the main screen" are
+        /// the two halves of the session's life and no bool pair can be in both at once.</para>
+        ///
+        /// <para>It sits <b>below</b> the settings panel deliberately. On the main screen the panel
+        /// stands in the menu's place (<see cref="MenuScreen.Settings"/>), so closing it is what
+        /// backs out of that screen and the menu follows on its own; a rung above the panel would
+        /// unwind the navigation out from under a panel still on screen.</para>
+        /// </summary>
+        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen,
+            bool almanacOpen, MenuScreen? startScreen) =>
+            Escape(toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen: false, startScreen);
+
+        /// <summary>
+        /// The same rule with the context menu in it (design 33 §7a), above everything: the menu
+        /// is the last thing raised, at the pointer, and Escape is one of the four ways it closes
+        /// (with a click elsewhere, a camera orbit and a change of selection).
+        /// </summary>
+        public EscapeAction Escape(bool contextMenuOpen, bool toolArmed, bool paletteOpen, bool menuOpen,
+            bool workOpen, bool almanacOpen, bool animalsOpen, MenuScreen? startScreen) =>
+            Escape(contextMenuOpen, toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
+                inventoryOpen: false, researchOpen: false, startScreen);
+
+        /// <summary>
+        /// The whole rule: the context menu above everything, then the ladder with the inventory and
+        /// research panels in it. The one the presenter calls; the shorter overloads are this with
+        /// the panels a caller does not know about shut.
+        /// </summary>
+        public EscapeAction Escape(bool contextMenuOpen, bool toolArmed, bool paletteOpen, bool menuOpen,
+            bool workOpen, bool almanacOpen, bool animalsOpen, bool inventoryOpen, bool researchOpen,
+            MenuScreen? startScreen) =>
+            Escape(contextMenuOpen, toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
+                inventoryOpen, researchOpen, assignOpen: false, startScreen);
+
+        /// <summary>
+        /// The same rule with the Assign tab in it (design 43 §6), which docks in the Work tab's
+        /// corner beside the others and unwinds at their rung. The one the presenter calls.
+        /// </summary>
+        public EscapeAction Escape(bool contextMenuOpen, bool toolArmed, bool paletteOpen, bool menuOpen,
+            bool workOpen, bool almanacOpen, bool animalsOpen, bool inventoryOpen, bool researchOpen,
+            bool assignOpen, MenuScreen? startScreen)
+        {
+            if (contextMenuOpen) return EscapeAction.CloseContextMenu;
+            // Below the tool, the menu, the palette and the Work tab, which a player raised over it
+            // or which the shell would have closed on opening it; beside the other docked tabs.
+            if (assignOpen && !toolArmed && !menuOpen && !paletteOpen && !workOpen)
+                return EscapeAction.CloseAssign;
+            return Escape(toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
+                inventoryOpen, researchOpen, startScreen);
+        }
+
+        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen,
+            bool almanacOpen, bool animalsOpen, MenuScreen? startScreen) =>
+            Escape(toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
+                inventoryOpen: false, researchOpen: false, startScreen);
+
+        /// <summary>
+        /// The same rule with the Inventory and Research tabs in it (designs 35 and 34). Both dock
+        /// in the Work tab's corner beside Animals and the shell closes each when another opens,
+        /// so they unwind at its rung and their order among themselves is not observable.
+        /// </summary>
+        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen,
+            bool almanacOpen, bool animalsOpen, bool inventoryOpen, bool researchOpen,
+            MenuScreen? startScreen)
         {
             if (toolArmed) return EscapeAction.DisarmTool;
             if (menuOpen) return EscapeAction.CloseMenu;
             if (paletteOpen) return EscapeAction.ClosePalette;
             if (workOpen) return EscapeAction.CloseWork;
+            if (animalsOpen) return EscapeAction.CloseAnimals;
+            if (inventoryOpen) return EscapeAction.CloseInventory;
+            if (researchOpen) return EscapeAction.CloseResearch;
             if (almanacOpen) return EscapeAction.CloseAlmanac;
-            return Open ? EscapeAction.ClosePanel : EscapeAction.OpenPanel;
+            if (Open) return EscapeAction.ClosePanel;
+
+            if (startScreen != null)
+                return startScreen == MenuScreen.Root ? EscapeAction.Nothing : EscapeAction.MenuBack;
+
+            return EscapeAction.OpenPanel;
         }
     }
 }

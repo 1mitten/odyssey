@@ -22,6 +22,13 @@ namespace Odyssey.Hud
         public static readonly string[] Keys =
         {
             "ui.bulletin.supplydrop",
+            "ui.bulletin.scrapdrop",
+            // Written down by the world when a bandit leaves the board (design 33 §17).
+            "ui.bulletin.theft",
+            "ui.bulletin.banditleft",
+            "ui.bulletin.medicaldrop",
+            // A band walking in from one edge (design 55): its Events row is the warning.
+            "ui.bulletin.raidincoming",
         };
 
         /// <summary>The key for an incident the table does not know, so the fault is visible on screen.</summary>

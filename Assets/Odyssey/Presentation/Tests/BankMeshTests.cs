@@ -27,11 +27,22 @@ namespace Odyssey.Tests.Presentation
     {
         const float Tolerance = 1e-4f;
 
+        // These pin the bank *wedges* — the pieces the ground skin replaced (design 38 §20) — so
+        // they run with the skin off, which is still a shipped path (GroundSkin.Enabled) and the
+        // one the skin's measurement arm compares against. GroundSkinTests pins the skin.
         [SetUp]
-        public void Reset() => ResetLevers();
+        public void Reset()
+        {
+            ResetLevers();
+            GroundSkin.Enabled = false;
+        }
 
         [TearDown]
-        public void Restore() => ResetLevers();
+        public void Restore()
+        {
+            ResetLevers();
+            GroundSkin.Enabled = true;
+        }
 
         /// <summary>
         /// Both sets, because the bank levers became statics when the decision left the mesher and

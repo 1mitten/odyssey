@@ -42,12 +42,24 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
             out Vector3 heading, WorldRenderModel? world = null) =>
-            Of(in pawn, tickAlpha, movePerTick, out heading, world, default, out _);
+            Of(in pawn, tickAlpha, movePerTick, out heading, world, default, null, out _);
 
         public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
             out Vector3 heading, WorldRenderModel? world,
             ReadOnlySpan<PawnView> otherPawns) =>
-            Of(in pawn, tickAlpha, movePerTick, out heading, world, otherPawns, out _);
+            Of(in pawn, tickAlpha, movePerTick, out heading, world, otherPawns, null, out _);
+
+        /// <summary>
+        /// The same pose, with an index saying who is near enough to be worth asking about.
+        ///
+        /// <para><paramref name="index"/> must have been rebuilt from <paramref name="otherPawns"/>
+        /// this frame. Null is the plain scan, which is what every fixture and every caller
+        /// without one gets, and what <see cref="PawnCrowdIndex"/> is measured against.</para>
+        /// </summary>
+        public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
+            out Vector3 heading, WorldRenderModel? world,
+            ReadOnlySpan<PawnView> otherPawns, PawnCrowdIndex? index) =>
+            Of(in pawn, tickAlpha, movePerTick, out heading, world, otherPawns, index, out _);
 
         /// <summary>
         /// The same pose, with the sub-tile steering it applied handed back separately.
@@ -61,15 +73,34 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
             out Vector3 heading, WorldRenderModel? world,
-            ReadOnlySpan<PawnView> otherPawns, out Vector3 steer)
+            ReadOnlySpan<PawnView> otherPawns, out Vector3 steer) =>
+            Of(in pawn, tickAlpha, movePerTick, out heading, world, otherPawns, null, out steer);
+
+        /// <summary>See the overload above, and <see cref="PawnCrowdIndex"/> for the index.</summary>
+        public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
+            out Vector3 heading, WorldRenderModel? world,
+            ReadOnlySpan<PawnView> otherPawns, PawnCrowdIndex? index, out Vector3 steer)
         {
             steer = Vector3.zero;
             Vector3 from = CellMetrics.FloorCentre(pawn.Cell);
             if (!pawn.Moving)
             {
                 heading = Vector3.zero;
-                return GroundRelief.Lift(from) +
-                       Vector3.up * (BankLayout.RiseAt(world, pawn.Cell, from.x, from.z) +
+
+                // **Two people standing on one cell are never drawn at one point** (owner,
+                // 2026-09-25: "that should never happen in any scenario"; design 25 §10). The
+                // spread goes out as `steer`, so the live figure eases into it at SwayRate and
+                // the gait never sees it, exactly like the walking sidestep. Zero for a pawn
+                // alone on its cell, and then `stand` is `from` to the bit.
+                Vector3 stand = from;
+                if (otherPawns.Length > 1)
+                {
+                    steer = StandApart(in pawn, world, otherPawns, index);
+                    stand += steer;
+                }
+
+                return GroundRelief.Lift(stand) +
+                       Vector3.up * (BankLayout.RiseAt(world, pawn.Cell, stand.x, stand.z) +
                                      WaterLine.FloatRise(world, pawn.Cell));
             }
 
@@ -150,18 +181,21 @@ namespace Odyssey.Presentation.Rendering
             // <para><c>movePerTick</c> is the fallback for a hand-built fixture that publishes no
             // rate, and it keeps the old meaning — a cost unit as a hundredth of a step — because
             // that is what those fixtures were written against.</para>
-            float carried = pawn.MoveDeltaPerMille > 0
-                ? pawn.MoveDeltaPerMille * 0.1f * tickAlpha
-                : movePerTick * tickAlpha;
-            float percent = pawn.MovePerMille > 0
-                ? pawn.MovePerMille * 0.1f + carried
-                : pawn.MovePercent + carried;
-
+            //
+            // Both halves are StepProgress's now, shared with the jump's clips (design 46 §7).
+            //
             // Along `travel` and not along `heading`: the bearing has had its vertical part taken
             // out on purpose, and a pawn that moved along it would climb a shaft without going
             // down. The lift is taken at the interpolated position, not at either end, so a pawn
             // walks along the drawn ground instead of cutting the chord between two cell centres.
-            float t = Mathf.Clamp(percent, 0f, 100f) * 0.01f;
+            float t = StepProgress(in pawn, tickAlpha, movePerTick);
+
+            // **A jump over a stream is drawn from its own curve** (design 46 §7), and before
+            // anything below touches it: the wading branch would take a short jump for a step into
+            // the water, the ground clamp would sample the bank under whichever cell the figure is
+            // "over" when it is 2.5 m from both, and the sidestep would push a body in mid-air.
+            // A jump is not ground locomotion, the same reason the gait is held through a hop.
+            if (JumpArc.IsJump(in pawn)) return JumpArc.Position(world, in pawn, t);
 
             // **Time is not distance: the step's duration is spread over its drawn path.**
             //
@@ -216,18 +250,60 @@ namespace Odyssey.Presentation.Rendering
                 float envelope = SteeringCurve.Bell(s);
 
                 // 1. Passing traffic and standing colonists.
+                //
+                // **This walked the whole colony for every pawn it posed** — O(N squared), and
+                // measured on 2026-09-23 at 15.8 ms of a 27.8 ms frame in `Actors` alone at 384
+                // colonists, against 0.02 ms at 64 (`docs/plans/pf-crowd-scan.md`). What follows
+                // is three ways of reaching the *same* answer, not three behaviours: see
+                // `PawnCrowdIndex` for why the cull is exact rather than approximate, and
+                // `PawnCrowdIndexTests` for that claim pinned pawn by pawn.
+                //
+                // The index is used only when it was rebuilt from this very span. A length that
+                // does not match means somebody has handed us last frame's index or another
+                // snapshot's, and the cached positions would be wrong — so fall back to the scan,
+                // which is always right and merely slow.
                 float crowd = 0f;
-                for (int i = 0; i < otherPawns.Length; i++)
+                // Animals are outside the sidestep on both sides (design 29 §7 of the plan): a
+                // hog does not dodge a colonist and a colonist does not dodge a hog. Recorded
+                // against P11, whose per-pawn scan this is; CrowdWeight is where the other side
+                // of it lives. Merged over the crowd index on 2026-09-23: the gate is on the
+                // posed pawn and the weight, whichever scan finds the pair.
+                if (pawn.IsPerson)
                 {
-                    ref readonly var other = ref otherPawns[i];
-                    if (other.Id == pawn.Id) continue;
+                    bool usable = index != null && index.Count == otherPawns.Length &&
+                                  PawnCrowdIndex.Mode != CrowdScan.Span;
 
-                    float near = SteeringCurve.Proximity(
-                        Vector3.Distance(hereNow, SteeringCurve.WhereItIsNow(in other)));
-                    if (near <= 0f) continue;
-
-                    float weight = near * SteeringCurve.InTheWay(headingDir, in other);
-                    if (weight > crowd) crowd = weight;
+                    if (usable && PawnCrowdIndex.Mode == CrowdScan.Bucketed)
+                    {
+                        foreach (int i in index!.Near(hereNow))
+                        {
+                            float weight = CrowdWeight(in otherPawns[i], in pawn, hereNow, headingDir,
+                                index.PositionAt(i));
+                            if (weight > crowd) crowd = weight;
+                        }
+                    }
+                    else if (usable)
+                    {
+                        // CrowdScan.Cached: the same N-squared visit, but reading each pawn's position
+                        // from the frame's cache instead of recomputing it once per pair. Kept as a
+                        // measurement arm rather than a mode anybody plays, because the plan asked
+                        // what the constant factor alone was worth before an index was built on it.
+                        for (int i = 0; i < otherPawns.Length; i++)
+                        {
+                            float weight = CrowdWeight(in otherPawns[i], in pawn, hereNow, headingDir,
+                                index!.PositionAt(i));
+                            if (weight > crowd) crowd = weight;
+                        }
+                    }
+                    else
+                    {
+                        for (int i = 0; i < otherPawns.Length; i++)
+                        {
+                            float weight = CrowdWeight(in otherPawns[i], in pawn, hereNow, headingDir,
+                                SteeringCurve.WhereItIsNow(in otherPawns[i]));
+                            if (weight > crowd) crowd = weight;
+                        }
+                    }
                 }
                 lateral += SteeringCurve.MaxLateralOffset * envelope * crowd;
 
@@ -275,6 +351,186 @@ namespace Odyssey.Presentation.Rendering
                     WaterLine.CrossingHeight(world, pawn.Cell, pawn.NextCell, s), along.z);
 
             return OnTheDrawnGround(along, pawn, s, world, pace);
+        }
+
+        /// <summary>
+        /// How far through its step a pawn is, 0 to 1, at this frame: the published progress and
+        /// the sub-tick carry, exactly as <see cref="Of"/> reads it — one copy, so anything else
+        /// timed to a step (the jump's clips, design 46 §7) cannot drift from where the figure is.
+        /// </summary>
+        public static float StepProgress(in PawnView pawn, float tickAlpha, int movePerTick)
+        {
+            float carried = pawn.MoveDeltaPerMille > 0
+                ? pawn.MoveDeltaPerMille * 0.1f * tickAlpha
+                : movePerTick * tickAlpha;
+            float percent = pawn.MovePerMille > 0
+                ? pawn.MovePerMille * 0.1f + carried
+                : pawn.MovePercent + carried;
+            return Mathf.Clamp(percent, 0f, 100f) * 0.01f;
+        }
+
+        /// <summary>
+        /// The closest two people standing on one cell are drawn, centre to centre, in metres:
+        /// about a shoulder's width and a little air, so two bodies do not pass through each
+        /// other. See design 25 §10.
+        /// </summary>
+        public const float StandApartSpacing = 0.7f;
+
+        /// <summary>
+        /// The furthest from its cell's centre a standing pawn is ever drawn by
+        /// <see cref="StandApart"/>, in metres. Half a cell is 1.25 m; this leaves a body's width
+        /// inside it, so a crowd on one cell never looks as if it is standing on the next.
+        /// </summary>
+        public const float StandApartMaxRadius = 0.95f;
+
+        /// <summary>
+        /// Where, relative to its cell's centre, a pawn that is standing still is drawn so that
+        /// nobody else standing on the same cell is drawn at the same point. Horizontal; zero for
+        /// a pawn alone on its cell, a pawn walking, or a pawn this rule leaves where it lies.
+        ///
+        /// <para><b>The rule</b> (design 25 §10). Everybody standing still on the cell — not
+        /// walking, not asleep, not downed and not carried, because those are laid out by a bed, a
+        /// fall or a pair of arms rather than by where they stand — is put on a ring round the
+        /// cell's centre, evenly spaced, in order of pawn id. The ring is sized so that neighbours
+        /// on it are <see cref="StandApartSpacing"/> apart, is kept clear of a trunk standing in
+        /// the cell by the same 0.6 m the walking sidestep gives one, and is capped at
+        /// <see cref="StandApartMaxRadius"/>.</para>
+        ///
+        /// <para><b>Stable.</b> Every input is the snapshot's, so the answer is the same every
+        /// frame until somebody arrives or leaves, and it does not depend on the order of the
+        /// span. The lowest id always takes the first slot, so a newcomer never moves her round
+        /// the ring — only out a little as the ring widens. Where the ring starts is the lowest
+        /// id's too: across the direction she is facing her work or her fire, so two colonists on
+        /// one cell sit side by side facing it rather than one behind the other, and otherwise a
+        /// bearing fixed by the cell. When the set does change, the live figure eases into its new
+        /// place at <c>PawnFigureDirector.SwayRate</c>, because this goes out as the steer.</para>
+        ///
+        /// <para><b>Bounded</b> (P12): with an index rebuilt from this span it visits one bucket,
+        /// <see cref="PawnCrowdIndex.Here"/>, because every pawn standing on one cell has exactly
+        /// the same cached position. Without one it is the linear scan the sidestep falls back to.</para>
+        /// </summary>
+        public static Vector3 StandApart(in PawnView pawn, WorldRenderModel? world,
+            ReadOnlySpan<PawnView> otherPawns, PawnCrowdIndex? index)
+        {
+            if (!StandsApart(in pawn)) return Vector3.zero;
+
+            int count = 0;
+            int rank = 0;
+            bool sawSelf = false;
+            PawnView anchor = pawn;
+
+            bool usable = index != null && index.Count == otherPawns.Length &&
+                          PawnCrowdIndex.Mode == CrowdScan.Bucketed;
+            if (usable)
+            {
+                foreach (int i in index!.Here(CellMetrics.FloorCentre(pawn.Cell)))
+                    Tally(in otherPawns[i], in pawn, ref count, ref rank, ref sawSelf, ref anchor);
+            }
+            else
+            {
+                for (int i = 0; i < otherPawns.Length; i++)
+                    Tally(in otherPawns[i], in pawn, ref count, ref rank, ref sawSelf, ref anchor);
+            }
+
+            // A caller may pose a pawn against a span it is not in; it still stands on its cell.
+            if (!sawSelf) count++;
+            if (count < 2) return Vector3.zero;
+
+            bool trunk = world != null && world.HasObstacle(pawn.Cell);
+            float radius = StandApartRadius(count, trunk);
+            float angle = RingStart(in anchor) + rank * (2f * Mathf.PI / count);
+            return new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle)) * radius;
+        }
+
+        /// <summary>
+        /// Whether a pawn takes a place on the ring: standing still and on its feet. A sleeper,
+        /// the downed and the carried are placed by a bed, the ground they fell on or the arms
+        /// that hold them (<c>PawnFigureDirector.AimSleep</c> lays a body from the cell centre
+        /// whatever this says), so they neither move nor count.
+        /// </summary>
+        static bool StandsApart(in PawnView pawn) =>
+            !pawn.Moving && !pawn.Asleep && !pawn.IsDowned && !pawn.IsCarried;
+
+        /// <summary>One pawn of the span, counted if it stands on the same cell.</summary>
+        static void Tally(in PawnView other, in PawnView self, ref int count, ref int rank,
+            ref bool sawSelf, ref PawnView anchor)
+        {
+            if (other.Cell != self.Cell || !StandsApart(in other)) return;
+            if (other.Id == self.Id)
+            {
+                // Once, however many times the span repeats it.
+                if (sawSelf) return;
+                sawSelf = true;
+            }
+            count++;
+            if (other.Id.Value < self.Id.Value) rank++;
+            if (other.Id.Value < anchor.Id.Value) anchor = other;
+        }
+
+        /// <summary>
+        /// How far from the centre the ring is, for <paramref name="count"/> people: neighbours a
+        /// chord of <see cref="StandApartSpacing"/> apart, out of a trunk's way, and inside the cell.
+        /// Two people stand 0.35 m either side of the centre; six are 0.7 m out.
+        /// </summary>
+        public static float StandApartRadius(int count, bool trunkInCell)
+        {
+            if (count < 2) return 0f;
+            float radius = StandApartSpacing * 0.5f / Mathf.Sin(Mathf.PI / count);
+            if (trunkInCell) radius = Mathf.Max(radius, SteeringCurve.MaxLateralOffset);
+            return Mathf.Min(radius, StandApartMaxRadius);
+        }
+
+        /// <summary>
+        /// The bearing of the ring's first place, in radians, as a yaw (x = sin, z = cos) — decided
+        /// by the lowest id on the cell so that everybody on it agrees. Across her work or her
+        /// fire when she has one in another cell, so the ring's first pair stands abreast of it;
+        /// otherwise a bearing hashed from the cell, so a crowd of pairs does not all line up
+        /// east to west.
+        /// </summary>
+        static float RingStart(in PawnView anchor)
+        {
+            if (anchor.Working || anchor.Seated)
+            {
+                int dx = anchor.WorkCell.X - anchor.Cell.X;
+                int dz = anchor.WorkCell.Z - anchor.Cell.Z;
+                if (dx != 0 || dz != 0) return Mathf.Atan2(dx, dz) + 0.5f * Mathf.PI;
+            }
+
+            unchecked
+            {
+                uint h = (uint)anchor.Cell.X * 73856093u ^ (uint)anchor.Cell.Z * 19349663u ^
+                         (uint)anchor.Cell.Y * 83492791u;
+                h ^= h >> 15;
+                h *= 2246822519u;
+                h ^= h >> 13;
+                return (h & 0xFFFF) * (2f * Mathf.PI / 65536f);
+            }
+        }
+
+        /// <summary>
+        /// How much room one other colonist asks for, 0 to 1: nothing at all if it is out of
+        /// range, out of the way, or the pawn itself.
+        ///
+        /// <para><b>One copy, called by all three scans of <see cref="CrowdScan"/>.</b> The
+        /// exactness claim in <see cref="PawnCrowdIndex"/> is worth nothing unless the survivors
+        /// are weighed by the identical arithmetic however they were found, and three inlined
+        /// copies of this would be three chances to drift apart — which is the same fault
+        /// <see cref="PawnPose"/> itself exists to prevent between the far form and the live
+        /// figures.</para>
+        ///
+        /// <para><paramref name="otherAt"/> is passed in rather than computed here because it is
+        /// the one term the cached and bucketed scans already know: it was recomputed once per
+        /// *pair* and there are only N distinct answers.</para>
+        /// </summary>
+        static float CrowdWeight(in PawnView other, in PawnView self, Vector3 hereNow,
+                                 Vector3 headingDir, Vector3 otherAt)
+        {
+            if (other.Id == self.Id) return 0f;
+            // An animal is outside the sidestep on both sides (design 29): nobody dodges a hog.
+            if (other.IsAnimal) return 0f;
+            float near = SteeringCurve.Proximity(Vector3.Distance(hereNow, otherAt));
+            if (near <= 0f) return 0f;
+            return near * SteeringCurve.InTheWay(headingDir, in other);
         }
 
         /// <summary>

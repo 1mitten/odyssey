@@ -163,27 +163,28 @@ namespace Odyssey.Hud
         /// <see cref="QuitKey"/> stays last, which is where the settings panel already draws it, so
         /// adding three rows moves nothing the owner has already looked at.</para>
         ///
-        /// <para><b>Which rows ask twice.</b> In game, all three of Load, Quit to main menu and
-        /// Quit throw a running colony away, so all three arm first — the argument
-        /// <see cref="SettingsDirector.RequestExit"/> already makes for one of them, applied to the
-        /// two that arrived beside it. On the main screen nothing is running, so Load and Options
-        /// cost nothing and go on the first press. Quit still asks twice there, for the reason the
-        /// exit row does: it sits directly under Options in a stack of four, it is irreversible,
-        /// and a mis-aimed click closes the game. That also keeps one word behaving one way
-        /// everywhere, which is the whole thesis of putting both surfaces through this table.</para>
+        /// <para><b>Which rows ask twice.</b> In game, Load throws a running colony away on a
+        /// press, so it arms first. <b>The two quits no longer do</b> (2026-09-21): they raise
+        /// <see cref="LeavePrompt"/> instead, which asks the same question and one more — whether
+        /// to save on the way out — and arming a row that opens a prompt would be asking twice
+        /// before asking properly. On the main screen nothing is running, so Load and Options cost
+        /// nothing and go on the first press. Quit asked twice there until 2026-09-24, because with no
+        /// colony there was no prompt to raise in its place; the title screen's Exit game now raises
+        /// the leave prompt in its no-colony form (<c>LeavePrompt.AskToExit</c>, design 40), so the
+        /// prompt is the second press there too and the row no longer arms.</para>
         /// </summary>
         static readonly (string Key, SessionContext Context, int Order, bool AsksTwice)[] Table =
         {
             (NewGameKey,    SessionContext.MainScreen, 1, false),
             (LoadKey,       SessionContext.MainScreen, 2, false),
             (OptionsKey,    SessionContext.MainScreen, 3, false),
-            (QuitKey,       SessionContext.MainScreen, 4, true),
+            (QuitKey,       SessionContext.MainScreen, 4, false),
 
             (SaveKey,       SessionContext.InGame,     1, false),
             (SaveAsKey,     SessionContext.InGame,     2, false),
             (LoadKey,       SessionContext.InGame,     3, true),
-            (QuitToMenuKey, SessionContext.InGame,     4, true),
-            (QuitKey,       SessionContext.InGame,     5, true),
+            (QuitToMenuKey, SessionContext.InGame,     4, false),
+            (QuitKey,       SessionContext.InGame,     5, false),
         };
 
         /// <summary>The contexts, so a test can walk every one rather than naming two by hand and

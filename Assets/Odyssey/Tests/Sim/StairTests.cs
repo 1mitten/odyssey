@@ -20,7 +20,7 @@ namespace Odyssey.Tests.Sim
     /// <para>Written in <c>LadderTests</c>'s shape on purpose: <b>reachability rather than
     /// edifice-existence, with the control measured first</b>, because a board where everything
     /// happens to be reachable would pass a badly written version of every test here without the
-    /// feature existing at all. Design: <c>docs/design/28-stairs.md</c>.</para>
+    /// feature existing at all. Design: <c>docs/design/60-stairs.md</c>.</para>
     /// </summary>
     public class StairTests
     {
@@ -42,7 +42,13 @@ namespace Odyssey.Tests.Sim
         {
             Assert.That(colony.Construction.Place(Size.FromIndex(cell), building, stuff, facing),
                 Is.EqualTo(IntentRejection.None), $"the order for {cell} was refused");
-            colony.Construction.Raise(colony.Pawns, cell);
+
+            // Raise refuses while a colonist is walking through a cell a blocking thing would fill
+            // (design 30, nobody in a wall); wait for them to pass, and say so if they never do.
+            for (int tick = 0; tick < 600 && !colony.Construction.Raise(colony.Pawns, cell); tick++)
+                colony.World.Tick();
+            Assert.That(colony.Construction.SiteAt(Size.FromIndex(cell)), Is.EqualTo(-1),
+                $"{cell} was never raised: somebody stood in it for ten seconds");
         }
 
         static int Above(int cell) => cell + Size.LayerStride;
@@ -153,11 +159,8 @@ namespace Odyssey.Tests.Sim
             colony.World.Tick();
 
             Pawn pawn = TheColonist(colony);
-            foreach (TraverseMode mode in new[]
-                     {
-                         TraverseMode.Colonist, TraverseMode.Hauler,
-                         TraverseMode.Animal, TraverseMode.IgnoreDoors,
-                     })
+            // Every mode there is, not a list of them: a mode added later is covered or fails here.
+            foreach (TraverseMode mode in (TraverseMode[])System.Enum.GetValues(typeof(TraverseMode)))
                 Assert.That(colony.Pawns.Reachable(pawn, landing, mode), Is.True, $"{mode} may climb a stair");
         }
 
@@ -165,7 +168,7 @@ namespace Odyssey.Tests.Sim
 
         /// <summary>
         /// <b>A colony-built stair is one record in one cell, climbing a whole layer</b>
-        /// (2026-09-21, <c>28-stairs.md</c> §10). The owner's words: <i>"It should be able to go up
+        /// (2026-09-21, <c>60-stairs.md</c> §10). The owner's words: <i>"It should be able to go up
         /// a flight in one square for ease."</i>
         ///
         /// <para>The neighbour is asserted empty in the same breath, because "one cell" is a claim

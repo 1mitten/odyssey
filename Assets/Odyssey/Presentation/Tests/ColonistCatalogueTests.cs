@@ -64,17 +64,22 @@ namespace Odyssey.Presentation.Tests
         [Test]
         public void NoSlotsOverlapOnAnyBody()
         {
-            // The shader lays the four slots over one another in a fixed order and does not test
-            // for overlap, so a fragment inside two of them would take whichever came last. That
-            // is only safe because they are disjoint, which is asserted here rather than hoped
-            // for. A body the classifier could not separate is marked Shared and drops the
+            // The shader gives a fragment to the first of the four slots it is inside, in a fixed
+            // order (skin, hair, cloth, cloth2), so a colonist's rectangle that overlapped another
+            // slot's would quietly lose part of itself. That is only safe because they are
+            // disjoint, which is asserted here rather than hoped for. A body the classifier could not separate is marked Shared and drops the
             // smaller slot, so even those arrive disjoint.
             // Across slots, not within one. Two skin rectangles that touch paint the same colour
             // twice and are the same picture; two rectangles belonging to *different* slots are
             // the ambiguity the shader cannot resolve. The classifier merges the first case and
             // drops a slot in the second.
+            //
+            // The bandit gang's rows are the one deliberate exception (design 42 §5): their black
+            // slot is the whole atlas, lying behind the skin, which the shader's first-slot-wins
+            // order resolves. They are held to their own shape by FarBanditTests instead.
             foreach (ModuleEntry row in Load().FindFamily(ModuleIds.ColonistBase))
             {
+                if (row.bandit) continue;
                 AppearanceCells cells = row.appearance;
                 var slots = new[] { cells.skin, cells.hair, cells.cloth, cells.cloth2 };
                 for (int i = 0; i < slots.Length; i++)

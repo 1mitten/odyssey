@@ -19,6 +19,16 @@
 -->
 <Defs>
 
+  <!--
+    maxHitPoints (design 33 section 4, C6) is what a finished thing has when it is struck, in whole
+    points, before any material scaling: INVENTED per thing by the combat contracts step, and C6's
+    to tune. A building nobody has hit carries no row anywhere; what is left of a struck one is
+    EdificeDamage's. Building_None has none. The pool is this times the material's
+    hitPointsFactorPerMille (design 33 section 13c): a wooden wall 300, a stone one 450. Only an
+    edifice standing in a cell can be struck, so the floor's, the deck plate's and the conduit's
+    numbers are not read yet.
+  -->
+
   <!-- 0 is "nothing", matching the grid's zero default, exactly as TerrainAir is 0. -->
   <BuildingDef>
     <defName>Building_None</defName>
@@ -46,6 +56,7 @@
     <workToBuild>135</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.wall</iconKey>
+    <maxHitPoints>300</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -75,6 +86,7 @@
     <workToBuild>120</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.roof</iconKey>
+    <maxHitPoints>250</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -113,6 +125,7 @@
     <workToBuild>60</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.deckplate</iconKey>
+    <maxHitPoints>150</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -134,7 +147,7 @@
 
     Stairs were deliberately not here until U44, for the reason given at the time: a stair is two
     cells and rises 1.5 m per cell, so it carries a placement rule a ladder needs none of. That
-    rule is written now - see Building_Stair below and docs/design/28-stairs.md.
+    rule is written now - see Building_Stair below and docs/design/60-stairs.md.
   -->
   <BuildingDef>
     <defName>Building_Ladder</defName>
@@ -154,6 +167,7 @@
     <workToBuild>90</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.ladder</iconKey>
+    <maxHitPoints>80</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -187,6 +201,9 @@
     <workToBuild>180</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.bed</iconKey>
+    <maxHitPoints>120</maxHitPoints>
+    <!-- Cover beside it (design 53 section 3), low. INVENTED. -->
+    <coverPerMille>300</coverPerMille>
   </BuildingDef>
 
   <!--
@@ -204,79 +221,159 @@
     <workToBuild>135</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.door</iconKey>
+    <maxHitPoints>160</maxHitPoints>
   </BuildingDef>
 
   <!--
-    RF1. A column in one cell whose only job is to hold up the slab above it, and the thing that
-    makes a hall roofable. Support decays one per cell from a wall, so a slab stands at most three
-    cells from anything holding it up: measured, a room with an 8-cell interior takes nine holes in
-    its roof and a 10-cell one takes twenty-five. docs/design/27-roofs.md §5.
-
-    edifice 4 is CoreContent.EdificePillar, which has existed since worldgen stamped its first
-    colonnade. The support solver needs no change whatsoever - SupportSolver.IsGrounded ends at
-    `Edifice[below] >= 0`, so a pillar has grounded the slab over it for as long as the solver has
-    run. There was simply nothing that could build one.
-
-    blocking true, and it is a decision rather than a detail: a pillar fills its 2.5 m cell, so the
-    span is paid for in the floor it stands on. A pillar you could walk through would make a
-    pillared hall strictly better than an unpillared one and the choice free.
-
-    costCount 3 and workToBuild 90 against a wall's 5 and 135 and a slab's 4 and 120 - less
-    material than a 3 m wall panel, dearer per cell than a slab. Neither number is derived from
-    anything and nothing derives from them; they are the owner's to tune.
+    THE SHELF. edifice 13 is CoreContent.EdificeShelf — 10 and 11 are the trees, 12 is the bed.
+    blocking false: a shelf is walked past, not around. A blocking one would be a wall a player
+    built by accident, and every placement would be a NavGraph rebuild.
+    needsClearCell true: the cell stops taking loose stacks the moment the shelf is raised, so
+    what is at a shelf's cell is in the shelf.
+    Cost and work are the bed's; a shelf is joinery of the same order.
   -->
   <BuildingDef>
-    <defName>Building_Pillar</defName>
-    <label>support pillar</label>
-    <edifice>4</edifice>
-    <blocking>true</blocking>
-    <costCount>3</costCount>
-    <workToBuild>90</workToBuild>
-    <minSkill>0</minSkill>
-    <iconKey>ui.arch.tool.pillar</iconKey>
-  </BuildingDef>
-
-  <!--
-    THE WAY UP THAT CARRIES SOMETHING (docs/design/28-stairs.md). A hauler is barred from a ladder,
-    so a stair carries the AllMask and material reaches an upper storey by it.
-
-    ONE CELL, climbing a full 3.0 m layer, flush with the floor above. It was two cells for exactly
-    one day: U44 built it as the bed's footprint - two adjacent halves rising 1.5 m each - because
-    SM_Bld_Base_Stairs_01 is a half-flight and that is what the Phase 3 research recommended. The
-    owner played it (2026-09-21): "It should be able to go up a flight in one square for ease - but
-    it's not - it's not flush with the floor above either - this needs to change."
-
-    docs/research/e-01-module-mapping.md had the answer in the same table it made the original
-    recommendation in: SM_Bld_Base_Stairs_02, 2.50 x 3.33 x 2.50, rise 3.00, listed as a "steep
-    full-layer stair in one cell (optional variant)". No new geometry, no scaling hack.
-
-    edifice 13 is CoreContent.EdificeStairFull, a value of its own. Worldgen's stamped stairwells
-    keep Lower + Upper (5 and 6) and are deliberately NOT unified with this - the city templates
-    depend on the pair, and a separate value means EdificeFootprint answers 1 here with no special
-    case, every second-cell path falls out on SecondCell == -1, the shaft rule asks about one cell
-    above instead of two, and the connector is the ladder's own one-cell shape.
-
-    rotates true: which way the flight climbs is the player's to choose, and unlike the two-cell
-    version there is no partner to infer it from - so the stored facing is read, which is what a
-    built thing was always supposed to do (28-stairs.md 9).
-
-    blocking false for the ladder's reason exactly: a stair you cannot enter is a decoration.
-
-    costCount 6 and workToBuild 150 against a wall's 5 and 135 and a ladder's 4 and 90 - a flight of
-    carpentry, and the thing a colony saves up for rather than knocks together. Unchanged from the
-    two-cell version deliberately: a stair still costs a stair. Neither number derives from anything
-    and nothing derives from them; they are the owner's to tune.
-  -->
-  <BuildingDef>
-    <defName>Building_Stair</defName>
-    <label>stair</label>
+    <defName>Building_Shelf</defName>
+    <label>shelf</label>
     <edifice>13</edifice>
-    <rotates>true</rotates>
     <blocking>false</blocking>
-    <costCount>6</costCount>
-    <workToBuild>150</workToBuild>
+    <rotates>true</rotates>
+    <needsClearCell>true</needsClearCell>
+    <storageSlots>8</storageSlots>
+    <costCount>5</costCount>
+    <workToBuild>180</workToBuild>
     <minSkill>0</minSkill>
-    <iconKey>ui.arch.tool.stair</iconKey>
+    <iconKey>ui.arch.tool.shelf</iconKey>
+    <maxHitPoints>100</maxHitPoints>
+    <!-- Cover beside it (design 53 section 3), low. INVENTED. -->
+    <coverPerMille>500</coverPerMille>
+  </BuildingDef>
+
+  <!--
+    THE FIRST HEAT SOURCE (design 28 §7). edifice 14 is CoreContent.EdificeCampfire.
+
+    heatPerPass 1200 is in centi-degree-cells: in deepest Rime it holds a 6×6 room at roughly
+    +38 °C over the outdoors - comfortable - and in Wash the same fire in the same room runs
+    toward 49 °C, which is the lesson "don't burn fires in summer" arriving for free. A
+    temperature cap on a source is a recorded hook, not v1.
+
+    blocking true: nobody stands in a fire. needsClearCell true like the bed's - a stack of
+    meals on a campfire is a worse version of the stack through the mattress.
+
+    costCount 3 and workToBuild 60: kindling and a ring of stones, the cheapest thing in the
+    table beside the deck plate. It burns steadily in v1; fuel is a recorded hook, and the
+    campfire sound is already in the library waiting for the day something plays it.
+
+    radiantC 2600 is a DIFFERENT thing from heatPerPass and the pair is the point (design 31
+    section 15). heatPerPass warms the room's air, slowly and everywhere at once. radiantC is
+    what the fire does to you by shining on you: immediate, local, and no different in a
+    cupboard than in a hall. 2600 puts the fire's own cell at about 45 C in Wash - past the
+    35 C the pane already draws red at, and past heatstrokeC, so standing in it is a bad idea
+    by the tuning rather than by a new rule. The ring one cell out lands in the amber band.
+
+    In deep Rime the same fire reads about 13 C at its own cell and is not red, which is
+    correct rather than a miss: the colour tracks whether it is DANGEROUS, and a fire in
+    freezing air is the opposite of dangerous. That is the owner's own distinction - red for
+    danger, amber for passive benefit - falling out of absolute temperature.
+  -->
+  <BuildingDef>
+    <defName>Building_Campfire</defName>
+    <label>campfire</label>
+    <edifice>14</edifice>
+    <blocking>true</blocking>
+    <needsClearCell>true</needsClearCell>
+    <heatPerPass>1200</heatPerPass>
+    <radiantC>2600</radiantC>
+    <costCount>3</costCount>
+    <workToBuild>60</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.campfire</iconKey>
+    <!-- C6 (design 33 section 13c), INVENTED: kindling and a ring of stones, the cheapest thing in the table. -->
+    <maxHitPoints>60</maxHitPoints>
+    <!-- Cover beside it (design 53 section 3), low. INVENTED. -->
+    <coverPerMille>250</coverPerMille>
+  </BuildingDef>
+
+  <!--
+    A POWER LINE (design 32 §3, §14). conduit true: not an edifice, so the order goes to the power
+    grid and the line into a layer of its own, where it can run through a wall or under a floor.
+    All part and no material: partItem 1 is Item_Salvage, scrap metal, one a cell. workToBuild 40
+    is a-07's 35 rounded to the table's tens.
+  -->
+  <BuildingDef>
+    <defName>Building_Conduit</defName>
+    <label>conduit</label>
+    <edifice>0</edifice>
+    <conduit>true</conduit>
+    <blocking>false</blocking>
+    <costCount>0</costCount>
+    <partItem>1</partItem>
+    <partCount>1</partCount>
+    <workToBuild>40</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.conduit</iconKey>
+    <!-- C6, INVENTED and unread: a line is not an edifice, so nothing can strike one yet. -->
+    <maxHitPoints>40</maxHitPoints>
+  </BuildingDef>
+
+  <!--
+    THE WOOD-FIRED GENERATOR (design 32 §6). edifice 15 is CoreContent.EdificeGenerator.
+
+    powerOutputW 1000, fuelCapacity 75 and fuelPerDay 22 are a-07's; the burn is in proportion to
+    load (the owner's departure), so 22 is the ceiling. fuelItem 2 is Item_Wood, and 75 is exactly
+    one stack of it. heatPerPass 400 is the heat at full load, scaled by load like the burn and
+    owned by the power grid rather than the thermal pass's table. Two cells, rotatable, blocking,
+    wanting a clear cell. 30 stuff and 600 ticks: the first expensive thing in the table.
+  -->
+  <BuildingDef>
+    <defName>Building_Generator</defName>
+    <label>generator</label>
+    <edifice>15</edifice>
+    <blocking>true</blocking>
+    <footprint>2</footprint>
+    <rotates>true</rotates>
+    <needsClearCell>true</needsClearCell>
+    <powerOutputW>1000</powerOutputW>
+    <fuelItem>2</fuelItem>
+    <fuelCapacity>75</fuelCapacity>
+    <fuelPerDay>22</fuelPerDay>
+    <heatPerPass>400</heatPerPass>
+    <costCount>30</costCount>
+    <partItem>1</partItem>
+    <partCount>20</partCount>
+    <workToBuild>600</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.generator</iconKey>
+    <!-- C6, INVENTED: the first expensive thing, a wall's worth. -->
+    <maxHitPoints>300</maxHitPoints>
+    <!-- Cover beside it (design 53 section 3), low. INVENTED. -->
+    <coverPerMille>500</coverPerMille>
+  </BuildingDef>
+
+  <!--
+    THE ELECTRIC HEATER (design 32 §7). edifice 16 is CoreContent.EdificeHeater. a-07's 175 W, and
+    heatPerPass 1000 into its room only while powered and switched on. One cell, blocking, wanting
+    a clear cell; 10 stuff and 240 ticks.
+  -->
+  <BuildingDef>
+    <defName>Building_Heater</defName>
+    <label>heater</label>
+    <edifice>16</edifice>
+    <blocking>true</blocking>
+    <rotates>true</rotates>
+    <needsClearCell>true</needsClearCell>
+    <powerDrawW>175</powerDrawW>
+    <heatPerPass>1000</heatPerPass>
+    <costCount>10</costCount>
+    <partItem>1</partItem>
+    <partCount>5</partCount>
+    <workToBuild>240</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.heater</iconKey>
+    <!-- C6, INVENTED: a shelf's worth. -->
+    <maxHitPoints>100</maxHitPoints>
+    <!-- Cover beside it (design 53 section 3), low. INVENTED. -->
+    <coverPerMille>400</coverPerMille>
   </BuildingDef>
 
   <!--
@@ -286,6 +383,12 @@
     carries one, and ConstructionContent.IsBuildable is what keeps them off the menu. A salvage
     line that turned rubble into steel would give one an item and put it there, with no other
     change anywhere.
+
+    sharpDamagePerMille and bluntDamagePerMille (design 33 section 14d; the owner, 2026-09-24:
+    blunt against stone, sharp against wood) scale a blow at a thing built of the material, in
+    thousandths of its rolled damage, by the weapon's damage kind; fists are blunt. INVENTED: wood
+    1250 sharp and 1000 blunt, stone 500 sharp and 1250 blunt. The city's four take the default
+    1000 - the owner left the city for now - and so does anything the table does not know.
   -->
   <StuffDef>
     <defName>Stuff_None</defName>
@@ -299,6 +402,7 @@
     <label>concrete</label>
     <stuff>1</stuff>
     <item>-1</item>
+    <thermalConductancePerMille>1100</thermalConductancePerMille>
   </StuffDef>
 
   <StuffDef>
@@ -306,6 +410,7 @@
     <label>steel</label>
     <stuff>2</stuff>
     <item>-1</item>
+    <thermalConductancePerMille>1400</thermalConductancePerMille>
   </StuffDef>
 
   <StuffDef>
@@ -313,6 +418,7 @@
     <label>composite</label>
     <stuff>3</stuff>
     <item>-1</item>
+    <thermalConductancePerMille>800</thermalConductancePerMille>
   </StuffDef>
 
   <!--
@@ -330,6 +436,9 @@
     <workOffsetTicks>0</workOffsetTicks>
     <hitPointsFactorPerMille>1000</hitPointsFactorPerMille>
     <iconKey>ui.res.wood</iconKey>
+    <thermalConductancePerMille>600</thermalConductancePerMille>
+    <sharpDamagePerMille>1250</sharpDamagePerMille>
+    <bluntDamagePerMille>1000</bluntDamagePerMille>
   </StuffDef>
 
   <!--
@@ -355,6 +464,136 @@
     <workOffsetTicks>15</workOffsetTicks>
     <hitPointsFactorPerMille>1500</hitPointsFactorPerMille>
     <iconKey>ui.res.stone</iconKey>
+    <thermalConductancePerMille>1000</thermalConductancePerMille>
+    <sharpDamagePerMille>500</sharpDamagePerMille>
+    <bluntDamagePerMille>1250</bluntDamagePerMille>
   </StuffDef>
+
+  <!--
+    THE GALLEY (design 48 section 5): the electric cooker, where meals are cooked from bills.
+    edifice 22 is CoreContent.EdificeGalley, after the wild things of design 45. a-18's electric stove draws 350 W, whenever it is
+    switched on, as the heater does. One cell, blocking, rotating, wanting a clear cell; built of
+    wood or stone with scrap metal in its workings, the heater's recipe a little heavier.
+  -->
+  <BuildingDef>
+    <defName>Building_Galley</defName>
+    <label>galley</label>
+    <edifice>22</edifice>
+    <blocking>true</blocking>
+    <rotates>true</rotates>
+    <needsClearCell>true</needsClearCell>
+    <powerDrawW>350</powerDrawW>
+    <costCount>15</costCount>
+    <partItem>1</partItem>
+    <partCount>10</partCount>
+    <workToBuild>300</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.galley</iconKey>
+    <!-- INVENTED: the heater's worth. -->
+    <maxHitPoints>100</maxHitPoints>
+    <!-- Cover beside it (design 53 section 3), low. INVENTED. -->
+    <coverPerMille>500</coverPerMille>
+  </BuildingDef>
+
+  <!--
+    SANDBAGS (design 53 section 4). edifice 23 is CoreContent.EdificeSandbags. Low cover, 55 per cent
+    (the reference's), crossed at +150 and never stood on (passThrough). Always stone - fixedStuff
+    5 is StuffHandle.Stone - five of it, the owner's placeholder until the recipes are decided. The
+    shelf's work; a quarter of the cost is left when fighting destroys one. INVENTED but the 55.
+  -->
+  <BuildingDef>
+    <defName>Building_Sandbags</defName>
+    <label>sandbags</label>
+    <edifice>23</edifice>
+    <blocking>false</blocking>
+    <needsClearCell>true</needsClearCell>
+    <costCount>5</costCount>
+    <workToBuild>180</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.sandbag</iconKey>
+    <maxHitPoints>300</maxHitPoints>
+    <coverPerMille>550</coverPerMille>
+    <passThrough>true</passThrough>
+    <crossCost>150</crossCost>
+    <wreckRefundPerMille>250</wreckRefundPerMille>
+    <fixedStuff>5</fixedStuff>
+  </BuildingDef>
+
+  <!--
+    RF1. A column in one cell whose only job is to hold up the slab above it, and the thing that
+    makes a hall roofable. Support decays one per cell from a wall, so a slab stands at most three
+    cells from anything holding it up: measured, a room with an 8-cell interior takes nine holes in
+    its roof and a 10-cell one takes twenty-five. docs/design/59-roofs.md §5.
+
+    edifice 4 is CoreContent.EdificePillar, which has existed since worldgen stamped its first
+    colonnade. The support solver needs no change whatsoever - SupportSolver.IsGrounded ends at
+    `Edifice[below] >= 0`, so a pillar has grounded the slab over it for as long as the solver has
+    run. There was simply nothing that could build one.
+
+    blocking true, and it is a decision rather than a detail: a pillar fills its 2.5 m cell, so the
+    span is paid for in the floor it stands on. A pillar you could walk through would make a
+    pillared hall strictly better than an unpillared one and the choice free.
+
+    costCount 3 and workToBuild 90 against a wall's 5 and 135 and a slab's 4 and 120 - less
+    material than a 3 m wall panel, dearer per cell than a slab. Neither number is derived from
+    anything and nothing derives from them; they are the owner's to tune.
+  -->
+  <BuildingDef>
+    <defName>Building_Pillar</defName>
+    <label>support pillar</label>
+    <edifice>4</edifice>
+    <blocking>true</blocking>
+    <costCount>3</costCount>
+    <workToBuild>90</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.pillar</iconKey>
+    <!-- INVENTED on merging combat: two thirds of a wall's. Its cover is the full-fill rule's. -->
+    <maxHitPoints>200</maxHitPoints>
+  </BuildingDef>
+
+  <!--
+    THE WAY UP THAT CARRIES SOMETHING (docs/design/60-stairs.md). A hauler is barred from a ladder,
+    so a stair carries the AllMask and material reaches an upper storey by it.
+
+    ONE CELL, climbing a full 3.0 m layer, flush with the floor above. It was two cells for exactly
+    one day: U44 built it as the bed's footprint - two adjacent halves rising 1.5 m each - because
+    SM_Bld_Base_Stairs_01 is a half-flight and that is what the Phase 3 research recommended. The
+    owner played it (2026-09-21): "It should be able to go up a flight in one square for ease - but
+    it's not - it's not flush with the floor above either - this needs to change."
+
+    docs/research/e-01-module-mapping.md had the answer in the same table it made the original
+    recommendation in: SM_Bld_Base_Stairs_02, 2.50 x 3.33 x 2.50, rise 3.00, listed as a "steep
+    full-layer stair in one cell (optional variant)". No new geometry, no scaling hack.
+
+    edifice 24 is CoreContent.EdificeStairFull, a value of its own. Worldgen's stamped stairwells
+    keep Lower + Upper (5 and 6) and are deliberately NOT unified with this - the city templates
+    depend on the pair, and a separate value means EdificeFootprint answers 1 here with no special
+    case, every second-cell path falls out on SecondCell == -1, the shaft rule asks about one cell
+    above instead of two, and the connector is the ladder's own one-cell shape.
+
+    rotates true: which way the flight climbs is the player's to choose, and unlike the two-cell
+    version there is no partner to infer it from - so the stored facing is read, which is what a
+    built thing was always supposed to do (60-stairs.md 9).
+
+    blocking false for the ladder's reason exactly: a stair you cannot enter is a decoration.
+
+    costCount 6 and workToBuild 150 against a wall's 5 and 135 and a ladder's 4 and 90 - a flight of
+    carpentry, and the thing a colony saves up for rather than knocks together. Unchanged from the
+    two-cell version deliberately: a stair still costs a stair. Neither number derives from anything
+    and nothing derives from them; they are the owner's to tune.
+  -->
+  <BuildingDef>
+    <defName>Building_Stair</defName>
+    <label>stair</label>
+    <edifice>24</edifice>
+    <rotates>true</rotates>
+    <blocking>false</blocking>
+    <costCount>6</costCount>
+    <workToBuild>150</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.stair</iconKey>
+    <!-- INVENTED on merging combat: a bed's worth, sturdier than a ladder. Stood on, not behind. -->
+    <maxHitPoints>120</maxHitPoints>
+  </BuildingDef>
 
 </Defs>

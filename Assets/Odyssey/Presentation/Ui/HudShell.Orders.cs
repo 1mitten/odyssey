@@ -70,6 +70,88 @@ namespace Odyssey.Presentation.Ui
 
             BuildRail(_gutter);
             BuildOrders(_gutter);
+            BuildViews(_gutter);
+        }
+
+        // ============================================================ the views strip
+
+        /// <summary>One toggle per view, by its key (design 32 §14).</summary>
+        readonly Dictionary<string, VisualElement> _viewButtons = new Dictionary<string, VisualElement>();
+
+        /// <summary>What the strip was last painted for: one bit per view, and -1 so the first paint runs.</summary>
+        int _viewsPaintedFor = -1;
+
+        /// <summary>The views drawn as paths rather than glyphs, re-tinted when they go on and off.</summary>
+        readonly Dictionary<string, PathGlyph> _viewPaths = new Dictionary<string, PathGlyph>();
+
+        /// <summary>
+        /// The views strip: under the orders, the same buttons, but each a switch that stays where
+        /// it is put rather than a tool that is held (owner, 2026-09-23). Which views exist is
+        /// <see cref="HudViews.Keys"/>; whether one is on is the overlay director's.
+        /// </summary>
+        void BuildViews(VisualElement gutter)
+        {
+            VisualElement strip = Panel("views", "orders", "views");
+            foreach (string key in HudViews.Keys) strip.Add(ViewButton(key));
+            gutter.Add(strip);
+        }
+
+        VisualElement ViewButton(string key)
+        {
+            var button = new VisualElement { name = "view-" + key };
+            button.AddToClassList("ord__btn");
+            // Home is drawn from Claude Design's path (design 43 §5a), in the accent at 80% while
+            // off and in the text colour while on; power keeps the palette category's bolt.
+            string? path = HudViews.PathOf(key);
+            if (path != null)
+            {
+                var glyph = new PathGlyph(path, 17f, HudTokens.Convert(HudTheme.Accent.WithAlpha(0.80f)), fill: true);
+                _viewPaths[key] = glyph;
+                button.Add(glyph);
+            }
+            else
+            {
+                button.Add(new HudGlyph(key == HudViews.Power ? HudGlyphKind.CategoryPower : HudGlyphKind.Placeholder,
+                    17f, HudTokens.Convert(HudTheme.Accent)));
+            }
+            button.tooltip = Registry.Label(key) + " — show it whatever is armed; press again to hide it";
+            button.RegisterCallback<ClickEvent>(_ =>
+            {
+                if (_directors == null) return;
+                HudViews.Toggle(_directors.Overlays, key);
+                MarkViews();
+            });
+            _viewButtons[key] = button;
+            return button;
+        }
+
+        /// <summary>Light the views that are on. Called every frame; early-returns when nothing moved.</summary>
+        void MarkViews()
+        {
+            if (_directors == null) return;
+            int bits = 0;
+            for (int i = 0; i < HudViews.Keys.Length; i++)
+                if (HudViews.IsOn(_directors.Overlays, HudViews.Keys[i])) bits |= 1 << i;
+            if (bits == _viewsPaintedFor) return;
+            _viewsPaintedFor = bits;
+
+            for (int i = 0; i < HudViews.Keys.Length; i++)
+            {
+                if (!_viewButtons.TryGetValue(HudViews.Keys[i], out VisualElement? button)) continue;
+                bool on = (bits & (1 << i)) != 0;
+                HudColour hue = HudTheme.Accent;
+                button.EnableInClassList("ord__btn--on", on);
+                button.style.backgroundColor = HudTokens.Convert(hue.WithAlpha(on ? 0.30f : 0.06f));
+                button.style.borderTopColor = button.style.borderRightColor =
+                    button.style.borderBottomColor = button.style.borderLeftColor =
+                        HudTokens.Convert(hue.WithAlpha(on ? 1f : 0.30f));
+                if (_viewPaths.TryGetValue(HudViews.Keys[i], out PathGlyph? glyph))
+                    glyph.Tint = HudTokens.Convert(on ? HudTheme.TextPrimary : hue.WithAlpha(0.80f));
+            }
+
+            // The Menu's rows for the same views are the same switches (design 43 §5a).
+            foreach (KeyValuePair<string, VisualElement> row in _overlayRows)
+                row.Value.EnableInClassList("menu__row--on", HudViews.IsOn(_directors.Overlays, row.Key));
         }
 
         // ============================================================ the orders strip

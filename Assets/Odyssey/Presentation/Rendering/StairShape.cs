@@ -40,7 +40,7 @@ namespace Odyssey.Presentation.Rendering
         /// <c>docs/research/e-01-module-mapping.md</c>, which listed it as a "steep full-layer
         /// stair in one cell (optional variant)" beside the half-flight it recommended. The owner
         /// asked for the variant after playing the recommendation
-        /// (<c>docs/design/28-stairs.md</c> §10).</para>
+        /// (<c>docs/design/60-stairs.md</c> §10).</para>
         ///
         /// <para>So <b>flush</b> is arithmetic rather than a tolerance: the top of the flight and
         /// the floor of the cell above are the same plane, and the picker's top plane

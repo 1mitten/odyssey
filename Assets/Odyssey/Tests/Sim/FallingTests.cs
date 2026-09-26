@@ -4,6 +4,7 @@ using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
 using Odyssey.Sim.Designations;
+using Odyssey.Sim.Growing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
@@ -471,6 +472,182 @@ namespace Odyssey.Tests.Sim
             Assert.That(Percent(100, 100), Is.EqualTo(100),
                 "a flat crossing, which was the one case the old arithmetic got right");
             Assert.That(Percent(500, 400), Is.EqualTo(100), "overshoot is still clamped");
+        }
+
+        // ---- what is rooted in the ground rather than resting on it -----------------------
+        //
+        // Owner report, 2026-09-21, with a screenshot: soil was tilled into a growing zone, sown,
+        // and then quarried out from underneath, and the seeds stayed exactly where they had been
+        // -- a scatter of white specks hanging over the hole. Falling knew about people and about
+        // loose things and about nothing else.
+
+        /// <summary>Paint one cell of carrots, sow it, and answer with the cell that holds it.</summary>
+        static int SowOne(ColonyWorld colony, int x, int z, int y)
+        {
+            GrowingZones zones = colony.Growing!;
+            int cell = Size.Index(x, z, y);
+            Assume.That(zones.Designate(new CellRef(x, z, y), PlantHandle.Carrot),
+                Is.EqualTo(IntentRejection.None), "the fixture needs plantable ground here");
+            zones.Sow(cell);
+            return cell;
+        }
+
+        /// <summary>
+        /// A surface cell of open, plantable ground with solid soil under it, and a plantable
+        /// neighbour to its east so the "field next door" test has somewhere to stand.
+        /// </summary>
+        static int OpenField(ColonyWorld colony, out int ground)
+        {
+            GrowingZones zones = colony.Growing!;
+            PlantDef carrot = zones.Plant(PlantHandle.Carrot);
+            for (int z = 1; z < Size.SizeZ - 1; z++)
+            for (int x = 1; x < Size.SizeX - 2; x++)
+            {
+                int cell = Size.Index(x, z, colony.Start.Y);
+                if (!zones.SiteAllows(cell, carrot)) continue;
+                if (!zones.SiteAllows(Size.Index(x + 1, z, colony.Start.Y), carrot)) continue;
+                int soil = cell - Size.LayerStride;
+                if (!colony.Grid.IsSolidTerrain(soil)) continue;
+                ground = soil;
+                return cell;
+            }
+
+            ground = -1;
+            return -1;
+        }
+
+        [Test]
+        public void MiningTheSoilUnderAFieldTakesTheSeedWithIt()
+        {
+            ColonyWorld colony = Board();
+            int cell = OpenField(colony, out int ground);
+            Assume.That(cell, Is.GreaterThanOrEqualTo(0), "the fixture found nowhere to farm");
+
+            CellRef at = Size.FromIndex(cell);
+            SowOne(colony, at.X, at.Z, at.Y);
+            Assume.That(colony.Growing!.IsPlanted(cell), Is.True);
+
+            Dig(colony, ground);
+
+            Assert.That(colony.Grid.HasFloor(cell), Is.False, "the fixture did not actually dig the soil out");
+            Assert.That(colony.Growing!.IsPlanted(cell), Is.False,
+                "the seed stayed where the soil had been - the reported fault");
+            Assert.That(colony.Growing!.ZonePlantAt(cell), Is.LessThan(0),
+                "the zone paint outlived the ground, so the field would have re-sown itself into the air");
+        }
+
+        [Test]
+        public void TheFieldNextDoorKeepsItsCrop()
+        {
+            // The rule is about the cell that lost its floor and not about the zone it belonged
+            // to: quarrying one corner of a field must not cancel the field.
+            ColonyWorld colony = Board();
+            int cell = OpenField(colony, out int ground);
+            Assume.That(cell, Is.GreaterThanOrEqualTo(0));
+
+            CellRef at = Size.FromIndex(cell);
+            SowOne(colony, at.X, at.Z, at.Y);
+            int neighbour = SowOne(colony, at.X + 1, at.Z, at.Y);
+
+            Dig(colony, ground);
+
+            Assert.That(colony.Growing!.IsPlanted(cell), Is.False);
+            Assert.That(colony.Growing!.IsPlanted(neighbour), Is.True, "its own soil is untouched");
+            Assert.That(colony.Growing!.ZonePlantAt(neighbour), Is.EqualTo(PlantHandle.Carrot));
+        }
+
+        [Test]
+        public void AnEmptyZoneCellLosesItsPaintToo()
+        {
+            // Nothing sown yet: the paint alone is still a claim about ground that is now a hole,
+            // and a sower sent to it would be sent into the air.
+            ColonyWorld colony = Board();
+            int cell = OpenField(colony, out int ground);
+            Assume.That(cell, Is.GreaterThanOrEqualTo(0));
+
+            CellRef at = Size.FromIndex(cell);
+            Assume.That(colony.Growing!.Designate(at, PlantHandle.Carrot), Is.EqualTo(IntentRejection.None));
+
+            Dig(colony, ground);
+
+            Assert.That(colony.Growing!.ZonePlantAt(cell), Is.LessThan(0));
+        }
+
+        [Test]
+        public void TheSweepFindsAFieldNobodyReported()
+        {
+            // The sibling of DropFloatingItems, for the case no caller of OutOf saw: a slab several
+            // cells away comes down and takes the soil of a field with it. The ground is taken away
+            // here without telling anybody, which is what that looks like from the zone's side.
+            ColonyWorld colony = Board();
+            int cell = OpenField(colony, out int ground);
+            Assume.That(cell, Is.GreaterThanOrEqualTo(0));
+
+            CellRef at = Size.FromIndex(cell);
+            SowOne(colony, at.X, at.Z, at.Y);
+
+            colony.Grid.Terrain[ground] = CoreContent.TerrainAir;
+            colony.Grid.Flags[ground] &= ~CellFlags.SolidTerrain;
+            Assume.That(colony.Grid.HasFloor(cell), Is.False);
+            Assume.That(colony.Growing!.IsPlanted(cell), Is.True, "nothing has been told yet");
+
+            Assert.That(Falling.UprootFloatingPlants(colony.Pawns), Is.EqualTo(1));
+            Assert.That(colony.Growing!.IsPlanted(cell), Is.False);
+            Assert.That(colony.Growing!.ZonePlantAt(cell), Is.LessThan(0));
+        }
+
+        [Test]
+        public void TheSweepCostsNothingWhenEveryFieldHasItsGround()
+        {
+            ColonyWorld colony = Board();
+            int cell = OpenField(colony, out _);
+            Assume.That(cell, Is.GreaterThanOrEqualTo(0));
+
+            CellRef at = Size.FromIndex(cell);
+            SowOne(colony, at.X, at.Z, at.Y);
+
+            Assert.That(Falling.UprootFloatingPlants(colony.Pawns), Is.EqualTo(0));
+            Assert.That(colony.Growing!.IsPlanted(cell), Is.True);
+        }
+
+        [Test]
+        public void ATreeGoesWithTheGroundAndLeavesNoWood()
+        {
+            // Mining cannot reach this - DesignationGrid.CanMine refuses the cell under a standing
+            // tree outright - but a collapsing slab and a deconstructed floor never ask. The rule
+            // is stated here so the caller that can produce it inherits the answer.
+            ColonyWorld colony = Board();
+            int tree = FirstTree(colony);
+            Assume.That(tree, Is.GreaterThanOrEqualTo(0), "the wooded board grew no trees");
+
+            int stacks = colony.Pawns.Items.Items.Count;
+            int ground = tree - Size.LayerStride;
+            colony.Grid.Terrain[ground] = CoreContent.TerrainAir;
+            colony.Grid.Flags[ground] &= ~CellFlags.SolidTerrain;
+
+            // Through OutOf rather than TreesOutOf, so the wiring is asserted and not just the rule.
+            Falling.OutOf(colony.Pawns, tree);
+            Assert.That(colony.Designations.IsTree(tree), Is.False, "the tree stayed rooted in mid-air");
+            Assert.That(colony.Pawns.Items.Items.Count, Is.EqualTo(stacks),
+                "what is lost with the ground is lost: felling is the way to get the timber");
+        }
+
+        [Test]
+        public void ATreeOnSolidGroundIsLeftAlone()
+        {
+            ColonyWorld colony = Board();
+            int tree = FirstTree(colony);
+            Assume.That(tree, Is.GreaterThanOrEqualTo(0));
+
+            Assert.That(Falling.TreesOutOf(colony.Pawns, tree), Is.False);
+            Assert.That(colony.Designations.IsTree(tree), Is.True);
+        }
+
+        static int FirstTree(ColonyWorld colony)
+        {
+            for (int i = Size.LayerStride; i < Size.CellCount; i++)
+                if (colony.Designations.IsTree(i)) return i;
+            return -1;
         }
 
         /// <summary>The arithmetic <c>PawnRegistry</c> publishes, stated once so it can be checked.</summary>

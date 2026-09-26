@@ -149,23 +149,20 @@ namespace Odyssey.Presentation.Ui
         /// How many units of a material the colony is holding, counted off the published
         /// snapshot.
         ///
-        /// <para>Loose stacks on the ground, which is what the stores panel counts too, and for
-        /// the same reason: a wall is built out of what a hauler can fetch. A material with no
-        /// item behind it can never be held, so it answers zero rather than pretending.</para>
+        /// <para>Everything the colony holds, which is what the stores panel counts too, and for
+        /// the same reason: a wall is built out of what a hauler can fetch, and a hauler can fetch
+        /// out of a shelf. A material with no item behind it can never be held, so it answers zero
+        /// rather than pretending.</para>
+        ///
+        /// <para>The sum itself is <see cref="ColonyStock"/>'s, in <c>Odyssey.Hud</c>, so that the
+        /// fast tier can hold it to that — this assembly is not compiled there.</para>
         /// </summary>
         int StockOf(int stuff)
         {
             WorldSnapshot? snapshot = _boot == null ? null : _boot.World?.Views.Current;
             if (snapshot == null || !ConstructionContent.IsBuildable(stuff)) return 0;
 
-            int item = ConstructionContent.StuffAt(stuff).item;
-            if (item < 0) return 0;
-
-            int held = 0;
-            ReadOnlySpan<ThingView> things = snapshot.Things;
-            for (int i = 0; i < things.Length; i++)
-                if (things[i].DefIndex == item) held += things[i].Stack;
-            return held;
+            return ColonyStock.Of(snapshot, ConstructionContent.StuffAt(stuff).item);
         }
 
         /// <summary>
@@ -893,6 +890,10 @@ namespace Odyssey.Presentation.Ui
             // did not have — press B with Work open and the two drew over each other, in the one
             // corner where the rule is already stated twice.
             if (open) _directors?.Work.SetOpen(false);
+            if (open) _directors?.Animals.SetOpen(false);
+            if (open) _directors?.Inventory.SetOpen(false);
+            if (open) _directors?.Research.SetOpen(false);
+            if (open) _directors?.Assign.SetOpen(false);
 
             _buildPanel.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
 

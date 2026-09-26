@@ -30,6 +30,19 @@ namespace Odyssey.Sim
         /// <summary>Publish one standing order, wherever in the world it is.</summary>
         public void AddOrder(in OrderView view) => _target.AddOrder(view);
 
+        /// <summary>Publish one built store — a shelf — and how full it is.</summary>
+        public void AddStorageUnit(in StorageUnitView view) => _target.AddStorageUnit(view);
+
+        /// <summary>Publish one cooking station, after its bills: <see cref="StationView.FirstBill"/> is
+        /// <see cref="BillCursor"/> read before the first of them was added.</summary>
+        public void AddStation(in StationView view) => _target.AddStation(view);
+
+        /// <summary>Publish one bill. See <see cref="AddStation"/>.</summary>
+        public void AddBill(in BillView view) => _target.AddBill(view);
+
+        /// <summary>How many bills this frame holds so far: where the next one will land.</summary>
+        public int BillCursor => _target.BillCount;
+
         /// <summary>Publish one building site, wherever in the world it is.</summary>
         public void AddSite(in SiteView view) => _target.AddSite(view);
 
@@ -62,11 +75,55 @@ namespace Odyssey.Sim
         /// </summary>
         public void AddCellDetail(in CellDetail detail) => _target.AddCellDetail(detail);
 
+        /// <summary>The answer to the standing <c>QueryShot</c> (design 53 §8b).</summary>
+        public void SetShotReport(in ShotReportView report) => _target.SetShotReport(report);
+
         /// <summary>Publish one entry of the incident ledger. See <see cref="BulletinView"/>.</summary>
         public void AddBulletin(in BulletinView view) => _target.AddBulletin(view);
 
         /// <summary>Publish one thing in the air. See <see cref="FallingView"/>.</summary>
         public void AddFalling(in FallingView view) => _target.AddFalling(view);
+
+        public void AddProjectile(in ProjectileView view) => _target.AddProjectile(view);
+
+        /// <summary>Publish one raid. See <see cref="RaidView"/>.</summary>
+        public void AddRaid(in RaidView view) => _target.AddRaid(view);
+
+        /// <summary>Publish one line cell. See <see cref="ConduitView"/> for which are published when.</summary>
+        public void AddConduit(in ConduitView view) => _target.AddConduit(view);
+
+        /// <summary>Publish one power building.</summary>
+        public void AddPowerDevice(in PowerDeviceView view) => _target.AddPowerDevice(view);
+
+        /// <summary>Publish one power net's balance.</summary>
+        public void AddPowerNet(in PowerNetView view) => _target.AddPowerNet(view);
+
+        /// <summary>Say which drawing of the lines this frame's rows are. See <see cref="WorldSnapshot.PowerVersion"/>.</summary>
+        public void SetPowerVersion(int version) => _target.SetPowerVersion(version);
+
+        /// <summary>Publish the sky. See <see cref="WorldSnapshot.Weather"/>.</summary>
+        public void SetWeather(in WeatherView view) => _target.SetWeather(view);
+
+        /// <summary>Say where the hearth is. See <see cref="WorldSnapshot.HearthCell"/>.</summary>
+        public void SetHearthCell(int cell) => _target.SetHearthCell(cell);
+
+        /// <summary>Say which working-out of the home this frame's rows are. See <see cref="WorldSnapshot.HomeVersion"/>.</summary>
+        public void SetHomeVersion(int version) => _target.SetHomeVersion(version);
+
+        /// <summary>Publish one border cell of the home. See <see cref="HomeCellView"/>.</summary>
+        public void AddHomeCell(in HomeCellView view) => _target.AddHomeCell(view);
+
+        /// <summary>Publish one moment of a fight. See <see cref="CombatEventView"/>.</summary>
+        public void AddCombatEvent(in CombatEventView view) => _target.AddCombatEvent(view);
+
+        /// <summary>Publish one corpse. See <see cref="CorpseView"/>.</summary>
+        public void AddCorpse(in CorpseView view) => _target.AddCorpse(view);
+
+        /// <summary>Publish one struck building (design 33 §13i). See <see cref="EdificeDamageView"/>.</summary>
+        public void AddEdificeDamage(in EdificeDamageView view) => _target.AddEdificeDamage(view);
+
+        /// <summary>Publish the content's hit points for one edifice id: nought is "not a target".</summary>
+        public void SetEdificeHitPoints(int edifice, int points) => _target.SetEdificeHitPoints(edifice, points);
     }
 
     /// <summary>
@@ -104,6 +161,29 @@ namespace Odyssey.Sim
         /// view state: not saved, not hashed, and a question changes nothing the simulation owns.
         /// </summary>
         public int QueryCell { get; internal set; } = -1;
+
+        /// <summary>
+        /// Is presentation showing the power lines (design 32 §9)? While it is, built lines are
+        /// published; while it is not, only orders and marks are. Set through a
+        /// <c>WatchPower</c> intent, and view state like <see cref="QueryCell"/>: not saved, not
+        /// hashed, and changing nothing the simulation owns.
+        /// </summary>
+        public bool WatchPower { get; internal set; }
+
+        /// <summary>
+        /// Is presentation showing the home (design 43 §5c)? While it is, the home's border cells are
+        /// published. Set through a <c>WatchHome</c> intent; view state like <see cref="WatchPower"/>.
+        /// </summary>
+        public bool WatchHome { get; internal set; }
+
+        /// <summary>
+        /// The shot the interface has asked about (design 53 §8b): the shooter's and the target's
+        /// pawn ids, nought for no question. View state like <see cref="QueryCell"/>.
+        /// </summary>
+        public int QueryShotShooter { get; internal set; }
+
+        /// <inheritdoc cref="QueryShotShooter"/>
+        public int QueryShotTarget { get; internal set; }
 
         public int PublishCount { get; private set; }
 

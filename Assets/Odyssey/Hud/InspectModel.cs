@@ -10,6 +10,12 @@ namespace Odyssey.Hud
         Colonist,
         Item,
         Cell,
+
+        /// <summary>
+        /// A corpse (design 33 §1: "clickable as Corpse of X"), by <see cref="InspectModel.Corpse"/>.
+        /// Appended with the combat contracts step; lane C fills its pane.
+        /// </summary>
+        Corpse,
     }
 
     /// <summary>
@@ -17,6 +23,27 @@ namespace Odyssey.Hud
     /// Tabs whose systems do not exist yet are present and disabled, so the shape of the game is
     /// visible from the first version — the panel catalogue's guarantee, made concrete.
     /// </summary>
+    /// <summary>
+    /// One kind of thing on a built store: what it is, how much, and in how many of its bays.
+    ///
+    /// <para>A struct in a pooled list rather than a string built per frame, for the pane's usual
+    /// reason — this is rebuilt fifteen times a second while a store is selected.</para>
+    /// </summary>
+    public struct StoreContentRow
+    {
+        /// <summary>The registry key, for the icon beside the name.</summary>
+        public string IconKey;
+
+        /// <summary>The commodity's name, from the registry and never written here.</summary>
+        public string Name;
+
+        /// <summary>Units of it, summed across however many bays hold it.</summary>
+        public int Units;
+
+        /// <summary>How many of the store's bays it occupies.</summary>
+        public int Stacks;
+    }
+
     public struct InspectTab
     {
         public string Name;
@@ -117,8 +144,93 @@ namespace Odyssey.Hud
         public PawnId Pawn;
         public ThingId Thing;
 
+        /// <summary>The corpse on the pane, as a <see cref="CorpseView.Id"/>, or 0 (design 33 §5f).</summary>
+        public int Corpse;
+
+        // ---- what the pane's shell builds (design 33 §5f) ------------------------------------
+        //
+        // The shell (HudShell.Inspect, Presentation) used to decide its shape from the subject
+        // and IsAnimal, which left every new kind of pawn — the bandit, the corpse — falling to
+        // the colonist's defaults in a file the interface lane does not own. It reads these four
+        // answers instead, and they live here, in the fast tier, where lane C can change them and
+        // test them. Their values as the contracts step left them reproduce the pane exactly as it
+        // was; the bandit and the corpse are lane C's to answer.
+
+        /// <summary>
+        /// The pane's avatar slot shows this pawn's own face (and portrait) rather than a keyed
+        /// badge. A person's: a colonist's, and a bandit's own portrait with the helmet on (design
+        /// 42 §2 — "they need to be their own character"). An animal wears its kind's badge.
+        /// </summary>
+        public bool ShowsFace => Subject == InspectSubject.Colonist && !IsAnimal;
+
+        /// <summary>
+        /// The needs, the skills, the Health tab's values and the mood in the state line are
+        /// synced. A colonist's only. <b>A bandit has none of them</b> (design 33 §5c: no needs;
+        /// its skills are not the player's to read and its health is the bar over its head), so
+        /// its pane is the animal's shape — kind, activity, where.
+        /// </summary>
+        public bool ShowsColonistBody => Subject == InspectSubject.Colonist && !IsAnimal && !IsHostile;
+
+        /// <summary>
+        /// The tab strip and the fixed-height tab box are built. A colonist's, and an animal's —
+        /// whose box is built from an empty tab list, the pane as it was (design 33 §5i) and kept
+        /// rather than changed without a decision. A bandit's is not: its pane has no tabs to
+        /// hold, and an empty box would be the Health tab's place with nothing in it.
+        /// </summary>
+        public bool ShowsTabBox => Subject == InspectSubject.Colonist && !IsHostile;
+
+        /// <summary>The badge the avatar slot shows when <see cref="ShowsFace"/> is false.</summary>
+        public string AvatarKey =>
+            Subject == InspectSubject.Item ? ItemIconKey
+            : Subject == InspectSubject.Cell ? CellIconKey
+            : IsAnimal || IsHostile || Subject == InspectSubject.Corpse ? KindIconKey
+            : PawnKindLabels.Colonist;
+
+        /// <summary>The corpse's registry key: its badge, and the first word of its title.</summary>
+        public const string CorpseKey = "ui.pawn.corpse";
+
         /// <summary>Last-known values of a colonist who has left the frame, shown greyed.</summary>
         public bool Tombstoned;
+
+        // ---- the Health tab (design 33 §1, §5d; lane C) ---------------------------------------
+
+        /// <summary>
+        /// The Health tab's rows under the bar: the colonist's condition (unhurt, hurt, stunned,
+        /// downed) and what is in her hand. Rebuilt only when one of them changes.
+        /// </summary>
+        public readonly List<InspectRow> HealthRows = new List<InspectRow>();
+
+        /// <summary>
+        /// "73 / 100": hit points left out of the pool, in whole points, up to the next whole point
+        /// so a colonist on her feet never reads nought, and nought for anybody below it. Empty
+        /// when no pool is published (a frame from before combat).
+        /// </summary>
+        public string HealthValue = string.Empty;
+
+        /// <summary>The bar's fill, 0 to 1000: hit points over the pool, clamped.</summary>
+        public int HealthPerMille;
+
+        /// <summary>The bar's ink, from <see cref="CombatFeedbackModel.HealthBarColour"/>.</summary>
+        public HudColour HealthInk = CombatFeedbackModel.HealthGood;
+
+        /// <summary>
+        /// The Health tab's two columns (design 43 §10): the regions and pain, and the pool, the
+        /// capacities, the blood, the bleed and the tend — or a clicked region's injuries.
+        /// </summary>
+        public readonly HealthTab Health = new HealthTab();
+
+        /// <summary>
+        /// "Hurt", "Stunned" or "Downed" for the header's state line, and empty for a colonist who
+        /// is whole (design 43 §10: the condition left the tab for the line beside the job).
+        /// </summary>
+        public string HealthCondition = string.Empty;
+
+        /// <summary>What is in her hand, for the header's state line; empty for bare hands.</summary>
+        public string HealthWeapon = string.Empty;
+
+        /// <summary>The Health tab's row labels, by key.</summary>
+        public const string HealthKey = "ui.combat.health", ConditionKey = "ui.combat.condition",
+            WeaponKey = "ui.combat.weapon";
 
         // ---- header
         public string Title = string.Empty;
@@ -162,7 +274,33 @@ namespace Odyssey.Hud
         /// <summary>The tile's own icon key, so the pane's avatar is the thing that was clicked.</summary>
         public string CellIconKey = "ui.overlay.zones";
 
+        /// <summary>
+        /// The selected pawn is an animal (design 29 §2, §8): the pane says its species, what it
+        /// is doing and where it is, and nothing a person has — no portrait, no needs, no tabs,
+        /// no commands. Set from the view's flags on every refresh.
+        /// </summary>
+        public bool IsAnimal;
+
+        /// <summary>
+        /// The selected pawn is hostile — a bandit (design 33 §1). A person, and not ours: its
+        /// pane is the animal's shape (kind, activity, where) with the kind's badge, and it has no
+        /// needs, skills, Health tab or Draft button. Set from the view's flags on every refresh.
+        /// </summary>
+        public bool IsHostile;
+
+        // Which pawn IsAnimal and IsHostile were last read for. A pawn that leaves the frame keeps
+        // the shape it had while it was in it, rather than falling to a colonist's tombstone.
+        PawnId _shapeFor;
+
+        /// <summary>The species' registry key, for the badge an animal shows where a person shows a face.</summary>
+        public string KindIconKey = PawnKindLabels.Colonist;
+
         // ---- colonist body, the Needs tab
+        /// <summary>
+        /// The activity line. For an animal and for any pawn without <see cref="ShowsColonistBody"/>
+        /// it is the whole of the line under the name; for a corpse it is the line the corpse's
+        /// pane says there (lane C's words, set in <see cref="Refresh"/>).
+        /// </summary>
         public string Job = "idle";
         public string JobIconKey = "ui.status.idle";
         public int Food;
@@ -174,6 +312,43 @@ namespace Odyssey.Hud
         public readonly List<int> JobCounts = new List<int>();
 
         public readonly List<InspectTab> Tabs = new List<InspectTab>();
+
+        /// <summary>
+        /// What a built store is holding, one row per kind, biggest first. Empty for everything
+        /// else — a painted zone's contents are on the board and are read off the board.
+        /// </summary>
+        public readonly List<StoreContentRow> StoreContents = new List<StoreContentRow>();
+
+        /// <summary>Whether the store under the pane is one the colony built, rather than painted.</summary>
+        public bool IsBuiltStore { get; private set; }
+
+        /// <summary>
+        /// Everything the Holding rows are drawn from, in one int.
+        ///
+        /// <para>The contents change as haulers arrive, which the filter's signature cannot see —
+        /// so the group has a cheap one of its own and the pane still rebuilds nothing on a frame
+        /// where nothing moved.</para>
+        /// </summary>
+        public int StoreContentsSignature
+        {
+            get
+            {
+                unchecked
+                {
+                    int signature = IsBuiltStore ? 17 : 0;
+                    for (int i = 0; i < StoreContents.Count; i++)
+                    {
+                        signature = signature * 31 + StoreContents[i].IconKey.GetHashCode();
+                        signature = signature * 31 + StoreContents[i].Units;
+                        signature = signature * 31 + StoreContents[i].Stacks;
+                    }
+                    return signature * 31 + StoreSummary.GetHashCode();
+                }
+            }
+        }
+
+        /// <summary>How full a built store is, as the Holding header says it: "4 of 8 stacks".</summary>
+        public string StoreSummary { get; private set; } = string.Empty;
         public readonly List<InspectCommand> Commands = new List<InspectCommand>();
 
         /// <summary>
@@ -206,11 +381,18 @@ namespace Odyssey.Hud
             ActiveTab >= 0 && ActiveTab < Tabs.Count ? Tabs[ActiveTab].Name : string.Empty;
 
         // Selection state is set by the pick resolver; the model never reads input itself.
+        // Every subject but a corpse writes Title, Subtitle and Job itself, so each forgets which
+        // corpse last wrote them: otherwise choosing that corpse again kept the other subject's
+        // strings (review, 2026-09-23).
         public void SetColonist(PawnId id)
         {
+            // Another colonist: the Health tab's clicked region was about the last one.
+            if (Subject != InspectSubject.Colonist || id != Pawn) Health.Reset();
             Subject = InspectSubject.Colonist;
             Pawn = id;
             Thing = ThingId.None;
+            Corpse = 0;
+            _corpseFor = 0;
         }
 
         public void SetItem(ThingId id)
@@ -218,6 +400,8 @@ namespace Odyssey.Hud
             Subject = InspectSubject.Item;
             Thing = id;
             Pawn = PawnId.None;
+            Corpse = 0;
+            _corpseFor = 0;
         }
 
         public void SetCell(CellRef cell)
@@ -225,7 +409,18 @@ namespace Odyssey.Hud
             Subject = InspectSubject.Cell;
             Pawn = PawnId.None;
             Thing = ThingId.None;
+            Corpse = 0;
             _cell = cell;
+            _corpseFor = 0;
+        }
+
+        /// <summary>A corpse, by <see cref="CorpseView.Id"/> (design 33 §5f).</summary>
+        public void SetCorpse(int corpseId)
+        {
+            Subject = InspectSubject.Corpse;
+            Pawn = PawnId.None;
+            Thing = ThingId.None;
+            Corpse = corpseId;
         }
 
         public void ClearSelection()
@@ -233,7 +428,9 @@ namespace Odyssey.Hud
             Subject = InspectSubject.None;
             Pawn = PawnId.None;
             Thing = ThingId.None;
+            Corpse = 0;
             Tombstoned = false;
+            _corpseFor = 0;
         }
 
         CellRef _cell;
@@ -271,6 +468,30 @@ namespace Odyssey.Hud
             Job = JobLabels.Carrying(pawn.JobDef, carried, stack);
         }
 
+        /// <summary>
+        /// "Pace 90% · in the rain", the line under the activity line (design 17 §5a), and what
+        /// it is made of for its tooltip. Empty for anything the simulation published no pace for.
+        /// </summary>
+        public string Pace = string.Empty;
+
+        /// <summary>The factors of <see cref="Pace"/> that are not the standard walk, joined.</summary>
+        public string PaceTip = string.Empty;
+
+        // What the two pace strings were last built from. The same argument as _positionFor: they
+        // are composed, and the pane refreshes fifteen times a second.
+        PaceModel.Factors _paceFor;
+        bool _paceWritten;
+
+        void SetPace(WorldSnapshot snapshot, PawnId id)
+        {
+            PaceModel.Factors factors = PaceModel.Of(snapshot, id);
+            if (_paceWritten && factors.Equals(_paceFor)) return;
+            _paceFor = factors;
+            _paceWritten = true;
+            Pace = factors.Published ? PaceModel.Line(factors) : string.Empty;
+            PaceTip = factors.Published ? PaceModel.Tooltip(factors) : string.Empty;
+        }
+
         void SetPosition(CellRef cell)
         {
             if (_positionWritten && _positionFor == cell) return;
@@ -278,6 +499,137 @@ namespace Odyssey.Hud
             _positionWritten = true;
             Position = $"at {cell.X}, {cell.Z}";
         }
+
+        /// <summary>The carried half of the activity cache while an animal's line is in it: no carried def is this.</summary>
+        const int AnimalActivity = int.MinValue + 1;
+
+        // The corpse the header strings were last written for. A corpse never changes, so its
+        // three strings are composed once per selection rather than fifteen times a second.
+        int _corpseFor;
+
+        /// <summary>
+        /// What the corpse on the pane was, as its kind's registry key, and whether it was an
+        /// animal — for the Almanac, which opens an animal's corpse on its Fauna entry. Empty and
+        /// false for anything else.
+        /// </summary>
+        public string CorpseKindKey { get; private set; } = string.Empty;
+
+        public bool CorpseWasAnimal { get; private set; }
+
+        /// <summary>
+        /// "Corpse of Wrenn" — "Corpse of a midden hog" — what it was, and when it died (design 33
+        /// §1). A colonist is named as she was named alive: <see cref="ColonistNames.Of(uint, PawnId)"/>
+        /// over the seed and id the corpse kept, which answers a player's own name first, so the
+        /// roster she left and the body she left agree. A bandit is a person with a name too
+        /// (design 42 §2), and keeps it; only an animal is called by its kind.
+        /// </summary>
+        void DescribeCorpse(in CorpseView corpse)
+        {
+            if (_corpseFor == corpse.Id) return;
+            _corpseFor = corpse.Id;
+
+            bool colonist = (corpse.Flags & (PawnFlags.Person | PawnFlags.Hostile)) == PawnFlags.Person;
+            bool hostile = (corpse.Flags & PawnFlags.Hostile) != 0;
+            CorpseKindKey = PawnKindLabels.IconKey(corpse.Kind);
+            CorpseWasAnimal = (corpse.Flags & PawnFlags.Person) == 0;
+            string of = !CorpseWasAnimal
+                ? ColonistNames.Of(corpse.RollSeed, corpse.Pawn)
+                : WithArticle(PawnKindLabels.Label(corpse.Kind).ToLowerInvariant());
+            Title = Registry.Label(CorpseKey) + " of " + of;
+            Subtitle = colonist ? ColonistWord : hostile ? HostileKindWord(corpse.Kind) : AnimalWord;
+            Job = Registry.Label(DeadKey) + " · since " + GameClock.HourOfDay(corpse.Tick).ToString("00")
+                + "h, day " + GameClock.DayOfMonth(corpse.Tick) + " of " + GameClock.MonthName(corpse.Tick);
+        }
+
+        const string DeadKey = "ui.combat.dead";
+
+        // What a pawn is, under its name, on the living pane and the corpse's alike: the
+        // registry's words lower-cased, once, so renaming a kind in icon-keys.csv renames it
+        // here too (RegistryTests.TheInspectPaneWritesNoPawnKindItself).
+        static readonly string ColonistWord = Registry.Label(PawnKindLabels.Colonist).ToLowerInvariant();
+        static readonly string HostileWord = Registry.Label("ui.pawn.hostile").ToLowerInvariant();
+        static readonly string AnimalWord = Registry.Label("ui.pawn.animal").ToLowerInvariant();
+        static readonly string BanditWord = PawnKindLabels.Label(PawnKindLabels.Bandit).ToLowerInvariant();
+        static readonly string GunmanWord = PawnKindLabels.Label(PawnKindLabels.Gunman).ToLowerInvariant();
+
+        /// <summary>
+        /// The word under a hostile person's name: "bandit" for the bandit (design 42 §2), "gunman"
+        /// for the gunman (design 55 §8), the generic "hostile" for any hostile kind that comes after
+        /// them and has no word of its own.
+        /// </summary>
+        static string HostileKindWord(int kind) =>
+            kind == PawnKindLabels.Bandit ? BanditWord
+            : kind == PawnKindLabels.Gunman ? GunmanWord
+            : HostileWord;
+
+        static string WithArticle(string noun) =>
+            noun.Length > 0 && "aeiou".IndexOf(noun[0]) >= 0 ? "an " + noun : "a " + noun;
+
+        // What the Health tab's strings were last built from, so a refresh that says the same
+        // thing builds nothing — the pane refreshes fifteen times a second.
+        int _healthHp = int.MinValue, _healthMax = int.MinValue, _healthWeapon = int.MinValue, _healthCondition = -1;
+
+        /// <summary>
+        /// The Health tab (design 33 §1: HP, state, weapon). The pool is <c>odyssey.pawn.hp.max</c>,
+        /// published for every person always; <b>no <c>odyssey.pawn.hp</c> beside it means whole</b>
+        /// (design 33 §5d). The condition is the flags' — downed, then stunned — else hurt while
+        /// below the pool, else unhurt. The weapon is <c>odyssey.pawn.weapon</c>'s item, else bare
+        /// hands.
+        ///
+        /// <para>Three O(1) aspect lookups a refresh for the one pawn on the pane.</para>
+        /// </summary>
+        void RefreshHealth(WorldSnapshot snapshot, in PawnView pawn)
+        {
+            bool pooled = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpMaxKey, out int max) && max > 0;
+            if (!pooled) max = 0;
+            int hp = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpKey, out int published) ? published : max;
+            int weaponDef = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponKey, out int held) ? held : -1;
+            int tier = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponQualityKey, out int q) ? q : 0;
+            // The tier rides the cache key: a better weapon of the same kind is a different line.
+            int weapon = weaponDef < 0 ? -1 : weaponDef * 16 + tier;
+            int condition = pawn.IsDowned ? 3 : pawn.IsStunned ? 2 : hp < max ? 1 : 0;
+
+            // The body's two columns (design 43 §10), rebuilt only when a number they quote moved.
+            Health.Refresh(snapshot, pawn.Id, hp, max);
+
+            if (hp == _healthHp && max == _healthMax && weapon == _healthWeapon && condition == _healthCondition)
+                return;
+            _healthHp = hp;
+            _healthMax = max;
+            _healthWeapon = weapon;
+            _healthCondition = condition;
+
+            int shown = hp < 0 ? 0 : hp > max ? max : hp;
+            HealthValue = pooled ? WholePoints(hp) + " / " + WholePoints(max) : string.Empty;
+            HealthPerMille = pooled ? (int)((long)shown * 1000 / max) : 0;
+            HealthInk = CombatFeedbackModel.HealthBarColour(shown, max);
+
+            HealthRows.Clear();
+            HealthRows.Add(new InspectRow
+            {
+                Name = Registry.Label(ConditionKey),
+                Value = Registry.Label(condition switch
+                {
+                    3 => CombatFeedbackModel.DownedKey,
+                    2 => CombatFeedbackModel.StunnedKey,
+                    1 => "ui.combat.hurt",
+                    _ => "ui.combat.unhurt",
+                }),
+            });
+            HealthRows.Add(new InspectRow
+            {
+                Name = Registry.Label(WeaponKey),
+                Value = weaponDef >= 0 ? ItemLabels.Label(weaponDef, tier) : Registry.Label("ui.combat.barehands"),
+            });
+
+            // The header's line carries these now (design 43 §10); the rows above stay the one place
+            // they are worded, so the words cannot drift apart.
+            HealthCondition = condition == 0 ? string.Empty : HealthRows[0].Value;
+            HealthWeapon = weapon >= 0 ? HealthRows[1].Value : string.Empty;
+        }
+
+        /// <summary>Thousandths to whole points, up to the next one: on her feet is never "0". Nought below it.</summary>
+        static int WholePoints(int milli) => milli <= 0 ? 0 : (milli + 999) / 1000;
 
         /// <summary>
         /// Refill every field from the current frame. Called on the pane's cadence (15 Hz in the
@@ -289,22 +641,96 @@ namespace Odyssey.Hud
             Tabs.Clear();
             Commands.Clear();
             _bedUnderPane = false;
+            _powerSwitchUnderPane = false;
+            TileEdifice = 0;
+            TileCellIndex = -1;
+            _orderActionUnderPane = false;
+            IsCampfire = false;
+            IsHearth = false;
             IsStore = false;
+            IsBuiltStore = false;
+            StoreSummary = string.Empty;
+            StoreContents.Clear();
 
             if (Subject == InspectSubject.Colonist)
             {
-                if (snapshot.TryGetPawn(Pawn, out PawnView pawn))
+                bool present = snapshot.TryGetPawn(Pawn, out PawnView pawn);
+                if (present)
+                {
+                    IsAnimal = PawnKindLabels.IsAnimal(pawn);
+                    IsHostile = pawn.IsHostile;
+                    _shapeFor = Pawn;
+                }
+                else if (_shapeFor != Pawn)
+                {
+                    // Never seen in a frame: the colonist's tombstone, as it always was.
+                    IsAnimal = false;
+                    IsHostile = false;
+                }
+
+                if (IsAnimal || IsHostile)
+                {
+                    // An animal (design 29 §8) or a bandit (design 33 §1): kind, activity,
+                    // where. The colonist's tabs, commands and skills are not added, so the pane
+                    // below the header is empty — and stays so when the pawn leaves the frame,
+                    // which a fight now makes ordinary: it keeps its shape, greyed.
+                    Skills.Clear();
+                    if (!present)
+                    {
+                        Tombstoned = true;
+                        return;
+                    }
+                    Tombstoned = false;
+                    KindIconKey = PawnKindLabels.IconKey(pawn.Kind);
+                    // A bandit is a person with a name of their own, dealt from the colonist
+                    // pool by the same seed and id (design 42 §2: "they need to be their own
+                    // character"); an animal is called by its kind.
+                    Title = IsAnimal ? PawnKindLabels.Label(pawn.Kind) : ColonistNames.Of(snapshot, pawn.Id);
+                    if (IsAnimal)
+                    {
+                        Subtitle = AnimalWord;
+                        // Its own mark in the carried half of the cache, so a colonist's line and
+                        // an animal's for the same job cannot be taken for each other; the stack
+                        // half carries whether the rain has sent it for cover (design 43 §6a).
+                        bool sheltering = PawnKindLabels.IsSheltering(snapshot, pawn.Id);
+                        int shelterMark = sheltering ? 1 : 0;
+                        string activity = PawnKindLabels.ActivityKey(pawn.JobDef, sheltering);
+                        if (_jobFor != pawn.JobDef || _carriedFor != AnimalActivity || _stackFor != shelterMark)
+                        {
+                            _jobFor = pawn.JobDef;
+                            _carriedFor = AnimalActivity;
+                            _stackFor = shelterMark;
+                            Job = Registry.Label(activity);
+                        }
+                        JobIconKey = activity;
+                    }
+                    else
+                    {
+                        // A bandit's job is a person's job — fighting, mostly — in a person's words,
+                        // under the kind's word where the name would otherwise leave you guessing.
+                        Subtitle = HostileKindWord(pawn.Kind);
+                        SetJob(snapshot, pawn);
+                        JobIconKey = JobLabels.IconKey(pawn.JobDef);
+                    }
+                    SetPosition(pawn.Cell);
+                    Layer = pawn.Cell.Y;
+                    return;
+                }
+
+                if (present)
                 {
                     Tombstoned = false;
                     Title = ColonistNames.Of(snapshot, pawn.Id);
-                    Subtitle = "colonist";
+                    Subtitle = ColonistWord;
                     SetJob(snapshot, pawn);
                     JobIconKey = JobLabels.IconKey(pawn.JobDef);
+                    SetPace(snapshot, pawn.Id);
                     Food = pawn.Food;
                     Rest = pawn.Rest;
                     Mood = pawn.Mood;
                     SetPosition(pawn.Cell);
                     Layer = pawn.Cell.Y;
+                    RefreshHealth(snapshot, pawn);
                 }
                 else
                 {
@@ -314,12 +740,42 @@ namespace Odyssey.Hud
                 }
 
                 AddColonistTabs();
-                AddColonistCommands();
+                AddColonistCommands(!Tombstoned && OrderModel.IsDrafted(snapshot, Pawn), ResponseModel.Of(snapshot, Pawn));
                 RefreshSkills(snapshot);
                 return;
             }
 
             Tombstoned = false;
+            IsAnimal = false;
+            IsHostile = false;
+
+            // A corpse (design 33 §1, §5f): "Corpse of X", what it was, when it died and where it
+            // lies, with the corpse badge and no tabs or commands.
+            if (Subject == InspectSubject.Corpse)
+            {
+                Skills.Clear();
+                KindIconKey = CorpseKey;
+                var corpses = snapshot.Corpses;
+                for (int i = 0; i < corpses.Length; i++)
+                {
+                    if (corpses[i].Id != Corpse) continue;
+                    DescribeCorpse(corpses[i]);
+                    SetPosition(corpses[i].Cell);
+                    Layer = corpses[i].Cell.Y;
+                    return;
+                }
+
+                // Not in this frame (a load, or a later cleanup): the word alone, rather than the
+                // last corpse's name.
+                _corpseFor = 0;
+                CorpseKindKey = string.Empty;
+                CorpseWasAnimal = false;
+                Title = Registry.Label(CorpseKey);
+                Subtitle = string.Empty;
+                Job = string.Empty;
+                return;
+            }
+
             if (Subject == InspectSubject.Item)
             {
                 bool found = false;
@@ -337,7 +793,7 @@ namespace Odyssey.Hud
                     // headline is "Wood × 27" and the line below says where it is lying.
                     Title = thing.Stack > 1
                         ? ItemLabels.Label(thing.DefIndex) + " × " + thing.Stack
-                        : ItemLabels.Label(thing.DefIndex);
+                        : ItemLabels.Label(thing.DefIndex, thing.Quality);
                     Subtitle = "item";
                     Stack = thing.Stack;
                     ItemIconKey = ItemLabels.IconKey(thing.DefIndex);
@@ -376,10 +832,18 @@ namespace Odyssey.Hud
                 if (DescribeSiteAt(snapshot, _cell))
                 {
                     // A site leads and is the whole answer: the tile under a blueprint is the
-                    // least interesting thing about the click.
+                    // least interesting thing about the click — except the one thing a player
+                    // does with an order they have changed their mind about, which is cancel it
+                    // (owner, 2026-09-23). One row, in the cancel tool's red, taking the building
+                    // order only: a line ordered through the same cell has a pane of its own.
                     CellRows.Clear();
                     _cellRowsFor = -1;
                     CellIconKey = "ui.overlay.zones";
+                    _orderActionUnderPane = true;
+                    OrderAction = IntentKind.CancelBuilding;
+                    OrderActionA = 1;
+                    Row(0, OrderActionRow, Registry.Label(PaletteTools.Cancel),
+                        OrderActionTint(IntentKind.CancelBuilding, keep: false));
                     return;
                 }
 
@@ -468,19 +932,28 @@ namespace Odyssey.Hud
         void SetSiteLine(SiteView site, string stuff)
         {
             int seconds = site.IsFrame ? (site.WorkTotal - site.WorkDone + 59) / 60 : -1;
+            int delivered = site.Delivered * 1_000 + site.PartsDelivered;
             if (_siteFramedFor == site.IsFrame
-                && _siteDeliveredFor == site.Delivered
+                && _siteDeliveredFor == delivered
                 && _siteSecondsFor == seconds) return;
 
             _siteFramedFor = site.IsFrame;
-            _siteDeliveredFor = site.Delivered;
+            _siteDeliveredFor = delivered;
             _siteSecondsFor = seconds;
 
             // The material leads while it is missing, because that is the actionable half: a site
             // with no wood is not slow, it is stuck.
+            // A second payment follows the first (design 32 §14): the scrap metal a generator
+            // still wants is said once its wood is in — "20 of 30 wood" while that is the stuck
+            // half, then "4 of 20 scrap metal".
+            string parts = site.PartsItem >= 0
+                ? Registry.Label(ItemLabels.IconKey(site.PartsItem)).ToLowerInvariant()
+                : string.Empty;
             Site = site.IsFrame
                 ? "about " + Seconds(site.WorkTotal - site.WorkDone) + " left"
-                : $"{site.Delivered} of {site.Cost} {stuff} delivered";
+                : site.Delivered < site.Cost || site.PartsCost == 0
+                    ? $"{site.Delivered} of {site.Cost} {stuff} delivered"
+                    : $"{site.PartsDelivered} of {site.PartsCost} {parts} delivered";
         }
 
         /// <summary>
@@ -535,13 +1008,31 @@ namespace Odyssey.Hud
             // The subject stays `Cell`, deliberately: everything below still describes the tile, a
             // zone has no identity a selection could hold on to across an edit, and the pick
             // resolver goes on answering in cells. What changes is what the pane leads with.
-            IsStore = detail.StorageZone >= 0;
+            // **Either kind of store**, since 2026-09-21: a shelf is a store the player built
+            // rather than painted, and a pane that led with the tile for one and with the store for
+            // the other would be the same report arriving a second time. The ordinal is one series
+            // across both, so "Shelf 3" and "Stockpile 3" can never be the same store.
+            IsStore = detail.StoreKind != CellDetail.StoreNone;
+            // A painted zone's contents are on the board and are read off the board; only a built
+            // one has an inside that has to be described. The Holding group hangs off this rather
+            // than off the list being non-empty, so an empty shelf can say it is empty instead of
+            // the section silently not existing.
+            IsBuiltStore = detail.StoreKind == CellDetail.StoreShelf;
             if (IsStore)
             {
+                bool built = detail.StoreKind == CellDetail.StoreShelf;
                 StoreCells = detail.StorageCells;
-                Title = $"{Registry.Label(PaletteTools.Stockpile)} {detail.StorageOrdinal}";
-                Subtitle = StoreCells == 1 ? "1 tile" : $"{StoreCells} tiles";
-                CellIconKey = PaletteTools.Stockpile;
+
+                string storeKey = built ? PaletteTools.Shelf : PaletteTools.Stockpile;
+                Title = $"{Registry.Label(storeKey)} {detail.StorageOrdinal}";
+                CellIconKey = storeKey;
+
+                // A zone's extent is its tiles; a shelf's is how full it is, because "1 tile" says
+                // nothing at all about a thing that is always one tile.
+                Subtitle = built
+                    ? $"{detail.StoredStacks} of {detail.StoreSlots} stacks"
+                    : StoreCells == 1 ? "1 tile" : $"{StoreCells} tiles";
+                StoreSummary = built ? $"{detail.StoredStacks} of {detail.StoreSlots} stacks" : string.Empty;
                 // Named from the registry, not written here. "Tile" is already the name of a floor
                 // covering in `ui.arch.tool.tile`, so a literal would have been a second copy of a
                 // name the wiki owns — which `RegistryTests` said, and the answer to that test is
@@ -550,6 +1041,11 @@ namespace Odyssey.Hud
                 Tabs.Add(new InspectTab { Name = Registry.Label(TabTile), Enabled = true, Reason = string.Empty });
                 if (ActiveTab < 0 || ActiveTab >= Tabs.Count) ActiveTab = 0;
             }
+
+            // Outside the branch on purpose: it clears as well as fills, and a list left behind
+            // by the last selection would be drawn over the next one. Every other field here is
+            // assigned on every path for the same reason.
+            FillStoreContents(snapshot, detail);
 
             string edifice = EdificeLabels.Title(detail.Edifice);
             string terrain = TerrainLabels.Label(detail.Terrain);
@@ -581,6 +1077,18 @@ namespace Odyssey.Hud
                 tileTitle = "Ground";
                 tileIcon = "ui.overlay.zones";
             }
+
+            // A cell holding nothing but a line — an order over open ground, or a laid line in the
+            // air while the lines are shown — is about the line (design 32 §14): the ground under
+            // it is what a click on the ground means, and this click landed on the line.
+            if (edifice.Length == 0 && detail.FloorStuff == StuffHandle.None)
+                foreach (ConduitView line in snapshot.Conduits)
+                    if (line.CellIndex == detail.CellIndex)
+                    {
+                        tileTitle = Registry.Label(PaletteTools.Conduit);
+                        tileIcon = PaletteTools.Conduit;
+                        break;
+                    }
 
             if (!IsStore)
             {
@@ -614,15 +1122,20 @@ namespace Odyssey.Hud
         /// answer, and a guard that could not tell it from "no store at all" would leave the row
         /// standing over a cell the player had just un-zoned.
         /// </summary>
+        byte _cellRowsStoreKind;
+        byte _cellRowsStoredStacks;
+        byte _cellRowsStoredDef;
+        int _cellRowsStoredUnits;
         int _cellRowsStoragePriority;
 
         static int StoragePriorityOf(CellDetail detail) =>
-            detail.StorageZone >= 0 ? detail.StoragePriority + 1 : 0;
+            detail.StoreKind != CellDetail.StoreNone ? detail.StoragePriority + 1 : 0;
 
         int _cellRowsZonePlant;
         int _cellRowsZoneYield;
         int _cellRowsCropGrowth;
         bool _cellRowsIndoors;
+        int _cellRowsTemp;
 
         /// <summary>
         /// Whether the tile under the pane is a bed whose owner row can be pressed — the pane's
@@ -635,12 +1148,114 @@ namespace Odyssey.Hud
         bool _bedUnderPane;
 
         /// <summary>
-        /// Whether the tile under the pane is inside a storage zone, so its storage row can be
-        /// pressed — the pane's second interactive fact, and the way a player says what a store
-        /// takes. Cleared and set on the same cadence as <see cref="BedUnderPane"/>, so a stale
-        /// true cannot outlive the zone it described.
+        /// Whether the tile under the pane is a power building whose switch row can be pressed
+        /// (design 32 §5) — the pane's second interactive fact, kept exactly as the bed's is:
+        /// cleared every refresh, set only by <see cref="SetCellRows"/> and set <b>above</b> its
+        /// early return, so the control cannot die on the second refresh and go on looking alive.
         /// </summary>
+        public bool PowerSwitchUnderPane => _powerSwitchUnderPane;
 
+        /// <summary>Whether the building under the pane is switched on; what a press on its switch row reverses.</summary>
+        public bool PowerSwitchOn { get; private set; }
+
+        bool _powerSwitchUnderPane;
+
+        /// <summary>
+        /// What stands in the tile under the pane, as an <see cref="EdificeHandle"/> value, or 0.
+        /// Cleared every refresh and set by <see cref="SetCellRows"/> with the other tile flags, so
+        /// the bill list (design 48 §5) is shown for exactly the station the answer is about.
+        /// </summary>
+        public int TileEdifice { get; private set; }
+
+        /// <summary>The whole-world index of the tile the answer is about, or -1 before there is one.</summary>
+        public int TileCellIndex { get; private set; } = -1;
+
+        /// <summary>
+        /// Whether the pane holds an order whose action row can be pressed: a building site's
+        /// Cancel, or a line's — Cancel an order, Remove a laid line, Keep one marked to come up
+        /// (design 32 §14; owner, 2026-09-23: "the same for any building blueprint that has been
+        /// put down so it can be cancelled"). Kept as the switch's and the bed's flags are —
+        /// cleared every refresh, set before any early return.
+        /// </summary>
+        public bool OrderActionUnderPane => _orderActionUnderPane;
+
+        /// <summary>What a press on the order row sends, about <see cref="Cell"/>, with <see cref="OrderActionA"/>.</summary>
+        public IntentKind OrderAction { get; private set; }
+
+        /// <summary>The intent's <c>A</c>: 1 on a building site's cancel, which takes the building order only.</summary>
+        public int OrderActionA { get; private set; }
+
+        bool _orderActionUnderPane;
+
+        /// <summary>The order row's key, which the shell compares against rather than against a word.</summary>
+        public const string OrderActionRow = "order";
+
+        /// <summary>
+        /// The colour an order's action is drawn in: a cancel in the cancel tool's red, taking a
+        /// line up in the remove tool's amber, and keeping a marked line in no colour of its own.
+        /// <c>OrderColours</c> is the one owner of an order's hue, so the button and the tool the
+        /// player would otherwise reach for are the same colour.
+        /// </summary>
+        public static HudColour? OrderActionTint(IntentKind action, bool keep) =>
+            keep ? (HudColour?)null
+            : action == IntentKind.RemoveConduit ? OrderColours.Hue(DesignateTool.RemoveConduit)
+            : OrderColours.Hue(DesignateTool.Cancel);
+
+        /// <summary>Everything the power rows quote, folded into one number for the rebuild guard.</summary>
+        int _cellRowsPower;
+
+        /// <summary>
+        /// The pane holds a campfire (design 43 §6). A campfire's pane is wide, as a store's is: the
+        /// hearth's button does not fit the 280 px tile column (owner, 2026-09-25). Cleared every
+        /// refresh and set before the cell rows' early return, as the bed's and the switch's flags
+        /// are, so neither answer can outlive the fire.
+        /// </summary>
+        public bool IsCampfire { get; private set; }
+
+        /// <summary>The pane's campfire is the hearth: the header says so, on a line under the name.</summary>
+        public bool IsHearth { get; private set; }
+
+        /// <summary>The pane's campfire is not the hearth, and one button under the header makes it so.</summary>
+        public bool OffersHearth => IsCampfire && !IsHearth;
+
+        /// <summary>A store's pane and a campfire's are the full 560; every other tile's is the narrow column.</summary>
+        public bool IsWide => IsStore || IsCampfire || IsStation;
+
+        /// <summary>
+        /// Something that takes bills stands in the tile (design 49): the pane is the bench width
+        /// and carries the bill list. A campfire is one, so it is wide on both counts.
+        /// </summary>
+        public bool IsStation => BillsModel.IsStation(TileEdifice);
+
+        /// <summary>The header line on the hearth, and the button on any other campfire.</summary>
+        public const string HearthKey = "ui.home.hearth";
+        public const string MakeHearthKey = "ui.command.sethearth";
+
+        /// <summary>The switch row's key, which the shell compares against rather than against a word.</summary>
+        public const string PowerSwitchRow = "switch";
+
+        /// <summary>
+        /// The power building and net at this cell, folded to one number for the guard — every
+        /// field the rows below print, so a hopper going down a unit or a net going dark rebuilds
+        /// the rows and nothing else does.
+        /// </summary>
+        static int PowerSignature(WorldSnapshot snapshot, int cell)
+        {
+            int sig = 17;
+            if (snapshot.TryGetPowerDevice(cell, out PowerDeviceView d))
+            {
+                sig = sig * 31 + (d.On ? 1 : 2);
+                sig = sig * 31 + (d.Powered ? 1 : 2);
+                sig = sig * 31 + d.NetKey;
+                sig = sig * 31 + d.LoadW;
+                sig = sig * 31 + d.FuelMilli / 1_000;
+                if (snapshot.TryGetPowerNet(d.NetKey, out PowerNetView net))
+                    sig = sig * 31 + net.SupplyW * 7 + net.DemandW * 13 + (int)net.State;
+            }
+            foreach (ConduitView line in snapshot.Conduits)
+                if (line.CellIndex == cell) sig = sig * 31 + (int)line.Kind * 3 + (int)line.State + 1_000;
+            return sig;
+        }
 
         /// <summary>
         /// The selected cell is inside a storage zone, so the pane is about the <b>store</b>: the
@@ -700,10 +1315,35 @@ namespace Odyssey.Hud
             // took this return, and never set it again. The row went on reading "Assign…" for ever
             // over a control that was dead, and the owner reported being unable to assign a bed
             // three times across two sessions before a test could say why (BedOwnerPickerTests).
-            _bedUnderPane = detail.EdificeQuality > 0;
+            // **And it asks what the thing is, not only whether it has a tier.** A quality above
+            // nought used to be a good enough proxy for "this is a bed" because a bed was the only
+            // thing that took one. The shelf takes none, so it does not trip this — but the next
+            // piece of quality-bearing furniture would, and the row it grew would open the *bed*
+            // picker over it. Three characters against a report.
+            _bedUnderPane = detail.EdificeQuality > 0 && detail.Edifice == EdificeHandle.Bed;
+            TileEdifice = detail.Edifice;
+            TileCellIndex = detail.CellIndex;
+            if (snapshot.TryGetPowerDevice(detail.CellIndex, out PowerDeviceView switchable))
+            {
+                _powerSwitchUnderPane = true;
+                PowerSwitchOn = switchable.On;
+            }
+            int powerSignature = PowerSignature(snapshot, detail.CellIndex);
+            foreach (ConduitView held in snapshot.Conduits)
+            {
+                if (held.CellIndex != detail.CellIndex) continue;
+                _orderActionUnderPane = true;
+                OrderAction = held.Kind == ConduitKind.Built ? IntentKind.RemoveConduit : IntentKind.CancelConduit;
+                OrderActionA = 0;
+                break;
+            }
             // Set beside the bed's flag and **above** the early return below, for the reason that
             // whole paragraph exists: a flag cleared every refresh and set only after the return
             // is a control that dies on the second refresh and goes on looking alive.
+            // The hearth (design 43 §3f, §6) the same way: header facts, not rows, so they are not
+            // in the rows' guard; the shell's rebuild signature carries them instead.
+            IsCampfire = detail.Edifice == EdificeHandle.Campfire;
+            IsHearth = IsCampfire && snapshot.HearthCell == detail.CellIndex;
 
             if (_cellRowsFor == detail.CellIndex
                 && _cellRowsCost == detail.MoveCostPerMille
@@ -719,7 +1359,13 @@ namespace Odyssey.Hud
                 && _cellRowsCropGrowth == detail.CropGrowth
                 && _cellRowsZoneYield == detail.ZoneYield
                 && _cellRowsStoragePriority == StoragePriorityOf(detail)
-                && _cellRowsIndoors == detail.IsIndoors) return;
+                && _cellRowsStoreKind == detail.StoreKind
+                && _cellRowsStoredStacks == detail.StoredStacks
+                && _cellRowsStoredUnits == detail.StoredUnits
+                && _cellRowsStoredDef == detail.StoredDef
+                && _cellRowsIndoors == detail.IsIndoors
+                && _cellRowsTemp == detail.AmbientTempC
+                && _cellRowsPower == powerSignature) return;
 
             _cellRowsFor = detail.CellIndex;
             _cellRowsCost = detail.MoveCostPerMille;
@@ -735,7 +1381,13 @@ namespace Odyssey.Hud
             _cellRowsCropGrowth = detail.CropGrowth;
             _cellRowsZoneYield = detail.ZoneYield;
             _cellRowsStoragePriority = StoragePriorityOf(detail);
+            _cellRowsStoreKind = detail.StoreKind;
+            _cellRowsStoredStacks = detail.StoredStacks;
+            _cellRowsStoredUnits = detail.StoredUnits;
+            _cellRowsStoredDef = detail.StoredDef;
             _cellRowsIndoors = detail.IsIndoors;
+            _cellRowsTemp = detail.AmbientTempC;
+            _cellRowsPower = powerSignature;
 
             // Written in place, like the skills list: the count is a handful and changes rarely,
             // so the list never churns while a tile is held.
@@ -765,6 +1417,47 @@ namespace Odyssey.Hud
                     : "Assign…");
             }
 
+            // A power building's own facts (design 32 §10), beside what it is: what it is doing —
+            // the actionable clause, so it leads — its hopper, its net's balance, and the switch,
+            // which the shell turns a press on into the switch intent, as it does the bed's owner.
+            if (snapshot.TryGetPowerDevice(detail.CellIndex, out PowerDeviceView device))
+            {
+                bool netKnown = snapshot.TryGetPowerNet(device.NetKey, out PowerNetView net);
+                HudColour? tint = !device.On || device.NetKey < 0 ? HudTheme.TextMeta
+                    : device.Role == PowerRole.Generator && device.BurnsFuel && device.FuelMilli <= 0 ? HudTheme.Bad
+                    : netKnown ? PowerLabels.Colour(net.State) : (HudColour?)null;
+                Row(n++, "power", PowerLabels.Status(device, netKnown, net), tint);
+                if (device.BurnsFuel)
+                    Row(n++, "fuel", PowerLabels.Fuel(device),
+                        device.FuelMilli * 2 < device.FuelCapacityMilli ? HudTheme.Warn : (HudColour?)null);
+                if (netKnown)
+                    Row(n++, "net", PowerLabels.Balance(net) + " — " + PowerLabels.State(net.State),
+                        PowerLabels.Colour(net.State));
+                Row(n++, PowerSwitchRow, Registry.Label(device.On ? "ui.command.switchoff" : "ui.command.switchon"));
+            }
+
+            // A line in the cell, when it is drawn: laid (and on what), ordered, or marked to come
+            // up. Silent while the lines are hidden — a hidden thing the pane announced would be
+            // the pane contradicting the picture.
+            foreach (ConduitView line in snapshot.Conduits)
+            {
+                if (line.CellIndex != detail.CellIndex) continue;
+                string lineSays = line.Kind == ConduitKind.Ordered ? "ordered"
+                    : line.Kind == ConduitKind.Marked ? "marked to come up"
+                    : "laid — " + PowerLabels.State(line.State);
+                if (line.Kind == ConduitKind.Built && snapshot.TryGetPowerNet(line.NetKey, out PowerNetView lineNet))
+                    lineSays += ", " + PowerLabels.Balance(lineNet);
+                Row(n++, "conduit", lineSays, line.Kind == ConduitKind.Built ? PowerLabels.Colour(line.State) : (HudColour?)null);
+                // The line's own action, which the shell turns a press on into an intent: cancel
+                // an order, take a laid line up, or keep one that is marked (design 32 §14).
+                bool keep = line.Kind == ConduitKind.Marked;
+                Row(n++, OrderActionRow, line.Kind == ConduitKind.Ordered ? Registry.Label(PaletteTools.Cancel)
+                    : keep ? "Keep it"
+                    : Registry.Label(PaletteTools.Unwire),
+                    OrderActionTint(line.Kind == ConduitKind.Built ? IntentKind.RemoveConduit : IntentKind.CancelConduit, keep));
+                break;
+            }
+
             // A field's own answer, beside the ground's (owner, 2026-09-18 - clicking a growing
             // zone should say what is growing there). What the zone grows and how far the
             // standing crop has come; the changing percentage is why the pane is worth holding
@@ -784,15 +1477,61 @@ namespace Odyssey.Hud
             // player changes and the thing that decides where the next armful goes; the size
             // follows it, because a zone has no name until storage groups arrive (S2) and "how
             // big" is the only other thing that tells two of them apart.
-            if (detail.StorageZone >= 0)
+            if (detail.StoreKind != CellDetail.StoreNone)
                 // A fact, not a control: the settings are a tab of their own since 2026-09-21, so
                 // this row says which rung the store is on and nothing opens from it. Two ways in
                 // to one panel is the one a player finds by accident.
                 Row(n++, "storage",
                     Registry.Label(StorageSettingsModel.PriorityKeys[detail.StoragePriority]));
 
+            // What a built store is actually holding, which a painted one has no equivalent of:
+            // its cells are the board and what is on them is read off the board.
+            //
+            // **Counted in stacks, not against a unit total.** "400 of 600" was the recorded form
+            // and it has no honest denominator: 600 is eight times wood's stack limit, and a shelf
+            // full of meals — which stack to twenty — would read "160 of 600" and look nearly
+            // empty. Stacks is the thing a shelf actually meters, and the `× n` form carries the
+            // amount beside it (docs/design/24-pile-reading.md §2).
+            if (detail.StoreKind == CellDetail.StoreShelf)
+            {
+                string holding;
+                if (detail.StoredStacks == 0)
+                    holding = "empty — " + detail.StoreSlots + " stacks free";
+                else
+                {
+                    // **Never a bare number.** This said `46 — 3 of 8 stacks` for a store holding
+                    // more than one kind, because the single-kind byte is 255 there and the amount
+                    // was printed on its own: a quantity of nothing named, which reads as a bug
+                    // whichever way you take it. Nor is it summed and labelled, because 400 wood
+                    // and 20 meals are not 420 of anything. The kinds themselves are listed on the
+                    // Storage tab now, so this line only has to say that there is more than one.
+                    //
+                    // **It falls back rather than trusting the scan.** `StoreContents` is filled
+                    // from the published things, and a caller that hands over a detail row with no
+                    // store cell on it — every test that builds one by hand — would otherwise be
+                    // told this shelf holds "0 kinds", which is a worse lie than the one being
+                    // fixed.
+                    string what = detail.StoredDef != 255
+                        ? Registry.Label(ItemLabels.IconKey(detail.StoredDef)) + " × " + detail.StoredUnits
+                        : StoreContents.Count > 1 ? StoreContents.Count + " kinds" : "mixed";
+                    holding = what + " — " + detail.StoredStacks + " of " + detail.StoreSlots + " stacks";
+                }
+
+                Row(n++, "holding", holding);
+            }
+
             if (detail.IsIndoors)
                 Row(n++, "environment", "indoors");
+
+            // How warm it is here, beside whether it is indoors: the room's air where the cell
+            // is in a room, the outdoor curve where it is not — the same number the colonists
+            // are feeling on the needs cadence and the crops on the growth one (design 28 §8).
+            // Centi-degrees to one decimal, signed, because −12.5 °C and 12.5 °C are different
+            // decisions and the pane exists to make the decision obvious. Silent only for a
+            // detail that was never told, which in the game never happens.
+            if (detail.AmbientTempC != int.MinValue)
+                Row(n++, "temperature", TemperatureLabels.Describe(detail.AmbientTempC),
+                    HudTheme.Temperature(detail.AmbientTempC));
 
             Row(n++, "walk speed", detail.MoveCostPerMille == 0
                 ? "cannot walk"
@@ -814,6 +1553,63 @@ namespace Odyssey.Hud
                 Row(n++, "support", detail.Support.ToString());
 
             while (CellRows.Count > n) CellRows.RemoveAt(CellRows.Count - 1);
+        }
+
+        /// <summary>
+        /// What is in the store under the pane, gathered by kind, biggest first.
+        ///
+        /// <para><b>Off the things, not off a second channel.</b> A contained thing is published
+        /// in <see cref="WorldSnapshot.Things"/> at its store's own cell carrying its container id
+        /// — the decision <c>ThingView.Container</c> records — so the list a player reads and the
+        /// totals the Build palette and the stores panel count are the same rows. A contents
+        /// channel of its own would be the fifth place to look and the one that drifts.</para>
+        ///
+        /// <para>Scanned rather than indexed because a store holds at most a handful of kinds and
+        /// this runs only while one is selected. Sorted by amount so the thing there is most of is
+        /// the thing read first, and ties broken by name so the list does not shuffle under the
+        /// pointer as stacks come and go.</para>
+        /// </summary>
+        void FillStoreContents(WorldSnapshot snapshot, in CellDetail detail)
+        {
+            StoreContents.Clear();
+            if (detail.StoreKind != CellDetail.StoreShelf || detail.StoreCellIndex < 0) return;
+
+            GridSize size = snapshot.Size;
+            var things = snapshot.Things;
+
+            for (int i = 0; i < things.Length; i++)
+            {
+                if (things[i].Container == 0) continue;
+                if (size.Index(things[i].Cell) != detail.StoreCellIndex) continue;
+
+                int def = things[i].DefIndex;
+                int at = -1;
+                for (int row = 0; row < StoreContents.Count; row++)
+                    if (StoreContents[row].IconKey == ItemLabels.IconKey(def)) { at = row; break; }
+
+                if (at < 0)
+                {
+                    StoreContents.Add(new StoreContentRow
+                    {
+                        IconKey = ItemLabels.IconKey(def),
+                        Name = Registry.Label(ItemLabels.IconKey(def)),
+                        Units = things[i].Stack,
+                        Stacks = 1,
+                    });
+                    continue;
+                }
+
+                StoreContentRow had = StoreContents[at];
+                had.Units += things[i].Stack;
+                had.Stacks++;
+                StoreContents[at] = had;
+            }
+
+            StoreContents.Sort(static (a, b) =>
+            {
+                int byAmount = b.Units.CompareTo(a.Units);
+                return byAmount != 0 ? byAmount : string.CompareOrdinal(a.Name, b.Name);
+            });
         }
 
         void Row(int index, string name, string value, HudColour? tint = null)
@@ -838,6 +1634,7 @@ namespace Odyssey.Hud
             1 => "mining",
             2 => "deconstructing",
             3 => "chopping",
+            4 => "picking",
             _ => "working",
         };
 
@@ -917,12 +1714,33 @@ namespace Odyssey.Hud
             Tabs.Add(new InspectTab { Name = "Gear", Enabled = false, Reason = "equipment arrives with the inventory" });
             Tabs.Add(new InspectTab { Name = "Thoughts", Enabled = false, Reason = "arrives with the thought log" });
             Tabs.Add(new InspectTab { Name = "Social", Enabled = false, Reason = "M6" });
-            Tabs.Add(new InspectTab { Name = "Health", Enabled = false, Reason = "M6" });
+            // Live from the combat contracts step (design 33 §5): a colonist can be hurt now. The
+            // tab's body is lane C's (HudShell.Combat.cs, CombatFeedbackModel) and is empty until
+            // it is written.
+            Tabs.Add(new InspectTab { Name = "Health", Enabled = true, Reason = string.Empty });
             Tabs.Add(new InspectTab { Name = "Log", Enabled = false, Reason = "M6" });
         }
 
-        void AddColonistCommands()
+        /// <summary>
+        /// The draft's key names, one per face of the one button (design 33 §2f). Public so the
+        /// shell that draws the button can tell it is the one that does something.
+        /// </summary>
+        public const string DraftKey = "ui.command.draft", UndraftKey = "ui.command.undraft";
+
+        /// <summary>Whether the colonist on the pane is drafted: which face the Draft button shows.</summary>
+        public bool Drafted { get; private set; }
+
+        /// <summary>
+        /// The colonist's response to danger (<see cref="ResponseModel"/>, design 33 §18e): which
+        /// face the response button shows. A colonist gone from the frame reads as the default,
+        /// with the button off.
+        /// </summary>
+        public int Response { get; private set; }
+
+        void AddColonistCommands(bool drafted, int response)
         {
+            Drafted = drafted;
+            Response = response;
             Commands.Add(new InspectCommand
             {
                 IconKey = "ui.command.inspect", Label = "Inspect",
@@ -933,10 +1751,24 @@ namespace Odyssey.Hud
                 IconKey = "ui.command.prioritise", Label = "Prioritise",
                 Enabled = false, Reason = "job priorities arrive with the work grid (M7)",
             });
+            // Live since the draft (design 33 §2f). One button with two faces, as the reference
+            // has it: it says what pressing it will do, and a tombstoned colonist has nothing to
+            // command.
+            string key = drafted ? UndraftKey : DraftKey;
             Commands.Add(new InspectCommand
             {
-                IconKey = "ui.command.draft", Label = "Draft",
-                Enabled = false, Reason = "combat arrives with M6",
+                IconKey = key, Label = Registry.Label(key),
+                Enabled = !Tombstoned,
+                Reason = drafted ? "give back to the work list (T)" : "take direct control: right-click to move (T)",
+            });
+            // Her response to danger (design 33 §18e), beside Draft. A setting rather than an
+            // action, so the face is the response she has, and a press moves it round the three.
+            string respond = ResponseModel.KeyOf(response);
+            Commands.Add(new InspectCommand
+            {
+                IconKey = respond, Label = Registry.Label(respond),
+                Enabled = !Tombstoned,
+                Reason = ResponseModel.Describe(response),
             });
         }
     }

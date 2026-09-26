@@ -86,10 +86,17 @@ namespace Odyssey.Hud
         /// <summary>The loudest thing that arrived last refresh, by favourability: 0 neutral, 1 good, 2 bad.</summary>
         public int ArrivedFavourability { get; private set; }
 
+        /// <summary>
+        /// A raid arrived last refresh (design 55 §7): its row sounds the war horn rather than the
+        /// chime its favourability would pick, because a raid and a theft are not the same news.
+        /// </summary>
+        public bool ArrivedRaid { get; private set; }
+
         public void Refresh(WorldSnapshot snapshot)
         {
             Arrived = 0;
             ArrivedFavourability = 0;
+            ArrivedRaid = false;
 
             var tail = snapshot.Bulletins;
             for (int i = 0; i < tail.Length; i++)
@@ -103,6 +110,7 @@ namespace Odyssey.Hud
                 Version++;
                 if (!_primed) continue;
                 Arrived++;
+                if (view.IncidentDef == IncidentHandle.Raid) ArrivedRaid = true;
                 if (view.Favourability == 2 || ArrivedFavourability == 0)
                     ArrivedFavourability = view.Favourability;
             }
@@ -139,11 +147,83 @@ namespace Odyssey.Hud
 
         public bool IsDismissed(int id) => _dismissed.Contains(id);
 
+        /// <summary>
+        /// The id every presentation-side notice carries. <b>Negative, so it can never collide
+        /// with a ledger id</b>, which is how a row the simulation never raised can live on a
+        /// panel whose whole edge rule is "an id above the highest seen is new".
+        /// </summary>
+        public const int NoticeId = -1;
+
+        /// <summary>Whether a row is a notice rather than something that happened in the world —
+        /// so a view knows there is no place to jump the camera to.</summary>
+        public static bool IsNotice(in BulletinRow row) => row.Id < 0;
+
+        /// <summary>
+        /// Put a notice on the panel: something the *game* did rather than something the colony
+        /// did. The autosave is the first and at present the only one.
+        ///
+        /// <para><b>There is only ever one.</b> A new notice replaces the one already there rather
+        /// than stacking, because the panel keeps six rows and a colony played for a week would
+        /// otherwise hold six autosaves and no events — the notice would crowd out the thing the
+        /// panel is for. What a player wants from it is *is my file current*, which is a fact with
+        /// one current value, not a history.</para>
+        ///
+        /// <para>It is not counted in <see cref="Arrived"/>, so it does not chime: the game saving
+        /// itself on schedule is not news that wants the room's attention.</para>
+        /// </summary>
+        public void PostNotice(string key, string title, string stamp)
+        {
+            for (int i = 0; i < Rows.Count; i++)
+            {
+                if (!IsNotice(Rows[i])) continue;
+                Rows.RemoveAt(i);
+                break;
+            }
+
+            _dismissed.Remove(NoticeId);
+            Rows.Insert(0, new BulletinRow(NoticeId, key, title, stamp, default, 0, -1, 0));
+            Version++;
+
+            while (Rows.Count > MaxRows)
+            {
+                Rows.RemoveAt(Rows.Count - 1);
+                Version++;
+            }
+        }
+
         static BulletinRow Make(in BulletinView view)
         {
             string key = IncidentLabels.IconKey(view.IncidentDef);
-            return new BulletinRow(view.Id, key, Registry.Label(key), Stamp(view.Tick), view.Cell, view.Tick,
-                view.IncidentDef, view.Favourability);
+            string title = view.IncidentDef == IncidentHandle.Raid
+                ? RaidTitle(key, view.Subject, view.Amount)
+                : Title(key, view.Subject, view.Amount);
+            return new BulletinRow(view.Id, key, title, Stamp(view.Tick), view.Cell,
+                view.Tick, view.IncidentDef, view.Favourability);
+        }
+
+        /// <summary>
+        /// A raid's row (design 55 §7): its detail is the mix and the band's size rather than a thing
+        /// and a count, so it reads "Raid warning · Mixed × 20". The mix's name is the registry's.
+        /// </summary>
+        public static string RaidTitle(string key, int mix, int size)
+        {
+            string name = Registry.Label(key);
+            if (mix < 0) return name;
+            return name + " · " + RaidMixLabels.Label(mix) + " × " + size;
+        }
+
+        /// <summary>
+        /// The row's words: the incident's name, and — for an entry about a thing (design 33 §17)
+        /// — the thing and how many, as the activity line writes a load: "Theft · Meal × 12". Both
+        /// names come from <see cref="Registry"/>; only the separator and the sign are written here,
+        /// and they name nothing (<see cref="JobLabels.Carrying"/> makes the same bargain).
+        /// </summary>
+        public static string Title(string key, int subject, int amount)
+        {
+            string name = Registry.Label(key);
+            if (subject < 0) return name;
+            string thing = ItemLabels.Label(subject);
+            return amount > 1 ? name + " · " + thing + " × " + amount : name + " · " + thing;
         }
 
         /// <summary>"Day 3 · 14h": the day as the clock counts it, and the hour. Built here so the

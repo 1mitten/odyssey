@@ -21,7 +21,7 @@ namespace Odyssey.Hud
         /// Parallel to <see cref="EdificeHandle"/>.
         ///
         /// <para><b>Three entries say "stair" and all three are right.</b> 5 and 6 are the two
-        /// halves of one of worldgen's stamped stairwells and 13 is the colony's own one-cell
+        /// halves of one of worldgen's stamped stairwells and 24 is the colony's own one-cell
         /// flight; they are different things to the mesher and to the graph, and the same thing to
         /// a player, who clicks a stair and is told it is a stair.</para>
         /// </summary>
@@ -30,8 +30,18 @@ namespace Odyssey.Hud
             "",
             "ui.arch.tool.wall", "ui.arch.tool.door", "", "ui.arch.tool.pillar",
             "ui.arch.tool.stair", "ui.arch.tool.stair", "ui.arch.tool.ladder", "", "",
-            "ui.terrain.tree.conifer", "ui.terrain.tree.broadleaf",
-            "ui.arch.tool.bed",
+            "ui.terrain.tree.birch", "ui.terrain.tree.meadow",
+            "ui.arch.tool.bed", "ui.arch.tool.shelf",
+            "ui.arch.tool.campfire",
+            "ui.arch.tool.generator", "ui.arch.tool.heater",
+            // The wild things of design 45, after the buildings: two more trees, then the bushes.
+            "ui.terrain.tree.fruit", "ui.terrain.tree.giant",
+            "ui.terrain.bush", "ui.terrain.bush.berry", "ui.terrain.bush.picked",
+            // The kitchen (design 48), edifice 22, after the wild things.
+            "ui.arch.tool.galley",
+            // Cover (design 53 §4), edifice 23.
+            "ui.arch.tool.sandbag",
+            // The colony's own one-cell stair (design 60), edifice 24.
             "ui.arch.tool.stair",
         };
 

@@ -117,9 +117,29 @@ namespace Odyssey.Tests.Sim
             // a colony that pulls a wall down while a half-ordered hut waits for its last plank
             // finishes neither, and demolition is the one job here that is never urgent — the thing
             // being removed is already standing and already doing its job.
+            //
+            // Power (design 32): laying a line sits with building, after it by name, and taking one
+            // up sits with deconstructing, for deconstruct's reason. Refuelling leads hauling,
+            // because a generator run dry darkens a net and a log in the wrong place darkens
+            // nothing (a-07 §3 records the reference's generators running dry while pawns tidied).
+            // Forage (design 45 §6) is growing work and sorts by name inside it, first: a ripe
+            // berry bush keeps for three days where a field's window will not, but the name
+            // tiebreak is the rule here and nothing argues against it.
+            //
+            // Rescue leads everything (design 33 §5, C4): it is the one emergency giver, and an
+            // emergency is scanned ahead of every ordinary giver at the same priority, whatever the
+            // work types' order says. A colonist bleeding out on the grass outranks the wall.
+            // Tend follows it (design 43 §5): the second emergency giver, after rescue by the work
+            // types' order, so a downed colonist is carried to a bed and tended there.
             var names = Shipped().Givers.Select(g => g.Name).ToArray();
-            Assert.That(names, Is.EqualTo(
-                new[] { "Deliver", "Build", "Deconstruct", "Harvest", "Sow", "Fell", "Mine", "Haul" }));
+            Assert.That(names, Is.EqualTo(new[]
+            {
+                // Doctor is the second emergency (design 37), behind rescue by the work types' order.
+                // Cook sits after growing and before cutting (design 48 §5): a hungry colony cooks
+                // before it fells.
+                "Rescue", "Doctor", "Deliver", "Build", "LayConduit", "Deconstruct", "RemoveConduit",
+                "Forage", "Harvest", "Sow", "Cook", "Fell", "Mine", "Refuel", "Haul",
+            }));
         }
 
         [Test]
@@ -130,7 +150,14 @@ namespace Odyssey.Tests.Sim
             string[] shipped = new JobSystem(ctx, JobSystem.DefaultTree(), discovered)
                 .Givers.Select(g => g.Name).ToArray();
 
-            foreach (WorkGiver[] permutation in Permutations(WorkGiverRegistry.Discover()))
+            // **A sample of orders, not all of them**, since power (design 32). Every permutation
+            // was 8! = 40,320 constructions with eight givers; eleven made it 11! and took this one
+            // test from well under a second to two minutes, and a twelfth would have made it
+            // twenty. What the test proves is that the sort ignores registration order, and a total
+            // order is what makes that true — which NoTwoGiversCanTieInTheSort guards directly. So
+            // every rotation and every reversal (each giver first and last at least once) and five
+            // thousand seeded shuffles are asked, which is the same question at a fixed price.
+            foreach (WorkGiver[] permutation in SampledOrders(WorkGiverRegistry.Discover()))
             {
                 string[] order = new JobSystem(ctx, JobSystem.DefaultTree(), permutation)
                     .Givers.Select(g => g.Name).ToArray();
@@ -243,26 +270,29 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>Every ordering of a small set, so "order does not matter" is proved rather than sampled.</summary>
-        static IEnumerable<WorkGiver[]> Permutations(WorkGiver[] givers)
+        static IEnumerable<WorkGiver[]> SampledOrders(WorkGiver[] givers)
         {
-            if (givers.Length <= 1)
+            int n = givers.Length;
+            for (int start = 0; start < n; start++)
             {
-                yield return givers;
-                yield break;
+                var rotated = new WorkGiver[n];
+                for (int i = 0; i < n; i++) rotated[i] = givers[(start + i) % n];
+                yield return rotated;
+                var reversed = (WorkGiver[])rotated.Clone();
+                Array.Reverse(reversed);
+                yield return reversed;
             }
 
-            for (int i = 0; i < givers.Length; i++)
+            var rng = new Random(20260923);
+            for (int s = 0; s < 5_000; s++)
             {
-                var rest = new List<WorkGiver>(givers);
-                WorkGiver head = rest[i];
-                rest.RemoveAt(i);
-                foreach (WorkGiver[] tail in Permutations(rest.ToArray()))
+                var shuffled = (WorkGiver[])givers.Clone();
+                for (int i = n - 1; i > 0; i--)
                 {
-                    var one = new WorkGiver[givers.Length];
-                    one[0] = head;
-                    Array.Copy(tail, 0, one, 1, tail.Length);
-                    yield return one;
+                    int j = rng.Next(i + 1);
+                    (shuffled[i], shuffled[j]) = (shuffled[j], shuffled[i]);
                 }
+                yield return shuffled;
             }
         }
     }

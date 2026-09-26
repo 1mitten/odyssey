@@ -53,6 +53,89 @@ namespace Odyssey.Presentation.Audio
         public const string CarryDrop = SoundPrefix + "carry.drop";
 
         /// <summary>
+        /// A blade drawn: a colonist has been drafted (design 33 §2i). 2D — it confirms an order
+        /// the player gave, wherever the camera is — and played once on the frame the snapshot
+        /// first shows a colonist drafted, never on the key press, so a refused draft is silent.
+        /// Baked by <c>tools/audio/bake_draft.sh</c> from the owner's recording.
+        /// </summary>
+        public const string Draft = SoundPrefix + "draft";
+
+        /// <summary>
+        /// A weapon through the air — the whoosh (design 33 §9g): every swing of a bat, a crowbar,
+        /// a machete or an arc blade, hit or miss; fists and bites are silent. Two takes,
+        /// <c>combat-whoosh.wav</c> and <c>combat-whoosh_01.wav</c>, picked at random per swing.
+        /// <b>Scheduled, not played on its event's frame</b>: <see cref="Odyssey.Hud.CombatSoundTiming"/>
+        /// starts it so its loudest moment is a tenth of a second before the blow connects.
+        /// </summary>
+        public const string CombatSwing = SoundPrefix + "combat.swing";
+
+        /// <summary>
+        /// A blow landing on somebody — the thud (design 33 §9g): every landed hit, any weapon,
+        /// fists and bites too, and under the slice on a critical. Played on the hit's own frame;
+        /// <c>combat-hit.wav</c> is trimmed so its transient is on its first sample.
+        /// </summary>
+        public const string CombatHit = SoundPrefix + "combat.hit";
+
+        /// <summary>
+        /// A sharp weapon's critical — the slice (design 33 §9g): a machete or an arc blade whose
+        /// blow, rolled as the wind-up starts, is critical (<c>CombatEventKind.SwingCritical</c>).
+        /// Played <b>instead of</b> the whoosh and scheduled so its loudest moment lands on the
+        /// impact; a blunt critical keeps the whoosh. <c>combat-crit-slice.wav</c>.
+        /// </summary>
+        public const string CombatCritSlice = SoundPrefix + "combat.crit-slice";
+
+        /// <summary>
+        /// A pistol fired, heard near (design 47 §4c-bis): the dry crack with the outdoor space 13 dB
+        /// under it. Three takes, <c>combat-shot.wav</c>, <c>_01</c> and <c>_02</c>, baked by
+        /// <c>tools/audio/bake_gunshot.sh</c>. Played on the <c>Shot</c> event's own frame from the
+        /// shooter's feet when she is within <c>CombatFeedback.ShotNearMetres</c> of the listener;
+        /// nothing is scheduled, because the report starts within 7 ms of the first sample.
+        /// </summary>
+        public const string CombatShot = SoundPrefix + "combat.shot";
+
+        /// <summary>
+        /// A pistol fired, heard far (design 47 §4c-bis): low-passed, the space blooming under it.
+        /// Two takes, <c>combat-shot-far.wav</c> and <c>_01</c>. Beyond
+        /// <c>CombatFeedback.ShotNearMetres</c>; two sounds rather than one with a longer rolloff,
+        /// because a rolloff can only make a crack quieter, never duller.
+        /// </summary>
+        public const string CombatShotFar = SoundPrefix + "combat.shot-far";
+
+        /// <summary>A blow meeting nothing — a miss or a dodge. Named, and in no catalogue yet.</summary>
+        public const string CombatMiss = SoundPrefix + "combat.miss";
+
+        /// <summary>Somebody going down. Named, and in no catalogue yet.</summary>
+        public const string CombatDown = SoundPrefix + "combat.down";
+
+        /// <summary>Somebody dying. Named, and in no catalogue yet.</summary>
+        public const string CombatDeath = SoundPrefix + "combat.death";
+
+        /// <summary>
+        /// The sound a moment of a fight makes <b>on its own frame</b>, or null for one that makes
+        /// none: a stun is the blow that caused it and is already heard, and getting up is quiet.
+        /// A swing is null here because its sound is not on its frame — the whoosh or the slice
+        /// is scheduled against the blow (<see cref="Odyssey.Hud.CombatSoundSchedule"/>).
+        /// </summary>
+        public static string? ForCombat(Odyssey.Sim.Contracts.CombatEventKind kind) => kind switch
+        {
+            Odyssey.Sim.Contracts.CombatEventKind.Hit => CombatHit,
+            Odyssey.Sim.Contracts.CombatEventKind.Miss => CombatMiss,
+            Odyssey.Sim.Contracts.CombatEventKind.Dodge => CombatMiss,
+            Odyssey.Sim.Contracts.CombatEventKind.Downed => CombatDown,
+            Odyssey.Sim.Contracts.CombatEventKind.Died => CombatDeath,
+            _ => null,
+        };
+
+        /// <summary>The sound a cue of a blow plays (design 33 §9g), or null for none.</summary>
+        public static string? ForCue(Odyssey.Hud.CombatCue cue) => cue switch
+        {
+            Odyssey.Hud.CombatCue.Whoosh => CombatSwing,
+            Odyssey.Hud.CombatCue.Slice => CombatCritSlice,
+            Odyssey.Hud.CombatCue.Thud => CombatHit,
+            _ => null,
+        };
+
+        /// <summary>
         /// A sliding door opening. <b>Named, and in no catalogue yet</b>:
         /// the director declines a sound it has no clip for, so this plays the day the owner adds
         /// the row and not before.
@@ -73,6 +156,22 @@ namespace Odyssey.Presentation.Audio
         /// published frame, on the first frame a thing that was in the air is not.
         /// </summary>
         public const string DropLand = SoundPrefix + "drop.land";
+
+        /// <summary>
+        /// A jump over a stream falling short: a body landing in the water (design 46 §7).
+        /// <b>Named, and in no catalogue yet</b>, like <see cref="DropLand"/> — the director
+        /// declines a sound it has no clip for, so this plays the day a splash is sourced under
+        /// ADR 0010 and added, and not before. Raised by <see cref="AudioDirector"/> from the
+        /// published frame, on the first frame a pawn that was falling short stands in the water.
+        /// </summary>
+        public const string Splash = SoundPrefix + "splash";
+
+        /// <summary>
+        /// One arm of a swimmer's stroke going into the water (design 20 §9): twice a stroke cycle,
+        /// once per arm, at the swimmer, and short-ranged so it is heard only with the camera
+        /// close. Raised by <c>PawnFigureDirector.SwimStroked</c>, timed off the drawn stroke.
+        /// </summary>
+        public const string SwimStroke = SoundPrefix + "swim.stroke";
 
         /// <summary>
         /// The neutral chime: something has happened that is worth a glance and is nobody's
@@ -106,11 +205,20 @@ namespace Odyssey.Presentation.Audio
         public const string AlertJoined = SoundPrefix + "alert.joined";
 
         /// <summary>
-        /// A raid. <b>In the library, and the one unplayed chime that is already wired</b>:
-        /// <see cref="AlertChime.RaidKey"/> is declared in <c>icon-keys.csv</c>, so the moment
-        /// something raises an alert row under that key this sound plays with no code change.
+        /// A raid turning to assault the colony: the low horn (Pixabay, trading_nation,
+        /// <c>low-horn-185556</c> — the owner's <c>notification-raid</c> is the same recording,
+        /// measured sample for sample, design 55 §7). Played through <see cref="AlertChime.RaidKey"/>:
+        /// the alert row under that key is raised while a raid is assaulting.
         /// </summary>
         public const string AlertRaid = SoundPrefix + "alert.raid";
+
+        /// <summary>
+        /// A raid arriving at the edge of the board: the war horn (Pixabay, freesound_community,
+        /// <c>war-horn-horror-73771</c>, baked by <c>tools/audio/bake_raid.sh</c>). Played by the
+        /// raid's Events row (design 55 §7), not by an alert, because a raid gathering at the edge
+        /// is news rather than a standing problem.
+        /// </summary>
+        public const string AlertRaidArrive = SoundPrefix + "alert.raid.arrive";
 
         /// <summary>
         /// A campfire burning. **In the library, not yet in the game.**
@@ -126,6 +234,20 @@ namespace Odyssey.Presentation.Audio
 
         /// <summary>Looping water: ponds, streams and the river, scaled by how much of it is near.</summary>
         public const string AmbienceWater = AmbiencePrefix + "water";
+
+        /// <summary>
+        /// Light rain: drips and patter over a soft hiss, the owner's gentle-rain recording
+        /// (<c>tools/audio/bake_rain.sh</c>). The drizzle end of rain, and kept faintly under a
+        /// downpour for its close detail. How loud it is is <see cref="RainMix"/>'s, read off the
+        /// published sky, never the clip's (design 43 §7).
+        /// </summary>
+        public const string AmbienceRainLight = AmbiencePrefix + "rain.light";
+
+        /// <summary>
+        /// Heavy rain: a steady roar with no individual drops, the owner's heavier recording. Rises
+        /// under the light bed as rain passes about half intensity, and carries a storm.
+        /// </summary>
+        public const string AmbienceRainHeavy = AmbiencePrefix + "rain.heavy";
 
         /// <summary>
         /// The sound of the world outdoors by day — the bed under everything else, birds and air
@@ -201,6 +323,24 @@ namespace Odyssey.Presentation.Audio
         }
     }
 
+    /// <summary>Which chime an Events row gets when it arrives (design 55 §7).</summary>
+    public static class BulletinChime
+    {
+        /// <summary>
+        /// The sound an Events row makes when it arrives (design 55 §7): the war horn for a raid,
+        /// else by favourability — a gift sounds glad, a blow sounds like one, and anything else is
+        /// worth a glance. A raid arriving in the same refresh as anything else wins: it is the news.
+        /// </summary>
+        public static string For(bool raid, int favourability) =>
+            raid ? SoundIds.AlertRaidArrive
+            : favourability switch
+            {
+                1 => SoundIds.AlertHappy,
+                2 => SoundIds.AlertNegative,
+                _ => SoundIds.AlertNormal,
+            };
+    }
+
     /// <summary>
     /// Which chime an alert row gets.
     ///
@@ -218,8 +358,7 @@ namespace Odyssey.Presentation.Audio
     public static class AlertChime
     {
         /// <summary>The raid alert's key, as <c>docs/design/icon-keys.csv</c> declares it.
-        /// Nothing raises it yet; the row below is what makes that a seam rather than a
-        /// to-do.</summary>
+        /// Raised while a band assaults (design 55 §7); the row below gives it the assault horn.</summary>
         public const string RaidKey = "ui.alert.raid";
 
         /// <summary>Conditions whose own sound beats their severity's. Ordinal, and short

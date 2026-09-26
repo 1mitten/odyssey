@@ -220,6 +220,7 @@ namespace Odyssey.Presentation.Ui
             if (BuildPaletteOpen) SetBuildPalette(false);
             if (MenuOpen) ToggleMenu(false);
             CloseBedPicker();
+            CloseContextMenu();
         }
 
         /// <summary>
@@ -568,6 +569,8 @@ namespace Odyssey.Presentation.Ui
                     view.JobIcon.SetKey(JobLabels.IconKey(model.JobDef));
                 }
 
+                SyncCardHealth(view, model);
+
                 view.Root.EnableInClassList("card--sel", model.Selected);
                 view.Ring.style.display = model.Selected ? DisplayStyle.Flex : DisplayStyle.None;
                 view.LastLayer = model.Layer;
@@ -607,6 +610,39 @@ namespace Odyssey.Presentation.Ui
             }
         }
 
+        /// <summary><see cref="CardView.LastHealth"/> for a downed colonist, which no fill can be.</summary>
+        const int DownedHealth = -2;
+
+        /// <summary>
+        /// Draw a card's health bar from the model (design 33 §9f): the fill's width and ink, and
+        /// for a downed colonist an empty track in the red and "Downed" across the foot of the
+        /// portrait. Every number, colour and word is <see cref="RosterModel.Health"/>'s; this only
+        /// writes them, and only when the reading moved, because the strip refreshes fifteen times
+        /// a second.
+        /// </summary>
+        static void SyncCardHealth(CardView view, in RosterCard model)
+        {
+            int key = model.Downed ? DownedHealth : model.Health;
+            if (view.LastHealth == key) return;
+            view.LastHealth = key;
+
+            view.HealthFill.style.width = Length.Percent(model.Health <= 0 ? 0f : model.Health / 10f);
+            view.HealthFill.style.backgroundColor = HudTokens.Convert(model.HealthInk);
+
+            if (model.Downed)
+            {
+                view.Health.style.backgroundColor = HudTokens.Convert(model.HealthInk.WithAlpha(0.35f));
+                view.HealthWord.style.backgroundColor = HudTokens.Convert(model.HealthInk.WithAlpha(0.85f));
+                HudText.Set(view.HealthWord, model.HealthWord, HudTextRole.Meta);
+                view.HealthWord.style.display = DisplayStyle.Flex;
+            }
+            else
+            {
+                view.Health.style.backgroundColor = StyleKeyword.Null;
+                view.HealthWord.style.display = DisplayStyle.None;
+            }
+        }
+
         CardView NewCard(int index)
         {
             var card = new VisualElement();
@@ -640,29 +676,49 @@ namespace Odyssey.Presentation.Ui
             Label name = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "card__name");
             card.Add(name);
 
+            // The health bar under the name, always shown (design 33 §9f), and "Downed" across the
+            // foot of the portrait, shown only while downed. The caption goes into the avatar box
+            // before the badge so the badge still sits on top of it.
+            var health = new VisualElement { pickingMode = PickingMode.Ignore };
+            health.AddToClassList("card__health");
+            var healthFill = new VisualElement { pickingMode = PickingMode.Ignore };
+            healthFill.AddToClassList("card__health-fill");
+            health.Add(healthFill);
+            card.Add(health);
+
+            Label downed = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "card__downed");
+            downed.pickingMode = PickingMode.Ignore;
+            downed.style.display = DisplayStyle.None;
+            avatarBox.Insert(avatarBox.IndexOf(jobIcon), downed);
+
             var view = new CardView
             {
                 Root = card, Ring = ring, Avatar = avatar, Name = name,
                 JobIcon = jobIcon,
+                Health = health, HealthFill = healthFill, HealthWord = downed,
             };
 
-            // Shift is the strip's toggle, exactly as it is in the world: a shift-press on a card
-            // turns it on or off without moving the camera, and while shift is held a drag across
-            // cards toggles each one it crosses (A2 "drag-select a range"). A plain press keeps the
-            // jump: a card is a way of getting to someone far away. Right-click and hold initiates
-            // drag-and-drop to reorder slots.
+            // A left press starts a sweep (design 33 §20; owner, 2026-09-24: "I should be drag the
+            // across their roster profile and select them all"): dragged across other cards it
+            // selects every card passed over, as the world's box does, and Shift adds them to what
+            // was held. A press that crosses no other card is a click — the one colonist and
+            // nothing else, the view left where it is (owner, 2026-09-25); a second click on the
+            // same card inside DoubleClick.Seconds takes the slice and the camera to her and zooms
+            // in close. With Shift a click toggles her, as a shift-click does in the world. The rule is
+            // RosterSweep's and fast-tier tested; this only reports the pointer. Right-click and
+            // hold still reorders the slots, untouched.
             card.RegisterCallback<PointerDownEvent>(evt =>
             {
                 if (!view.LastId.IsValid || _boot!.World == null) return;
                 PawnId id = view.LastId;
                 if (evt.button == 0)
                 {
-                    if (evt.shiftKey)
-                    {
-                        _sweepingRoster = true;
-                        _directors?.Selection.Toggle(id);
-                    }
-                    else _directors?.ChooseColonist(id, _boot.World.Views.Current);
+                    if (_directors == null) return;
+                    _sweepPage.Clear();
+                    for (int c = 0; c < _cards.Count; c++)
+                        if (_cards[c].LastId.IsValid) _sweepPage.Add(_cards[c].LastId);
+                    if (_rosterSweep.Press(_sweepPage, id, evt.shiftKey, _directors.Selection.Pawns))
+                        ApplyRosterSweep(evt.shiftKey ? SelectionChange.Toggled : SelectionChange.Chosen);
                 }
                 else if (evt.button == 2)
                 {
@@ -695,6 +751,7 @@ namespace Odyssey.Presentation.Ui
 
             card.RegisterCallback<PointerUpEvent>(evt =>
             {
+                if (evt.button == 0 && _rosterSweep.Active) FinishRosterSweep();
                 if (evt.button == 2)
                 {
                     if (card.HasPointerCapture(evt.pointerId))
@@ -716,6 +773,8 @@ namespace Odyssey.Presentation.Ui
 
             card.RegisterCallback<PointerCancelEvent>(evt =>
             {
+                // A cancelled pointer is not a click: the sweep is dropped with no jump.
+                _rosterSweep.Cancel();
                 if (card.HasPointerCapture(evt.pointerId))
                     card.ReleasePointer(evt.pointerId);
                 if (_isRightDragging)
@@ -728,12 +787,40 @@ namespace Odyssey.Presentation.Ui
 
             card.RegisterCallback<PointerEnterEvent>(_ =>
             {
-                if (!_sweepingRoster || !view.LastId.IsValid) return;
-                _directors?.Selection.Toggle(view.LastId);
+                if (!_rosterSweep.Active || !view.LastId.IsValid) return;
+                if (_rosterSweep.Over(view.LastId)) ApplyRosterSweep(SelectionChange.Boxed);
             });
 
             _cardsHost.Add(card);
             return view;
+        }
+
+        /// <summary>Write the sweep's selection to the director: it replaces the selection, Shift's base included.</summary>
+        void ApplyRosterSweep(SelectionChange reason) =>
+            _directors?.Selection.PickMany(_rosterSweep.Selection, additive: false, reason);
+
+        /// <summary>
+        /// The left button came up after a press on a card (design 33 §20). A plain click — no
+        /// other card covered, no Shift — has already selected her at the press and does nothing
+        /// more: <b>a single click selects only</b>, the view stays where it is (owner,
+        /// 2026-09-25, <c>14-hud-layout.md</c> §10). The second plain click on the same card inside
+        /// <see cref="DoubleClick.Seconds"/> — the world pick's own threshold, on the unscaled
+        /// clock so it works while paused — takes the slice to her layer and glides the camera to
+        /// her, zooming in close (<see cref="HudDirectors.CloseInOnColonist"/>). A sweep, or a
+        /// Shift-click, has already said everything it has to, and breaks a pending double.
+        /// </summary>
+        void FinishRosterSweep()
+        {
+            PawnId pressed = _rosterSweep.Pressed;
+            bool additive = _rosterSweep.Additive;
+            if (_rosterSweep.Release() != RosterSweepEnd.Clicked || additive)
+            {
+                _rosterDoubleClick.Forget();
+                return;
+            }
+            if (!_rosterDoubleClick.Click(pressed, Time.unscaledTime)) return;
+            var world = _boot?.World;
+            if (world != null && pressed.IsValid) _directors?.CloseInOnColonist(pressed, world.Views.Current);
         }
 
         void StartDragDrop(VisualElement sourceCard, PawnId pawnId)
@@ -847,6 +934,25 @@ namespace Odyssey.Presentation.Ui
             _clockDate = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "clock__date");
             line.Add(_clockTime);
             line.Add(_clockDate);
+
+            // The outdoor temperature, third on the same row (owner, 2026-09-23: it "is leaking
+            // out into over controls"). It was *inside* the date string — "Day 3 · Larkspur ·
+            // Wash · 12.5 °C outdoors" — which ran the row past the panel and over the controls
+            // beside it. Dropping "outdoors" is most of the fix; an element of its own is the
+            // rest, and is what lets it carry its own colour.
+            //
+            // A row and not a second line, although a second line was tried: it cost 20 px that
+            // HudLayoutTests.TheStripIsAlwaysOneRowAndNoFurther does not have, taking the resting
+            // interface to 20.27% of a 1280x720 viewport against a 20% ceiling.
+            _clockTemp = HudText.Make(string.Empty, HudTextRole.Body, numeric: true, "clock__temp");
+            // The sky, as a glyph before the reading (design 43 §5). A glyph and not a word because
+            // the row has no room for one (above); the word is its tooltip, from the registry.
+            _clockWeather = new HudGlyph(HudGlyphKind.WeatherClear, 16f, new Color(0.94f, 0.84f, 0.48f, 0.92f));
+            _clockWeather.AddToClassList("clock__weather");
+            _clockWeather.pickingMode = PickingMode.Position;
+            line.Add(_clockWeather);
+            line.Add(_clockTemp);
+
             clock.Add(line);
 
             var speed = new VisualElement();
@@ -1031,9 +1137,38 @@ namespace Odyssey.Presentation.Ui
             if (world == null) return;
             long tick = world.CurrentTick;
             HudText.Set(_clockTime, $"{GameClock.HourOfDay(tick):00}:00", HudTextRole.Clock);
+
             HudText.Set(_clockDate,
                 $"Day {GameClock.DayOfMonth(tick)} · {GameClock.MonthName(tick)} · {GameClock.SeasonName(tick)}",
                 HudTextRole.Body);
+
+            // The outdoor reading, on its own row and in its own colour. The word "outdoors" is
+            // gone with the overflow it caused (owner, 2026-09-23) — which costs the one thing it
+            // was carrying, that this is the *unenclosed* temperature and not the temperature
+            // where you happen to be looking. That distinction now lives only in the pane's own
+            // tile row (design 28 §8), and if the reading ever reads as "the temperature here",
+            // a label is what puts it back.
+            var temperature = _boot.Colony?.Pawns.Temperature;
+            HudText.Set(_clockTemp, temperature == null
+                ? string.Empty
+                : TemperatureLabels.Describe(temperature.OutdoorTempC(tick)), HudTextRole.Body);
+
+            // The sky (design 43 §5): the kind holding the larger share, which changes once, at the
+            // half of a hand-over, rather than flickering.
+            if (_clockWeather != null)
+            {
+                WeatherView sky = world.Views.Current.Weather;
+                string word = WeatherLabels.Describe(sky);
+                _clockWeather.style.display = word.Length == 0 ? DisplayStyle.None : DisplayStyle.Flex;
+                _clockWeather.Kind = sky.Kind switch
+                {
+                    WeatherKind.Cloudy => HudGlyphKind.WeatherCloudy,
+                    WeatherKind.Rain => HudGlyphKind.WeatherRain,
+                    WeatherKind.Storm => HudGlyphKind.WeatherStorm,
+                    _ => HudGlyphKind.WeatherClear,
+                };
+                _clockWeather.tooltip = word;
+            }
         }
 
         void RefreshSpeed()
@@ -1110,6 +1245,27 @@ namespace Odyssey.Presentation.Ui
             RefreshToasts();
         }
 
+        /// <summary>
+        /// The game wrote the colony by itself: one line on the Events panel saying so, and which
+        /// file it went to (2026-09-21).
+        ///
+        /// <para><b>A line rather than a toast or a silence</b> (owner's call). What a player wants
+        /// from it is the answer to *is my file current* when they are about to quit, and a row
+        /// that has already faded cannot answer it. It replaces the previous autosave line rather
+        /// than stacking — <see cref="BulletinModel.PostNotice"/> says why — and it does not chime.
+        /// </para>
+        /// </summary>
+        void OnAutosaved(string saveName)
+        {
+            var world = _boot!.World;
+            if (world == null) return;
+
+            _bulletins.PostNotice(AutosaveClock.NoticeKey,
+                Registry.Label(AutosaveClock.NoticeKey),
+                saveName + " · " + BulletinModel.Stamp(world.CurrentTick));
+            RefreshBulletins();
+        }
+
         void RefreshBulletins()
         {
             var world = _boot!.World;
@@ -1117,15 +1273,10 @@ namespace Odyssey.Presentation.Ui
             _bulletins.Refresh(world.Views.Current);
 
             // The chime rides the row, as an alert's does: the model says what is news, and a
-            // clone with no catalogue gets a null director and silence. A gift sounds glad, a
-            // blow sounds like one, and anything else is worth a glance.
+            // clone with no catalogue gets a null director and silence. Which chime is the
+            // library's (BulletinChime): a raid's war horn, else by favourability.
             if (_bulletins.Arrived > 0)
-                _boot.Audio?.PlayAlert(_bulletins.ArrivedFavourability switch
-                {
-                    1 => Audio.SoundIds.AlertHappy,
-                    2 => Audio.SoundIds.AlertNegative,
-                    _ => Audio.SoundIds.AlertNormal,
-                });
+                _boot.Audio?.PlayAlert(Audio.BulletinChime.For(_bulletins.ArrivedRaid, _bulletins.ArrivedFavourability));
 
             if (_bulletinsDrawn == _bulletins.Version) return;
             _bulletinsDrawn = _bulletins.Version;
@@ -1202,6 +1353,9 @@ namespace Odyssey.Presentation.Ui
             {
                 if (evt.button != 0) return;
                 if (_directors == null || _boot?.World == null) return;
+                // A notice is something the game did, not something the colony did, so there is
+                // nowhere on the board to take the camera.
+                if (view.Id < 0) return;
                 _directors.Camera.JumpTo(
                     new CellRef(view.TargetCell.X, view.TargetCell.Z, _directors.Slice.ActiveLayer));
             });

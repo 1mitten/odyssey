@@ -21,12 +21,19 @@ namespace Odyssey.Tests.Presentation
         readonly List<PlacedEdifice> _edifices = new List<PlacedEdifice>();
         readonly List<SiteView> _sites = new List<SiteView>();
 
-        public RenderTestWorld(int sizeX, int sizeZ, int layers)
+        public RenderTestWorld(int sizeX, int sizeZ, int layers) : this(sizeX, sizeZ, layers, new ModuleLibrary(null))
+        {
+        }
+
+        /// <summary>A test world whose modules resolve through <paramref name="library"/> — the
+        /// real catalogue's, for a test that needs the art and ignores itself where it did not
+        /// resolve.</summary>
+        public RenderTestWorld(int sizeX, int sizeZ, int layers, ModuleLibrary library)
         {
             Size = new GridSize(sizeX, sizeZ, layers);
             Grid = new CellGrid(Size);
             Chunks = new ChunkGrid(Size);
-            Library = new ModuleLibrary(null);
+            Library = library;
             Model = new WorldRenderModel(Size, Chunks, Library);
         }
 
@@ -124,6 +131,19 @@ namespace Odyssey.Tests.Presentation
             return this;
         }
 
+        /// <summary>A shelf standing in one cell, facing as given.</summary>
+        public RenderTestWorld Shelf(int x, int z, int y, int facing, ushort stuff = CoreContent.StuffConcrete)
+        {
+            int cell = Index(x, z, y);
+            _edifices.Add(new PlacedEdifice
+            {
+                CellIndex = cell, Def = CoreContent.EdificeShelf, Stuff = stuff, Built = true,
+                Facing = (byte)facing,
+            });
+            Grid.Edifice[cell] = _edifices.Count - 1;
+            return this;
+        }
+
         /// <summary>
         /// A stair the way <c>ConstructionGrid.RaiseEdifice</c> leaves it: <b>two</b> records, not
         /// one, because a stair is the only buildable that finishes as two edifice values — the
@@ -198,6 +218,13 @@ namespace Odyssey.Tests.Presentation
         public RenderTestWorld Publish()
         {
             Model.RefreshAll(Grid, _edifices);
+            return this;
+        }
+
+        /// <summary>Publish only the chunks marked dirty since, as a tick's edit reaches the mirror.</summary>
+        public RenderTestWorld PublishEdits()
+        {
+            Model.RefreshDirty(Grid, _edifices);
             return this;
         }
     }

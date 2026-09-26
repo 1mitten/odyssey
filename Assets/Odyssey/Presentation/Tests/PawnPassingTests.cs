@@ -117,6 +117,52 @@ namespace Odyssey.Tests.Presentation
                 "walking pawn must veer to the side of the tile around the stationary pawn");
         }
 
+        // What the simulation publishes for each kind (PawnRegistry.Contribute): a bandit is a
+        // person under the hostile flag, a hog is no person at all. Kind numbers are the sim's
+        // PawnKindIndex, which this assembly cannot see.
+        const int Colonist = 0, Hog = 1, Bandit = 3;
+
+        static PawnFlags FlagsOf(int kind) => kind switch
+        {
+            Colonist => PawnFlags.Person,
+            Bandit => PawnFlags.Person | PawnFlags.Hostile,
+            _ => PawnFlags.None,
+        };
+
+        /// <summary>
+        /// **The person flag decides who steps round whom, not the kind** (design 33 §8c). Every
+        /// person - colonist or bandit - steps round every other person standing in its way,
+        /// so two bandits walking into a brawl do not draw through each other or through a
+        /// colonist; an animal is outside the sidestep on both sides (design 29). Before the
+        /// combat contracts the gate was <c>Kind == 0</c>, and a bandit, kind 3, neither
+        /// stepped round anybody nor was stepped round.
+        /// </summary>
+        [TestCase(Colonist, Colonist, true)]
+        [TestCase(Bandit, Colonist, true)]
+        [TestCase(Colonist, Bandit, true)]
+        [TestCase(Bandit, Bandit, true)]
+        [TestCase(Hog, Colonist, false)]
+        [TestCase(Colonist, Hog, false)]
+        [TestCase(Bandit, Hog, false)]
+        public void ThePersonFlagDecidesWhoStepsRound(int walkerKind, int standerKind, bool steps)
+        {
+            CellRef c0 = new CellRef(0, 0, 0);
+            CellRef c1 = new CellRef(0, 1, 0);
+            float baseX = CellMetrics.FloorCentre(c0).x;
+
+            var walker = new PawnView(new PawnId(1), c0, 100, 100, 50, -1, c1, 50,
+                kind: walkerKind, flags: FlagsOf(walkerKind));
+            var stander = new PawnView(new PawnId(2), c1, 100, 100, 50, -1, c1, 0,
+                kind: standerKind, flags: FlagsOf(standerKind));
+            var pair = new[] { walker, stander };
+
+            float offset = PawnPose.Of(walker, 0f, 0, out _, null, pair).x - baseX;
+            if (steps)
+                Assert.That(offset, Is.GreaterThan(0.5f), $"kind {walkerKind} walked through kind {standerKind}");
+            else
+                Assert.That(offset, Is.EqualTo(0f).Within(1e-4f), $"kind {walkerKind} stepped round kind {standerKind}");
+        }
+
         [Test]
         public void PassingEncounter_DistanceThreshold_ScalesSmoothlyWithoutThresholdPop()
         {

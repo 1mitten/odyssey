@@ -36,6 +36,13 @@
  * it and HudStyleSheetTests checks them against it, so the alpha cannot be changed in one
  * place only. The nearly-opaque surfaces above it (BarFill .90, PopoverFill .96) are left
  * alone: at 4–10% they never showed the world, which is the thing that was wrong here.
+ *
+ * ONE EXCEPTION, 2026-09-25. The inspect pane — the colonist info pane, and the same element for
+ * any other selection — is HudTheme.InspectFill, the panel colour at .85 (owner: "the colonist
+ * info pane at 85% opacity"). It is the pane the player reads while watching the colonist it
+ * describes, so a little of the board showing through is wanted there and nowhere else: the
+ * roster cards and every other panel stay opaque. The cost is measured, not assumed: the dim ink
+ * is 4.44:1 over pure white terrain (HudLayoutTests), a hair under body minimum.
  */
 
 /* Unity's runtime theme gives every Label a small vertical margin of its own. Inside a row of a
@@ -251,7 +258,9 @@
    giving names 80 px of width (a 60% increase over the old 50 px budget). */
 .card {
     width: 96px;
-    height: 89px;
+    /* 89 until 2026-09-23; the health bar and its gap added 5, which is all the coverage ceiling
+       had left (design 33 §9f, HudLayout.CardHeight). */
+    height: 94px;
     /* Half the gap on each side horizontally, the whole of it below — so the gap between two
        rows is one CardGap and the first row still starts exactly at the strip's top edge, which
        is what lets the layout model state the strip's height as rows and gaps and be right. */
@@ -320,6 +329,41 @@
     -unity-text-align: middle-center;
 }
 
+/* The health bar (design 33 §9f): always shown, the full width inside the padding, the need bar's
+   4px. The fill's width and colour are set from code - the colour is
+   CombatFeedbackModel.HealthBarColour, the one owner of the bar over a colonist's head, so no
+   colour for the fill is written here. A downed colonist's track is tinted red from code too. */
+.card__health {
+    height: 4px;
+    width: 100%;
+    margin-top: 1px;
+    flex-shrink: 0;
+    background-color: rgba(255, 255, 255, 0.09);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.card__health-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 2px;
+}
+
+/* "Downed", across the foot of the portrait: a 4px bar is too thin to carry a word, and the card
+   has no pixel of height left to give one a line (HudLayout.CardHeight). The plate is set from
+   code in the bar's red; the job badge is added after it and so sits on top at the right. */
+.card__downed {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 15px;
+    padding-left: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    color: #eef3f6;
+    -unity-text-align: middle-left;
+    white-space: nowrap;
+}
+
 /* Drag and drop slot swapping feedback */
 .card--dragging {
     opacity: 0.35;
@@ -374,7 +418,6 @@
     justify-content: center;
     align-items: center;
     border-radius: 3px;
-    cursor: link;
 }
 
 .roster-pager__btn:hover {
@@ -403,11 +446,13 @@
    twenty pixels below a strip beside it that started at zero, and the two read as misaligned
    because they were. It is not against the right edge — the depth rail is, and this column sits
    inside it — so only its top corners are squared. */
+/* Width is HudLayout.ClockWidth said again in the language the panel is actually laid out in.
+   Nothing checks that the two agree; change them together. */
 .column-right {
     position: absolute;
     right: 56px;
     top: 0;
-    width: 266px;
+    width: 271px;
 }
 
 .clock.panel {
@@ -434,6 +479,26 @@
     color: rgba(255, 255, 255, 0.66);
     height: 28px;
     -unity-text-align: middle-right;
+}
+
+/* The outdoor temperature, third on the clock's row. Yellow so a reading that matters is
+   findable at a glance without being an alarm - the alert colours are Warn's orange and Bad's
+   red, and a temperature that is merely being read must not be mistaken for either. It keeps the
+   row's own 28 px so the clock's height, and the coverage budget, are unchanged. */
+.clock__temp {
+    color: rgba(240, 214, 122, 0.92);
+    height: 28px;
+    margin-left: 4px;
+    -unity-text-align: middle-right;
+}
+
+/* The sky on the clock (design 43 §5): a 16 px glyph before the reading, the reading's own
+   yellow, and its word in the tooltip - the row has no room for a word. */
+.clock__weather {
+    width: 16px;
+    height: 16px;
+    margin-left: 8px;
+    flex-shrink: 0;
 }
 
 .speed {
@@ -484,7 +549,6 @@
     padding-left: 4px;
     padding-right: 2px;
     border-radius: 2px;
-    cursor: link;
 }
 
 .alert:hover {
@@ -506,7 +570,6 @@
 }
 
 .alert__target {
-    cursor: link;
 }
 
 .alert__prefix,
@@ -550,7 +613,6 @@
     padding-left: 4px;
     padding-right: 2px;
     border-radius: 2px;
-    cursor: link;
 }
 
 .toast:hover {
@@ -601,7 +663,6 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    cursor: link;
     border-radius: 2px;
 }
 
@@ -631,7 +692,6 @@
     padding-left: 4px;
     padding-right: 2px;
     border-radius: 2px;
-    cursor: link;
 }
 
 .bulletin:hover {
@@ -669,7 +729,6 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    cursor: link;
     border-radius: 2px;
 }
 
@@ -768,12 +827,20 @@
     background-color: #e8b55c;
 }
 
-.rail__hint {
-    color: rgba(255, 255, 255, 0.50);
-    -unity-text-align: middle-center;
-    height: 14px;
-    margin-top: 6px;
+/* The walls-down switch under the cells (design 42 §7), where the "R / F" hint was. A cell's
+   width, lit from C# in the accent while on, the way the views strip's switches are. */
+.rail__walls {
+    width: 26px;
+    height: 22px;
+    margin-top: 4px;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-radius: 4px;
 }
+
+.rail__walls:hover { background-color: rgba(255, 255, 255, 0.07); }
 
 /* ---------------------------------------------------------------- the orders strip
 
@@ -814,14 +881,24 @@
 
 .ord__btn:hover { background-color: rgba(255, 255, 255, 0.07); }
 
+/* The views strip (design 32 §14): the orders strip's own box and buttons, a gap below it in the
+   same gutter. Its buttons are switches, lit while their view is on, in the accent rather than an
+   order's hue, because showing the lines is not an order. */
+.views { margin-top: 9px; }
+
 /* ---------------------------------------------------------------- A9/A10 inspect */
 
 /* Docked to the left edge with the stores panel above it. Its bottom sits flush against the command
-   bar, so both bottom corners and the top-left corner are squared. */
+   bar, so both bottom corners and the top-left corner are squared.
+
+   The one panel that is not opaque (owner, 2026-09-25: the colonist info pane at 85%): HudTheme.
+   InspectFill, held to it by HudStyleSheetTests. It overrides .panel's fill by coming later in the
+   sheet at the same specificity. See the header's note on the opaque fill. */
 .inspect {
     left: 0;
     bottom: 50px;
     width: 560px;
+    background-color: rgba(12, 16, 20, 0.85);
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
@@ -832,6 +909,23 @@
    place now, where the joined line made every number hunt for its label). */
 .inspect--narrow {
     width: 280px;
+}
+
+/* A station's pane (design 49): wider than a store's, because a bill row carries seven
+   columns. BillsLayout.PaneWidth is the same number and BillsLayoutTests holds the two. */
+.inspect--bench {
+    width: 680px;
+}
+
+/* The bill list's square controls: the mode cell, the reorder pair, pause and remove. The border
+   lives here rather than inline so the hover can move it. */
+.bills__ctl {
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.26);
+}
+
+.bills__ctl:hover {
+    border-color: rgba(255, 255, 255, 0.50);
 }
 
 /* One fact of the readout: the label in a fixed-width column, the value beside it. The label
@@ -908,6 +1002,15 @@
     -unity-text-align: middle-left;
 }
 
+/* A colonist's pace, the header's third line (design 17 §5a). It fits because the 60 px portrait
+   sets the header, not the 38 px of text; HudLayoutTests holds the three lines inside it. */
+.inspect__pace {
+    color: rgba(255, 255, 255, 0.50);
+    white-space: nowrap;
+    height: 16px;
+    -unity-text-align: middle-left;
+}
+
 .inspect__actions {
     flex-direction: row;
     align-items: center;
@@ -951,7 +1054,6 @@
     border-radius: 4px;
     justify-content: center;
     align-items: center;
-    cursor: link;
 }
 .inspect__info:hover { border-color: #7fd0e0; }
 
@@ -1290,7 +1392,6 @@
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.10);
     border-radius: 4px;
-    cursor: link;
 }
 
 .workkey__btn:hover {
@@ -1349,6 +1450,9 @@
 
 .menu__row:hover { background-color: rgba(255, 255, 255, 0.07); }
 .menu__row--off { opacity: 0.42; }
+/* An overlay that is showing (design 32 §9: the power row). The accent at the pressed-chip
+   strength, so an overlay left on is visible in the menu that turns it off. */
+.menu__row--on { background-color: rgba(111, 211, 227, 0.14); }
 .menu__row--off:hover { background-color: rgba(0, 0, 0, 0); }
 
 .menu__label {
@@ -1551,7 +1655,6 @@
 .bp__tile--off {
     background-color: rgba(255, 255, 255, 0.02);
     border-color: rgba(255, 255, 255, 0.07);
-    cursor: initial;
 }
 
 .bp__tile--off:hover {
@@ -1804,20 +1907,11 @@
     border-bottom-width: 4px;
 }
 
-/* ---------------------------------------------------------------- B17 settings
+/* ---------------------------------------------------------------- the settings row idiom
 
-   Centred, and deliberately narrow: it holds a short list of switches, not a settings tree. Not a
-   modal, so there is no scrim behind it and the board stays visible and running underneath, which
-   is the whole reason to open it. */
-
-.settings {
-    top: 50%;
-    left: 50%;
-    translate: -50% -50%;
-    width: 860px;
-    max-width: 94%;
-    max-height: 90%;
-}
+   The rows, tabs and columns the old settings panel was built from. The settings window itself
+   has its own .sw rules below (design 39); these stay because the debug menu and the start screen
+   are built from them. */
 
 /* The debug menu (backtick). Centred exactly like Settings and mutually exclusive with it
    (HudShell.Debug.cs / HudShell.Bar.cs each close the other on open), so reusing the same spot
@@ -1826,7 +1920,9 @@
     top: 50%;
     left: 50%;
     translate: -50% -50%;
-    width: 280px;
+    /* 280 until 2026-09-24 (owner: "make the debug menu bigger"): wide enough now for the Spawn
+       tab's two columns of headed rows (design 33 §9i). */
+    width: 460px;
 }
 
 .settings__tabs {
@@ -1835,12 +1931,6 @@
     height: 26px;
     border-bottom-width: 1px;
     border-bottom-color: rgba(255, 255, 255, 0.09);
-}
-
-.settings__scroll {
-    max-height: 480px;
-    min-height: 0;
-    flex-shrink: 1;
 }
 
 .settings__columns {
@@ -1858,97 +1948,6 @@
 }
 
 .settings__body { margin-top: 9px; }
-
-/* The scale ladder: one rung per percentage, the live one filled. Chips rather than a slider,
-   because a scale rung is a choice and not a continuum — the chip is the idiom this HUD uses
-   for every control that holds a choice. The faders below are the other kind. */
-.settings__ladder {
-    flex-direction: row;
-    flex-wrap: wrap;
-    margin-top: 4px;
-    margin-left: 26px;
-}
-
-.rung {
-    height: 26px;
-    padding: 0 9px;
-    margin: 0 4px 4px 0;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.13);
-    border-radius: 4px;
-    color: rgba(255, 255, 255, 0.66);
-    -unity-text-align: middle-center;
-}
-
-.rung:hover { border-color: #6fd3e3; }
-
-.rung--on {
-    background-color: #6fd3e3;
-    border-color: #6fd3e3;
-    color: #0b1116;
-}
-
-/* A volume fader: the one control in this HUD that holds a continuum rather than a choice.
-   Unity seated at the centre (the notch below marks it), silence at the left end, boost at
-   the right — each half linear in dB over its own span. The built-in slider restyled rather
-   than replaced, the Build palette's scroller having shown the way in. The tracker's end
-   margins are half the thumb's width on purpose: Unity sweeps the thumb's LEFT edge from the
-   track's start to its end minus the thumb, so those margins are what make the thumb's centre
-   sweep exactly the track — and what puts its centre on the notch at unity. */
-.settings__fader {
-    height: 24px;
-    margin: 0 6px 4px 26px;
-}
-
-.settings__fader .unity-base-slider__tracker {
-    height: 3px;
-    align-self: center;
-    border-radius: 1.5px;
-    background-color: rgba(255, 255, 255, 0.13);
-    border-width: 0;
-    margin-left: 6px;
-    margin-right: 6px;
-}
-
-.settings__fader .unity-base-slider__dragger {
-    width: 12px;
-    height: 12px;
-    border-radius: 6px;
-    background-color: #6fd3e3;
-    border-width: 0;
-    margin-left: 0;
-    top: 50%;
-    margin-top: -6px;
-}
-
-.settings__fader .unity-base-slider__dragger:hover { background-color: #ffffff; }
-
-/* Where unity sits: the centre mark the default is seated on, so putting a fader back the way
-   it shipped is a place rather than a memory. First child, so the track and the thumb both
-   draw over it. */
-.settings__fader-notch {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 1px;
-    height: 7px;
-    margin-left: -0.5px;
-    margin-top: -3.5px;
-    background-color: rgba(255, 255, 255, 0.35);
-}
-
-/* The figure a fader rests at, beside its row's label: the saying half of the control the
-   slider is the dragging half of. Wide enough for the longest figure in the mono face, so
-   the label does not walk as the thumb moves. */
-.settings__value {
-    min-width: 52px;
-    margin-left: 6px;
-    color: rgba(255, 255, 255, 0.66);
-    -unity-text-align: middle-right;
-}
-
-/* A row that only labels the control under it, and answers nothing itself. */
-.settings__row--static:hover { background-color: rgba(0, 0, 0, 0); }
 
 .settings__section {
     color: rgba(255, 255, 255, 0.50);
@@ -1992,103 +1991,10 @@
     border-color: #6fd3e3;
 }
 
-/* The resolution dropdown selector: single control replacing the rank of buttons */
-.settings__dropdown {
-    width: 130px;
-    height: 24px;
-    margin: 0;
-    padding: 0;
-}
-
-.settings__dropdown .unity-base-popup-field__input {
-    background-color: rgba(255, 255, 255, 0.04);
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.13);
-    border-radius: 4px;
-    padding: 0 6px;
-    height: 24px;
-}
-
-.settings__dropdown:hover .unity-base-popup-field__input {
-    border-color: #6fd3e3;
-}
-
-.settings__dropdown .unity-base-popup-field__text {
-    color: rgba(255, 255, 255, 0.82);
-    -unity-text-align: middle-center;
-    margin: 0;
-    padding: 0;
-}
-
-.settings__dropdown .unity-base-popup-field__arrow {
-    -unity-background-image-tint-color: rgba(255, 255, 255, 0.66);
-    align-self: center;
-    width: 10px;
-    height: 6px;
-    margin-left: 4px;
-}
-
-.settings__dropdown:hover .unity-base-popup-field__arrow {
-    -unity-background-image-tint-color: #6fd3e3;
-}
-
 .settings__note {
     color: rgba(255, 255, 255, 0.50);
     white-space: normal;
     margin-top: 9px;
-}
-
-/* One key cap on a binding row. A small rung rather than the command bar's bare cap, because
-   a cap here is a control in its own right — click it, and the next key pressed is offered to
-   the slot it names. */
-.settings__keycap {
-    min-width: 26px;
-    height: 19px;
-    margin-left: 6px;
-    padding: 0 6px;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.13);
-    border-radius: 4px;
-    color: rgba(255, 255, 255, 0.66);
-    -unity-text-align: middle-center;
-}
-
-.settings__keycap:hover { border-color: #6fd3e3; }
-
-.settings__keycap--listening {
-    border-color: #6fd3e3;
-    color: #6fd3e3;
-}
-
-/* The reset row under the binding list, set apart from the list it undoes. */
-.settings__reset { margin-top: 9px; }
-
-/* The session rows grid, below every tab: 2 columns across, separated by a hairline */
-.settings__session-grid {
-    flex-direction: row;
-    margin-top: 9px;
-    border-top-width: 1px;
-    border-top-color: rgba(255, 255, 255, 0.09);
-    padding-top: 6px;
-}
-
-.settings__session-col {
-    flex-grow: 1;
-    flex-basis: 0;
-    margin-right: 14px;
-}
-
-.settings__session-col:last-child {
-    margin-right: 0;
-}
-
-/* The way out, below every tab: separated by a hairline, because it is not a setting and
-   should not read as one. Armed, it says what it is waiting for and the accent says it means
-   it. */
-.settings__exit {
-    margin-top: 9px;
-    border-top-width: 1px;
-    border-top-color: rgba(255, 255, 255, 0.09);
 }
 
 /* A row that has been pressed once and is asking to be sure. Not named for the exit row any more
@@ -2098,6 +2004,535 @@
 .row--armed { background-color: rgba(111, 211, 227, 0.12); }
 
 .row--armed .settings__label { color: #6fd3e3; }
+
+/* ---------------------------------------------------------------- B17 the settings window
+
+   One fixed frame, 1240 x 720, centred by fixed offsets rather than by its own size, whichever
+   tab is open (design 39). Nothing a tab holds may change it: a short tab leaves space. Flat
+   throughout: no radius, no shadow, no gradient. Every colour below is a HudTheme token and
+   HudStyleSheetTests holds them to it; the per-tab hues are laid on from C# (SettingsLayout.Hue),
+   because which hue is a question about the open tab. The numbers are SettingsLayout's. */
+
+.sw__scrim {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(6, 10, 12, 0.58);
+}
+
+.sw {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin-left: -620px;
+    margin-top: -360px;
+    width: 1240px;
+    height: 720px;
+    flex-direction: column;
+    background-color: rgb(12, 16, 20);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    color: rgb(238, 243, 246);
+}
+
+.sw__header {
+    height: 52px;
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 16px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.13);
+}
+
+.sw__title {
+    margin-left: 10px;
+    color: rgb(238, 243, 246);
+}
+
+.sw__close {
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+}
+
+.sw__close:hover { border-color: rgba(255, 255, 255, 0.26); }
+
+.sw__body {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+/* The rail: the five tabs, then the game's actions pinned to its foot. */
+.sw__rail {
+    width: 240px;
+    flex-shrink: 0;
+    padding: 10px 0;
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.13);
+}
+
+.sw__tab {
+    height: 40px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 16px;
+}
+
+.sw__tab:hover { background-color: rgba(255, 255, 255, 0.07); }
+
+/* The selected tab's inset rail, in its hue. */
+.sw__tab-bar {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+}
+
+.sw__tab-label {
+    margin-left: 12px;
+    color: rgb(238, 243, 246);
+}
+
+.sw__game {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.13);
+}
+
+.sw__game-label {
+    color: rgba(255, 255, 255, 0.50);
+    padding: 0 16px;
+    margin-bottom: 8px;
+}
+
+.sw__game-rule {
+    height: 1px;
+    margin: 6px 16px;
+    background-color: rgba(255, 255, 255, 0.07);
+}
+
+.sw__action {
+    height: 38px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 16px;
+}
+
+.sw__action:hover { background-color: rgba(255, 255, 255, 0.07); }
+
+/* Pressed once and asking to be sure: Load, which asks twice. */
+.sw__action--armed { background-color: rgba(111, 211, 227, 0.12); }
+
+.sw__action-label {
+    margin-left: 12px;
+    color: rgb(238, 243, 246);
+    white-space: nowrap;
+}
+
+/* The content pane: title band, columns, footer. */
+.sw__content {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.sw__titleband {
+    height: 72px;
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 24px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.13);
+}
+
+.sw__tile {
+    width: 38px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+}
+
+.sw__titlewords { margin-left: 14px; }
+
+.sw__pagename { color: rgb(238, 243, 246); }
+
+.sw__subtitle {
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.66);
+}
+
+.sw__pages {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.sw__columns {
+    flex-grow: 1;
+    flex-direction: row;
+    padding: 20px 24px;
+    overflow: hidden;
+}
+
+/* A page with a band across its top (Graphics: Quality) over an inner row of columns, which then
+   carries no padding of its own. */
+.sw__page {
+    flex-grow: 1;
+    flex-direction: column;
+    padding: 20px 24px;
+    overflow: hidden;
+}
+
+.sw__band {
+    flex-shrink: 0;
+    margin-bottom: 22px;
+}
+
+.sw__columns--inner { padding: 0; }
+
+.sw__column {
+    flex-grow: 1;
+    flex-basis: 0;
+    flex-direction: column;
+    margin-right: 40px;
+}
+
+.sw__column:last-child { margin-right: 0; }
+
+.sw__section { margin-bottom: 22px; }
+
+.sw__heading {
+    height: 18px;
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.sw__square {
+    width: 8px;
+    height: 8px;
+}
+
+.sw__heading-label {
+    margin-left: 9px;
+    color: rgb(238, 243, 246);
+}
+
+.sw__heading-rule {
+    flex-grow: 1;
+    height: 1px;
+    margin-left: 9px;
+    background-color: rgba(255, 255, 255, 0.13);
+}
+
+.sw__row {
+    height: 38px;
+    flex-direction: row;
+    align-items: center;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.07);
+}
+
+/* Disabled: the whole row at 45%, and its note says why. */
+.sw__row--off { opacity: 0.45; }
+
+/* The label, and under it the note a greyed row gives its reason in. Under rather than beside it,
+   as the brief drew it, because beside it the two cut each other short on a row with five segments
+   ("Frame rate cap" and "Paced by VSync" came out "Frame ..."), and a 38 px row holds both lines. */
+.sw__words {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    margin-right: 12px;
+    overflow: hidden;
+}
+
+.sw__label {
+    height: 20px;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-left;
+    color: rgb(238, 243, 246);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sw__note {
+    height: 14px;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-left;
+    color: rgba(255, 255, 255, 0.66);
+    white-space: nowrap;
+}
+
+.sw__control {
+    flex-shrink: 0;
+    flex-grow: 0;
+}
+
+/* Segmented: joined buttons, the edges shared by a 1px overlap. The segment after a lit one
+   takes the accent on the border it shares with it, which is how the lit segment sits above
+   its neighbours without a z-order. */
+.sw__segs { flex-direction: row; }
+
+.sw__seg {
+    height: 28px;
+    padding: 0 11px;
+    margin-left: -1px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.26);
+    color: rgb(238, 243, 246);
+    -unity-text-align: middle-center;
+}
+
+.sw__seg:first-child { margin-left: 0; }
+
+.sw__seg:hover { background-color: rgba(255, 255, 255, 0.07); }
+
+.sw__seg--on {
+    background-color: rgb(111, 211, 227);
+    border-color: rgb(111, 211, 227);
+    color: rgb(11, 17, 22);
+}
+
+.sw__seg--on:hover { background-color: rgb(111, 211, 227); }
+
+.sw__seg--after-on { border-left-color: rgb(111, 211, 227); }
+
+/* Switch: the state in a word, then the track. On is the accent track with the knob right. */
+.sw__switch {
+    flex-direction: row;
+    align-items: center;
+}
+
+.sw__switch-word {
+    width: 26px;
+    margin-right: 9px;
+    -unity-text-align: middle-right;
+    color: rgba(255, 255, 255, 0.50);
+}
+
+.sw__track {
+    width: 38px;
+    height: 22px;
+    padding: 3px;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.26);
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+.sw__knob {
+    width: 14px;
+    height: 14px;
+    background-color: rgba(255, 255, 255, 0.66);
+}
+
+.sw__switch--on .sw__switch-word { color: rgb(238, 243, 246); }
+
+.sw__switch--on .sw__track {
+    justify-content: flex-end;
+    background-color: rgb(111, 211, 227);
+    border-color: rgb(111, 211, 227);
+}
+
+.sw__switch--on .sw__knob { background-color: rgb(11, 17, 22); }
+
+/* Slider: a 220 x 4 track with the accent up to the value, a 10 x 18 thumb, the figure after.
+   The tracker's end margins are half the thumb, so the thumb's centre sweeps exactly the track
+   and sits on the centre mark at unity. */
+.sw__slider {
+    flex-direction: row;
+    align-items: center;
+}
+
+.settings__fader {
+    width: 220px;
+    height: 18px;
+    margin: 0;
+    padding: 0;
+}
+
+.settings__fader .unity-base-slider__input { overflow: visible; }
+
+.settings__fader .unity-base-slider__tracker {
+    height: 4px;
+    align-self: center;
+    border-radius: 0;
+    border-width: 0;
+    background-color: rgba(255, 255, 255, 0.13);
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+.settings__fader .unity-base-slider__dragger-border { display: none; }
+
+.settings__fader .unity-base-slider__dragger {
+    width: 10px;
+    height: 18px;
+    border-radius: 0;
+    border-width: 0;
+    background-color: rgb(238, 243, 246);
+    margin-left: 0;
+    top: 50%;
+    margin-top: -9px;
+}
+
+.sw__fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background-color: rgb(111, 211, 227);
+}
+
+/* Where unity sits, so putting a fader back the way it shipped is a place (owner, 2026-09-17). */
+.settings__fader-notch {
+    position: absolute;
+    left: 50%;
+    top: -3px;
+    width: 1px;
+    height: 10px;
+    margin-left: -0.5px;
+    background-color: rgba(255, 255, 255, 0.26);
+}
+
+.settings__value {
+    width: 56px;
+    margin-left: 14px;
+    color: rgb(238, 243, 246);
+    -unity-text-align: middle-right;
+}
+
+/* Select: 190 x 28, the value in mono, a drawn triangle at the right. */
+.sw__select {
+    width: 190px;
+    height: 28px;
+    margin: 0;
+    padding: 0;
+}
+
+.sw__select .unity-base-popup-field__input {
+    height: 28px;
+    padding: 0 10px;
+    border-width: 1px;
+    border-radius: 0;
+    border-color: rgba(255, 255, 255, 0.26);
+    background-color: rgba(0, 0, 0, 0);
+    flex-direction: row;
+    align-items: center;
+}
+
+.sw__select .unity-base-popup-field__text {
+    flex-grow: 1;
+    margin: 0;
+    padding: 0;
+    color: rgb(238, 243, 246);
+    -unity-text-align: middle-left;
+}
+
+/* Key chips: two per action. An unbound slot is an empty chip in dashes (DashedOutline). */
+.sw__chips { flex-direction: row; }
+
+.sw__chip {
+    min-width: 36px;
+    height: 26px;
+    padding: 0 8px;
+    margin-left: 6px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.26);
+    color: rgb(238, 243, 246);
+}
+
+.sw__chip-key {
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-center;
+}
+
+.sw__chip:first-child { margin-left: 0; }
+
+.sw__chip:hover { background-color: rgba(255, 255, 255, 0.07); }
+
+.sw__chip--empty { border-width: 0; }
+
+.sw__chip--listening {
+    border-color: rgb(111, 211, 227);
+    color: rgb(111, 211, 227);
+}
+
+/* The footer: the reset button left, the Keys hint right. */
+.sw__footer {
+    height: 52px;
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 24px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.13);
+}
+
+.sw__button {
+    height: 30px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 12px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+}
+
+.sw__button:hover { border-color: rgba(255, 255, 255, 0.26); }
+
+.sw__button-label {
+    margin-left: 8px;
+    color: rgb(238, 243, 246);
+}
+
+.sw__hint { color: rgba(255, 255, 255, 0.66); }
+
+/* The focus ring: one for the window, moved to whichever control has the keyboard, drawn last
+   so no neighbour covers it. UI Toolkit has no outline. */
+.sw__ring {
+    position: absolute;
+    border-width: 2px;
+    border-color: rgb(238, 243, 246);
+}
+
+/* The leave prompt, over the window's own tokens (design 39 §7): 440 wide, the answer that
+   saves in the good ink, the one that does not in the bad. */
+#leaveprompt {
+    width: 440px;
+    padding: 20px;
+    border-radius: 0;
+}
+
+#leaveprompt .prompt__answer {
+    height: 30px;
+    border-radius: 0;
+}
+
+#leaveprompt .prompt__answer--save {
+    border-color: rgb(127, 201, 140);
+    background-color: rgba(127, 201, 140, 0.12);
+    color: rgb(127, 201, 140);
+}
+
+#leaveprompt .prompt__answer--leave {
+    border-color: rgb(224, 106, 92);
+    color: rgb(224, 106, 92);
+}
+
+#leaveprompt .prompt__answer--cancel { border-color: rgba(255, 255, 255, 0.13); }
 
 /* ---------------------------------------------------------------- the modal scrim
 
@@ -2126,76 +2561,233 @@
    It introduces no control of its own. A row here is a .settings__row, which is the same row the
    stores panel, the Menu popover and the settings panel are built from. */
 
-/* A fixed box, and fixed is the point (owner, 2026-09-17: "keep it fixed width and height because
-   it becomes hard to read between loading and saving screens"). It used to size itself to its
-   content, so the root screen and the load screen gave two different boxes — and since the panel is
-   centred, moving between them moved every row under the pointer. A menu whose items walk away as
-   you navigate is a menu you have to re-find each time. */
-.startscreen {
-    top: 50%;
-    left: 50%;
-    translate: -50% -50%;
-    width: 420px;
-    height: 384px;
+/* The title screen (design 40): a dock, full height, flush left, 560 wide at every resolution,
+   with the starfield to its right. Flat: the .panel radius and padding are taken back off, and
+   the dock carries its own contrast, so the start screen's scrim is clear (it still swallows the
+   pointer, which is its job). The numbers are TitleLayout's; HudStyleSheetTests pins them. */
+.panel.startscreen {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 560px;
+    padding: 0 48px;
+    flex-direction: column;
+    background-color: rgba(12, 16, 20, 0.72);
+    border-width: 0;
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.13);
+    border-radius: 0;
 }
 
-/* Everything under the title. One height for every screen this panel shows, which is what makes
-   the panel's own height a constant rather than a consequence. */
-.startscreen__body {
-    height: 318px;
-    margin-top: 14px;
-}
+#start-scrim { background-color: rgba(0, 0, 0, 0); }
 
-/* The game's own name, at the largest word-face step the type scale has. An explicit box with
-   middle alignment, like every other label that shares a column, so its leading falls outside the
-   box rather than pushing the rows below it down. */
-.startscreen__title {
-    color: #eef3f6;
-    height: 26px;
-    -unity-text-align: middle-center;
-    white-space: nowrap;
-}
-
-/* Top-aligned in a body that is taller than they are. The air below is deliberate: the alternative
-   to a fixed body is a list that scrolls at four rows. */
-.startscreen__rows { flex-shrink: 0; }
-
-/* The saves, when the load screen is showing. A max height and a scroll, which is the first
-   ceiling any region in this interface has carried — and it is here first because this is the
-   first region whose length is set by the player rather than by the game. The scroller itself is
-   restyled by the .build__scroll rules above; this list wears the same class so there is one
-   scrollbar in the project rather than two. Six rows, which is what the fixed body leaves once the
-   row that goes back has taken its share. */
-.startscreen__list {
-    flex-grow: 0;
+.title__logo {
+    flex-direction: row;
+    align-items: center;
     flex-shrink: 0;
+}
+
+.title__mark {
+    width: 70px;
+    height: 60px;
+    flex-shrink: 0;
+    margin-right: 22px;
+}
+
+.title__wordmark {
+    color: rgb(238, 243, 246);
+    white-space: nowrap;
+    -unity-text-align: middle-left;
+    padding: 0;
+    margin: 0;
+}
+
+.title__divider {
+    height: 1px;
+    flex-shrink: 0;
+    margin-top: 40px;
+    margin-bottom: 28px;
+    background-color: rgba(255, 255, 255, 0.13);
+}
+
+.title__menu { flex-shrink: 0; }
+
+.title__btn {
+    height: 64px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 14px;
+    margin-bottom: 6px;
+}
+
+.title__btn:last-child { margin-bottom: 0; }
+
+/* The lit edge, in the button's colour; shown on hover and focus. */
+.title__edge {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    display: none;
+}
+
+.title__btn:hover > .title__edge,
+.title__btn:focus > .title__edge { display: flex; }
+
+/* The name and the line under it, as one block centred on the icon. Each line is an explicit box
+   with its text centred in it and no margin or padding of its own, because a label left to size
+   itself takes a line box twice its point size and the block then sits on the renderer's metrics
+   rather than on the icon (owner, 2026-09-24: "all out of whack"). */
+.title__words {
+    margin-left: 16px;
+    flex-grow: 1;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.title__name {
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-left;
+    white-space: nowrap;
+    color: rgb(238, 243, 246);
+}
+
+.title__name--ink { color: rgb(224, 106, 92); }
+
+.title__desc {
+    height: 16px;
+    margin: 0;
+    margin-top: 6px;
+    padding: 0;
+    -unity-text-align: middle-left;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.66);
+}
+
+.title__btn--good > .title__edge { background-color: rgb(127, 201, 140); }
+.title__btn--good:hover,
+.title__btn--good:focus { background-color: rgba(127, 201, 140, 0.14); }
+.title__btn--good:active { background-color: rgba(127, 201, 140, 0.22); }
+.title__btn--good:hover .title__name,
+.title__btn--good:focus .title__name { color: rgb(127, 201, 140); }
+
+.title__btn--info > .title__edge { background-color: rgb(143, 208, 227); }
+.title__btn--info:hover,
+.title__btn--info:focus { background-color: rgba(143, 208, 227, 0.14); }
+.title__btn--info:active { background-color: rgba(143, 208, 227, 0.22); }
+.title__btn--info:hover .title__name,
+.title__btn--info:focus .title__name { color: rgb(143, 208, 227); }
+
+.title__btn--violet > .title__edge { background-color: rgb(185, 168, 224); }
+.title__btn--violet:hover,
+.title__btn--violet:focus { background-color: rgba(185, 168, 224, 0.14); }
+.title__btn--violet:active { background-color: rgba(185, 168, 224, 0.22); }
+.title__btn--violet:hover .title__name,
+.title__btn--violet:focus .title__name { color: rgb(185, 168, 224); }
+
+.title__btn--bad > .title__edge { background-color: rgb(224, 106, 92); }
+.title__btn--bad:hover,
+.title__btn--bad:focus { background-color: rgba(224, 106, 92, 0.14); }
+.title__btn--bad:active { background-color: rgba(224, 106, 92, 0.22); }
+
+/* The keyboard's ring: each button's own, 2 px off it and 2 px thick, shown while it has focus. */
+.title__ring {
+    position: absolute;
+    left: -4px;
+    top: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-width: 2px;
+    border-color: rgb(238, 243, 246);
+    display: none;
+}
+
+.title__btn:focus > .title__ring { display: flex; }
+
+.title__footer {
+    margin-top: auto;
+    margin-bottom: 28px;
+    flex-direction: row;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+.title__cap { color: rgba(255, 255, 255, 0.35); }
+
+/* The load list, in the dock under the divider where the buttons were. */
+.startscreen__list {
+    flex-grow: 1;
+    flex-shrink: 1;
     min-height: 0;
-    max-height: 284px;
 }
 
 .save {
     flex-direction: column;
     justify-content: center;
-    height: 44px;
-    margin-bottom: 4px;
-    padding: 0 8px;
-    border-radius: 3px;
+    height: 64px;
+    margin-bottom: 10px;
+    padding: 0 14px;
 }
 
 .save:hover { background-color: rgba(255, 255, 255, 0.07); }
 
+/* Every line an explicit box with its text centred in it and no margin or padding of its own, so
+   the title and the line under it start at one x and the row does not sit on the renderer's line
+   box (owner, 2026-09-24: "make sure all the elements are aligned"). */
 .save__name {
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-left;
     color: #eef3f6;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
 }
 
-/* Day, map, and — for a file this build cannot open — the reason. Listed rather than hidden: a
-   save that vanishes from the list is a colony the player concludes is gone. */
+/* Colony, day, date: the day at a fixed width and the date right-aligned, so the two figures stand
+   in columns down the list whatever each colony is called. */
+.save__line {
+    height: 20px;
+    margin-top: 4px;
+    flex-direction: row;
+    align-items: center;
+}
+
 .save__meta {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-left;
     color: rgba(255, 255, 255, 0.66);
     white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.save__day {
+    width: 80px;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-left;
+    color: rgba(255, 255, 255, 0.66);
+}
+
+/* A fixed width too, right-aligned inside it: a shorter date ("2 Sep") at its natural width moved
+   the day beside it (measured, HudShotTests.PhotographTheTitleScreen). */
+.save__when {
+    width: 120px;
+    flex-shrink: 0;
+    margin: 0;
+    margin-left: 12px;
+    padding: 0;
+    -unity-text-align: middle-right;
+    color: rgba(255, 255, 255, 0.66);
 }
 
 .save--bad { opacity: 0.42; }
@@ -2471,9 +3063,14 @@
    is set apart from the tabs. */
 .startscreen__back {
     margin-top: 4px;
+    margin-bottom: 16px;
+    padding: 0 14px;
     border-top-width: 1px;
     border-top-color: rgba(255, 255, 255, 0.09);
 }
+
+/* In the dock its word starts at the save titles' edge, not the row idiom's icon gap. */
+.startscreen__back .settings__label { margin-left: 0; }
 
 /* ---------------------------------------------------------------- the naming prompt
 
@@ -2613,7 +3210,6 @@
     flex-grow: 1;
 }
 
-.inspect__row--pick { cursor: pointer; }
 
 .inspect__row--pick .inspect__rowbox {
     background-color: rgba(111, 211, 227, 0.14);
@@ -2640,6 +3236,38 @@
 }
 
 .inspect__row--pick:hover .inspect__rowvalue { color: rgb(238, 250, 253); }
+
+/* An order's own action dressed as the button it is (owner, 2026-09-23: "colour the cancel button
+   a red theme with white text to make it clear it cancels"). Danger is a filled red with white
+   ink — #a8352b under white is 6.6:1, where the cancel tool's own #e06a5c would be 3.2 and fail
+   small text — and the tool's red is kept for the border so the two read as one colour. Warn is
+   taking a laid line up: the remove tool's amber, filled, with the panel's dark ink on it. Both
+   come after the pick rules above, which they replace at the same specificity. */
+.inspect__row--danger .inspect__rowbox {
+    background-color: rgb(168, 53, 43);
+    border-color: rgb(224, 106, 92);
+}
+.inspect__row--danger .inspect__rowvalue,
+.inspect__row--danger .inspect__rowchevron { color: rgb(255, 255, 255); }
+.inspect__row--danger:hover .inspect__rowbox {
+    background-color: rgb(196, 66, 54);
+    border-color: rgb(255, 255, 255);
+}
+.inspect__row--danger:hover .inspect__rowvalue,
+.inspect__row--danger:hover .inspect__rowchevron { color: rgb(255, 255, 255); }
+
+.inspect__row--warn .inspect__rowbox {
+    background-color: rgb(232, 181, 92);
+    border-color: rgb(232, 181, 92);
+}
+.inspect__row--warn .inspect__rowvalue,
+.inspect__row--warn .inspect__rowchevron { color: rgb(11, 17, 22); }
+.inspect__row--warn:hover .inspect__rowbox {
+    background-color: rgb(244, 204, 132);
+    border-color: rgb(255, 255, 255);
+}
+.inspect__row--warn:hover .inspect__rowvalue,
+.inspect__row--warn:hover .inspect__rowchevron { color: rgb(11, 17, 22); }
 
 .inspect__rowglyph { margin-right: 1px; }
 
@@ -2760,7 +3388,6 @@
     margin-left: 6px;
     justify-content: center;
     align-items: center;
-    cursor: link;
 }
 
 .almanac-hdr__btn:hover {
@@ -2788,7 +3415,6 @@
     flex-direction: row;
     align-items: center;
     padding: 0 16px;
-    cursor: link;
 }
 
 .almanac-cat:hover {
@@ -2849,7 +3475,6 @@
     padding: 0 12px;
     border-bottom-width: 1px;
     border-bottom-color: rgba(255, 255, 255, 0.06);
-    cursor: link;
 }
 
 .almanac-idx-row:hover {
@@ -2964,7 +3589,6 @@
     background-color: rgba(127, 208, 224, 0.16);
     border-radius: 4px;
     margin-bottom: 8px;
-    cursor: link;
 }
 
 .almanac-action-btn:hover {
@@ -2976,14 +3600,12 @@
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
-    cursor: link;
 }
 
 /* Picking is off in code as well; this says so in ink. */
 .almanac-pin-btn--off {
     border-color: rgba(255, 255, 255, 0.08);
     opacity: 0.38;
-    cursor: default;
 }
 
 .almanac-grid {
@@ -3121,7 +3743,6 @@
     background-color: rgba(255, 255, 255, 0.04);
     margin-right: 8px;
     margin-bottom: 8px;
-    cursor: link;
 }
 
 .almanac-rel-chip:hover {
@@ -3149,3 +3770,50 @@
     margin-left: 6px;
 }
 
+
+/* ---------------------------------------------------------------- The context menu (design 33 §7a)
+
+   A small panel at the pointer, raised by a right-click on a thing with more than one answer: a
+   weapon's "Equip machete" and "Cancel" today. Its width is set here and never from code, so the
+   border-box trap a panel that writes its own width falls into cannot happen (CLAUDE.md); its left
+   and top are written from code, because only the pointer knows them. Tighter than a board panel:
+   it is a list of two or three rows, not a readout. */
+.ctxmenu {
+    min-width: 168px;
+    padding: 4px;
+    background-color: rgba(12, 16, 20, 0.96);
+}
+
+.ctxmenu__row {
+    flex-direction: row;
+    align-items: center;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 3px;
+}
+.ctxmenu__row:hover { background-color: rgba(255, 255, 255, 0.07); }
+.ctxmenu__row--off:hover { background-color: rgba(0, 0, 0, 0); }
+
+/* Cancel sits under a hairline, apart from the orders above it. */
+.ctxmenu__row--cancel {
+    margin-top: 3px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.09);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.ctxmenu__label { color: rgb(238, 243, 246); }
+.ctxmenu__row--off .ctxmenu__label { color: rgba(255, 255, 255, 0.35); }
+
+/* Why a row cannot be chosen, after its words: "Equip machete  Downed". */
+.ctxmenu__reason {
+    color: rgba(255, 255, 255, 0.50);
+    margin-left: 10px;
+}
+
+/* The hit-chance readout beside the pointer (design 53 section 8b). */
+.shotreadout {
+    padding: 4px 8px;
+    background-color: rgba(12, 16, 20, 0.96);
+}

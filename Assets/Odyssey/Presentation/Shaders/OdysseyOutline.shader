@@ -43,6 +43,7 @@ Shader "Odyssey/Outline"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareNormalsTexture.hlsl"
 
             float4 _OutlineColour;
             float _Thickness;
@@ -65,6 +66,17 @@ Shader "Odyssey/Outline"
 
                 float2 uv = input.texcoord;
                 half4 scene = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv);
+
+                // No ink on terrain (owner, 2026-09-24; design 38 §17c). The ground shader writes a
+                // mark into the normals texture's spare channel from its DepthNormals pass, and the
+                // prepass keeps only the surface that is finally visible, so a colonist standing on
+                // the ground overwrites the mark with its own 0 and keeps its line. The ink lands on
+                // the near side of a step (below), and the near side of a terrace riser, a bank or a
+                // stream's edge is the ground itself — so asking the centre pixel is the whole test.
+                // It also skips the rest of the work on most of the screen.
+                half terrain = SAMPLE_TEXTURE2D_X(_CameraNormalsTexture, sampler_PointClamp,
+                    UnityStereoTransformScreenSpaceTex(uv)).a;
+                if (terrain > 0.5) return scene;
 
                 float2 texel = _BlitTexture_TexelSize.xy * _Thickness;
 

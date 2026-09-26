@@ -78,6 +78,13 @@ namespace Odyssey.Sim.Pawns
         public CellRef Start => Outcome.StartCell;
 
         /// <summary>
+        /// The first item the map put down rather than the scenario (design 45 §6): every item
+        /// before this index is the starting kit, every one from it on a loose stone or a mushroom
+        /// the generator placed. A test that pins the kit reads the ones before it.
+        /// </summary>
+        public int FirstNaturalItem { get; private set; }
+
+        /// <summary>
         /// The world's state, in the order a save writes it. Order is part of the format: items
         /// before pawns, because a pawn's job refers to an item handle and a half-loaded registry
         /// would resolve it against the wrong list.
@@ -144,6 +151,67 @@ namespace Odyssey.Sim.Pawns
                 // from before storage has neither, and loads with no zones and an empty table.
                 pawns.Storage!.Settings,
                 pawns.Storage!,
+                // The built stores, appended after the painted ones. A shelf points at a record in
+                // the table above, so the table has to be read before this is useful — but the two
+                // are only ever read together at the end of the load, not during it, so this is an
+                // ordering of convenience rather than one anything depends on.
+                pawns.StorageUnits!,
+                // Appended (design 29 §6). Writes into pawns the registry has rebuilt, on the
+                // terms of the seed section above; a save from before animals has no entry here
+                // and every restored pawn is the colonist it was.
+                new PawnKindSection(pawns.Pawns),
+                // Which animals have decided to leave (design 30 §3). Absent from an older save,
+                // which loads with nobody leaving.
+                new WildlifeSection(pawns.Pawns),
+                // Who is drafted, and a step an order interrupted (design 33 §2a). Absent from an
+                // older save, which loads with nobody drafted.
+                new CombatSection(pawns.Pawns),
+                // The picked berry bushes (design 45 §6). Absent from an older save, which loads
+                // with every berry bush ripe - which, in a world where nobody could pick one, it was.
+                pawns.Nature!,
+                // Appended, as every section since the first has been: the room temperatures,
+                // keyed by room. A save from before temperature has no section and loads with
+                // every room at the outdoor curve — which is what it was, in a world where
+                // nothing was ever cold (design 28 §9).
+                pawns.Temperature!,
+                // Appended, as every section since the first has been: the lines, their orders,
+                // and the switch and hopper of every power building (design 32 §8). A save from
+                // before power has no section and loads with no lines — which is what it had.
+                pawns.Power!,
+                // The parts delivered to building sites (design 32 §14), after the construction
+                // section whose sites they name. A save from before has none, and loads with every
+                // site's parts at nought — which is what every site then had.
+                construction.Parts,
+                // The dead, and what is left of each struck building (design 33 §5). Appended;
+                // absent from an older save, which loads with no corpses and every building whole.
+                pawns.Corpses,
+                pawns.EdificeDamage,
+                // What a ledger entry is about — the stack a bandit carried off (design 33 §17).
+                // Appended, after the ledger whose load clears it; absent from an older save, which
+                // loads with no entry about anything, as none then was.
+                pawns.Incidents!.Ledger.DetailSection,
+                // The body's ledger (design 43 §9): who is injured where, and how much blood each
+                // has lost. Appended, after the combat section that restores the pool it sits over;
+                // absent from an older save, which loads with nobody injured.
+                new HealthSection(pawns.Pawns),
+                // The sky (design 43 §3): appended, no format bump. A save from before weather has
+                // no section and rolls a sky on its first pass, which is what a new world does.
+                pawns.Weather!,
+                // Where each colonist may work (design 43 §4a). Appended; absent from an older
+                // save, which loads with everybody at Anywhere, as everybody then was.
+                new Saving.AssignSection(pawns.Pawns),
+                // Which campfire is the hearth (design 43 §3f). Appended; absent from an older
+                // save, which loads with none, as there then was.
+                pawns.Hearth!,
+                // The kitchen (design 48 §5): every station's bills and pan. Appended, no format
+                // bump; a save from before the kitchen has no section and loads with no bills.
+                pawns.Kitchen!,
+                // The bullets in the air (design 47 §2c): appended, no format bump. A save from
+                // before guns has no section and loads with nothing in flight.
+                pawns.Projectiles,
+                // The raids on the board (design 55 §10): appended, no format bump. A save from
+                // before raids has no section and loads with no band.
+                pawns.Raids!,
             };
         }
 
@@ -178,6 +246,7 @@ namespace Odyssey.Sim.Pawns
         public SaveHeader Load(Stream stream)
         {
             var header = WorldSave.Load(World, stream, SaveComponents);
+            Pawns.Pawns.BackfillSkills(header.FormatVersion);
             RebuildDerived();
             return header;
         }
@@ -192,6 +261,7 @@ namespace Odyssey.Sim.Pawns
         public SaveHeader LoadFromFile(string path)
         {
             var header = WorldSave.LoadFromFile(path, World, SaveComponents);
+            Pawns.Pawns.BackfillSkills(header.FormatVersion);
             RebuildDerived();
             return header;
         }
@@ -212,6 +282,10 @@ namespace Odyssey.Sim.Pawns
         {
             _solver.SolveFull();
 
+            // The home (design 43 §3c) is derived from everything that just came back, and nothing
+            // it read before the load is still true.
+            Pawns.Cells.Footprint.TouchAll();
+
             // A built ladder's connector is derived, not saved — the same argument as support, one
             // level along (U43). The edifice comes back with the save; the portal it opens between
             // two layers is worked out again here, before the rebuild that turns it into an edge.
@@ -220,6 +294,10 @@ namespace Odyssey.Sim.Pawns
             Construction.RebuildLadderConnectors(Pawns);
             Construction.RebuildStairConnectors(Pawns);
             Construction.RebuildDoors(Pawns);
+
+            // The weather's temperature offset is derived and written only every weather pass, so
+            // a loaded colony takes it back here or reads the fresh board's until the next pass.
+            Pawns.Weather?.ReapplyOffset(World.CurrentTick);
 
             // And which cells hold furniture nothing may be put down in — derived from the same
             // edifice list, for the same reason.
@@ -242,7 +320,38 @@ namespace Odyssey.Sim.Pawns
                 Pawns.Storage.RebucketAll();
             }
 
+            // And anything that came back naming a shelf which is not there. Unlike the zones this
+            // needs no hand-over — an item's own record says which container holds it, so the
+            // listers were already right when the items section finished — but a file whose units
+            // and items disagree is a file, and a stack that is in a container nothing can open is
+            // worse than one on the floor.
+            Pawns.StorageUnits?.AdoptContents(Pawns);
+
+            // The power records against what is standing: the repair for a file where the two
+            // disagree, and nothing at all on every file this build wrote (design 32 §8).
+            Pawns.Power?.Reconcile();
+
+            // **The whole graph, not the dirty blocks** (design 33 §19a). `NavGraph.Rebuild` floods
+            // only the blocks something marked, and a load writes the cell arrays wholesale without
+            // marking any: the graph the fresh world built for the generated board survived the
+            // load everywhere a door or a ladder above did not happen to dirty a block. In the
+            // owner's save seven walls of a house on the first column of a block (x = 60) stayed
+            // walkable, and bandits walked through them and chose sides inside them. On the
+            // generation path every block is still dirty from the graph's construction, so this
+            // changes nothing there.
+            _nav.MarkAllDirty();
             _nav.Rebuild();
+
+            // The weather's share of the outdoor temperature is written on the weather's cadence
+            // and saved nowhere: put back the value the last boundary set, or the first needs pass
+            // after a load reads the build's sky (WeatherSystem.RestoreOffset).
+            Pawns.Weather?.RestoreOffset(World.CurrentTick);
+
+            // The sky map is derived from the grid, and a load writes the grid wholesale without
+            // telling the chunk grid a thing: rebuilt whole (design 43 §6). Now, so a board-wide
+            // walk is paid inside the loading rather than on the first tick that asks.
+            Pawns.Sky?.MarkAllDirty();
+            Pawns.Sky?.Sync();
         }
 
         /// <summary>
@@ -255,12 +364,53 @@ namespace Odyssey.Sim.Pawns
         /// natural generator with hills, rock and ore.</param>
         /// <param name="chunks">The presentation chunk grid, when a renderer will be attached, so
         /// the support system and the jobs that edit the world can mark chunks dirty. Null for a
-        /// purely headless run.</param>
+        /// purely headless run, which then gets one of its own: the sky map hears edits through it
+        /// (design 43 §6).</param>
         /// <param name="mapType">Natural by owner instruction, which is what the scene loads. The
         /// ruined city is still generated and still tested (ADR 0008), and is what the M2 demo
         /// needs, because it is the only map with storeys to climb between.</param>
         /// <param name="wooded">With <paramref name="barren"/>: keep the woodland, which is what
         /// the scene loads since 2026-09-16. False is the bare board the tests baseline on.</param>
+        /// <summary>
+        /// Which generator definition a colony is built from — <b>the one owner of that choice</b>.
+        ///
+        /// <para>Extracted 2026-09-21, because it had two. This method was four lines inside
+        /// <see cref="Build"/>, and every per-board measurement in the test assembly reached for
+        /// <c>MapGenerator.DefaultDef</c> instead and so measured the *unmodified* def while the
+        /// played scene (<c>barrenMap: 1, woodedMap: 1</c>) gets <see cref="NaturalMapGenDef.MakeWooded"/>
+        /// applied on top. Two owners, silently disagreeing, for two days — the shape
+        /// <c>docs/bug-patterns.md</c> keeps meeting. Now there is one, and
+        /// <c>Odyssey.Tests.Sim.PlayedMap</c> calls it rather than re-deriving it.</para>
+        ///
+        /// <para>The def is mutable and is mutated here, so a caller gets a fresh one each time
+        /// and must not cache it.</para>
+        ///
+        /// <para><paramref name="surfaceRelief"/> overrides a natural map's relief — the layers the
+        /// surface may rise or fall from the ground layer — and re-derives the ground layer from it,
+        /// as <see cref="NaturalMapGenDef.For"/> would have. <b>A measurement seam</b>
+        /// (<c>docs/design/38-meadow-overhaul.md</c> §7, M7): the game passes -1, the def's own.
+        /// It is here rather than in the arms so that the measured board is still the one this
+        /// method chooses, which is why this method exists at all.</para>
+        /// </summary>
+        public static MapGenDef DefFor(MapType map, GridSize size, bool barren, bool wooded,
+            int surfaceRelief = -1)
+        {
+            MapGenDef gen = MapGenerator.DefaultDef(map, size);
+            if (barren && gen is NaturalMapGenDef natural)
+            {
+                if (wooded) natural.MakeWooded();
+                else natural.MakeBarren();
+            }
+
+            if (surfaceRelief >= 0 && gen is NaturalMapGenDef hills)
+            {
+                hills.surfaceRelief = surfaceRelief;
+                hills.groundLayer = hills.GroundLayerFor(size);
+            }
+
+            return gen;
+        }
+
         public static ColonyWorld Build(GridSize size, uint seed, ScenarioDef scenario, bool barren = true,
             ChunkGrid? chunks = null, MapType mapType = MapType.Natural, bool wooded = false) =>
             Build(new ColonyRequest
@@ -289,13 +439,16 @@ namespace Odyssey.Sim.Pawns
 
             GridSize size = request.Size;
             uint seed = request.Seed;
-            ChunkGrid? chunks = request.Chunks;
+            // A world without a renderer still needs the chunk grid: it is how the sky map hears
+            // which columns an edit touched (design 43 §6), and a headless run that never heard
+            // would keep a felled tree's shade for ever and disagree with the played game.
+            ChunkGrid chunks = request.Chunks ?? new ChunkGrid(size);
 
-            MapGenDef gen = MapGenerator.DefaultDef(request.Map, size);
-            if (request.Barren && gen is NaturalMapGenDef natural)
+            MapGenDef gen = DefFor(request.Map, size, request.Barren, request.Wooded, request.SurfaceRelief);
+            if (!request.Wildlife)
             {
-                if (request.Wooded) natural.MakeWooded();
-                else natural.MakeBarren();
+                gen.wildlife = System.Array.Empty<Wildlife.WildlifeEntry>();
+                gen.wildlifePer10000Columns = 0;
             }
 
             var grid = new CellGrid(size);
@@ -310,6 +463,8 @@ namespace Odyssey.Sim.Pawns
             var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns())
             {
                 Chunks = chunks,
+                // What a raid makes for with no hearth (design 55 §5). Derived, so a load has it too.
+                ColonyStart = outcome.StartCell,
             };
             var solver = new SupportSolver(grid);
             var support = new SupportSystem(grid, solver, chunks);
@@ -328,6 +483,10 @@ namespace Odyssey.Sim.Pawns
             SimWorld world = builder
                 .AddColony(pawns, designations, support, nav, outcome.Placements,
                     out ConstructionGrid construction, jobs)
+                // The level-keeper for the world's animals (design 30 §3). Inert on a world whose
+                // table is empty, which is the bare board and every test built on it.
+                .AddTickable(_ => new Wildlife.WildlifeSystem(pawns, jobs, gen, outcome.StartCell,
+                    request.Scenario.startingFellRadius + Wildlife.WildlifeSeeder.ClearingMargin))
                 .Build();
 
             // Before anything is placed and before the first tick, which is the only window
@@ -349,9 +508,19 @@ namespace Odyssey.Sim.Pawns
             ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed,
                 scenario, request.Colonists);
             int marked = ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenario);
+            // The loose stones and the first mushrooms (design 45 §6): where the generator put
+            // them, after the scenario's own things so a starting pile always has its cell.
+            int firstNatural = pawns.Items.Items.Count;
+            if (outcome.Natural != null) NatureSeeder.Seed(pawns, outcome.Natural);
+            // The world's animals, after its people and before its first tick (design 30 §2):
+            // the seeder reads the trees and the rock the generator left and the clearing the
+            // scenario is about to fell, and draws from the world's own seed.
+            Wildlife.WildlifeSeeder.Seed(pawns, gen, outcome.StartCell,
+                scenario.startingFellRadius + Wildlife.WildlifeSeeder.ClearingMargin, seed);
 
             var built = new ColonyWorld(grid, pawns, designations, construction, world, outcome, scenario, placement,
                 solver, nav, jobs, gen, marked, request);
+            built.FirstNaturalItem = firstNatural;
             built.RebuildDerived();
             return built;
         }

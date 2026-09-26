@@ -1,8 +1,10 @@
 # Commands
 
-What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein.
+What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein. A right-click on a thing with more than one answer, a weapon today, opens a small menu at the pointer whose rows are these commands; the menu's own words are listed after them.
 
-48 entries, 28 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+53 entries, 33 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+
+## Commands
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
@@ -54,6 +56,16 @@ What the player can tell a selected thing to do. Many are conventional; the ones
 | **Evacuate** | `ui.command.evacuate` | Everyone out of this area <br>**Needs:** clear this area now | no art | M3 |
 | **Hunt** | `ui.command.hunt` | Kill this wild animal for meat | sheet 06 (action tiles), high | M3 |
 | **Strip** | `ui.command.strip` | Take everything they carry <br>**Needs:** taking everything a pawn carries | no art | M3 |
+| **Fight back** | `ui.command.fightback` | Fights only whoever strikes her. Press to change <br>**Needs:** raised fists | no art | CB |
+| **Defend** | `ui.command.defend` | Joins a fight near her, then goes back to work. Press to change <br>**Needs:** a shield over a figure | no art | CB |
+| **Flee** | `ui.command.flee` | Runs from danger near her, and fights only when cornered. Press to change <br>**Needs:** a figure running away | no art | CB |
+| **Make this the hearth** | `ui.command.sethearth` | Centre the colony's home on this campfire <br>**Needs:** a house over a campfire | no art | M3 |
+
+## The context menu
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Cancel** | `ui.menu.cancel` | Close the menu a right-click opened, and order nothing | no art | CB |
 
 ---
 

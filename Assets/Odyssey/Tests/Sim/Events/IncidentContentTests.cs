@@ -23,7 +23,26 @@ namespace Odyssey.Tests.Sim.Events
         // Moved the same day, after the first look: fallTicks 120 to 360, because two seconds
         // landed almost before it had been seen falling, and a description, which is the debug
         // menu's Events tab tooltip.
-        const ulong ContentFingerprint = 18026134764698235758UL;
+        //
+        // 2026-09-23, power (design 32 §14): Incident_ScrapDrop appended at index 1 — the supply
+        // drop's own worker with scrap metal for cargo, fifteen to thirty, weight 60, the supply
+        // drop's gates otherwise. The owner's second source of scrap metal beside the wreckage.
+        //
+        // 2026-09-24, bandits stealing (design 33 §17): Incident_Theft (Bad) and
+        // Incident_BanditLeft (Neutral) appended at 2 and 3, both naming the Recorded worker —
+        // written down by the world when a bandit leaves the board, never fired. Default gates.
+        //
+        // 2026-09-24, the bandit (design 42): Incident_BanditLeft renamed Incident_BanditLeft,
+        // its label and bulletin key with it. Index 3 unchanged; the ledger keeps indices.
+        //
+        // 2026-09-25, medical supplies (design 37 §5), at the merge with main: Incident_MedicalDrop
+        // appended at index 4, after the bandit's two — the supply drop's worker again, four to
+        // eight medical supplies, weight 40 (invented).
+        //
+        // 2026-09-25, raids (design 55): Incident_Raid appended at index 5 — Bad, ThreatBig, worker
+        // Raid, the first Def with a per-worker block (<raid>), gates earliestDay 3 and
+        // minRefireDays 4 (invented). No golden moved: no golden fires an incident.
+        const ulong ContentFingerprint = 7539131593735443081UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

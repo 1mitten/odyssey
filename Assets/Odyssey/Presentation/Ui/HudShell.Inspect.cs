@@ -5,6 +5,7 @@ using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Storage;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -37,11 +38,69 @@ namespace Odyssey.Presentation.Ui
             _railCells.AddToClassList("rail__cells");
             rail.Add(_railCells);
 
-            _railHint = HudText.Make("R / F", HudTextRole.Meta, numeric: false, "rail__hint");
-            _railHint.tooltip = "R and F move the slice up and down. Home recentres.";
-            rail.Add(_railHint);
+            rail.Add(BuildWallsToggle());
 
             gutter.Add(rail);
+        }
+
+        // ============================================================ walls down (design 42 §7)
+
+        VisualElement? _wallsButton;
+        HudGlyph? _wallsGlyph;
+
+        /// <summary>What the walls button was last painted for: bit 0 the choice, bit 1 build mode;
+        /// -1 so the first paint runs.</summary>
+        int _wallsPaintedFor = -1;
+
+        /// <summary>
+        /// The walls-down switch, under the "R / F" hint it belongs beside (owner, 2026-09-24): a
+        /// drawn wall, standing while they are up and cut to a stump while they are down, lit in
+        /// the accent while on as the views strip's switches are. It throws the one setting H and
+        /// the Settings row throw, so the three can never disagree.
+        /// </summary>
+        VisualElement BuildWallsToggle()
+        {
+            var button = new VisualElement { name = "walls-down" };
+            button.AddToClassList("rail__walls");
+            _wallsGlyph = new HudGlyph(HudGlyphKind.WallsDown, 16f, HudTokens.Convert(HudTheme.Accent));
+            button.Add(_wallsGlyph);
+            button.RegisterCallback<ClickEvent>(_ =>
+            {
+                _directors?.Settings.Toggle(GraphicsOption.WallsDown);
+                MarkWalls();
+            });
+            _wallsButton = button;
+            return button;
+        }
+
+        /// <summary>
+        /// Show the choice, and dim it while build mode is overruling it so a player can see why
+        /// the walls came back. Called every frame; early-returns when nothing moved.
+        /// </summary>
+        void MarkWalls()
+        {
+            if (_directors == null || _wallsButton == null || _wallsGlyph == null) return;
+            bool chosen = _directors.Settings.IsOn(GraphicsOption.WallsDown);
+            bool building = WallsView.BuildMode(BuildPaletteOpen, _directors.Designate.Tool);
+            int bits = (chosen ? 1 : 0) | (building ? 2 : 0);
+            if (bits == _wallsPaintedFor) return;
+            _wallsPaintedFor = bits;
+
+            _wallsGlyph.Kind = chosen ? HudGlyphKind.WallsDown : HudGlyphKind.WallsUp;
+            bool lit = chosen && !building;
+            HudColour hue = HudTheme.Accent;
+            _wallsGlyph.Tint = HudTokens.Convert(hue.WithAlpha(building ? 0.45f : 1f));
+            _wallsButton.EnableInClassList("rail__walls--on", lit);
+            _wallsButton.style.backgroundColor = HudTokens.Convert(hue.WithAlpha(lit ? 0.30f : 0.06f));
+            _wallsButton.style.borderTopColor = _wallsButton.style.borderRightColor =
+                _wallsButton.style.borderBottomColor = _wallsButton.style.borderLeftColor =
+                    HudTokens.Convert(hue.WithAlpha(lit ? 1f : 0.30f));
+
+            string name = Registry.Label(SettingsDirector.WallsDownKey);
+            string key = HotkeyDirector.Display(_directors.Hotkeys.Key(HotkeyAction.WallsDown, 0));
+            string state = building ? "standing while you build"
+                : chosen ? "on — press again to raise them" : "off";
+            _wallsButton.tooltip = key.Length > 0 ? $"{name} ({key}) — {state}" : $"{name} — {state}";
         }
 
         /// <summary>
@@ -121,7 +180,11 @@ namespace Odyssey.Presentation.Ui
                         ? $"{occupancyPercent}% built"
                         : "occupancy publishes for the active slice only";
                     view.Root.tooltip =
-                        $"Layer {model.Layer}{surface} — {model.Pawns} colonists, {occupancy}. Click to move the slice.";
+                        $"Layer {model.Layer}{surface} — {model.Pawns} colonists, {occupancy}. " +
+                        "Click to move the slice, or R and F; Home recentres.";
+                    // The keys ride on each cell's own tooltip rather than on an "R / F" label under
+                    // the rail (owner, 2026-09-24): the label took a row of a rail whose length the
+                    // world decides, and the walls switch beside the slice keys has that row now.
                 }
             }
         }
@@ -142,6 +205,20 @@ namespace Odyssey.Presentation.Ui
             _worldUi.Add(_inspectPanel);
         }
 
+        /// <summary>
+        /// Show the pane if something is selected and the corner is free. The Assign tab keeps the
+        /// corner while a name pressed in it selects a colonist (design 43 §6a), so the pane stays
+        /// away while the tab is open and comes up for whoever was chosen when it closes. Without
+        /// this the two drew over each other: both dock bottom-left, just above the bar.
+        /// </summary>
+        void SyncInspectShown()
+        {
+            bool assignHoldsTheCorner = _directors != null && _directors.Assign.Open;
+            _inspectPanel.style.display = _inspect.Subject != InspectSubject.None && !assignHoldsTheCorner
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
+        }
+
         void RefreshInspect()
         {
             var world = _boot!.World;
@@ -154,9 +231,21 @@ namespace Odyssey.Presentation.Ui
             // can reach several cells of it.
             string signature =
                 _inspect.Subject + ":" +
-                (_inspect.Subject == InspectSubject.Colonist ? _inspect.Pawn.ToString()
+                // The draft is in it too (design 33 §2f): the Draft button changes face, and the
+                // header it sits in is structure. So are the model's shape answers (design 33
+                // §5f), which the combat lanes may change for a pawn while it is on the pane.
+                (_inspect.Subject == InspectSubject.Colonist
+                    ? _inspect.Pawn.ToString() + (_inspect.Drafted ? ":drafted" : string.Empty)
+                        + (_inspect.ShowsColonistBody ? string.Empty : ":bare")
+                        + (_inspect.ShowsTabBox ? ":tabs" : string.Empty)
                  : _inspect.Subject == InspectSubject.Item ? _inspect.Thing.ToString()
-                 : _inspect.Position + ":" + _inspect.Layer);
+                 : _inspect.Subject == InspectSubject.Corpse ? _inspect.Corpse.ToString()
+                 : _inspect.Position + ":" + _inspect.Layer
+                    // A campfire's header says whether it is the hearth or offers to be (design 43
+                    // §6), so the hearth moving is a change of structure.
+                    + (_inspect.IsHearth ? ":hearth" : _inspect.OffersHearth ? ":fire" : string.Empty)
+                    // A station's pane is the bench width (design 49), so becoming one is structure.
+                    + (_inspect.IsStation ? ":bench" : string.Empty));
             if (signature != _inspectBuiltFor)
             {
                 BuildInspectBody();
@@ -174,10 +263,12 @@ namespace Odyssey.Presentation.Ui
 
             // The avatar follows the answer rather than the click: a tile whose face is mined
             // through, or a pile that changes hands, swaps its icon without a rebuild.
-            bool colonist = _inspect.Subject == InspectSubject.Colonist;
-            string avatarKey = _inspect.Subject == InspectSubject.Item ? _inspect.ItemIconKey
-                : _inspect.Subject == InspectSubject.Cell ? _inspect.CellIconKey
-                : "ui.pawn.colonist";
+            // An animal is a pawn with no face (design 29 §8): the badge slot shows its species
+            // key and the portrait slot stays out, as for anything that is not a person.
+            // Both answers are the model's (design 33 §5f), so a bandit and a corpse are decided
+            // in the fast tier by the interface lane rather than here.
+            bool colonist = _inspect.ShowsFace;
+            string avatarKey = _inspect.AvatarKey;
             if (avatarKey != _inspectAvatarKey)
             {
                 _inspectAvatarKey = avatarKey;
@@ -203,7 +294,7 @@ namespace Odyssey.Presentation.Ui
             // rarely and the job hardly at all.
             int layer = _inspect.Layer;
             int selected = _directors != null ? _directors.Selection.Pawns.Count : 0;
-            string band = _inspect.Subject == InspectSubject.Colonist
+            string band = _inspect.ShowsColonistBody
                 ? MoodBands.Band(_inspect.Mood)
                 : string.Empty;
 
@@ -226,10 +317,27 @@ namespace Odyssey.Presentation.Ui
                 HudText.Set(_inspectState, StateLine(), HudTextRole.Meta);
             }
 
-            if (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item)
-                SyncCellRows();
+            // The pace (design 17 §5a): a colonist's only, the third line of the header, which
+            // the 60 px portrait already made room for — the pane does not grow. Rebuilt only when
+            // the model composed a new string, which it does only when a factor moved.
+            if (!ReferenceEquals(_statePace, _inspect.Pace))
+            {
+                _statePace = _inspect.Pace;
+                HudText.Set(_inspectPace, _inspect.Pace, HudTextRole.Meta);
+                _inspectPace.tooltip = _inspect.PaceTip;
+            }
+            _inspectPace.style.display = _inspect.ShowsColonistBody && _inspect.Pace.Length > 0
+                ? DisplayStyle.Flex : DisplayStyle.None;
 
-            if (_inspect.Subject != InspectSubject.Colonist || _inspect.Tombstoned) return;
+            if (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item)
+            {
+                SyncCellRows();
+                // A cooking station's bills (design 48 §5), above the tile's facts.
+                WorldSnapshot? frame = _boot?.World?.Views.Current;
+                if (frame != null) SyncBills(frame);
+            }
+
+            if (!_inspect.ShowsColonistBody || _inspect.Tombstoned) return;
 
             SetNeed(0, _inspect.Food);
             SetNeed(1, _inspect.Rest);
@@ -240,6 +348,8 @@ namespace Odyssey.Presentation.Ui
                 SkillRow row = _inspect.Skills[i];
                 SetSkill(i, row);
             }
+
+            SyncHealthTab();
         }
 
         /// <summary>
@@ -255,10 +365,15 @@ namespace Odyssey.Presentation.Ui
             string active = _inspect.ActiveTabName;
             bool skills = active == "Skills";
 
+            // The Health tab (design 33 §5): its body is lane C's, in HudShell.Combat.cs. While it
+            // is the active tab the needs grid steps aside, as it does for Skills.
+            bool health = active == "Health";
+
             if (_needsGrid != null)
-                _needsGrid.style.display = skills ? DisplayStyle.None : DisplayStyle.Flex;
+                _needsGrid.style.display = skills || health ? DisplayStyle.None : DisplayStyle.Flex;
             if (_skillsGrid != null)
                 _skillsGrid.style.display = skills ? DisplayStyle.Flex : DisplayStyle.None;
+            ShowHealthTab(health);
 
             // A store's two tabs stand in the same box and one of them is drawn, exactly as the
             // colonist's needs and skills do — so changing tab changes which rows are shown and
@@ -499,13 +614,21 @@ namespace Odyssey.Presentation.Ui
             {
                 case InspectSubject.Colonist:
                     {
+                        // An animal has an activity and no mood (design 29 §8), and so does any
+                        // pawn the model says has no colonist's body (design 33 §5f).
+                        if (!_inspect.ShowsColonistBody) return _inspect.Job;
+
                         // A multi-selection shows the primary colonist in full, with the size of
                         // the set said out loud: "3 selected" is the whole of what a pane can add
                         // to several brackets until commands arrive (A10).
                         string count = _directors != null && _directors.Selection.HasMultiple
                             ? $"{_directors.Selection.Pawns.Count} selected · "
                             : string.Empty;
-                        return count + $"{_inspect.Job} · mood {MoodBands.Band(_inspect.Mood)}";
+                        // The condition and what is in her hand left the Health tab for this
+                        // line (design 43 §10): "Building · content · Hurt · Machete".
+                        string condition = _inspect.HealthCondition.Length > 0 ? " · " + _inspect.HealthCondition : string.Empty;
+                        string weapon = _inspect.HealthWeapon.Length > 0 ? " · " + _inspect.HealthWeapon : string.Empty;
+                        return count + $"{_inspect.Job} · mood {MoodBands.Band(_inspect.Mood)}" + condition + weapon;
                     }
                 case InspectSubject.Item:
                     // The count used to be said here — "27 in the pile" — and it was missed
@@ -519,6 +642,9 @@ namespace Odyssey.Presentation.Ui
                     // below in its own column, and the state line stays empty rather than
                     // repeating any of them.
                     return _inspect.Site;
+                case InspectSubject.Corpse:
+                    // The model's words (design 33 §5f): lane C writes the corpse's line into Job.
+                    return _inspect.Job;
                 default:
                     return string.Empty;
             }
@@ -533,10 +659,13 @@ namespace Odyssey.Presentation.Ui
             _cellRows.Clear();
             _needsGrid = null;
             _skillsGrid = null;
+            ForgetHealthTab();
             _cellRowsGrid = null;
             _locationRow = null;
             _locationValue = null;
             _needRows = 0;
+            // The bill list belongs to the subject being replaced (design 48 §5).
+            _billList = null;
 
             // Nothing selected: no panel at all (owner, 2026-09-16), and this is the HUD's resting
             // state. It was a 41 px strip reading "Nothing selected", itself already a cut-down of
@@ -550,7 +679,7 @@ namespace Odyssey.Presentation.Ui
                 return;
             }
 
-            _inspectPanel.style.display = DisplayStyle.Flex;
+            SyncInspectShown();
 
             // The tile readout and a selected pile take a column; a colonist takes a band. The
             // pane is the same panel either way — one class says which shape it is standing in
@@ -558,8 +687,13 @@ namespace Odyssey.Presentation.Ui
             // A store is never narrow. 280 px is the bare-tile variant and the accepts list does not
             // fit in it; the settings belong to the zone, and a pane that shrank with the zone would
             // imply otherwise (design brief, 2026-09-21, state 8).
+            // A campfire is never narrow either (owner, 2026-09-25): the hearth's button does not fit.
             _inspectPanel.EnableInClassList("inspect--narrow",
-                !_inspect.IsStore
+                !_inspect.IsWide
+                && (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item));
+            // A station is wider still (design 49): its bill row carries seven columns.
+            _inspectPanel.EnableInClassList("inspect--bench",
+                _inspect.IsStation
                 && (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item));
 
             // ---- header: avatar, name and its two lines, then the actions on the right
@@ -571,9 +705,7 @@ namespace Odyssey.Presentation.Ui
             // the only kind of thing an icon key can describe. They are both built here rather
             // than swapped in on selection, because the header is rebuilt on a change of *shape*
             // and a colonist replacing a rock is not one.
-            _inspectAvatarKey = _inspect.Subject == InspectSubject.Item ? _inspect.ItemIconKey
-                : _inspect.Subject == InspectSubject.Cell ? _inspect.CellIconKey
-                : "ui.pawn.colonist";
+            _inspectAvatarKey = _inspect.AvatarKey;
             _inspectAvatar = new IconBadge(_inspectAvatarKey, IconBadge.AvatarSize);
             _inspectAvatar.Inherit(HudTokens.TextPrimary);
             _inspectFace = new AvatarGlyph(HudLayout.Avatar);
@@ -610,8 +742,14 @@ namespace Odyssey.Presentation.Ui
             nameLine.Add(_inspectMeta);
 
             _inspectState = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__state");
+            _inspectPace = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__pace");
+            _statePace = null;
             titles.Add(nameLine);
+            // The hearth says so under its name (design 43 §6): the house in the accent, 12 px,
+            // and "Hearth" in the meta ink, six below the name.
+            if (_inspect.IsHearth) titles.Add(HearthLine());
             titles.Add(_inspectState);
+            titles.Add(_inspectPace);
             header.Add(titles);
 
             var actions = new VisualElement();
@@ -627,14 +765,15 @@ namespace Odyssey.Presentation.Ui
             // said its story in a tooltip nobody hovers, and read as a broken button. Named
             // stores bring their own control when they bring the name (26-storage.md §9a, SZ4).
 
-            if (_inspect.Subject == InspectSubject.Colonist)
-                foreach (InspectCommand command in _inspect.Commands)
-                {
-                    // Two of the three: the pane's header carries the commands a player reaches
-                    // for, and Inspect is not one of them when the pane is already open.
-                    if (command.Label == "Inspect") continue;
-                    actions.Add(ActionButton(command));
-                }
+            // The model fills Commands for the subjects that have any (a colonist's, today), so the
+            // shell draws whatever is there rather than deciding who may be commanded.
+            foreach (InspectCommand command in _inspect.Commands)
+            {
+                // Two of the three: the pane's header carries the commands a player reaches
+                // for, and Inspect is not one of them when the pane is already open.
+                if (command.Label == "Inspect") continue;
+                actions.Add(ActionButton(command));
+            }
 
             var info = new VisualElement();
             info.AddToClassList("inspect__info");
@@ -652,7 +791,10 @@ namespace Odyssey.Presentation.Ui
             header.Add(actions);
             _inspectBody.Add(header);
 
-            if (_inspect.Subject == InspectSubject.Colonist)
+            // Any other campfire offers to be the hearth: one button, nine under the header.
+            if (_inspect.OffersHearth) _inspectBody.Add(MakeHearthButton());
+
+            if (_inspect.ShowsTabBox)
             {
                 var strip = new VisualElement();
                 strip.AddToClassList("inspect__tabs");
@@ -698,6 +840,9 @@ namespace Odyssey.Presentation.Ui
                     _skills.Add(SkillLine(_skillsGrid, withBar: true));
                 tabBody.Add(_skillsGrid);
 
+                // The Health tab's body, in the same fixed-height box (design 33 §5).
+                BuildHealthTab(tabBody);
+
                 _inspectBody.Add(tabBody);
 
                 ShowActiveTab();
@@ -734,6 +879,7 @@ namespace Odyssey.Presentation.Ui
                     // A 3 px rule under the live tab, not a filled pill: the pane is dark and a
                     // pill reads as a button that has been pressed rather than as a place you are.
                     var underline = new VisualElement();
+                    underline.name = StoreTabUnderlineName;
                     underline.style.height = 3;
                     underline.style.backgroundColor = HudTokens.Convert(HudTheme.Accent);
                     column.Add(underline);
@@ -751,6 +897,15 @@ namespace Odyssey.Presentation.Ui
 
                 _inspectBody.Add(strip);
                 BuildStoragePane();
+
+                // **The store's branch owed this and did not pay it**, while the colonist's
+                // branch a few lines up has always called it. Nothing else establishes which tab
+                // is live, so a freshly built strip drew *both* underlines — they are created
+                // visible — and the pane's own display carried over from whatever the last
+                // subject had left it on: select a store, look at its Tile tab, select another,
+                // and the Storage tab came up blank until a tab was clicked. Reported by the
+                // owner on 2026-09-21, as two separate faults that were one missing call.
+                ShowActiveTab();
             }
 
             if (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item)
@@ -759,6 +914,10 @@ namespace Odyssey.Presentation.Ui
                 // arrives and the facts change, so the pane never rebuilds its tree for a value.
                 // Items too, since 2026-09-19: a pile lying in a field carries the field's
                 // growing row, so the tile answers wherever on it the click lands.
+                // The bill list first (design 48 §5): built for every tile and shown only over a
+                // galley or a campfire, so the pane never rebuilds when the answer arrives.
+                BuildBills(_inspectBody);
+
                 _cellRowsGrid = new VisualElement();
                 _cellRowsGrid.AddToClassList("inspect__rows");
 
@@ -835,7 +994,10 @@ namespace Odyssey.Presentation.Ui
                 CellRowView captured = view;
                 view.Root.RegisterCallback<ClickEvent>(_ =>
                 {
-                    if (captured.IsPick) ToggleBedPicker(captured.Root);
+                    if (!captured.IsPick) return;
+                    if (captured.IsSwitch) ThrowPowerSwitch();
+                    else if (captured.IsOrderAction) ActOnOrder();
+                    else ToggleBedPicker(captured.Root);
                 });
 
                 _cellRowsGrid.Add(view.Root);
@@ -862,7 +1024,14 @@ namespace Odyssey.Presentation.Ui
                 // The storage row is a fact again, not a control: the settings are a tab of their
                 // own now, so a row that opened a popover would be a second way in to the same
                 // thing and the one a player found by accident.
-                bool pick = row.Name == "owner" && _inspect.BedUnderPane;
+                bool switchPick = row.Name == InspectModel.PowerSwitchRow && _inspect.PowerSwitchUnderPane;
+                // A station with no power carries its switch in the status strip at the top of the
+                // pane (design 49 §2), so the row would be the same button twice.
+                DisplayStyle shown = switchPick && _bills.HasProblem && _bills.HasSwitch
+                    ? DisplayStyle.None : DisplayStyle.Flex;
+                if (view.Root.style.display.value != shown) view.Root.style.display = shown;
+                bool linePick = row.Name == InspectModel.OrderActionRow && _inspect.OrderActionUnderPane;
+                bool pick = (row.Name == "owner" && _inspect.BedUnderPane) || switchPick || linePick;
                 // The pickable row's value is set in the heavier Row role, which is where weight
                 // lives: the stylesheet may not set type (TheSheetSetsNoTypeAtAll), so "make the
                 // assign button bolder" is a role here rather than a font-style there.
@@ -877,26 +1046,113 @@ namespace Odyssey.Presentation.Ui
                     view.LastTint = null;
                 }
 
-                // The value's colour, where the fact carries one — a quality tier, and nothing
-                // else so far. Null means the row keeps the colour the stylesheet gives it, which
-                // is what "Normal: no change" asks for, so the style is cleared rather than set to
-                // a colour of our own.
-                if (view.LastTint?.Hex != row.Tint?.Hex)
+                // An order's action is a button in its own colours (design 32 §14): Cancel filled
+                // red with white ink, taking a line up filled amber. The stylesheet owns both, so
+                // the row's tint is not written inline over it — an inline colour would win.
+                bool actionRow = row.Name == InspectModel.OrderActionRow && _inspect.OrderActionUnderPane;
+                bool danger = actionRow && row.Tint != null && _inspect.OrderAction != IntentKind.RemoveConduit;
+                bool warn = actionRow && row.Tint != null && _inspect.OrderAction == IntentKind.RemoveConduit;
+                HudColour? tintNow = actionRow ? null : row.Tint;
+
+                // The value's colour, where the fact carries one — a quality tier, a power state.
+                // Null means the row keeps the colour the stylesheet gives it, which is what
+                // "Normal: no change" asks for, so the style is cleared rather than set to a colour
+                // of our own.
+                if (view.LastTint?.Hex != tintNow?.Hex)
                 {
-                    view.LastTint = row.Tint;
-                    if (row.Tint is HudColour tint) view.Value.style.color = HudTokens.Convert(tint);
+                    view.LastTint = tintNow;
+                    if (tintNow is HudColour tint) view.Value.style.color = HudTokens.Convert(tint);
                     else view.Value.style.color = StyleKeyword.Null;
                 }
+                view.Root.EnableInClassList("inspect__row--danger", danger);
+                view.Root.EnableInClassList("inspect__row--warn", warn);
 
-                if (view.IsPick != pick)
+                if (view.IsPick != pick || view.IsSwitch != switchPick || view.IsOrderAction != linePick)
                 {
                     view.IsPick = pick;
+                    view.IsSwitch = switchPick;
+                    view.IsOrderAction = linePick;
                     view.Root.EnableInClassList("inspect__row--pick", pick);
                     view.Chevron.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
-                    view.Glyph.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
-                    view.Root.tooltip = pick ? "Choose whose bed this is" : null;
+                    // The bed's glyph is a bed: the switch and line rows wear the chevron alone.
+                    view.Glyph.style.display = pick && !switchPick && !linePick ? DisplayStyle.Flex : DisplayStyle.None;
+                    view.Root.tooltip = switchPick ? "Switch it on or off — at once, nobody is sent"
+                        : linePick ? row.Value + " — at once, nobody is sent"
+                        : pick ? "Choose whose bed this is" : null;
                 }
             }
+        }
+
+        /// <summary>
+        /// The order under the pane's own action (design 32 §14): cancel a building order, cancel a
+        /// line's order or its removal mark, or mark a laid line to come up. An intent like every
+        /// command, applied while paused.
+        /// </summary>
+        void ActOnOrder()
+        {
+            _boot?.World?.Intents.Submit(new Intent(_inspect.OrderAction, _inspect.Cell, _inspect.OrderActionA));
+        }
+
+        /// <summary>
+        /// Make the campfire under the pane the hearth (design 43 §3f): an intent, applied while
+        /// paused, refused by the simulation unless a campfire of ours stands there.
+        /// </summary>
+        void MakeHearth()
+        {
+            _boot?.World?.Intents.Submit(new Intent(IntentKind.SetHearth, _inspect.Cell));
+        }
+
+        /// <summary>The hearth's line under its name (design 43 §6).</summary>
+        static VisualElement HearthLine()
+        {
+            var line = new VisualElement();
+            line.AddToClassList("inspect__hearth");
+            line.style.flexDirection = FlexDirection.Row;
+            line.style.alignItems = Align.Center;
+            line.style.marginTop = 6;
+            line.Add(new PathGlyph(HudIcons.Home, 12f, HudTokens.Accent, fill: true));
+            Label word = HudText.Make(Registry.Label(InspectModel.HearthKey), HudTextRole.Meta);
+            word.style.color = HudTokens.TextMeta;
+            word.style.marginLeft = 6;
+            line.Add(word);
+            line.tooltip = "Home is the base joined to this fire";
+            return line;
+        }
+
+        /// <summary>
+        /// "Make this the hearth" (design 43 §6): the colonist pane's own <c>.action</c> button, 26
+        /// high as it ships, with the house at 14 px in the text colour and the words at 14 / 500.
+        /// </summary>
+        VisualElement MakeHearthButton()
+        {
+            var button = new VisualElement();
+            button.AddToClassList("action");
+            button.AddToClassList("inspect__makehearth");
+            button.style.alignSelf = Align.FlexStart;
+            button.style.marginTop = 9;
+            button.style.marginLeft = 0;
+            button.Add(new PathGlyph(HudIcons.Home, 14f, HudTokens.TextPrimary, fill: true));
+            Label label = HudText.Make(Registry.Label(InspectModel.MakeHearthKey), HudTextRole.Row);
+            label.style.color = HudTokens.TextPrimary;
+            label.style.marginLeft = 6;
+            button.Add(label);
+            button.tooltip = Registry.Label(InspectModel.MakeHearthKey) + " — home becomes the base joined to this fire";
+            button.RegisterCallback<ClickEvent>(evt =>
+            {
+                MakeHearth();
+                evt.StopPropagation();
+            });
+            return button;
+        }
+
+        /// <summary>
+        /// Throw the switch of the power building under the pane (design 32 §5): an intent, like
+        /// every command, applied while paused and at once — no colonist walks over to do it.
+        /// </summary>
+        void ThrowPowerSwitch()
+        {
+            _boot?.World?.Intents.Submit(new Intent(IntentKind.SetPowerSwitch, _inspect.Cell,
+                _inspect.PowerSwitchOn ? 0 : 1));
         }
 
         // ---- the bed's owner picker: the pane's first interactive fact ------------------------
@@ -1005,6 +1261,27 @@ namespace Odyssey.Presentation.Ui
 
         readonly List<VisualElement> _storageTabUnderlines = new List<VisualElement>();
         VisualElement? _storagePane;
+
+        /// <summary>
+        /// Element names the store pane's own tests find it by.
+        ///
+        /// <para>Named rather than reached through the shell's fields, because the alternative is
+        /// making a dozen private elements internal for one test. These three are the ones whose
+        /// <em>visibility</em> is the assertion — which is a thing neither tier could see before
+        /// and which the owner has now had to report twice.</para>
+        /// </summary>
+        public const string StoreTabUnderlineName = "store-tab-underline";
+        public const string StoreHoldingName = "store-holding";
+        public const string StoreHoldingRowName = "store-holding-row";
+
+        /// <summary>The Holding group: its header summary, its rows, and the pool they come from.</summary>
+        VisualElement? _storeHoldingGroup;
+        VisualElement? _storeHoldingList;
+        Label? _storeHoldingSummary;
+        readonly List<VisualElement> _storeHoldingRows = new List<VisualElement>();
+
+        /// <summary>The contents signature the Holding rows on screen were built from.</summary>
+        int _storeHoldingFilledFor = int.MinValue;
         VisualElement? _storageRows;
         ScrollView? _storageList;
         VisualElement? _storageWarning;
@@ -1078,6 +1355,40 @@ namespace Odyssey.Presentation.Ui
             _storagePane = new VisualElement();
             _storagePane.AddToClassList(StoragePaneClass);
             _storagePane.style.flexDirection = FlexDirection.Column;
+
+            // ---- holding: what is actually in there, which is the question a player clicking a
+            // store is most often asking. It leads the tab because the filter below it answers
+            // "what will it take", which is set once, while this changes all day.
+            _storeHoldingGroup = new VisualElement();
+            _storeHoldingGroup.name = StoreHoldingName;
+            _storeHoldingGroup.style.flexDirection = FlexDirection.Column;
+
+            VisualElement holdingHeader = StorageHeaderRow();
+            holdingHeader.Add(StorageSectionLabel("Holding"));
+            _storeHoldingSummary = HudText.Make(string.Empty, HudTextRole.Body);
+            _storeHoldingSummary.style.unityTextAlign = TextAnchor.MiddleRight;
+            _storeHoldingSummary.style.flexGrow = 1;
+            holdingHeader.Add(_storeHoldingSummary);
+            _storeHoldingGroup.Add(holdingHeader);
+
+            _storeHoldingList = new VisualElement();
+            _storeHoldingList.style.flexDirection = FlexDirection.Column;
+            _storeHoldingList.style.paddingLeft = 14;
+            _storeHoldingList.style.paddingRight = 14;
+            _storeHoldingList.style.paddingBottom = 10;
+            _storeHoldingGroup.Add(_storeHoldingList);
+
+            _storeHoldingGroup.Add(StorageDivider(0.14f));
+            _storagePane.Add(_storeHoldingGroup);
+
+            // **The pool belongs to the tree that has just been thrown away.** Every element
+            // above is new, so the rows remembered from the last build are orphans with no parent
+            // — and the fill loop below would dutifully write text into them while the list on
+            // screen stayed empty. The signature goes with them, or the first sync decides the
+            // rows are already right and returns without adding any. This is the same fault as
+            // the tab underlines above, which is why both lists near them are cleared on build.
+            _storeHoldingRows.Clear();
+            _storeHoldingFilledFor = int.MinValue;
 
             // ---- priority: the section label, and the rung it is on, on one line
             VisualElement priorityHeader = StorageHeaderRow();
@@ -1259,27 +1570,145 @@ namespace Odyssey.Presentation.Ui
         void SyncStoragePanel()
         {
             if (_storagePane == null || !_inspect.IsStore) return;
-
-            var storage = _boot?.Colony?.Pawns.Storage;
-            if (storage == null) return;
-
-            int cell = _boot!.Colony!.Grid.Index(_inspect.Cell);
-            int slot = storage.ZoneAt(storage.StoreCellOf(cell));
-            if (slot < 0) return;
-
-            if (StorageSignature(storage, slot) != _storageFilledFor) FillStoragePanel();
+            SyncStoreHolding();
+            if (!TryStoreUnderPane(out _, out _, out _, out int signature)) return;
+            if (signature != _storageFilledFor) FillStoragePanel();
         }
 
-        /// <summary>Everything the rows are drawn from, in one int: the zone, its rung, its filter.</summary>
-        static int StorageSignature(Odyssey.Sim.Storage.StorageZones storage, int slot)
+        /// <summary>
+        /// Show what the store is holding, rebuilding the rows only when they have changed.
+        ///
+        /// <para><b>A signature of its own, not the filter's.</b> The filter changes when a person
+        /// presses something; the contents change whenever a hauler arrives, which the filter's
+        /// signature cannot see. Sharing one would have left the list frozen at whatever was in
+        /// there when the store was selected — the same class of fault as the panel that was one
+        /// action stale, and just as invisible.</para>
+        ///
+        /// <para>Hidden outright over a painted zone: a stockpile's contents are lying on the
+        /// board in front of you, and a list of them would be a second, worse view of something
+        /// already on screen.</para>
+        /// </summary>
+        void SyncStoreHolding()
         {
-            Odyssey.Sim.Storage.StorageSettings settings = storage.SettingsOf(slot);
+            if (_storeHoldingGroup == null || _storeHoldingList == null) return;
+
+            _storeHoldingGroup.style.display =
+                _inspect.IsBuiltStore ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!_inspect.IsBuiltStore) return;
+
+            int signature = _inspect.StoreContentsSignature;
+            if (signature == _storeHoldingFilledFor) return;
+            _storeHoldingFilledFor = signature;
+
+            if (_storeHoldingSummary != null) _storeHoldingSummary.text = _inspect.StoreSummary;
+
+            // One row per kind, plus one line saying so when there are none. Pooled, because this
+            // is a panel that ticks fifteen times a second and a store being loaded is a stream of
+            // small changes rather than one.
+            int wanted = Math.Max(1, _inspect.StoreContents.Count);
+            while (_storeHoldingRows.Count < wanted)
+            {
+                var row = new VisualElement();
+                row.name = StoreHoldingRowName;
+                row.style.flexDirection = FlexDirection.Row;
+                row.style.alignItems = Align.Center;
+                row.style.paddingTop = 2;
+                row.style.paddingBottom = 2;
+
+                Label rowName = HudText.Make(string.Empty, HudTextRole.Body);
+                Label rowAmount = HudText.Make(string.Empty, HudTextRole.Body, numeric: true);
+                rowAmount.style.unityTextAlign = TextAnchor.MiddleRight;
+                rowAmount.style.flexGrow = 1;
+
+                row.Add(rowName);
+                row.Add(rowAmount);
+                _storeHoldingList.Add(row);
+                _storeHoldingRows.Add(row);
+            }
+
+            for (int i = 0; i < _storeHoldingRows.Count; i++)
+            {
+                VisualElement row = _storeHoldingRows[i];
+                bool used = i < wanted;
+                row.style.display = used ? DisplayStyle.Flex : DisplayStyle.None;
+                if (!used) continue;
+
+                var rowName = (Label)row[0];
+                var rowAmount = (Label)row[1];
+
+                if (_inspect.StoreContents.Count == 0)
+                {
+                    rowName.text = "nothing yet";
+                    rowName.style.color = new Color(1f, 1f, 1f, 0.55f);
+                    rowAmount.text = string.Empty;
+                    continue;
+                }
+
+                StoreContentRow content = _inspect.StoreContents[i];
+                rowName.text = content.Name;
+                rowName.style.color = new Color(1f, 1f, 1f, 0.92f);
+                // The bay count only where it adds something: 150 in two bays is a fact about the
+                // store; 40 in one is just the amount, and the number would be noise.
+                rowAmount.text = content.Stacks > 1
+                    ? content.Units + "  (" + content.Stacks + " bays)"
+                    : content.Units.ToString();
+            }
+        }
+
+        /// <summary>
+        /// The store the pane is about — a painted zone, or a shelf — and everything the rows are
+        /// drawn from.
+        ///
+        /// <para><b>One owner, because the panel and its refresh both have to answer it.</b> Two
+        /// copies of the zone-or-shelf branch is two chances for the rows on screen and the
+        /// signature they are compared against to disagree, which would show as a panel that stops
+        /// updating or one that rebuilds every frame.</para>
+        /// </summary>
+        bool TryStoreUnderPane(out Odyssey.Sim.Storage.StorageSettings? settings,
+            out int identity, out int size, out int signature)
+        {
+            settings = null;
+            identity = 0;
+            size = 0;
+            signature = 0;
+
+            var storage = _boot?.Colony?.Pawns.Storage;
+            if (storage == null) return false;
+
+            int store = storage.StoreCellOf(_boot!.Colony!.Grid.Index(_inspect.Cell));
+
+            StorageUnit? unit = _boot.Colony.Pawns.StorageUnits?.AtCell(store);
+            if (unit != null)
+            {
+                settings = _boot.Colony.Pawns.StorageUnits!.SettingsOf(unit);
+                // Negative, so a shelf's identity can never collide with a zone's slot index. The
+                // model resets its remembered categories and its search when this changes, so two
+                // stores sharing a number would carry one's search over to the other.
+                identity = -(unit.Edifice + 1);
+                size = unit.Slots;
+                signature = StorageSignature(identity, settings, size);
+                return true;
+            }
+
+            int slot = storage.ZoneAt(store);
+            if (slot < 0) return false;
+
+            settings = storage.SettingsOf(slot);
+            identity = slot;
+            size = storage.CellsOf(slot).Count;
+            signature = StorageSignature(identity, settings, size);
+            return true;
+        }
+
+        /// <summary>Everything the rows are drawn from, in one int: the store, its rung, its filter.</summary>
+        static int StorageSignature(int identity, Odyssey.Sim.Storage.StorageSettings settings, int size)
+        {
             bool[] allow = settings.Allow;
 
             unchecked
             {
-                int signature = slot * 397 + settings.Priority;
-                signature = signature * 31 + storage.CellsOf(slot).Count;
+                int signature = identity * 397 + settings.Priority;
+                signature = signature * 31 + size;
                 for (int i = 0; i < allow.Length; i++) signature = signature * 31 + (allow[i] ? 1 : 0);
                 return signature;
             }
@@ -1295,17 +1724,22 @@ namespace Odyssey.Presentation.Ui
             if (_storageRows == null || storage == null) return;
 
             int cell = _boot!.Colony!.Grid.Index(_inspect.Cell);
-            int slot = storage.ZoneAt(storage.StoreCellOf(cell));
-            if (slot < 0) return;
 
-            var settings = storage.SettingsOf(slot);
-            _storageFilledFor = StorageSignature(storage, slot);
+            // **Either kind of store.** The intents this panel sends already resolve a cell to
+            // whichever store covers it, painted or built; asking here for a *zone* would find none
+            // over a shelf and leave the tab blank — the panel doing nothing, visibly, which is the
+            // fault design 20 §8 records under "why Assign did nothing, three times".
+            if (!TryStoreUnderPane(out Odyssey.Sim.Storage.StorageSettings? settings,
+                    out int identity, out int size, out int signature))
+                return;
+
+            _storageFilledFor = signature;
             var content = _boot.Colony.Pawns.Content;
             var keys = new List<string>(content.Items.Length);
             for (int i = 0; i < content.Items.Length; i++) keys.Add(ItemLabels.IconKey(i));
 
-            _storageSettings.Show(cell, slot, hasStore: true, settings.Priority,
-                storage.CellsOf(slot).Count, _inspect.Title,
+            _storageSettings.Show(cell, identity, hasStore: true, settings!.Priority,
+                size, _inspect.Title,
                 keys, settings.Accepts, i => (int)content.Items[i].category, Registry.Label);
 
             // ---- the ladder
@@ -1458,8 +1892,8 @@ namespace Odyssey.Presentation.Ui
             element.style.flexShrink = 0;
             element.style.paddingLeft = 10;
             element.style.paddingRight = 10;
-            element.style.backgroundColor =
-                new Color(hue.R / 255f, hue.G / 255f, hue.B / 255f, empty ? 0.045f : 0.09f);
+            element.style.backgroundColor = new Color(hue.R / 255f, hue.G / 255f, hue.B / 255f,
+                empty ? HudTheme.ItemCategoryWashEmpty : HudTheme.ItemCategoryWash);
 
             // The caret column exists whether or not this row has a caret, so every box below it
             // starts at the same x. An empty category has none at all, which is how it says it
@@ -1481,7 +1915,7 @@ namespace Odyssey.Presentation.Ui
             element.Add(StorageCheckbox(row.State, hue, 10));
 
             var icon = new HudGlyph(CategoryGlyph(row.Category), StorageGlyph,
-                HudTokens.Convert(empty ? hue.WithAlpha(0.45f) : hue));
+                HudTokens.Convert(empty ? hue.WithAlpha(HudTheme.ItemCategoryEmptyInk) : hue));
             icon.style.marginLeft = 10;
             element.Add(icon);
 
@@ -1491,7 +1925,7 @@ namespace Odyssey.Presentation.Ui
             // next heading somewhere else is capitalised by hand and the two drift apart.
             Label text = HudText.Make(row.Label, HudTextRole.ListHeading);
             text.style.marginLeft = 10;
-            text.style.color = HudTokens.Convert(empty ? hue.WithAlpha(0.45f) : hue);
+            text.style.color = HudTokens.Convert(empty ? hue.WithAlpha(HudTheme.ItemCategoryEmptyInk) : hue);
             element.Add(text);
 
             // The member count, a step up and set as a figure (owner, 2026-09-21: "make the
@@ -1621,7 +2055,7 @@ namespace Odyssey.Presentation.Ui
             return element;
         }
 
-        static HudGlyphKind CategoryGlyph(int category) => category switch
+        internal static HudGlyphKind CategoryGlyph(int category) => category switch
         {
             0 => HudGlyphKind.CategoryFood,
             1 => HudGlyphKind.CategoryMedicine,
@@ -1745,6 +2179,15 @@ namespace Odyssey.Presentation.Ui
             button.Add(icon);
             button.Add(HudText.Make(command.Label, HudTextRole.Meta, ussClass: "action__label"));
             button.tooltip = command.Label + " — " + command.Reason;
+
+            // The one live command (design 33 §2f). The same rule the key follows, so the button
+            // and T can never disagree about what the selection is.
+            if (command.Enabled
+                && (command.IconKey == InspectModel.DraftKey || command.IconKey == InspectModel.UndraftKey))
+                button.RegisterCallback<ClickEvent>(_ => ToggleDraft());
+            // The response beside it (design 33 §18e): the model decides, this carries its intents.
+            if (command.Enabled && ResponseModel.IsResponseKey(command.IconKey))
+                button.RegisterCallback<ClickEvent>(_ => CycleResponse());
             return button;
         }
 

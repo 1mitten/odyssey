@@ -47,6 +47,13 @@ namespace Odyssey.Sim.Construction
         readonly byte[] _stuff;
         readonly byte[] _facing;
         readonly int[] _delivered;
+
+        /// <summary>
+        /// Units of the building's <c>partItem</c> that have arrived — the second payment, banked
+        /// apart from the material (design 32 §14). Zero for everything with no parts.
+        /// </summary>
+        readonly int[] _parts;
+        readonly PartsSection _partsSection;
         readonly int[] _work;
         readonly List<int> _sites = new List<int>();
 
@@ -74,8 +81,39 @@ namespace Odyssey.Sim.Construction
             _stuff = new byte[grid.Size.CellCount];
             _facing = new byte[grid.Size.CellCount];
             _delivered = new int[grid.Size.CellCount];
+            _parts = new int[grid.Size.CellCount];
+            _partsSection = new PartsSection(this);
             _work = new int[grid.Size.CellCount];
         }
+
+        /// <summary>
+        /// The navigation graph, when the colony has one, told two things and asked nothing: that
+        /// a cell now holds an ordered building (<c>NavFlags.BuildSite</c>, which makes a colonist
+        /// with any other route take it), and that the cell changed when the thing goes up.
+        ///
+        /// <para>Set by <c>ColonyComposition.AddColony</c> and null in a fixture with no
+        /// navigation, in which case sites simply carry no detour — which is the right answer for
+        /// a test that never built a graph. It is a property rather than a constructor argument
+        /// because the graph is built before the grid and the grid is built inside the
+        /// composition; a fourth constructor argument would be a fourth thing to forget.</para>
+        /// </summary>
+        public Pathing.NavGraph? Nav { get; set; }
+
+        /// <summary>
+        /// The power grid (design 32), which owns lines. A line is ordered with the same intent,
+        /// cursor and palette row as a wall, so this grid is where the order arrives — and hands it
+        /// on, because a line is not a site of this grid and not an edifice. Asked too for where a
+        /// line may go, so <see cref="Allows(int, int)"/> and <see cref="WhereItWouldLand"/> give
+        /// the cursor the power grid's own answer. Set by the composition like <see cref="Nav"/>;
+        /// null in a fixture with no power, where a line order is refused.
+        /// </summary>
+        public Power.PowerGrid? Power { get; set; }
+
+        /// <summary>
+        /// The hearth (design 43 §3f), told when a campfire is raised or anything is demolished.
+        /// Null in a bare fixture with no colony.
+        /// </summary>
+        public World.Hearth? Hearth { get; set; }
 
         public GridSize Size => _grid.Size;
 
@@ -112,8 +150,39 @@ namespace Odyssey.Sim.Construction
             return wanted < 0 ? 0 : wanted;
         }
 
-        /// <summary>Has every unit of material arrived, so that the thing can be worked on?</summary>
-        public bool IsFrame(int index) => _building[index] != 0 && Outstanding(index) == 0;
+        /// <summary>Units of the site's part item that have arrived (design 32 §14).</summary>
+        public int PartsDelivered(int index) => _parts[index];
+
+        /// <summary>Units of the site's part item still wanted; 0 for a site with no parts, or once they are in.</summary>
+        public int OutstandingParts(int index)
+        {
+            if (_building[index] == 0) return 0;
+            BuildingDef def = ConstructionContent.BuildingAt(_building[index]);
+            if (!def.HasParts) return 0;
+            int wanted = def.partCount - _parts[index];
+            return wanted < 0 ? 0 : wanted;
+        }
+
+        /// <summary>
+        /// Has everything arrived — the material <b>and</b> the parts — so the thing can be worked
+        /// on? A generator with its thirty wood in and its scrap metal still out is a blueprint.
+        /// </summary>
+        public bool IsFrame(int index) =>
+            _building[index] != 0 && Outstanding(index) == 0 && OutstandingParts(index) == 0;
+
+        /// <summary>The site's second payment arrived. Returns what the site now holds of it.</summary>
+        public int DeliverParts(int index, int count)
+        {
+            _parts[index] += count;
+            return _parts[index];
+        }
+
+        /// <summary>
+        /// The save section that carries the parts delivered to sites (design 32 §14). A section of
+        /// its own rather than a field in the site record, so the site layout — and the save format
+        /// — is untouched; whoever assembles the save takes it from here, as it does the edifices.
+        /// </summary>
+        public ISaveable Parts => _partsSection;
 
         /// <summary>What this site costs in ticks of work, or 0 where there is no site.</summary>
         public int WorkFor(int index) =>
@@ -147,9 +216,18 @@ namespace Odyssey.Sim.Construction
         {
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
             if (!ConstructionContent.IsBuilding(building)) return IntentRejection.NotPermitted;
+            BuildingDef def = ConstructionContent.BuildingAt(building);
+            // A thing always made of one material is made of it whatever the order named (design
+            // 50 §4): the sandbags' five stone. Before the buildable test, so an order that names
+            // no material at all is still good for them.
+            if (def.fixedStuff != StuffHandle.None) stuff = def.fixedStuff;
             if (!ConstructionContent.IsBuildable(stuff)) return IntentRejection.NotPermitted;
 
-            BuildingDef def = ConstructionContent.BuildingAt(building);
+            // A line is not a site of this grid: it lives in the power grid's own layer, where a
+            // cell can hold a line and a wall at once (design 32 §3). Handed on whole — the lift,
+            // the rule and the refusal are the power grid's.
+            if (def.conduit)
+                return Power != null ? Power.PlaceLine(_grid.Index(cell)) : IntentRejection.NotPermitted;
 
             // A thing that does not rotate never carries one, even if the interface sent a stale
             // number: a site's facing is hashed, and two identical wall orders that arrived with
@@ -247,12 +325,19 @@ namespace Odyssey.Sim.Construction
             return -1;
         }
 
-        public IntentRejection Cancel(CellRef cell)
+        public IntentRejection Cancel(CellRef cell, bool lines = true)
         {
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
 
+            // Every order in the cell, the line orders included: a cancel drag is "undo what I
+            // asked for here", and a cell can hold a wall order and a line order at once (design
+            // 32 §3). Asked first and separately, so a cell with only a line order in it is a
+            // cancel that did something rather than AlreadyInThatState. A building's own pane
+            // asks for the building alone (`lines: false`), because its Cancel names one thing.
+            bool line = lines && Power != null && Power.CancelAt(_grid.Index(cell));
+
             int index = SiteAt(cell);
-            if (index < 0) return IntentRejection.AlreadyInThatState;
+            if (index < 0) return line ? IntentRejection.None : IntentRejection.AlreadyInThatState;
 
             Refund(index);
             Set(index, BuildingHandle.None, StuffHandle.None);
@@ -318,6 +403,10 @@ namespace Odyssey.Sim.Construction
 
             BuildingDef what = ConstructionContent.BuildingAt(building);
 
+            // A line takes its own lift, asked with its own rule: a click on the ground under a
+            // wall names the wall's cell for a line, where the wall's rule would refuse it.
+            if (what.conduit) return Power != null ? Power.WhereItWouldLand(index) : index;
+
             // A covering takes the WALL's lift, not the slab's: a click on grass names the ground
             // block and paving goes in the air cell above it, which is exactly what StandingOn
             // already does. Only structure is lifted over things that fill a cell (U42).
@@ -382,7 +471,7 @@ namespace Odyssey.Sim.Construction
         /// reported at the cell the player clicked — exactly as it was before.</para>
         ///
         /// <para><b>A cell that already holds a slab lifts too, and that is RF1's half of this
-        /// rule</b> (<c>docs/design/27-roofs.md</c> §3). Stand on an upper storey, point at the
+        /// rule</b> (<c>docs/design/59-roofs.md</c> §3). Stand on an upper storey, point at the
         /// floor under your feet and order a slab: the picker answers with that floor's own cell,
         /// because a pointer names a surface and the surface is the slab. Without this clause the
         /// order was <c>NotPermitted</c> for having a floor already — measured, and silent — so
@@ -433,6 +522,12 @@ namespace Odyssey.Sim.Construction
         public bool Allows(int index, int building)
         {
             if ((uint)index >= (uint)_grid.Size.CellCount) return false;
+
+            // A line answers to the power grid's rule alone — it may go where a wall stands, which
+            // every line below would refuse (design 32 §3).
+            if (ConstructionContent.BuildingAt(building).conduit)
+                return Power != null && Power.AllowsLine(index);
+
             if (_grid.IsSolidTerrain(index)) return false;
             if (NaturalContent.IsWater(_grid.Terrain[index])) return false;
             if (_grid.Edifice[index] >= 0) return false;
@@ -538,7 +633,7 @@ namespace Odyssey.Sim.Construction
         bool ShaftRulePermits(int index, BuildingDef def, int building)
         {
             // **A stair climbs an open shaft on exactly the ladder's terms** (U44,
-            // docs/design/28-stairs.md §5). Its upper end is the cell directly above it, so a slab
+            // docs/design/60-stairs.md §5). Its upper end is the cell directly above it, so a slab
             // there caps it; and the cell above *that* is where a colonist arrives, so a slab there
             // roofs the shaft and silently closes a way up — which is the owner's answer for the
             // ladder and is the same fact about a stair. Same rule, same reach, one method: two
@@ -876,6 +971,10 @@ namespace Odyssey.Sim.Construction
             if (_building[index] == 0) return;
             _work[index] = 0;
             _delivered[index] = keepDelivered;
+            // The parts go the same way, half kept, rounded up: the part is a handful of pieces
+            // and a botch that took the last one of an odd count would be a harsher rule than the
+            // material's own coin flip for no reason a player could see (design 32 §14).
+            _parts[index] = (_parts[index] + 1) / 2;
         }
 
         /// <summary>
@@ -891,19 +990,27 @@ namespace Odyssey.Sim.Construction
         /// </summary>
         void Refund(int index)
         {
+            // The parts first, and whatever was delivered of them, in full: a cancelled order gives
+            // back everything carried to it, material and parts alike (design 32 §14).
+            if (_parts[index] > 0 && _building[index] != 0)
+                GiveBack(index, ConstructionContent.BuildingAt(_building[index]).partItem, _parts[index]);
+
             int delivered = _delivered[index];
             if (delivered <= 0) return;
+            GiveBack(index, ConstructionContent.StuffAt(_stuff[index]).item, delivered);
+        }
 
-            int item = ConstructionContent.StuffAt(_stuff[index]).item;
-            if (item < 0) return;
+        void GiveBack(int index, int item, int count)
+        {
+            if (item < 0 || count <= 0) return;
 
             int at = _items.NearestCellWithSpace(
-                _grid, index, item, delivered, JobDriver.DropSearchRadius);
+                _grid, index, item, count, JobDriver.DropSearchRadius);
 
             // A board with no room within that radius is packed solid with things, which nothing in
             // the game can produce. Losing the load is the least bad answer; the alternative is
             // refusing to let the player cancel an order, which is worse.
-            if (at >= 0) _items.Spawn(item, at, delivered);
+            if (at >= 0) _items.Spawn(item, at, count);
         }
 
         void Set(int index, int building, int stuff, int facing = 0)
@@ -930,6 +1037,7 @@ namespace Odyssey.Sim.Construction
             _facing[index] = building != BuildingHandle.None ? (byte)(facing & 3) : (byte)0;
             // A new site, a cancelled one and a finished one all start the next from nothing.
             _delivered[index] = 0;
+            _parts[index] = 0;
             _work[index] = 0;
             if (building != BuildingHandle.None)
             {
@@ -944,11 +1052,23 @@ namespace Odyssey.Sim.Construction
             }
 
             bool now = building != BuildingHandle.None;
+
+            // The detour. A site that will block the cell is dearer to walk into than the ground
+            // beside it, so a colonist crossing the room goes round the wall somebody is putting
+            // up rather than through it — which is what makes the eviction in `Raise` a rarity
+            // rather than a thing the player watches. Asked of every write, including a site
+            // replaced by one of a different kind, and cleared when the site goes for any reason:
+            // cancelled, refunded, or raised into a real wall that carries its own flags.
+            Nav?.SetBuildSite(index,
+                now && ConstructionContent.BuildingAt(building).blocking);
+
             if (was == now) return;
 
             int at = _sites.BinarySearch(index);
             if (now) _sites.Insert(~at, index);
             else _sites.RemoveAt(at);
+            // A site is part of home (design 43 §3a), and so is whatever it is raised into.
+            _grid.Footprint.Touch(index);
         }
 
         /// <summary>
@@ -986,10 +1106,16 @@ namespace Odyssey.Sim.Construction
         /// <para><c>quality</c> is the tier the finishing colonist rolled, for the one def that
         /// takes one; zero, and written as zero, for everything else.</para>
         /// </summary>
-        public void Raise(PawnContext ctx, int cell, byte quality = 0)
+        /// <summary>
+        /// Returns false only when the raise was **refused because somebody is in the way** and is
+        /// worth trying again — see <see cref="RaiseWhenClear"/>, which is what the build driver
+        /// actually calls. Every other outcome, including a site that refunded itself and died, is
+        /// true: the question this answers is "should anybody ask again", not "did a wall appear".
+        /// </summary>
+        public bool Raise(PawnContext ctx, int cell, byte quality = 0)
         {
             int building = _building[cell];
-            if (building == BuildingHandle.None) return;
+            if (building == BuildingHandle.None) return true;
 
             BuildingDef def = ConstructionContent.BuildingAt(building);
             ushort stuff = ConstructionContent.StuffAt(_stuff[cell]).stuff;
@@ -1020,7 +1146,7 @@ namespace Odyssey.Sim.Construction
             {
                 Refund(cell);
                 Clear(cell);
-                return;
+                return true;
             }
 
             // **The shaft rule, asked again at the moment of truth**, and it is the only rule that
@@ -1038,7 +1164,7 @@ namespace Odyssey.Sim.Construction
             {
                 Refund(cell);
                 Clear(cell);
-                return;
+                return true;
             }
 
             // **And the support rule, for the same reason and with the opposite answer.**
@@ -1058,7 +1184,23 @@ namespace Odyssey.Sim.Construction
             // The work already done stays done, so the retry costs nothing, and nothing falls —
             // which is the owner's rule (2026-09-18): a slab that cannot stand is simply not built
             // yet, and it never leaves rubble.
-            if (!SlabWouldStand(cell)) return;
+            if (!SlabWouldStand(cell)) return true;
+
+            // **And nobody is built into it.** A site is walkable up to this instant, so a
+            // colonist can perfectly well be standing where the wall is about to be, and until
+            // 2026-09-21 the wall simply went up around them: the cell stopped being walkable,
+            // no path could start in it or end in it, and the colonist was sealed in for the life
+            // of the building (owner's report, and `EntombmentTests` is its reproduction).
+            //
+            // Two answers, because the two cases are different. Somebody **walking through** is
+            // gone in a second, so the raise is refused and the last blow lands again later —
+            // the work stays banked and the material is untouched, so waiting costs nothing.
+            // Somebody **standing** there will still be there in an hour, so they are moved
+            // aside; that is the deadlock this must not have, and one cell of shove is cheaper
+            // than an order the colony can never finish. `CanRaiseNow` is the same question
+            // asked without the shove, which is what lets the builder hold the last blow rather
+            // than roll a botch for a wall it is going to build anyway.
+            if (!MakeRoom(ctx, cell, second)) return false;
 
             Clear(cell);
 
@@ -1069,6 +1211,24 @@ namespace Odyssey.Sim.Construction
 
             if (def.edifice == CoreContent.EdificeDoor) ctx.Nav.SetDoor(cell, isDoor: true, open: false);
             if (def.edifice == CoreContent.EdificeBed) _items.AddBed(cell);
+            // Cover that is crossed but never stood on (design 53 §5): the crossing's price.
+            if (def.passThrough) ctx.Nav.SetPassThrough(cell, def.crossCost);
+
+            // 1b. A thing that makes or spends power has a switch and a hopper the world does not,
+            //     and joins whatever net a line beside it is on (design 32 §5).
+            if (def.IsPowered) ctx.Power?.AddDevice(_grid.Edifice[cell]);
+
+            // 1a. A store that was built rather than painted. The cell leaves whatever zone held
+            //     it *first*, so nothing can ever observe a cell that is in two stores at once: a
+            //     shelf carries its own filter and its own rung, and a cell with two answers to
+            //     "what goes here" is the fault the zones' own anchor rule exists to prevent. The
+            //     other direction is already closed — StorageZones.SiteAllows refuses to paint over
+            //     an edifice — so this is the half that was missing.
+            if (def.storageSlots > 0)
+            {
+                ctx.Storage?.LeaveCell(cell);
+                ctx.StorageUnits?.Raise(_grid.Edifice[cell], def.storageSlots);
+            }
 
             // 2. The cells and everything touching them must be re-meshed: a thing changes how its
             // neighbours draw their own faces, and the vertical neighbours are in other chunks.
@@ -1078,6 +1238,32 @@ namespace Odyssey.Sim.Construction
             // 3. What is walkable changed here, and in the cell above through the floor rule.
             MarkNavAround(ctx, cell);
             if (second >= 0) MarkNavAround(ctx, second);
+            return true;
+        }
+
+        /// <summary>
+        /// Raise the thing, and keep asking on later ticks while somebody is walking through the
+        /// cell it will fill.
+        ///
+        /// <para><b>Because the driver's own check cannot close the window.</b>
+        /// <see cref="CanRaiseNow"/> is asked in the pawn phase and the raise happens in the
+        /// deferred phase at the end of the same tick, so a colonist can step into the cell in
+        /// between — movement runs in that same phase, and pawns after this one in the order have
+        /// not moved yet when the check is made. Without a retry the site would sit finished and
+        /// unraised until a work giver offered it again, and the next builder's first stroke would
+        /// roll for success a **second** time on work that was already done. The roll happens
+        /// once; this is what gets the result of it into the world.</para>
+        ///
+        /// <para>The order it was rolled for is named, so a player who cancels the site or orders
+        /// something else there in the meantime does not get a bed built with a wall's dice.</para>
+        /// </summary>
+        public void RaiseWhenClear(PawnContext ctx, int cell, int building, byte quality = 0)
+        {
+            if (_building[cell] != building) return;
+            if (Raise(ctx, cell, quality)) return;
+
+            // Deferred from inside the deferred phase, which SimWorld.Tick puts on the next tick.
+            ctx.Defer(_ => RaiseWhenClear(ctx, cell, building, quality));
         }
 
         /// <summary>The walkability half of a world edit, both ends of a two-cell thing's "above".</summary>
@@ -1544,6 +1730,7 @@ namespace Odyssey.Sim.Construction
         {
             _grid.Floor[cell] = covering ? CoreContent.SlabPaved : CoreContent.SlabBuilt;
             _grid.FloorStuff[cell] = stuff;
+            _grid.Footprint.Touch(cell);
         }
 
         /// <summary>
@@ -1575,35 +1762,12 @@ namespace Odyssey.Sim.Construction
                 CellIndex = cell, Def = def.edifice, Stuff = stuff, Built = true,
                 Facing = face, Quality = quality,
             });
-            int head = _edifices.Count - 1;
-            _grid.Edifice[cell] = head;
-
-            if (second >= 0 && def.secondEdifice != 0)
-            {
-                // **A stair is the one thing that finishes as two records** (U44,
-                // docs/design/28-stairs.md §4). Its halves really are different — one sits on the
-                // floor and one 1.5 m up — and worldgen has stamped them as two values since the
-                // first template, so matching that keeps the mesher's partner scan, EdificeLabels
-                // and the render mirror working untouched. What they must agree about is only
-                // existing and being torn out together: a stair takes no quality and nobody owns
-                // one, which is why the objection 20-beds.md raises to paired records does not
-                // bite here.
-                //
-                // **The far half faces back the way it came**, which is the same answer
-                // ChunkMesher.EmitStair works out for drawing it. That makes
-                // EdificeFootprint.SecondCell symmetric — each half points at the other — so
-                // Demolish finds the whole stair from whichever cell was clicked.
-                _edifices.Add(new PlacedEdifice
-                {
-                    CellIndex = second, Def = def.secondEdifice, Stuff = stuff, Built = true,
-                    Facing = (byte)((face + 2) & 3), Quality = quality,
-                });
-                _grid.Edifice[second] = _edifices.Count - 1;
-            }
-            else if (second >= 0)
-            {
-                _grid.Edifice[second] = head;
-            }
+            _grid.Edifice[cell] = _edifices.Count - 1;
+            if (second >= 0) _grid.Edifice[second] = _edifices.Count - 1;
+            _grid.Footprint.Touch(cell);
+            if (second >= 0) _grid.Footprint.Touch(second);
+            // The first campfire of a colony with no hearth becomes it (design 43 §3f).
+            if (def.edifice == CoreContent.EdificeCampfire) Hearth?.OfferRaised(cell);
             if (def.blocking)
             {
                 _grid.Flags[cell] |= CellFlags.BlockingEdifice;
@@ -1653,9 +1817,21 @@ namespace Odyssey.Sim.Construction
             for (int i = 0; i < _edifices.Count; i++)
             {
                 PlacedEdifice placed = _edifices[i];
-                if (placed.Removed || placed.Def != CoreContent.EdificeDoor) continue;
-                ctx.Nav.SetDoor(placed.CellIndex, isDoor: true, open: false);
+                if (placed.Removed) continue;
+                if (placed.Def == CoreContent.EdificeDoor)
+                    ctx.Nav.SetDoor(placed.CellIndex, isDoor: true, open: false);
+                // And the cover crossed but never stood on (design 53 §5), derived the same way.
+                int building = ConstructionContent.BuildingForEdifice(placed.Def);
+                if (building != BuildingHandle.None && ConstructionContent.BuildingAt(building).passThrough)
+                    ctx.Nav.SetPassThrough(placed.CellIndex, ConstructionContent.BuildingAt(building).crossCost);
             }
+        }
+
+        /// <summary>Is this edifice something crossed but never stood on (design 53 §5)?</summary>
+        public static bool IsPassThrough(ushort edifice)
+        {
+            int building = ConstructionContent.BuildingForEdifice(edifice);
+            return building != BuildingHandle.None && ConstructionContent.BuildingAt(building).passThrough;
         }
 
         /// <summary>
@@ -1675,11 +1851,18 @@ namespace Odyssey.Sim.Construction
             stuff = _grid.FloorStuff[cell];
             _grid.Floor[cell] = CoreContent.SlabNone;
             _grid.FloorStuff[cell] = CoreContent.StuffNone;
+            _grid.Footprint.Touch(cell);
 
             MarkChunksAround(ctx, cell);
             ctx.Nav.MarkDirty(cell);
             int above = cell + _grid.Size.LayerStride;
             if (above < _grid.Size.CellCount) ctx.Nav.MarkDirty(above);
+
+            // The slab was the roof of whatever is under it, and a room with a hole in its roof
+            // is not a room: the enclosure must hear about it exactly as Demolish tells it about
+            // a wall. It did not until the 2026-09-21 review (design 28 §12, F3), and a roof taken
+            // off stayed warm until an unrelated edit re-solved the layer.
+            ctx.Enclosure?.MarkDirty(cell);
 
             // Pawns and loose items resting on the removed slab drop to the landing floor below.
             // A colonist tearing down the floor underfoot steps down without panic (NoThought).
@@ -1779,6 +1962,10 @@ namespace Odyssey.Sim.Construction
             // 1. The thing itself.
             _grid.RemoveEdifice(was.CellIndex);
             if (second >= 0) _grid.RemoveEdifice(second);
+            _grid.Footprint.Touch(was.CellIndex);
+            if (second >= 0) _grid.Footprint.Touch(second);
+            // The hearth coming down leaves the colony without one; nothing takes its place.
+            Hearth?.Lost(was.CellIndex);
             PlacedEdifice gone = was;
             gone.Removed = true;
             _edifices[handle] = gone;
@@ -1796,7 +1983,31 @@ namespace Odyssey.Sim.Construction
             // A bed leaves the sleep chooser's list with the world; its owner goes with it, in
             // that the record nobody will read again still says who it was.
             if (was.Def == CoreContent.EdificeDoor) ctx.Nav.SetDoor(was.CellIndex, isDoor: false, open: false);
-            if (was.Def == CoreContent.EdificeBed) _items.RemoveBed(was.CellIndex);
+            if (IsPassThrough(was.Def)) ctx.Nav.SetPassThrough(was.CellIndex, 0);
+            if (was.Def == CoreContent.EdificeBed)
+            {
+                _items.RemoveBed(was.CellIndex);
+                ReleasePatientsBed(ctx, was.CellIndex);
+            }
+
+            // A store coming down spills what the board will take and loses the rest. That this
+            // destroys is right here and refused one level up: the deconstruct job will not finish
+            // a shelf whose contents have nowhere to go, so by the time this runs either the shelf
+            // is empty or the building fell on it.
+            if (ConstructionContent.SlotsOf(was.Def) > 0) ctx.StorageUnits?.Dissolve(ctx, handle);
+
+            // Its switch and whatever wood was in its hopper go with it (design 32 §5).
+            ctx.Power?.RemoveDevice(handle);
+
+            // And a cooking station's bills and whatever was on the hob (design 48 §5).
+            ctx.Kitchen?.Remove(handle);
+
+            // Nothing may go on pointing at a building that has gone (design 33 §13h): what was
+            // left of it after a fight, and an order to take it apart. Here, because this is the one
+            // way an edifice leaves the world — taken apart, beaten down, or whatever calls it next.
+            ctx.EdificeDamage.Clear(was.CellIndex);
+            ClearDeconstructOrder(ctx, was.CellIndex);
+            if (second >= 0) ClearDeconstructOrder(ctx, second);
 
             // 2. The cells and everything touching them must be re-meshed: a thing coming down
             // changes how its neighbours draw their own faces, and the vertical neighbours are in
@@ -1815,6 +2026,105 @@ namespace Odyssey.Sim.Construction
             MarkNavAround(ctx, was.CellIndex);
             if (second >= 0) MarkNavAround(ctx, second);
             return true;
+        }
+
+        /// <summary>
+        /// A bed coming down lets go of the patient lying in it (design 33 §11h). The bed's head-cell
+        /// reservation passed to her on the lay and her <c>Job_Downed</c> holds it until she gets up,
+        /// so without this she kept a claim on bare ground for days and a bed raised on that cell read
+        /// as taken. Only a downed pawn: a sleeper's and a rescuer's jobs ask about their bed and let
+        /// go themselves. Taken off her own list as well as the table, so the two keep agreeing and
+        /// her job's end has nothing left to release. Scales with the pawns, once per bed demolished.
+        /// </summary>
+        static void ReleasePatientsBed(PawnContext ctx, int head)
+        {
+            long key = ReservationManager.Key(ReservationTargetKind.Cell, head);
+            var pawns = ctx.Pawns.All;
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                Pawn pawn = pawns[i];
+                if (!pawn.Downed || !pawn.HeldReservations.Remove(key)) continue;
+                ctx.Reservations.Release(pawn.Id, key);
+            }
+        }
+
+        /// <summary>
+        /// An order to take apart a building that is no longer there is an order on nothing. The
+        /// deconstruct driver clears its own before the removal; this is for every other route.
+        /// </summary>
+        static void ClearDeconstructOrder(PawnContext ctx, int cell)
+        {
+            var designations = ctx.Designations;
+            if (designations != null && designations.At(cell) == Designations.DesignationKind.Deconstruct)
+                designations.Clear(cell);
+        }
+
+        /// <summary>
+        /// Is there anybody in the way who will not move by themselves? False means the raise
+        /// must wait: somebody is walking through the cell this building will fill.
+        ///
+        /// <para>Asked by the build driver before the last blow — see <c>BuildJobDriver</c> — so
+        /// that waiting costs a held hammer rather than a fresh success roll on work that is
+        /// already done.</para>
+        /// </summary>
+        public bool CanRaiseNow(PawnContext ctx, int cell)
+        {
+            if (!BlocksTheCell(cell)) return true;
+
+            int second = SecondCellOf(cell);
+            return !PassingThrough(ctx, cell) && (second < 0 || !PassingThrough(ctx, second));
+        }
+
+        /// <summary>
+        /// Clear both of a building's cells of people, or say that it cannot be done yet.
+        /// <see cref="PawnEviction"/> holds the rule about where a displaced colonist goes.
+        /// </summary>
+        bool MakeRoom(PawnContext ctx, int cell, int second)
+        {
+            if (!BlocksTheCell(cell)) return true;
+            if (!MakeRoomIn(ctx, cell)) return false;
+            return second < 0 || MakeRoomIn(ctx, second);
+        }
+
+        static bool MakeRoomIn(PawnContext ctx, int cell)
+        {
+            Pawn? occupant = PawnEviction.Occupant(ctx, cell);
+            if (occupant == null) return true;
+            // Walking through: wait rather than shove, because they will be gone of their own
+            // accord and a shove the player can see is the cost being avoided here.
+            if (occupant.HasPath) return false;
+            // Standing there, and standing there is forever as far as a build order is concerned.
+            // A colonist with nowhere at all to be put — enclosed in solid world — holds the
+            // order up rather than being pushed into rock.
+            return PawnEviction.Evict(ctx, occupant);
+        }
+
+        static bool PassingThrough(PawnContext ctx, int cell)
+        {
+            Pawn? occupant = PawnEviction.Occupant(ctx, cell);
+            return occupant != null && occupant.HasPath;
+        }
+
+        /// <summary>Will the thing ordered here stand in the cell rather than under it?</summary>
+        bool BlocksTheCell(int cell)
+        {
+            int building = _building[cell];
+            // Cover crossed but never stood on counts too (design 53 §5): nobody may be left
+            // standing in a sandbag the instant it goes up, and somebody climbing over waits.
+            return building != BuildingHandle.None
+                   && (ConstructionContent.BuildingAt(building).blocking || ConstructionContent.BuildingAt(building).passThrough);
+        }
+
+        /// <summary>The far cell of a two-cell site, or -1. Read from the site as it stands.</summary>
+        int SecondCellOf(int cell)
+        {
+            int building = _building[cell];
+            if (building == BuildingHandle.None) return -1;
+
+            BuildingDef def = ConstructionContent.BuildingAt(building);
+            if (def.footprint <= 1) return -1;
+
+            return EdificeFootprint.SecondCell(cell, def.edifice, _facing[cell], _grid.Size);
         }
 
         static void MarkChunksAround(PawnContext ctx, int cell)
@@ -1848,8 +2158,11 @@ namespace Odyssey.Sim.Construction
         public IntentRejection HandlePlace(Intent intent) =>
             Place(intent.Cell, intent.A, intent.B, intent.C);
 
-        /// <summary><c>CancelBuilding(cell)</c>.</summary>
-        public IntentRejection HandleCancel(Intent intent) => Cancel(intent.Cell);
+        /// <summary>
+        /// <c>CancelBuilding(cell, A)</c>. <c>A</c> = 1 takes the building order only — the pane's
+        /// Cancel, which names one thing; 0, every order in the cell, which is what a drag means.
+        /// </summary>
+        public IntentRejection HandleCancel(Intent intent) => Cancel(intent.Cell, lines: intent.A != 1);
 
         /// <summary>
         /// <c>AssignBedOwner(cell, A = pawn)</c>, A = -1 to leave the bed unowned. Either cell of
@@ -1952,6 +2265,29 @@ namespace Odyssey.Sim.Construction
         /// <summary><see cref="BedOwnerAt(int)"/> by cell reference, which is how the pane holds one.</summary>
         public int BedOwnerAt(CellRef cell) =>
             _grid.Contains(cell.X, cell.Z, cell.Y) ? BedOwnerAt(_grid.Index(cell)) : 0;
+
+        /// <summary>
+        /// Every bed this pawn owns goes back to nobody: the pawn is leaving the board
+        /// (<c>PawnRegistry.Despawn</c>, design 33 §5c). Returns how many were released.
+        ///
+        /// <para><b>Does not raise <see cref="BedOwnershipChanged"/>.</b> That flag asks the job
+        /// system to move sleepers out of beds that are no longer theirs, and a bed going to nobody
+        /// takes nobody out of it — so raising it would only be a flag that can outlive its tick.</para>
+        /// </summary>
+        public int ReleaseBedsOf(int pawnId)
+        {
+            if (pawnId <= 0) return 0;
+            int released = 0;
+            for (int i = 0; i < _edifices.Count; i++)
+            {
+                PlacedEdifice bed = _edifices[i];
+                if (bed.Def != CoreContent.EdificeBed || bed.Removed || bed.Owner != pawnId) continue;
+                bed.Owner = 0;
+                _edifices[i] = bed;
+                released++;
+            }
+            return released;
+        }
 
         /// <summary>Whether this colonist already has a bed of her own somewhere on the map.</summary>
         public bool PawnOwnsABed(int pawnId)
@@ -2057,6 +2393,7 @@ namespace Odyssey.Sim.Construction
                 hash.Add(_stuff[index]);
                 hash.Add(_facing[index]);
                 hash.Add(_delivered[index]);
+                hash.Add(_parts[index]);
                 // Milliwork, whole, for the reason DesignationGrid's own ledger states: the hash
                 // is kept at the resolution the ledger is.
                 hash.Add(_work[index]);
@@ -2136,7 +2473,50 @@ namespace Odyssey.Sim.Construction
                     // The contract is ticks: the ledger is divided back where it is published,
                     // and the price was never scaled (§2bb — the scale stops at the contract).
                     _work[index] / Rates.Scale, WorkFor(index),
-                    _facing[index], (byte)def.footprint));
+                    _facing[index], (byte)def.footprint,
+                    (ushort)_parts[index], (ushort)(def.HasParts ? def.partCount : 0),
+                    (short)(def.HasParts ? def.partItem : -1)));
+            }
+        }
+
+        /// <summary>
+        /// The parts delivered to sites, saved apart from the sites themselves (design 32 §14):
+        /// <c>(cell, parts)</c> for every site holding any. Appended after the construction section,
+        /// so the sites it names already exist when it is read; one naming a cell with no site is a
+        /// file that disagrees with itself and is skipped. Hashed by the grid, not here.
+        /// </summary>
+        sealed class PartsSection : ISaveable
+        {
+            readonly ConstructionGrid _grid;
+
+            public PartsSection(ConstructionGrid grid) { _grid = grid; }
+
+            public string SaveKey => "odyssey.construction.parts";
+
+            public void Save(SaveWriter writer)
+            {
+                int count = 0;
+                for (int i = 0; i < _grid._sites.Count; i++) if (_grid._parts[_grid._sites[i]] > 0) count++;
+                writer.Write(count);
+                for (int i = 0; i < _grid._sites.Count; i++)
+                {
+                    int index = _grid._sites[i];
+                    if (_grid._parts[index] <= 0) continue;
+                    writer.Write(index);
+                    writer.Write(_grid._parts[index]);
+                }
+            }
+
+            public void Load(SaveReader reader)
+            {
+                int count = reader.ReadInt();
+                for (int i = 0; i < count; i++)
+                {
+                    int index = reader.ReadInt();
+                    int parts = reader.ReadInt();
+                    if ((uint)index >= (uint)_grid._parts.Length || _grid._building[index] == 0) continue;
+                    _grid._parts[index] = parts;
+                }
             }
         }
     }

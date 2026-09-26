@@ -43,7 +43,39 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < _pawns.Count; i++)
             {
                 var p = _pawns[i];
-                if (p.Cell == cell && !p.HasPath) return true;
+                // A carried patient is in her carrier's arms, not standing (design 33 §11f).
+                if (p.Cell == cell && !p.HasPath && p.CarriedBy == 0) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Does some pawn other than <paramref name="me"/> hold this cell — standing or lying in
+        /// it, finishing a step into it, or on its way to it (owner, 2026-09-25: *"don't have them
+        /// exactly over each other — that should never happen in any scenario"*)?
+        ///
+        /// <para>"On its way" is the path's destination and, for the three jobs whose target
+        /// <i>is</i> where the pawn will stand — a wander, a sleep and a move order — the job's
+        /// target as well. The second is what makes two idlers thinking on the same tick choose
+        /// different cells: a job handed out this tick has not asked for its path yet, so its
+        /// destination is still -1 while its target already names the cell. A carried patient
+        /// is in somebody's arms and holds nothing; the dead hold nothing.</para>
+        ///
+        /// <para><b>Scales with the pawns</b>, one pass, and is asked per candidate cell by a
+        /// chooser that runs when a pawn <i>starts</i> a stay — an idle settle, a lie-down, a
+        /// wander leg — never per tick. Design 31 §20 has the arithmetic.</para>
+        /// </summary>
+        public bool IsClaimedByOther(Pawn me, int cell)
+        {
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                Pawn other = _pawns[i];
+                if (other == me || other.CarriedBy != 0 || Melee.IsDead(other)) continue;
+                if (other.Cell == cell || other.FinishingStepTo == cell || other.Destination == cell) return true;
+                Job? job = other.CurrentJob;
+                if (job != null && job.TargetCell == cell &&
+                    (job.DefIndex == JobIndex.Wander || job.DefIndex == JobIndex.Sleep || job.DefIndex == JobIndex.Goto))
+                    return true;
             }
             return false;
         }
@@ -53,15 +85,56 @@ namespace Odyssey.Sim.Pawns
         /// no partially-initialised intermediate state, and the driver pool built up front so no
         /// job start ever allocates.
         /// </summary>
-        public Pawn Spawn(int cell)
+        public Pawn Spawn(int cell) => Spawn(cell, kind: 0);
+
+        /// <summary>How many kinds this build has: the bound a saved kind is checked against.</summary>
+        public int KindCount => _ctx.Content.Kinds.Length == 0 ? 1 : _ctx.Content.Kinds.Length;
+
+        /// <summary>
+        /// Build a pawn of a kind at a cell (design 29 §1). Kind 0 is the colonist and is what
+        /// <see cref="Spawn(int)"/> makes; anything else is an animal, and the caller has checked
+        /// the kind against <see cref="KindCount"/>.
+        /// </summary>
+        public Pawn Spawn(int cell, int kind) => Spawn(cell, kind, weaponDef: -1);
+
+        /// <summary>
+        /// Build a pawn of a kind at a cell holding <paramref name="weaponDef"/> — an item def with a
+        /// weapon block — in place of whatever the kind arrives holding (design 47 §3e: the debug
+        /// pistol bandit, a bandit and so still helmeted and vested, with a pistol and no new
+        /// kind). -1 is the kind's own table, which is what <see cref="Spawn(int, int)"/> sends.
+        /// <b>Bypasses <c>PawnContent.WeaponFor</c></b> for that one pawn; a gunman kind with its own
+        /// table is the later unit that restores the one owner.
+        /// </summary>
+        public Pawn Spawn(int cell, int kind, int weaponDef)
         {
-            var pawn = new Pawn(new PawnId(_nextId++), cell, _ctx.Content);
+            var pawn = new Pawn(new PawnId(_nextId++), cell, _ctx.Content, kind);
             // The world's seed unless a caller says otherwise (U40). This is what keeps every
             // colony nobody chose rolling exactly what it rolled before pawns had seeds of their
             // own, so no scenario, headless run or fixture had to change.
             pawn.RollSeed = _ctx.Seed;
             Adopt(pawn);
+            // What the kind arrives holding (design 33 §1: the bandit is armed). After the
+            // adoption, so the rules see a pawn the registry knows; a kind naming no weapon is one
+            // comparison. The loader never comes here — it restores the hand from the save.
+            if (weaponDef >= 0) GiveWeapon(pawn, weaponDef);
+            else if (_ctx.Content.ArmsOnSpawn(kind)) _ctx.WeaponRules.ArmOnSpawn(pawn, _ctx);
+            // What it arrived holding is its own gear, and a bandit's gear is poor (design 47 §11).
+            WeaponQuality.Assign(_ctx, WeaponHand.Held(pawn, _ctx), WeaponQuality.BanditSkill);
             return pawn;
+        }
+
+        /// <summary>
+        /// Make one <paramref name="def"/> on the nearest cell that can take it and put it straight
+        /// into <paramref name="pawn"/>'s hand, as the arming on spawn and the debug Arm row do. A
+        /// def with no weapon block, or no room anywhere near, gives nothing.
+        /// </summary>
+        void GiveWeapon(Pawn pawn, int def)
+        {
+            if ((uint)def >= (uint)_ctx.Content.Items.Length || _ctx.Content.Items[def].weapon == null) return;
+            int cell = _ctx.Items.NearestCellWithSpace(_ctx.Cells, pawn.Cell, def, 1, JobDriver.DropSearchRadius);
+            if (cell < 0) return;
+            ThingId id = _ctx.Items.Spawn(def, cell);
+            WeaponHand.TakeUp(pawn, _ctx.Items.Get(id)!, _ctx);
         }
 
         /// <summary>
@@ -84,15 +157,205 @@ namespace Odyssey.Sim.Pawns
         /// <see cref="StartingSkillsSystem"/> rolls them for any pawn still at the constructor's
         /// zero, on the very next tick, which this pawn is.</para>
         /// </summary>
+        /// <summary>
+        /// The most pawns a world will hold, and a hard ceiling in the same sense
+        /// <c>PawnFigureDirector.FigureCeiling</c> is one: **moving it is a measurement, not an
+        /// edit**, and <c>PawnCeilingTests</c> fails on anything that raises it.
+        ///
+        /// <para><b>Why it exists</b> (owner, 2026-09-23). Spawning colonists from the debug menu
+        /// past a certain number produced colonists "in an orange suit", textures that "kept
+        /// switching", and a session that "got buggy". Nothing in the game stopped that: the spawn
+        /// intent refused an unreachable column and nothing else, so the menu could add people
+        /// until something gave way.</para>
+        ///
+        /// <para><b>The orange suit was not a pawn count at all</b>, and was found the day after
+        /// this was written. The number was the 64-figure cap: past it, colonists are drawn in the
+        /// baked far form, and that form wore the pack's own paint on the uniform, which is burnt
+        /// orange. Fixed in presentation (<c>docs/design/29-modular-colonists.md</c> §13a). This
+        /// ceiling is kept as the rail it always said it was.</para>
+        ///
+        /// <para><b>It is a rail, not a fix, and it is deliberately far above any real colony.</b>
+        /// The audit's scale target is fifty; the figure ceiling is sixty-four; and a barren board
+        /// was measured healthy at <b>384</b> colonists on 2026-09-23 — 3.90 ms a frame, no
+        /// stand-ins drawn, 23 materials, two faces. So this number is not where things were found
+        /// to break. It is four times the scale target, and its whole job is that a debug command
+        /// cannot run a session into a state nobody designed for.</para>
+        ///
+        /// <para><b>A refusal, never a clamp.</b> The same rule the rest of this class follows: a
+        /// caller asking for one more than the world holds has misunderstood something, and
+        /// silently declining to spawn while reporting success is how a debug menu comes to lie.
+        /// Only the <i>intent</i> path is bounded — <see cref="Spawn(int, int)"/> itself is what
+        /// worldgen and the scenario call, and a starting colony is never anywhere near this.</para>
+        ///
+        /// <para><b>400 since 2026-09-25</b> (owner: a raid of up to two hundred beside a full
+        /// colony, design 55 §11). Measured before it moved, on the scale-target played map with
+        /// twenty colonists and two hundred raiders (Intel Xeon 2.8 GHz container, fast tier):
+        /// tick 0.23 ms at peace, 1.06 ms with the band loitering, 1.59 with every colonist on
+        /// Defend, 1.06 in the assault — of which the raid's own Pawns phase is 0.23 and the
+        /// snapshot publish of 243 pawns is 0.79. The frame side stands on 384 colonists measured
+        /// healthy on 2026-09-23 and on <c>FrameTimeTests.TheFrameWithARaidOfTwoHundred</c>.</para>
+        /// </summary>
+        public const int PawnCeiling = 400;
+
         public IntentRejection HandleSpawnPawn(Intent intent)
         {
+            // A is the kind (design 29 §7): 0 is the colonist this intent always made, so nothing
+            // that sends it today changed; a kind this build does not have is refused, not clamped.
+            int kind = intent.A;
+            if (kind < 0 || kind >= KindCount) return IntentRejection.NotPermitted;
+
+            // B is a weapon to hold instead of the kind's own, plus one (design 47 §3e): 0 — what
+            // every row sent before — is the kind's own table. Not a weapon is refused.
+            int weaponDef = intent.B - 1;
+            if (weaponDef >= 0 && ((uint)weaponDef >= (uint)_ctx.Content.Items.Length
+                || _ctx.Content.Items[weaponDef].weapon == null)) return IntentRejection.NotPermitted;
+
+            // The ceiling. Refused rather than clamped, and refused before anything is built, so a
+            // caller that has asked for one too many is told so rather than quietly ignored. A
+            // raid's members still to walk on are already promised the room (design 55 §9).
+            if (Count + (_ctx.Raids?.PendingArrivals ?? 0) >= PawnCeiling) return IntentRejection.NotPermitted;
+
             CellRef cell = intent.Cell;
             if (!_ctx.Size.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
             int index = _ctx.Cells.NearestWalkableInColumn(cell.X, cell.Z, cell.Y);
             if (index < 0) return IntentRejection.NotPermitted;
-            Pawn pawn = Spawn(index);
-            pawn.RollPassions();
+            index = FreeSpawnCell(index);
+            Pawn pawn = Spawn(index, kind, weaponDef);
+            // An animal has no skills to be passionate about (design 29 §2).
+            if (pawn.IsPerson) pawn.RollPassions();
             return IntentRejection.None;
+        }
+
+        /// <summary>
+        /// <c>DebugArmColonists</c> (design 33 §9i; owner, 2026-09-24: "an option to wield every colonist
+        /// with a random melee weapon ... for testing"). Every colonist who is standing and holds
+        /// nothing is dealt one of the content's melee weapons — a roll on her own stream, so a seed
+        /// deals the same arms every time — made on the nearest cell that can take it and taken
+        /// straight up (<see cref="WeaponHand.TakeUp"/>), exactly as <see cref="IWeaponRules.ArmOnSpawn"/>
+        /// arms a bandit. A colonist already holding a weapon keeps it; a downed one is skipped.
+        /// <c>AlreadyInThatState</c> when there was nobody to arm.
+        /// </summary>
+        public IntentRejection HandleDebugArmColonists(Intent intent)
+        {
+            var weapons = new List<int>();
+            ItemDef[] items = _ctx.Content.Items;
+            for (int i = 0; i < items.Length; i++) if (items[i].weapon != null) weapons.Add(i);
+            if (weapons.Count == 0) return IntentRejection.NotPermitted;
+
+            int tick = _ctx.World?.CurrentTick ?? _ctx.CurrentTick;
+            int armed = 0;
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                Pawn pawn = _pawns[i];
+                if (!pawn.IsColonist || pawn.Downed || pawn.EquippedItem != 0) continue;
+
+                var rng = DeterministicRandom.ForTick(_ctx.Seed, tick, PawnPurpose.DebugArm ^ (uint)pawn.Id.Value);
+                int def = weapons[rng.NextInt(weapons.Count)];
+                int cell = _ctx.Items.NearestCellWithSpace(_ctx.Cells, pawn.Cell, def, 1, JobDriver.DropSearchRadius);
+                if (cell < 0) continue;
+
+                ThingId id = _ctx.Items.Spawn(def, cell);
+                // A weapon dealt is a find (design 47 §11).
+                WeaponQuality.Assign(_ctx, _ctx.Items.Get(id), WeaponQuality.FoundSkill);
+                WeaponHand.TakeUp(pawn, _ctx.Items.Get(id)!, _ctx);
+                armed++;
+            }
+            return armed > 0 ? IntentRejection.None : IntentRejection.AlreadyInThatState;
+        }
+
+        /// <summary>
+        /// The debug menu's Hurt, Heal and Kill (design 43 §11): on the colonist nearest the cell
+        /// the menu was opened over. Hurt is a 20-point wound on a region by melee coverage; heal
+        /// fills the pool, clears the ledger and stands her up; kill goes through
+        /// <see cref="CombatSystem.Kill"/>, so she leaves a corpse and is mourned. Design 18 once
+        /// declined these because <c>Pawn</c> had no health; with one owner of damage and one way
+        /// to die, a debug kill is a real death rather than a despawn.
+        /// </summary>
+        public IntentRejection HandleDebugHealth(Intent intent)
+        {
+            CombatSystem? combat = _ctx.Combat;
+            if (combat == null) return IntentRejection.NotPermitted;
+            int tick = _ctx.World?.CurrentTick ?? _ctx.CurrentTick;
+            int at = _ctx.Size.Contains(intent.Cell) ? _ctx.Size.Index(intent.Cell) : -1;
+
+            Pawn? nearest = null;
+            int best = int.MaxValue;
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                Pawn pawn = _pawns[i];
+                if (!pawn.IsColonist || Melee.IsDead(pawn)) continue;
+                int distance = at < 0 ? 0 : _ctx.Distance(at, pawn.Cell);
+                if (distance >= best) continue;
+                nearest = pawn;
+                best = distance;
+            }
+            if (nearest == null) return IntentRejection.NotPermitted;
+
+            switch (intent.A)
+            {
+                case 0:
+                    combat.Hurt(nearest, null, 20_000, AfflictionKind.Wound, HitSet.Melee, -1, tick);
+                    return IntentRejection.None;
+                case 1:
+                    if (nearest.HpMilli == nearest.HpMaxMilli && !nearest.HasHealthState && !nearest.Downed)
+                        return IntentRejection.AlreadyInThatState;
+                    nearest.HpMilli = nearest.HpMaxMilli;
+                    nearest.Health = null;
+                    if (nearest.Downed) combat.Recover(nearest, tick);
+                    return IntentRejection.None;
+                case 2:
+                    combat.Kill(nearest, null, -1, tick);
+                    return IntentRejection.None;
+                default:
+                    return IntentRejection.NotPermitted;
+            }
+        }
+
+        /// <summary>How far round the spawn point a debug spawn looks for a free tile, in rings.</summary>
+        public const int SpawnSpreadRings = 4;
+
+        /// <summary>
+        /// The spawn cell if nobody stands on it, else the nearest free tile round it (owner,
+        /// 2026-09-24: bandits spawned in quick succession must not pile on one tile; design 33
+        /// §9h). Rings outward from the spawn point, in a fixed scan order so the answer is a
+        /// function of the world; each column is tried on the spawn layer, then one up, then one
+        /// down — the same lift a move order uses — and a tile must be standable, unoccupied and
+        /// reachable from the spawn point, so a pawn never arrives walled into a pocket. Falls back
+        /// to the spawn cell itself if every ring is full. Every kind, not only bandits: a
+        /// shared tile is the same fault whoever stands on it. Reachability is asked in
+        /// <paramref name="mode"/>: a raider arriving (design 55 §4) asks it in the bandit's, or
+        /// it could be put on a ledge only a colonist can leave. It costs a scan of the pawns per
+        /// candidate: a debug command, or one raider walking on, and never a tick's worth of pawns.
+        /// </summary>
+        internal int FreeSpawnCell(int anchor, TraverseMode mode = TraverseMode.Colonist)
+        {
+            if (!Occupied(anchor)) return anchor;
+
+            GridSize size = _ctx.Size;
+            CellRef at = size.FromIndex(anchor);
+            for (int ring = 1; ring <= SpawnSpreadRings; ring++)
+            for (int dz = -ring; dz <= ring; dz++)
+            for (int dx = -ring; dx <= ring; dx++)
+            {
+                if (System.Math.Abs(dx) != ring && System.Math.Abs(dz) != ring) continue;
+                int x = at.X + dx, z = at.Z + dz;
+                for (int dy = 0; dy <= 2; dy++)
+                {
+                    int y = at.Y + (dy == 0 ? 0 : dy == 1 ? 1 : -1);
+                    if (!size.Contains(x, z, y)) continue;
+                    int c = size.Index(x, z, y);
+                    if (!_ctx.Cells.IsWalkable(c) || Occupied(c)) continue;
+                    if (!_ctx.Nav.Reachable(anchor, c, mode)) continue;
+                    return c;
+                }
+            }
+            return anchor;
+        }
+
+        bool Occupied(int cell)
+        {
+            for (int i = 0; i < _pawns.Count; i++) if (_pawns[i].Cell == cell) return true;
+            return false;
         }
 
         /// <summary>
@@ -139,10 +402,45 @@ namespace Odyssey.Sim.Pawns
             return IntentRejection.None;
         }
 
+        /// <summary>
+        /// Take a pawn off the board (design 30 §3). The first thing that ever removes one: there
+        /// is no health model and no death, so until wildlife could walk off the edge nothing
+        /// left the registry. Reservations are released; the job is the caller's to have ended,
+        /// because the registry does not know the job system. Iteration order — ascending id — is
+        /// kept by removing in place and renumbering the index after it, which is O(n) on an
+        /// event that happens a few times a day.
+        ///
+        /// <para><b>And any bed the pawn owned goes back to nobody</b> (design 33 §5c). Until death
+        /// only animals were ever despawned and they own no beds, so nothing needed it; a dead
+        /// colonist would otherwise keep her bed for ever under an id that no longer exists. Here
+        /// rather than in the fight's death so that every way off the board — death, a leaving
+        /// animal, whatever comes next — releases the same things. One scan of the edifice list,
+        /// on an event that happens a few times a day.</para>
+        /// </summary>
+        public void Despawn(Pawn pawn)
+        {
+            if (pawn == null) throw new System.ArgumentNullException(nameof(pawn));
+            if (!_byId.TryGetValue(pawn.Id.Value, out int index) || !ReferenceEquals(_pawns[index], pawn)) return;
+            // Nobody fights a pawn that is gone (design 33 §9e): every attack on it ends now, on the
+            // tick it dies or leaves the board, rather than on each attacker's next tick.
+            _ctx.Combat?.EndAttacksOn(pawn);
+            _ctx.Reservations.ReleaseAll(pawn);
+            _ctx.Construction?.ReleaseBedsOf(pawn.Id.Value);
+            // A weapon in the hand goes down where the pawn stood, or it would stay carried by an
+            // id that no longer exists, with no cell, for ever (design 33 §6D). A death has already
+            // let go of it through the drop listener, so this is a no-op there; it is for every
+            // other way off the board — a bandit that flees off the edge (integration, 2026-09-23).
+            if (pawn.EquippedItem != 0) WeaponHand.PutDown(pawn, _ctx, pawn.Cell);
+            _pawns.RemoveAt(index);
+            _byId.Remove(pawn.Id.Value);
+            for (int i = index; i < _pawns.Count; i++) _byId[_pawns[i].Id.Value] = i;
+        }
+
         /// <summary>Register a pawn subclass. The seam a mod would use to add a pawn kind.</summary>
         public Pawn Adopt(Pawn pawn)
         {
             pawn.DriverPool = BuildDrivers();
+            pawn.Context = _ctx;
             _byId[pawn.Id.Value] = _pawns.Count;
             _pawns.Add(pawn);
             if (pawn.Id.Value >= _nextId) _nextId = pawn.Id.Value + 1;
@@ -164,7 +462,48 @@ namespace Odyssey.Sim.Pawns
             new DeconstructJobDriver(),
             new SowJobDriver(),
             new HarvestJobDriver(),
+            new DraftHoldJobDriver(),
+            new GotoJobDriver(),
+            new LayConduitJobDriver(),
+            new RemoveConduitJobDriver(),
+            new RefuelJobDriver(),
+            // The combat line (design 33 §5), in JobHandle order: 17 to 21, after power's three.
+            new AttackMeleeJobDriver(),
+            new FleeJobDriver(),
+            new DownedJobDriver(),
+            new EquipJobDriver(),
+            new RescueJobDriver(),
+            // A bandit carrying something off the board (design 33 §17), JobHandle 22.
+            new StealJobDriver(),
+            // Medical supplies (design 37): 23 and 24, after Steal.
+            new TreatJobDriver(),
+            new PatientJobDriver(),
+            // Picking a berry bush (design 45 §6), JobHandle 25, after medical supplies.
+            new ForageJobDriver(),
+            // The kitchen (design 48 §5), JobHandle 26, after the forager's.
+            new Cooking.CookJobDriver(),
+            // The ranged attack (design 47 §2d), JobHandle 27, after the kitchen's.
+            new AttackRangedJobDriver(),
         };
+
+        /// <summary>
+        /// Deal the skills a save older than <paramref name="formatVersion"/> could not carry
+        /// (design 47 §3a): Shooting, for a file below format 10. Called by <c>ColonyWorld</c> after
+        /// every section has loaded — not from this section's own load, because a pawn's kind
+        /// arrives in a later section and until then an animal reads as a colonist.
+        ///
+        /// <para>Through <see cref="Pawn.RollStartingSkills"/>, which draws in skill order and
+        /// writes only a skill still at nought: the first six come out as they were dealt, a
+        /// trained skill is never touched, and Shooting is dealt from the same stream a new colonist
+        /// of this seed and id would have been dealt it from. Passions are not re-dealt, so a
+        /// colonist from an older save has none for Shooting. A file at 10 or above does nothing.</para>
+        /// </summary>
+        public void BackfillSkills(int formatVersion)
+        {
+            if (formatVersion >= 10) return;
+            for (int i = 0; i < _pawns.Count; i++)
+                if (_pawns[i].IsPerson) _pawns[i].RollStartingSkills();
+        }
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------
 
@@ -236,6 +575,29 @@ namespace Odyssey.Sim.Pawns
                 // and a figure that swings an axe while walking is worse than one that glides.
                 int workFocus = pawn.Driver != null ? pawn.Driver.WorkFocus : -1;
 
+                // Sitting by a fire, and which fire: the figure faces it (design 31 §18d). The
+                // cell rides in WorkCell, which is otherwise the pawn's own cell when idle.
+                bool seated = pawn.CurrentJob != null && pawn.CurrentJob.Seated;
+                CellRef faces = workFocus >= 0 ? size.FromIndex(workFocus)
+                    : seated ? size.FromIndex(pawn.CurrentJob!.DestCell)
+                    : cell;
+
+                // What the pawn is and what state it is in (design 33 §5): the byte that replaced
+                // every "kind is not 0, so an animal" in the interface. A report, derived here
+                // from state hashed where it lives.
+                PawnFlags flags = PawnFlags.None;
+                if (pawn.IsPerson) flags |= PawnFlags.Person;
+                if (pawn.IsHostile) flags |= PawnFlags.Hostile;
+                if (pawn.Drafted) flags |= PawnFlags.Drafted;
+                if (pawn.Downed) flags |= PawnFlags.Downed;
+                if (pawn.StunnedAt(world.CurrentTick)) flags |= PawnFlags.Stunned;
+                if (pawn.KnockedDownAt(world.CurrentTick)) flags |= PawnFlags.KnockedDown;
+                if (pawn.CarriedBy != 0) flags |= PawnFlags.Carried;
+                // Drawn or sheathed (design 33 §8b): a report derived here from saved state, so
+                // it is neither saved nor hashed and no golden can move with it.
+                if (WeaponDraw.IsDrawn(_ctx, pawn, world.CurrentTick))
+                    flags |= PawnFlags.Drawn;
+
                 writer.AddPawn(new PawnView(
                     pawn.Id,
                     cell,
@@ -246,12 +608,73 @@ namespace Odyssey.Sim.Pawns
                     nextCell,
                     movePercent,
                     workFocus >= 0,
-                    workFocus >= 0 ? size.FromIndex(workFocus) : cell,
+                    faces,
                     pawn.Gesture,
                     pawn.GestureSerial,
                     pawn.Asleep,
                     movePerMille,
-                    moveDeltaPerMille));
+                    moveDeltaPerMille,
+                    pawn.Kind,
+                    flags,
+                    seated,
+                    // A jump falling short lands a layer below the bank it left (design 46 §6).
+                    pawn.JumpLanding >= 0 && pawn.JumpLanding / size.LayerStride != pawn.Cell / size.LayerStride));
+
+                // The fight (design 33 §5), sparse, and for animals as much as people: the health
+                // bar is drawn over the hurt, the downed and the drafted, and a hog can be all
+                // three but the last. A colony nobody has hurt publishes no hit points — the
+                // presence of hp is what says a bar is owed.
+                //
+                // The pool goes out for every person, hurt or whole, because the Health tab says
+                // "x / 100" for a colonist nobody has touched; an absent hp.max would leave it
+                // nothing to divide by. An absent hp with a published hp.max reads as whole. An
+                // animal has no Health tab, so its pool goes out only beside its hit points.
+                bool hurt = pawn.HpMilli < pawn.HpMaxMilli || pawn.Downed || pawn.Drafted;
+                if (hurt) writer.AddPawnAspect(pawn.Id, CombatAspects.Hp, pawn.HpMilli);
+                if (hurt || pawn.IsPerson) writer.AddPawnAspect(pawn.Id, CombatAspects.HpMax, pawn.HpMaxMilli);
+                // Whom the player sent her at, and whom she is carrying (design 33 §18b): two
+                // meanings of the one saved target, published apart, so the ring can mean an order
+                // without asking the job. A fight she started herself publishes neither.
+                int orderTarget = OrderTargetOf(pawn);
+                if (orderTarget != 0) writer.AddPawnAspect(pawn.Id, CombatAspects.OrderTarget, orderTarget);
+                int patient = RescuePatientOf(pawn);
+                if (patient != 0) writer.AddPawnAspect(pawn.Id, CombatAspects.RescuePatient, patient);
+                // The response (design 33 §18c), at anything but the default.
+                if (pawn.Response != HostilityResponse.FightBack)
+                    writer.AddPawnAspect(pawn.Id, CombatAspects.Response, (int)pawn.Response);
+                // Crouched behind cover (design 53 §8a), derived here and never kept.
+                int crouch = CoverCrouchOf(pawn);
+                if (crouch > 0) writer.AddPawnAspect(pawn.Id, CombatAspects.CoverCrouch, crouch);
+                // Where she may work (design 43 §4a), at anything but the default.
+                if (pawn.Area != PawnArea.Anywhere)
+                    writer.AddPawnAspect(pawn.Id, AreaAspects.Area, (int)pawn.Area);
+                // Lying where she fell with no bed to be carried to (design 33 §11d): why nobody
+                // comes. Asked only of the downed, so a colony nobody has hurt pays one flag.
+                if (pawn.Downed && RescueRules.NeedsRescue(pawn, _ctx) && RescueRules.BedFor(pawn, pawn, _ctx) < 0)
+                    writer.AddPawnAspect(pawn.Id, CombatAspects.RescueNoBed, 1);
+                // The body (design 43 §9), sparse: a pawn with nothing on its ledger publishes
+                // nothing new, so a healthy colony's rows did not move.
+                if (pawn.HasHealthState) HealthAspects.Publish(writer, pawn, _ctx.Content.DayTicks);
+                if (pawn.EquippedItem != 0)
+                {
+                    var weapon = _ctx.Items.Get(new ThingId(pawn.EquippedItem));
+                    if (weapon != null && !weapon.Despawned)
+                        writer.AddPawnAspect(pawn.Id, CombatAspects.Weapon, weapon.DefIndex);
+                        if (weapon.Quality != 0) writer.AddPawnAspect(pawn.Id, CombatAspects.WeaponQuality, weapon.Quality);
+                }
+
+                // An animal publishes its kind and its pace and nothing else of what follows
+                // (design 29 §2): it has no skills, no work, no schedule, no name and nothing in
+                // its arms. The pace goes out because the figure's gait speed is read off it.
+                if (!pawn.IsPerson)
+                {
+                    writer.AddPawnAspect(pawn.Id, RateAspects.Move, pawn.MoveRatePerMille());
+                    // Sheltering from the rain (design 43 §6a), sparse: read off the job it is
+                    // running and the sky, so the activity line can say so without a job def.
+                    if (AnimalShelterThinkNode.IsSheltering(pawn, _ctx))
+                        writer.AddPawnAspect(pawn.Id, AnimalShelterThinkNode.Sheltering, 1);
+                    continue;
+                }
 
                 // Skills go out as pawn aspects rather than as fields on the view, which is what
                 // that mechanism is for: nothing in Sim.Contracts had to learn that skills exist.
@@ -316,6 +739,27 @@ namespace Odyssey.Sim.Pawns
                 // colonist's pace wants to be able to ask it of an idle one.
                 writer.AddPawnAspect(pawn.Id, RateAspects.Move, pawn.MoveRatePerMille());
 
+                // And what that pace is a product of (design 17 §5a), so the pane can say why:
+                // the very methods MoveRatePerMille multiplies, asked again rather than derived a
+                // second way. The rolled pace always; the rest only while they cost her something,
+                // so a dry, fed, undrafted colonist pays one row for all of it.
+                writer.AddPawnAspect(pawn.Id, RateAspects.PaceRolled, pawn.InnatePacePerMille());
+                int condition = pawn.ConditionPerMille();
+                if (condition != Rates.Scale) writer.AddPawnAspect(pawn.Id, RateAspects.PaceCondition, condition);
+                int weather = pawn.WeatherPerMille();
+                if (weather != Rates.Scale) writer.AddPawnAspect(pawn.Id, RateAspects.PaceWeather, weather);
+                int urgency = pawn.UrgencyPerMille();
+                if (urgency != Rates.Scale) writer.AddPawnAspect(pawn.Id, RateAspects.PaceUrgency, urgency);
+
+                // The draft (design 33 §2e), sparse: a colony nobody drafts publishes nothing
+                // new. The order cell only while an order is being walked: a drafted move, or a
+                // weapon fetched from the context menu, drafted or not (§7a) — the board draws the
+                // same order line to both. Straight after the drafted row, which is what lets the
+                // interface attach one to the other without a search.
+                if (pawn.Drafted) writer.AddPawnAspect(pawn.Id, CombatAspects.Drafted, 1);
+                int orderCell = OrderCellOf(pawn);
+                if (orderCell >= 0) writer.AddPawnAspect(pawn.Id, CombatAspects.OrderCell, orderCell);
+
                 // What she has in her arms (design 24 §5b). Two rows, and only while there is
                 // something to publish — a carried thing has no cell, so it is delisted from the
                 // things below and this is the only channel by which anything can know it still
@@ -341,9 +785,120 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < items.Count; i++)
             {
                 var item = items[i];
-                if (item.Despawned || item.Cell < 0) continue;
-                writer.AddThing(new ThingView(item.Id, size.FromIndex(item.Cell), item.DefIndex, 0, item.Stack));
+                if (item.Despawned) continue;
+
+                if (item.Cell >= 0)
+                {
+                    writer.AddThing(new ThingView(item.Id, size.FromIndex(item.Cell), item.DefIndex, 0, item.Stack,
+                        quality: item.Quality));
+                    continue;
+                }
+
+                // In a store: published at the store's cell, carrying the store's id. A thing in a
+                // pair of hands is still skipped — it is drawn by the carrier, through the carry
+                // aspects above.
+                if (item.ContainerId == 0) continue;
+
+                int where = _ctx.WhereIs(item);
+                if (where < 0) continue;
+
+                // The thing's place in its store's ordered contents. A drawing position and
+                // nothing else — nothing in the simulation reads it back, and a store re-packs when
+                // something leaves it.
+                //
+                // **The def cannot stand in for it**, which was tried: a store holds several stacks
+                // of one kind, so eight stacks of wood would all draw in the same place. The
+                // contents index is the only number here that never collides.
+                IReadOnlyList<int> holds = _ctx.Items.ContentsOf(item.ContainerId);
+                int slot = 0;
+                for (int h = 0; h < holds.Count; h++)
+                {
+                    if (holds[h] != i) continue;
+                    slot = h;
+                    break;
+                }
+
+                writer.AddThing(new ThingView(item.Id, size.FromIndex(where), item.DefIndex, 0,
+                    item.Stack, item.ContainerId, (byte)slot, item.Quality));
             }
+        }
+
+        /// <summary>
+        /// Where the pawn is walking under the player's orders, or -1 (design 33 §2e, §7a): a
+        /// drafted colonist's move, or a weapon she was sent for — the only equip there is comes
+        /// from an order, drafted or not. An ordered attack on a pawn is marked on the pawn, not a
+        /// cell (<see cref="CombatAspects.OrderTarget"/>, the ring); an attack on a building to the cell
+        /// of it she strikes (design 33 §13i).
+        /// </summary>
+        static int OrderCellOf(Pawn pawn)
+        {
+            Job? job = pawn.CurrentJob;
+            if (job == null) return -1;
+            if (job.DefIndex == JobIndex.Goto && pawn.Drafted) return job.TargetCell;
+            if (job.DefIndex == JobIndex.Equip && job.PlayerForced) return job.TargetCell;
+            // A building has no pawn id to draw a line to, so it rides the order cell (design 33
+            // §5d, §13i): the cell of it she strikes at.
+            if (CombatJobs.IsAttack(job.DefIndex) && job.PlayerForced && pawn.CombatTarget == 0) return job.TargetCell;
+            return -1;
+        }
+
+        /// <summary>
+        /// The pawn the player ordered this one to attack, or 0 (design 33 §18b): a forced
+        /// <c>Job_AttackMelee</c> on a pawn — <c>OrderAttack</c>, and the knockback's re-issue of
+        /// it, which stays forced (§9b). <b>The one owner of "is this fight an order"</b>, which is
+        /// what the lock-on ring means. The hold's blow, fighting back, a drafted join (§15) and a
+        /// Defend join (§18) are unforced, and answer 0; so does a building, which has no pawn id
+        /// and rides the order cell (<see cref="OrderCellOf"/>).
+        /// </summary>
+        readonly CoverReport _crouchCover = new CoverReport();
+
+        /// <summary>
+        /// Is she crouched behind cover (design 53 §8a), and how well covered: a person standing
+        /// still in a ranged attack whose cover from her target is at least the combat Def's
+        /// <c>coverCrouchPerMille</c> with a low piece among it; or drafted, standing still with no
+        /// target, beside a piece of low cover — the most any one neighbour gives. Nought for
+        /// anything else. A pose only, published and never kept.
+        /// </summary>
+        public int CoverCrouchOf(Pawn pawn)
+        {
+            if (!pawn.IsPerson || pawn.Downed || pawn.CarriedBy != 0 || pawn.HasPath || pawn.PathPending) return 0;
+            Job? job = pawn.CurrentJob;
+            if (job != null && job.DefIndex == JobIndex.AttackRanged && pawn.CombatTarget != 0)
+            {
+                Pawn? target = Get(new PawnId(pawn.CombatTarget));
+                if (target == null) return 0;
+                int cover = Cover.Evaluate(_ctx, target.Cell, pawn.Cell, _crouchCover);
+                return cover >= _ctx.Content.Combat.coverCrouchPerMille && _crouchCover.HasLow ? cover : 0;
+            }
+            if (!pawn.Drafted || pawn.CombatTarget != 0) return 0;
+
+            GridSize size = _ctx.Size;
+            CellRef at = size.FromIndex(pawn.Cell);
+            int best = 0;
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if ((dx == 0 && dz == 0) || !size.Contains(at.X + dx, at.Z + dz, at.Y)) continue;
+                int value = Cover.BaseAt(_ctx, size.Index(at.X + dx, at.Z + dz, at.Y), out bool tall);
+                if (!tall && value > best) best = value;
+            }
+            return best;
+        }
+
+        public static int OrderTargetOf(Pawn pawn)
+        {
+            Job? job = pawn.CurrentJob;
+            return job != null && CombatJobs.IsAttack(job.DefIndex) && job.PlayerForced ? pawn.CombatTarget : 0;
+        }
+
+        /// <summary>
+        /// The downed colonist this one is rescuing, ordered or of her own accord, or 0 (design 33
+        /// §11, §18b): presentation's carrier lookup reads it.
+        /// </summary>
+        public static int RescuePatientOf(Pawn pawn)
+        {
+            Job? job = pawn.CurrentJob;
+            return job != null && job.DefIndex == JobIndex.Rescue ? pawn.CombatTarget : 0;
         }
 
         // ---- saving ------------------------------------------------------------------------
@@ -432,6 +987,17 @@ namespace Odyssey.Sim.Pawns
                 // where an older reader stops rather than where it would shift every read after
                 // it. Format 6, see WorldSave's version history.
                 writer.Write(pawn.StarvationSeverity);
+
+                // And last again, for the same reason one field later (design 28 §9): format 8
+                // ends at the severity above, and the temperature bar is appended where an
+                // older reader stops rather than where it would shift nothing and mean it.
+                writer.Write(pawn.TemperatureSeverity);
+
+                // The ambient the colonist last felt, beside the bar it feeds. It is a sample,
+                // not a derivation — the cell and the room may both have moved since — and for
+                // up to an interval after a load the work rate reads it, so a file that left it
+                // out diverged from its own game (design 28 §12, F8). Format 9 with the bar.
+                writer.Write(pawn.AmbientTempC);
             }
         }
 
@@ -448,6 +1014,7 @@ namespace Odyssey.Sim.Pawns
             {
                 var pawn = new Pawn(new PawnId(reader.ReadInt()), reader.ReadInt(), _ctx.Content);
                 pawn.DriverPool = BuildDrivers();
+                pawn.Context = _ctx;
 
                 int needCount = reader.ReadInt();
                 for (int n = 0; n < needCount; n++)
@@ -547,6 +1114,14 @@ namespace Odyssey.Sim.Pawns
                 // colonist from one had never been starving by a definition that did not exist.
                 if (reader.FormatVersion >= 6)
                     pawn.StarvationSeverity = reader.ReadInt();
+
+                // And last again, from format 9 on (design 28 §9): a colonist from an older
+                // file had never been cold by a definition that did not exist.
+                if (reader.FormatVersion >= 9)
+                {
+                    pawn.TemperatureSeverity = reader.ReadInt();
+                    pawn.AmbientTempC = reader.ReadInt();
+                }
 
                 _byId[pawn.Id.Value] = _pawns.Count;
                 _pawns.Add(pawn);

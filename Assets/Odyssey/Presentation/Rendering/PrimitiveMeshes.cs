@@ -86,5 +86,80 @@ namespace Odyssey.Presentation.Rendering
             mesh.UploadMeshData(markNoLongerReadable: false);
             return mesh;
         }
+
+        static Mesh? _unitRing;
+
+        /// <summary>
+        /// A flat ring on the ground plane, outer radius 1 m, facing up: the lock-on ring under an
+        /// attack order's target (design 33 §7b). Scaled in x and z by the placement to the
+        /// target's footprint, so the band thickens with the ring as it snaps in — which reads as
+        /// the ring arriving rather than as a line changing weight.
+        ///
+        /// <para>The vertex layout and the winding are <see cref="Odyssey.Hud.LockOnRing"/>'s, so
+        /// the fast tier checks it faces up (<c>LockOnRingTests.TheRingFacesUp</c>) and this only
+        /// copies it into a mesh.</para>
+        /// </summary>
+        public static Mesh UnitRing => _unitRing != null ? _unitRing : (_unitRing = BuildUnitRing());
+
+        static Mesh BuildUnitRing()
+        {
+            int segments = Odyssey.Hud.LockOnRing.Segments;
+            var vertices = new Vector3[segments * 2];
+            var normals = new Vector3[segments * 2];
+            var uvs = new Vector2[segments * 2];
+
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                Odyssey.Hud.LockOnRing.RingVertex(i, segments, out float x, out float z);
+                vertices[i] = new Vector3(x, 0f, z);
+                normals[i] = Vector3.up;
+                uvs[i] = new Vector2(x * 0.5f + 0.5f, z * 0.5f + 0.5f);
+            }
+
+            var mesh = new Mesh { name = "Odyssey/UnitRing" };
+            mesh.vertices = vertices;
+            mesh.normals = normals;
+            mesh.uv = uvs;
+            mesh.triangles = Odyssey.Hud.LockOnRing.RingTriangles(segments);
+            mesh.RecalculateBounds();
+            mesh.UploadMeshData(markNoLongerReadable: false);
+            return mesh;
+        }
+
+        static readonly Mesh?[] _blood = new Mesh?[3];
+
+        /// <summary>
+        /// A blood mark lying flat on the ground (design 33 §10a): facing up, inside a unit radius,
+        /// +x the way the blow went. The outline is <see cref="Odyssey.Hud.BloodShapes"/>'s, so the
+        /// fast tier checks it faces up and fits (<c>BloodShapesTests</c>) and this only copies it
+        /// into a mesh, once per shape.
+        /// </summary>
+        public static Mesh Blood(Odyssey.Hud.BloodShape shape)
+        {
+            int slot = (int)shape;
+            Mesh? mesh = _blood[slot];
+            if (mesh != null) return mesh;
+
+            Odyssey.Hud.BloodShapes.Build(shape, out float[] xs, out float[] zs, out int[] triangles);
+            var vertices = new Vector3[xs.Length];
+            var normals = new Vector3[xs.Length];
+            var uvs = new Vector2[xs.Length];
+            for (int i = 0; i < xs.Length; i++)
+            {
+                vertices[i] = new Vector3(xs[i], 0f, zs[i]);
+                normals[i] = Vector3.up;
+                uvs[i] = new Vector2(xs[i] * 0.5f + 0.5f, zs[i] * 0.5f + 0.5f);
+            }
+
+            mesh = new Mesh { name = "Odyssey/Blood/" + shape };
+            mesh.vertices = vertices;
+            mesh.normals = normals;
+            mesh.uv = uvs;
+            mesh.triangles = triangles;
+            mesh.RecalculateBounds();
+            mesh.UploadMeshData(markNoLongerReadable: false);
+            _blood[slot] = mesh;
+            return mesh;
+        }
     }
 }

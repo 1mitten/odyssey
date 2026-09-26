@@ -16,6 +16,13 @@ namespace Odyssey.Sim.Pathing
 
         /// <summary>A missing floor. One-way, downward, and excluded from districts.</summary>
         Fall = 2,
+
+        /// <summary>
+        /// A jump over a one-cell stream, bank to bank on one layer (design 46 §5). Not a
+        /// <see cref="Portal"/>, although it is built like a hop: the layer-change estimate counts
+        /// portals as ways between layers, and a jump is not one.
+        /// </summary>
+        Jump = 3,
     }
 
     /// <summary>
@@ -151,6 +158,7 @@ namespace Odyssey.Sim.Pathing
         readonly Dictionary<long, int> _pairScratch = new Dictionary<long, int>();
         readonly Dictionary<long, int> _fallScratch = new Dictionary<long, int>();
         readonly Dictionary<long, int> _hopScratch = new Dictionary<long, int>();
+        readonly Dictionary<long, int> _jumpScratch = new Dictionary<long, int>();
         int[] _bfsQueue = new int[64];
 
         /// <summary>Bumped whenever the graph changed, so cached corridors can be invalidated.</summary>
@@ -612,6 +620,7 @@ namespace Odyssey.Sim.Pathing
             _pairScratch.Clear();
             _fallScratch.Clear();
             _hopScratch.Clear();
+            _jumpScratch.Clear();
             if (zone < BlockCount) BuildInteriorZone(zone);
             else if (zone < 2 * BlockCount) BuildEdgeZone(zone - BlockCount, 1);
             else if (zone < 3 * BlockCount) BuildEdgeZone(zone - 2 * BlockCount, Size.SizeX);
@@ -642,8 +651,52 @@ namespace Odyssey.Sim.Pathing
                     // Hops are not gated on the region kind above: the test is on both ends and
                     // lives in TryHopEdge, because the cell above may be in any region at all.
                     TryHopEdges(block, c, x, z, y);
+
+                    // Jumps over a one-cell stream (design 46 §5): +x and +z only, so each pair
+                    // is built once, by the block holding the near end — and bounded by the board
+                    // rather than the block, so a jump may reach into the next one. Every cell the
+                    // rule reads is within a cell of the gap, which is why the dirty radius needs
+                    // no widening: see the design's §5 and the randomised-edit rebuild test.
+                    TryJumpEdges(block, c, x, z);
                 }
             }
+        }
+
+        void TryJumpEdges(int zone, int c, int x, int z)
+        {
+            if ((Grid.Flags[c] & NavFlags.Walkable) == 0) return;
+            if (x + 2 < Size.SizeX) TryJumpEdge(zone, c, c + 2);
+            if (z + 2 < Size.SizeZ) TryJumpEdge(zone, c, c + 2 * Size.SizeX);
+        }
+
+        void TryJumpEdge(int zone, int from, int to)
+        {
+            // The geometry and the ground, asked of the person's mode; the link then carries the
+            // mask of everyone the rule admits. The rule reads no mode but the animal test and the
+            // doors, and a jump is never from or to a door: both ends stand on solid ground.
+            if (!IsJumpAcross(from, to, TraverseMode.Colonist)) return;
+
+            int ra = _cellRegion[from];
+            int rb = _cellRegion[to];
+            if (ra == NoRegion || rb == NoRegion || ra == rb) return;
+            if (_regionKind[ra] == RegionKind.Impassable || _regionKind[rb] == RegionKind.Impassable) return;
+
+            long key = ((long)ra << 32) | (uint)rb;
+            if (_jumpScratch.ContainsKey(key)) return;
+            _jumpScratch[key] = 1;
+
+            int id = AllocLink(zone);
+            _linkA[id] = ra;
+            _linkB[id] = rb;
+            _linkKind[id] = LinkKind.Jump;
+            _linkCellA[id] = from;
+            _linkCellB[id] = to;
+            // The same price the cell search plans with and the mover charges. See JumpCost.
+            _linkCostAB[id] = JumpCost();
+            _linkCostBA[id] = JumpCost();
+            _linkOneWay[id] = false;
+            _linkSpan[id] = 1;
+            _linkMode[id] = JumpMask;
         }
 
         void BuildEdgeZone(int block, int delta)
@@ -711,7 +764,12 @@ namespace Odyssey.Sim.Pathing
             _pairScratch[key] = id;
         }
 
-        int StepCost(int targetCell, bool diagonal = false)
+        /// <summary>
+        /// What the region graph charges for stepping into a cell. Public so that a test can hold
+        /// it against <see cref="NavGrid.EnterCost"/>, which is what the mover charges for the
+        /// same step: the two are mirrors and a disagreement between them fails silently.
+        /// </summary>
+        public int StepCost(int targetCell, bool diagonal = false)
         {
             NavFlags f = Grid.Flags[targetCell];
             int baseCost = diagonal ? MoveCost.Diagonal : MoveCost.Orthogonal;
@@ -729,6 +787,23 @@ namespace Odyssey.Sim.Pathing
                 int hazard = MoveCost.HazardPenalty;
                 if (diagonal) hazard = (hazard * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
                 cost += hazard;
+            }
+            // The mirror of NavGrid.EnterCost's own site clause. The two must agree or the
+            // abstract search prices a route the mover then walks at a different cost, which is
+            // the failure HopPriceHasOneOwnerTests exists to catch for the hop;
+            // SiteDetourHasOneOwnerTests does the same for this.
+            if ((f & NavFlags.BuildSite) != 0)
+            {
+                int site = MoveCost.SiteDetour;
+                if (diagonal) site = (site * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
+                cost += site;
+            }
+            // The mirror of NavGrid.EnterCost's crossing clause (design 53 §4).
+            if ((f & NavFlags.PassThrough) != 0)
+            {
+                int cross = Grid.PassCostAt(targetCell);
+                if (diagonal) cross = (cross * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
+                cost += cross;
             }
             return cost;
         }
@@ -818,8 +893,24 @@ namespace Odyssey.Sim.Pathing
             _linkCostBA[id] = HopCost(up: false);
             _linkOneWay[id] = false;
             _linkSpan[id] = 1;
-            _linkMode[id] = TraverseModes.AllMask;
+            _linkMode[id] = HopMask(lower);
         }
+
+        /// <summary>
+        /// Who may take a hop whose lower end is this cell. Everyone, where the lower cell is the
+        /// foot of a terrace step — the ground is drawn as a ramp there, and going up or down it
+        /// is what an animal does. Nobody animal where it is not: a mined face, a rock a person
+        /// scrambles on to, the edge of a cut (owner, 2026-09-22: <i>"saw a pig climb a
+        /// stone/mine - guard them from climb up rocks/mines"</i>). The cost class is the slope's
+        /// exactly where <c>TerraceFoot</c> says a ramp is drawn, so the rule and the picture
+        /// cannot disagree. One owner for the region link, the step check and the search.
+        /// </summary>
+        public byte HopMask(int lower) =>
+            Grid.CostClass[lower] == Worldgen.Natural.NaturalContent.CostClassSlope
+                ? TraverseModes.AllMask
+                : (byte)(TraverseModes.AllMask & ~TraverseModes.AnimalMask);
+
+        public bool HopAllowed(int lower, TraverseMode mode) => TraverseModes.Allows(HopMask(lower), mode);
 
         void TryFallEdge(int zone, int from, int hole, int y)
         {
@@ -1220,6 +1311,40 @@ namespace Odyssey.Sim.Pathing
             MarkDirty(cell);
         }
 
+        /// <summary>
+        /// Mark, or unmark, a cell as holding a building that is ordered and not yet standing.
+        ///
+        /// <para>Registration rather than derivation, exactly as <see cref="SetDoor"/> is: the
+        /// nav grid is built from the <c>CellGrid</c> and a site lives in the construction grid,
+        /// which the nav layer does not know about and should not learn. The flag is sticky, so
+        /// a rebuild of the cell's other flags preserves it, and
+        /// <c>ConstructionGrid</c> is the only caller.</para>
+        /// </summary>
+        public void SetBuildSite(int cell, bool site)
+        {
+            bool already = (Grid.Flags[cell] & NavFlags.BuildSite) != 0;
+            if (already == site) return;
+            if (site) Grid.Flags[cell] |= NavFlags.BuildSite;
+            else Grid.Flags[cell] &= ~NavFlags.BuildSite;
+            MarkDirty(cell);
+        }
+
+        /// <summary>
+        /// Mark a cell as holding something crossed but never stood on (design 53 §5), at
+        /// <paramref name="crossCost"/> on top of the step; nought unmarks it. Registration, like
+        /// <see cref="SetBuildSite"/>: the construction grid is the one caller.
+        /// </summary>
+        public void SetPassThrough(int cell, int crossCost)
+        {
+            bool on = crossCost > 0;
+            bool already = (Grid.Flags[cell] & NavFlags.PassThrough) != 0;
+            if (already == on && Grid.PassCostAt(cell) == (on ? crossCost : 0)) return;
+            if (on) Grid.Flags[cell] |= NavFlags.PassThrough;
+            else Grid.Flags[cell] &= ~NavFlags.PassThrough;
+            Grid.SetPassCost(cell, on ? crossCost : 0);
+            MarkDirty(cell);
+        }
+
         public void SetHazard(int cell, bool hazard)
         {
             if (hazard) Grid.Flags[cell] |= NavFlags.Hazard;
@@ -1373,13 +1498,20 @@ namespace Odyssey.Sim.Pathing
                     return Grid.CanWalkInto(c1, mode) && Grid.CanWalkInto(c2, mode);
                 }
 
+                // A jump over a one-cell stream (design 46). Without this case the mover drops
+                // every path the planner makes through one.
+                if ((dx == 2 && dz == 0) || (dx == 0 && dz == 2))
+                    return IsJumpAcross(from, to, mode);
+
                 return false;
             }
 
             if (IsHop(a, b))
             {
                 int upper = a.Y > b.Y ? from : to;
-                if (UpperEndIsABlockTop(upper) && Grid.CanEnter(from, mode) && Grid.CanWalkInto(to, mode))
+                int lower = a.Y > b.Y ? to : from;
+                if (UpperEndIsABlockTop(upper) && HopAllowed(lower, mode)
+                    && Grid.CanEnter(from, mode) && Grid.CanWalkInto(to, mode))
                     return true;
             }
 
@@ -1427,6 +1559,76 @@ namespace Odyssey.Sim.Pathing
             int below = upper - Size.LayerStride;
             return below >= 0 && _cells.IsSolidTerrain(below);
         }
+
+        /// <summary>
+        /// The shape of a jump: two cells straight across on one layer (design 46 §4). Pure
+        /// geometry, like <see cref="IsHop"/>; <see cref="IsJumpAcross"/> is the rule.
+        /// </summary>
+        public static bool IsJump(CellRef a, CellRef b)
+        {
+            if (a.Y != b.Y) return false;
+            int dx = Math.Abs(a.X - b.X), dz = Math.Abs(a.Z - b.Z);
+            return (dx == 2 && dz == 0) || (dx == 0 && dz == 2);
+        }
+
+        /// <summary>The cell a jump passes over. Exact for a straight two-cell step on one layer.</summary>
+        public static int JumpMiddle(int from, int to) => from + (to - from) / 2;
+
+        /// <summary>
+        /// Who may jump: people. An animal that cannot wade a stream is not given a second way
+        /// across it (design 46 §2).
+        /// </summary>
+        public const byte JumpMask = (byte)(TraverseModes.AllMask & ~TraverseModes.AnimalMask);
+
+        /// <summary>
+        /// May this mode jump from <paramref name="from"/> to <paramref name="to"/> across the
+        /// stream between them? <b>The one owner of the rule</b> (design 46 §4): the cell search,
+        /// the region graph and the per-tick legality check all ask it, so they cannot disagree.
+        ///
+        /// <para>Both ends stand on solid terrain — bank to bank, never a built floor to a built
+        /// floor. The cell between is open air, so a floor poured over the water or anything
+        /// built in the gap takes the jump away. And the cell under the gap is walkable shallow
+        /// water, which is what makes this a stream and not a trench, and is also where a jump
+        /// that falls short has to land: deep water is impassable, so it is never jumped.</para>
+        ///
+        /// <para>A three-wide stream fails at <paramref name="to"/>, which is over water and has
+        /// no floor; a bank a layer higher fails there too, being solid.</para>
+        /// </summary>
+        public bool IsJumpAcross(int from, int to, TraverseMode mode)
+        {
+            if (!TraverseModes.Allows(JumpMask, mode)) return false;
+
+            // Cheapest first: the cell search asks this four times for every cell it expands, and
+            // on almost every one of them the gap is ground somebody could walk on. The midpoint
+            // is an index between the two, so it is safe to read before the shape is known.
+            int gap = JumpMiddle(from, to);
+            if (!Grid.IsAir(gap)) return false;
+            if (!IsWadeable(gap - Size.LayerStride)) return false;
+
+            if (!IsJump(Size.FromIndex(from), Size.FromIndex(to))) return false;
+            if (!Grid.CanEnter(from, mode) || !Grid.CanWalkInto(to, mode)) return false;
+            return UpperEndIsABlockTop(from) && UpperEndIsABlockTop(to);
+        }
+
+        /// <summary>A cell a person can stand in that is shallow water: where a short jump lands.</summary>
+        bool IsWadeable(int cell) =>
+            cell >= 0
+            && (Grid.Flags[cell] & NavFlags.Walkable) != 0
+            && Grid.CostClass[cell] == Worldgen.Natural.NaturalContent.CostClassShallowWater;
+
+        /// <summary>
+        /// Where a jump from <paramref name="from"/> to <paramref name="to"/> lands if it falls
+        /// short: the water under the gap (design 46 §6).
+        /// </summary>
+        public int ShortLanding(int from, int to) => JumpMiddle(from, to) - Size.LayerStride;
+
+        /// <summary>
+        /// What a jump costs. <b>The one owner of the price</b>, exactly as <see cref="HopCost(bool)"/>
+        /// is the hop's: the cell search plans with it, the region graph links with it and the
+        /// mover charges it, and <c>HopPriceHasOneOwnerTests</c> fails on any other file that
+        /// names <see cref="MoveCost.Jump"/>.
+        /// </summary>
+        public static int JumpCost() => MoveCost.Jump;
 
         /// <summary>
         /// What a hop costs, in the direction it is taken. **This is the only place the price of

@@ -125,6 +125,19 @@ namespace Odyssey.Hud
         /// glass laid on the board rather than as a hole cut in it.</summary>
         public static readonly HudColour PanelFill = new HudColour(12, 16, 20, 1f);
 
+        /// <summary>
+        /// The inspect pane's fill: the panel colour at 85% (owner, 2026-09-25: the colonist info
+        /// pane at 85% opacity). <b>The one exception to the opaque panel</b> — the roster cards and
+        /// every other panel stay at <see cref="PanelFill"/>. The pane is one element whatever is
+        /// selected, so a tile, a store or an animal's pane is the same 85%.
+        ///
+        /// <para><b>What it costs.</b> Over pure white terrain the primary ink reads 11.2:1 and the
+        /// meta ink 6.5:1, both above body minimum; the dim ink reads 4.44:1, a hair under it, and
+        /// passes over anything darker than white (4.74:1 over a light grey). <c>HudLayoutTests</c>
+        /// holds all three numbers.</para>
+        /// </summary>
+        public static readonly HudColour InspectFill = new HudColour(12, 16, 20, 0.85f);
+
         /// <summary>The command bar's fill: the same colour, a little more opaque, because the
         /// bar is always on screen and always carries text.</summary>
         public static readonly HudColour BarFill = new HudColour(12, 16, 20, 0.90f);
@@ -168,6 +181,36 @@ namespace Odyssey.Hud
         public static readonly HudColour Good = new HudColour(0x7f, 0xc9, 0x8c);
         public static readonly HudColour Info = new HudColour(0x8f, 0xd0, 0xe3);
 
+        /// <summary>The settings window's Graphics hue and the title screen's Settings button
+        /// (designs 39 and 40): one colour for the one destination.</summary>
+        public static readonly HudColour Violet = new HudColour(0xb9, 0xa8, 0xe0);
+
+        /// <summary>The title screen's dock (design 40): the panel fill, translucent, so the
+        /// starfield carries on faintly behind it rather than stopping at a wall (owner,
+        /// 2026-09-24: "it looks solid").</summary>
+        public static readonly HudColour DockFill = new HudColour(12, 16, 20, 0.72f);
+
+        // ------------------------------------------------------------------ controls (design 39)
+
+        /// <summary>The border of a control that can be pressed: a segment, a select, a key chip,
+        /// a switch that is off. A step brighter than <see cref="PanelBorder"/>, so a control
+        /// reads as a thing to press rather than as a rule.</summary>
+        public static readonly HudColour ControlBorder = new HudColour(255, 255, 255, 0.26f);
+
+        /// <summary>The rule under a settings row: quieter than a divider, because there are
+        /// many of them and each only says where one row ends.</summary>
+        public static readonly HudColour RowRule = new HudColour(255, 255, 255, 0.07f);
+
+        /// <summary>The track of a switch that is off.</summary>
+        public static readonly HudColour SwitchOffTrack = new HudColour(255, 255, 255, 0.10f);
+
+        /// <summary>The dashed outline of a key slot with nothing bound to it.</summary>
+        public static readonly HudColour EmptySlot = new HudColour(255, 255, 255, 0.22f);
+
+        /// <summary>The wash behind the settings window. Lighter than <see cref="ModalScrim"/>,
+        /// because the window's graphics levers are pulled while watching the board.</summary>
+        public static readonly HudColour SettingsScrim = new HudColour(6, 10, 12, 0.58f);
+
         // ------------------------------------------------------------------ quality
 
         /// <summary>
@@ -195,6 +238,26 @@ namespace Odyssey.Hud
             4 => new HudColour(0x45, 0xc7, 0xb0),  // Uber: teal
             5 => new HudColour(0xb9, 0x8c, 0xe8),  // Epic: purple
             _ => null,                             // Normal, and tier 0 which is never shown
+        };
+
+        /// <summary>
+        /// The colour a temperature is named in, anywhere the interface names one (design 28
+        /// §8): null is comfortable and means "leave it alone", exactly as <see cref="Quality"/>'s
+        /// null is Normal. Cold reuses <see cref="Info"/>'s blue and heat <see cref="Warn"/>'s
+        /// orange, sweltering <see cref="Bad"/>'s red — the same reuse discipline the quality
+        /// tiers follow, and for the same reason: a reading is not an alarm until it is one.
+        ///
+        /// <para>The thresholds are the interface's own approximations of the content's bands
+        /// (the Hud cannot read the simulation's tuning), restated rather than shared — the two
+        /// disagreeing would be a display quibble, not a rules bug, and the day that distinction
+        /// stops holding they belong in the registry beside the labels.</para>
+        /// </summary>
+        public static HudColour? Temperature(int centiC) => centiC switch
+        {
+            > 3_500 => Bad,                               // sweltering
+            > 3_000 => Warn,                              // hot
+            < 1_000 => Info,                              // cold, however deep
+            _ => null,                                    // comfortable, and the work band
         };
 
         /// <summary>The tint laid over a stores row whose stock is falling.</summary>
@@ -423,22 +486,38 @@ namespace Odyssey.Hud
         /// and <c>StorageThemeTests</c> holds every one of the eleven to
         /// <see cref="HudContrast.BodyMinimum"/> over the panel rather than taking the brief's word
         /// for it.</para>
+        ///
+        /// <para><b>Re-tuned for colour-blind players on 2026-09-23</b> (owner: "check this for
+        /// accessibility"). Every contrast was fine — 6.75:1 and up — but under deuteranopia,
+        /// about one man in twenty, Food, Weapons and Materials simulated to within 2 to 3 CIE Lab
+        /// units of one another: one colour. Each family is kept (green, pink, tan, violet, blue,
+        /// rust) and moved at most 12 units, spreading mostly by lightness, so every pair is now at
+        /// least 15 apart under normal vision, protanopia, deuteranopia and tritanopia alike, and
+        /// still 60 channel-points apart as before. <b>Colour is the second cue, never the only
+        /// one</b>: every category also carries its own drawn glyph and its name.
+        /// <c>StorageThemeTests.NoTwoCategoriesLookAlikeToAColourBlindPlayer</c> holds it.</para>
         /// </summary>
         public static readonly HudColour[] ItemCategoryHues =
         {
-            new HudColour(0x7f, 0xb8, 0x5a), // Food
-            // The reds came up too: #d95a6a measured 3.50 and #c85a3f was heading the same way.
-            // Dark saturated reds are the hardest thing to read as a label on a dark panel, and
-            // these are labels. Lightened until both clear the floor and stay clear of each other.
+            new HudColour(0x93, 0xd1, 0x7e), // Food — lighter, so deuteranopia cannot fold it into Materials
             new HudColour(0xf0, 0x86, 0xa8), // Medicine
-            // The brief's tan was #b0793f, 55 channel-points from Weapons' #c85a3f — under the 60
-            // the order hues are already held to, and the two sit three rows apart in a list the
-            // colour exists to make scannable. Pushed yellower; every other pair is well clear.
-            new HudColour(0xc4, 0xa0, 0x5a), // Materials
-            new HudColour(0xbb, 0x94, 0xdd), // Books
-            new HudColour(0x8f, 0xb3, 0xd9), // Items
-            new HudColour(0xe8, 0x8d, 0x66), // Weapons
+            new HudColour(0xc7, 0xa5, 0x4f), // Materials
+            new HudColour(0xba, 0x99, 0xf5), // Books
+            new HudColour(0x75, 0xa3, 0xcb), // Items — deeper, away from Books under protanopia
+            new HudColour(0xc1, 0x73, 0x49), // Weapons — a rust darker than the tan beside it
         };
+
+        /// <summary>
+        /// How strongly a category's heading row is washed with its hue, and a category with
+        /// nothing in it. One owner for the storage pane and the Inventory tab, which draw the same
+        /// heading so the two read as one system (owner, 2026-09-23: "uniform for easy
+        /// identification").
+        /// </summary>
+        public const float ItemCategoryWash = 0.09f;
+        public const float ItemCategoryWashEmpty = 0.045f;
+
+        /// <summary>The hue's strength on the glyph and label of a category with nothing in it.</summary>
+        public const float ItemCategoryEmptyInk = 0.45f;
 
         /// <summary>The rung's hue, or <see cref="TextDim"/> for a rung that does not exist.</summary>
         public static HudColour StoragePriorityHue(int rung) =>
@@ -639,6 +718,7 @@ namespace Odyssey.Hud
         public static HudColour? PinnedActionHue(string key) => key switch
         {
             PaletteTools.Fell => OrderColours.Hue(DesignateTool.Fell),
+            PaletteTools.Harvest => OrderColours.Hue(DesignateTool.Harvest),
             PaletteTools.Mine => OrderColours.Hue(DesignateTool.Mine),
             PaletteTools.Deconstruct => OrderColours.Hue(DesignateTool.Deconstruct),
             PaletteTools.Cancel => OrderColours.Hue(DesignateTool.Cancel),
@@ -646,6 +726,16 @@ namespace Odyssey.Hud
             PaletteTools.Stockpile => OrderColours.Hue(DesignateTool.Stockpile),
             _ => null,
         };
+
+        /// <summary>
+        /// The hue the armed banner wears for an order: a pinned action's own, or — for the one
+        /// order that lives in a category rather than on the strip, taking power lines up — its
+        /// order colour. Kept apart from <see cref="PinnedActionHue"/>, which lights the strip's
+        /// buttons and must answer nothing for a category's chip (design 32 §10).
+        /// </summary>
+        public static HudColour? ArmedOrderHue(string key) =>
+            PinnedActionHue(key)
+            ?? (key == PaletteTools.Unwire ? OrderColours.Hue(DesignateTool.RemoveConduit) : (HudColour?)null);
 
         // ------------------------------------------------------------------ categories
 
@@ -672,6 +762,9 @@ namespace Odyssey.Hud
         {
             // stores
             { "ui.res.meal", HudCategory.Sustenance },
+            { "ui.res.meal.veg", HudCategory.Sustenance },
+            { "ui.res.meal.burnt", HudCategory.Sustenance },
+            { "ui.res.rations", HudCategory.Sustenance },
             { "ui.res.meat", HudCategory.Sustenance },
             { "ui.res.grain", HudCategory.Sustenance },
             { "ui.res.wood", HudCategory.Organic },
@@ -688,6 +781,7 @@ namespace Odyssey.Hud
             { "ui.tab.schedule", HudCategory.Work },
             { "ui.tab.research", HudCategory.Record },
             { "ui.tab.colonists", HudCategory.People },
+            { "ui.tab.assign", HudCategory.People },
             { "ui.tab.animals", HudCategory.People },
             { "ui.tab.wildlife", HudCategory.People },
             { "ui.tab.bills", HudCategory.Work },

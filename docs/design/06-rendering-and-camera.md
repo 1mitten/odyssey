@@ -1257,6 +1257,15 @@ Sight, Audio, Doors, Overlays — stays under 0.02 ms throughout.
   it measures linear. Actors is every pawn without a figure, so it is (N-64) x N — quadratic, and
   it measures quadratic: 147,456 pairs at 384 pawns, each with a `Vector3.Distance`, which at
   about 90 ns a pair is 13 ms against the 13.275 measured.
+- **Confirmed again 2026-09-23, from a sweep that was measuring something else** (PR #168, the
+  modular colonists). `Actors` went 0.027 ms at 64 figures to **17.208 ms at 384**, with the frame at
+  4.04 and 30.35 ms — while draw calls moved 1,125 → 1,152 and the hair-and-beard pass beside it,
+  measured against a control in the same run, cost a flat **0.05 ms at both 64 and 192**. So the
+  growth is neither submission nor the newest per-pawn pass, and the quadratic model above holds at
+  ~117 ns a pair on a busier machine. **The prompt for whoever picks this up is
+  `docs/plans/pf-crowd-scan.md`**, including the reason the fix can be exact: `CrowdFarRadius` is
+  3.0 m, `Proximity` returns zero beyond it, so every pair the scan discards contributes nothing and
+  a 3 m cull is bit-identical.
 
 **The knee the owner saw is the figure ceiling**, not because the ceiling is wrong but because
 crossing it is where the quadratic term starts: below 64 there are no stand-ins and the only crowd
@@ -1273,6 +1282,10 @@ not done: it is the next unit, and the sweep above is its before.
 **At the scale target it is not yet a problem.** Fifty colonists is under the ceiling and the
 whole frame is about 3.5 ms. This is a ceiling on how big a colony may get, discovered four years
 before it binds, and worth fixing because the fix is cheap and provably invisible.
+
+> **Fixed 2026-09-23 — §6c.9 below, and `docs/design/25-pawn-steering.md` §9.** The sweep in this
+> table stands as the before it was taken as, but note it was measured beside two other editors;
+> §9a is the same sweep on a clear machine and is the number to quote.
 
 ### 6c.3 The decoration, measured — the surround is 45 per cent of the meadow and the tufts are 7
 
@@ -1625,6 +1638,13 @@ Both are invisible at 150 fps and neither is a 165 ms freeze. **That is the whol
 the right way round: a chunk two frames late is 13 ms of being slightly wrong; the alternative is a
 sixth of a second of nothing at all.
 
+**Amended 2026-09-25 (design 38 §26).** The budget is milliseconds as well as chunks:
+`MeshBudgetMs`, 2.0 by default, and whichever of it and the count is reached first ends the frame's
+meshing. The ground skin had taken a chunk from the 0.18 ms this section sized eleven on to about
+0.3–0.4 ms, and the thick meadow near the camera to about a millisecond, so eleven had become a
+worst frame of 8.6–12 ms while a whole board drained. A count also charges a slower machine more.
+With both, the worst frame is 2.8–3.8 ms and the board takes 14–21 frames to drain instead of 9–11.
+
 ### The one exception: building a world
 
 On a new game every chunk is never-meshed, and budgeting that would dribble the board in over
@@ -1718,6 +1738,116 @@ fixed and guarded, and the budget is unverified on the hardware it was written f
 `FrameTimeTests` asserts only that a frame is under a 30 Hz tick. The 5 ms budget lives in the
 documents, so **a green PlayMode run says nothing about it** — read the printed numbers, not the
 pass. That has always been true and is not a growing-zones matter.
+
+### 6c.8 One edit re-meshed the whole board, and the seconds that are still unexplained
+
+The owner reported *"about a second or 3 delay when the object appears when it's built, IE door,
+walls etc — sometimes a little glitch and it appears"*. `BuildAppearanceTests` was written to
+measure it in a real player loop rather than reason about the seam, and it found two things.
+
+**The publish seam is innocent.** A wall raised in a live session is in the render mirror on the
+**next tick's publish** — one tick, a few milliseconds — and drawn on the frame after that. The
+tick, the dirty chunk marks, the snapshot contributor and the mesher together cost one tick and one
+frame. **In ticks, not frames**, which cost a red run to learn: the mirror is written by a snapshot
+contributor, so a rig running frames faster than the fixed tick sees the wall arrive several frames
+later without anything being slower. The same commit read 0 frames alone and 13 frames in a full
+PlayMode run, with one tick of delay both times. Nothing there can account for
+seconds, and nothing there has been changed.
+
+**`WorldRenderModel.Version` was one number for the entire board.** Every `ChunkBatch` compared its
+own version against it, so *any* cell changing anywhere invalidated *every* batch, and all 45 drawn
+chunks of the meadow were re-meshed on the next frame. **This is the other half of §6c.6–6c.7 and
+not a duplicate of it**: the budget caps how many chunks may be re-meshed in one frame, and this
+caps how many are invalidated at all. With the budget alone a single wall still dirties 45 chunks
+and spreads them over four frames of stale geometry; with both, it dirties three and they are
+re-meshed inside one frame, well under the budget of eleven. Measured, with the contrast taken inside one
+run, which is the only way a frame number on this machine means anything:
+
+| | Chunks re-meshed by one wall | The frame after the raise | The frames either side of it |
+|---|---|---|---|
+| Before | 45 | **12.53 ms** | 0.68–0.85 ms |
+| After | 3 | **1.73 ms** | 0.38–0.43 ms |
+
+**Measured again with both in** (PlayMode on the merged branch, 2026-09-21): one wall is *in the
+mirror one tick and 12.4 ms after the raise, drawn on the next frame, 3 chunks re-meshed*, and the
+twelve frames following it are flat at 0.33–0.43 ms. The spike is not smaller, it is gone.
+
+The fix is a version *per chunk* (`WorldRenderModel.ChunkVersion`), stamped by `RefreshDirty` on the
+chunks it actually copied, with `RefreshAll` and `Remesh` writing the new version into every entry so
+that "re-mesh everything" is still expressible. `Version` itself stays and still means "something
+changed", which is what `DoorDirector` reads it for.
+
+**What this makes load-bearing.** A global version quietly covered under-marking: a system that
+dirtied too few chunks still got the right picture, because everything was re-meshed anyway. Now
+**a cell edit must dirty every chunk whose mesh depends on it** — which for terrain means the 3×3×3
+neighbourhood, because a face is drawn against what is beside it. `ConstructionGrid` and `MineJob`
+both do (`MarkChunksAround`); the per-cell marks that remain — a felled tree, a crop's stage, a
+zone's tint — are all things drawn inside their own cell. The symptom of getting this wrong is a
+stale face at a chunk boundary that corrects itself the next time anything near it changes.
+
+**The seconds are not explained by this**, and the leading candidate is outside the game: the editor
+compiles shader variants asynchronously (`ProjectSettings/EditorSettings.asset`,
+`m_AsyncShaderCompilation: 1`) and a wall is the first thing of its material a meadow ever draws.
+A batch run cannot reproduce it — `ShaderUtil.allowAsyncCompilation` is false in batch mode, and the
+probe recorded zero frames of compilation — so the next move is the owner flipping that one toggle
+in a real editor session and saying whether the delay becomes a brief hitch.
+
+### 6c.9 The crowd scan, fixed — and what the control says
+
+**2026-09-23.** The O(N squared) above is closed. `PawnCrowdIndex` buckets every pawn's position
+once a frame on a 3 m grid and `PawnPose.Of` asks the neighbourhood instead of the colony; the cull
+is exact, so no drawn position moved and the sidestep the owner judged is untouched. The shape, the
+alternatives and what not to undo are `docs/design/25-pawn-steering.md` §9; the pattern is P12 in
+`docs/bug-patterns.md`, now marked fixed, and the testing lesson that fell out of it is the new P16.
+
+**Two things in the measurement are worth carrying beyond this unit.**
+
+**The control was three-valued, not a bool.** The plan (`docs/plans/pf-crowd-scan.md`) named two
+candidates — hoisting `SteeringCurve.WhereItIsNow` out of the inner loop, and a spatial index — and
+warned against building the second on top of an unmeasured first. Building the index subsumes the
+hoist, so after the fact the two cannot be told apart. `CrowdScan.Cached` exists purely to keep them
+apart in one run: it is the hoist alone. That is the shape to copy whenever an optimisation contains
+a cheaper one.
+
+**And the numbers here were taken on a clear machine, which took three attempts to get.** The first
+queue raced its own EditMode run — a batch run that has printed its results can still be shutting
+down (`docs/lessons.md`) — and the sweep quoted in §6c.2 above was taken beside two other editors.
+The `Actors` figure at 384 moved from 13.3 ms (that sweep) to 15.8 ms (clear machine, unmodified
+code, same commit family). **Neither is a baseline for the other**, and the only reason the two can
+be read together at all is that the per-pair cost they imply — ~117 ns and ~128 ns — agrees.
+
+### 6c.10 The second quadratic in the same pass, and the end of the knee
+
+**2026-09-23, straight after §6c.9.** Fixing the crowd scan left `Actors` still growing as
+`(N - 64) x N` — 43 ns a pair, flat across a five-fold range. It was
+`WorldSnapshot.TryGetPawnAspect`, a linear scan over every published aspect row, called once per
+far-form colonist per frame. A colonist publishes **57 rows a tick** (measured, `AspectScaleTests`),
+so the published set is 57 x colonists and the scan grew with the colony.
+
+A lazy index, built on the first lookup of each published frame, closes it.
+`docs/design/31-aspect-lookup.md` has the decision and the alternatives; the numbers, measured with
+both arms alternated in one run on a clear machine:
+
+| colony | frame, scan | frame, index | `Actors` | `Figures` |
+|---|---|---|---|---|
+| 64 | 3.606 ms | 3.142 ms | 0.025 -> 0.024 | 1.185 -> 0.778 |
+| 192 | 6.189 ms | 3.428 ms | 1.076 -> 0.344 | 2.638 -> 0.754 |
+| 384 | 14.202 ms | **4.107 ms** | 4.587 -> **0.830** | 6.390 -> **0.743** |
+
+**`Figures` is flat at last** — 0.778, 0.754, 0.743 ms at 64, 192 and 384. The figure ceiling pins
+the number of posed figures at 64, but each of them was making a lookup whose cost grew with the
+whole colony, so the pass grew anyway. It is the first time the cap has actually capped anything.
+
+**And the colony sweep has no knee in it.** 2.20 / 2.61 / 3.21 / 3.37 / 3.53 / 3.75 / 4.99 /
+**4.82 ms** at 8 to 384 colonists. The Play report this whole line of work came from was *"it seemed
+to hover 1.7 ms no matter the colony size but then frames dropped after so many colonists"*; what is
+left is the hover. At 384 the frame has gone **27.81 -> 14.99 -> 4.82 ms** across the two units.
+
+**The finding worth carrying is not the fix.** The crowd scan was 3.5x the aspect scan, so while it
+stood the aspect scan looked like a constant and the bend was attributed wholly to the larger term.
+Neither was found by reading code; both were found by splitting the frame and noticing the growth
+had the wrong shape. **After fixing a quadratic, measure the same pass again rather than declaring
+it linear** — `docs/bug-patterns.md` P12.
 
 ## 7. Presentation is a reader
 

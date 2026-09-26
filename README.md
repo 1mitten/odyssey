@@ -1,12 +1,12 @@
 # Odyssey
 
-A prototype **colony sim in the RimWorld mould, in true 3D with discrete vertical layers**, set in a ruined sci-fi city. Unity 6.3 LTS (6000.3.x), URP, C#. The simulation is plain C# — single-threaded, deterministic, and testable with no Unity installed — and the board is a sliceable stack of layers you build up, dig down, and cut the camera through at any depth.
+A prototype **colony sim in the RimWorld mould, in true 3D with discrete vertical layers**, set in a wooded valley on a ruined sci-fi world. Unity 6.3 LTS (6000.3.x), URP, C#. The simulation is plain C# — single-threaded, deterministic, and testable with no Unity installed — and the board is a sliceable stack of layers you build up, dig down, and cut the camera through at any depth.
 
-Odyssey is a work in progress by one owner and a bench of AI coding agents. It is **playable today as an early vertical slice**: a colony of five chops, mines, hauls, builds, eats and sleeps in a wooded valley. What is *not* there yet is listed just as honestly under [Limitations](#honest-limitations). The scale target — 250 × 250 × 40 cells, 50 colonists, 60 FPS at 3× on a 2022 mid-range laptop — is the destination, not the current board.
+Odyssey is a work in progress by one owner and a bench of AI coding agents. It is **playable today**: a colony of three founders chops, mines, hauls, builds, farms, cooks, tends its sick and wounded, defends against raiders, and lives through seasons, weather and the night. What is *not* there yet is listed just as honestly under [Limitations](#honest-limitations). The scale target — 250 × 250 × 40 cells, 50 colonists, 60 FPS at 3× on a 2022 mid-range laptop — is the destination, not the current board.
 
 ## The content wiki
 
-Every named thing in the game — commodities, items, buildings, commands, work types, needs, body parts, alerts, proper nouns and the colonist name pool — with a stable key beside each (658 entries):
+Every named thing in the game — commodities, items, buildings, commands, work types, needs, body parts, alerts, proper nouns and the colonist name pool — with a stable key beside each (924 entries):
 
 - **Browse:** [`docs/wiki/index.md`](docs/wiki/index.md), one page per section.
 - **Searchable single page:** [`docs/wiki/index.html`](docs/wiki/index.html) — open it from disk or host it anywhere; no build step.
@@ -16,40 +16,82 @@ The wiki is **generated** from the design CSVs (`docs/design/icon-keys.csv` and 
 
 ## What is in the game now
 
-Everything below is on `main` and playable.
+Everything below is on `main`. Some of it is fresh enough that the owner has not played it yet — that is called out in `CLAUDE.md`, not hidden here.
 
-**The world.** A 120 × 120 × 16-cell board (cells are 2.5 × 2.5 × 3.0 m) of wooded meadow with a clearing at the start, streams and ponds, 3 m terrace risers, and rock, ore and sealed caverns underground. A ruined-city generator also exists and is kept as a later map type. There is a day/night cycle with golden-hour grading, and water is drawn as bodies with falls, streaks and foam. The **slice camera** cuts the world at any depth: at the surface every layer above is drawn solid; below it, one layer is x-rayed and the rest drawn. Anything drawn solid is clickable; ghosts never are.
+### World
 
-**Colonists.** Five per colony, with needs (food, rest, joy), mood from thoughts, and skills that set how fast they work. They are 61 Synty rigs recoloured by repainting atlas swatches — no modular bodies exist — with appearance rolled per pawn from its own seed, so the person on the setup card is the person who walks around. Portraits are the real character rendered once and cached. They walk (diagonally included), hop up one block, climb ladders, sidestep each other and trees, glance where they look, kneel to *computed* work strokes (no pack contains a work animation), claim beds and sleep lying down, and slow and collapse when starved or sleepless.
+- **A wooded meadow**, 120 × 120 × 16 cells by default (cells are 2.5 × 2.5 × 3.0 m), with a clearing at the start, streams and ponds, 3 m terrace risers, and rock, ore and sealed caverns underground. Small, Large and Huge (240 × 240 × 16) boards are also selectable; a ruined-city generator exists as a later map type.
+- **Trees, bushes and forage**: four tree species that fell and topple, berry bushes you harvest and that regrow, loose stones and mushrooms lying on the ground.
+- **Growing zones**: paint a zone, sow carrots, they grow in the daylight window, harvest and auto-resow.
+- **Weather and seasons**: Clear, Cloudy, Rain and Storm roll through by season, with rain that wets the ground, streaks the screen, patters on roofs and keeps colonists and crops dry or watered depending on cover.
+- **Temperature**: every enclosed room holds its own reading; the seasons and the day's own swing move it, warm air rises through stairwells, and cold can band mood, slow sleep and work, and in the harshest climate turn lethal.
+- **Day/night cycle** with golden-hour grading; **ambient birds** (rook flocks, a buzzard) and **ambient butterflies** (glowing at night) as pure decoration.
+- **The slice camera** cuts the world at any depth: at the surface every layer above is drawn solid; below it, one layer is x-rayed and the rest drawn. A **walls-down** view drops walls to a stump and hides the storeys stacked above the slice, so you can see who is indoors. Anything drawn solid is clickable; ghosts never are.
+- **Water** is drawn as bodies with falls, streaks and foam; a one-cell stream can be **jumped** at a run instead of waded.
 
-**Work.** A priority-ordered job scan keeps everyone employed: felling trees, mining, hauling to stockpiles, building, deconstructing, paving, eating, sleeping. Piles on the ground are drawn at their size; a carried load rides the hands, up out of the lift's crouch and back down on the stow.
+### Colonists
 
-**Building and digging.** Walls, floor slabs, paving, ladders and beds, in the materials the colony can gather. Support is solved bottom-up: take out what holds a span and it collapses, cascading down the layers. Construction can botch. A ladder needs its shaft left open through the floor above. Terrace steps are priced as slopes — the flats are walked, the ramp is climbed, at one speed each.
+- Drawn from a pool of 29 modular characters (hair, beards, an issued uniform over the base body), appearance rolled per pawn from its own seed, portraits rendered once and cached.
+- **Needs** (food, rest, joy), **mood** from thoughts, and **skills** that gain experience, level up with an on-screen toast, and set how fast a colonist works.
+- A **home area**, automatically grown around the hearth, that colonists idle and eat within unless drafted or starving.
+- Walk (diagonally), hop a one-block rise, climb ladders, jump a stream, sidestep crowds and trees, glance where they look, and kneel to computed work strokes (no animation pack contains work poses, so the axe/pick/hammer swings are generated).
+- Claim beds and sleep lying down; slow and eventually collapse when starved, sleepless or too cold or hot.
 
-**Events.** An incident layer — gated Defs, a saved and hashed ledger, a skyfaller — with one event, the **supply drop**: ten to twenty meals fall from the sky and the colony hauls them in. It fires from the debug menu's Events tab and lands on the board with a chime; there is **no storyteller** yet, by decision.
+### Work and economy
 
-**The interface.** A main screen with seed entry and reroll; three-candidate colonist select (name, age, occupation) and a naming page; the build palette (tools not yet built are drawn disabled); an orders strip whose colours are the same on panel, cursor and ground mark; a paged, drag-to-reorder roster; alerts with chimes; an events panel; a debug menu (grant food, wood or stone, spawn a pawn, developer overlay, fire an incident); audio faders; and named save/load.
+- A **priority-ordered job scan** keeps everyone employed: felling, mining, hauling, building, deconstructing, paving, growing, cooking, cleaning up refused goods, tending the hurt.
+- **Building and digging**: walls, floors, doors, windows, pillars, beds, ladders and paving, in the materials the colony can gather. Support is solved bottom-up — remove what holds a span and it collapses, cascading down the layers. Construction can botch; a ladder needs its shaft left open through the floor above.
+- **Storage**: paint-a-zone stockpiles and one-cell shelves (eight stacks apiece), a priority ladder, category/tri-state filters, and a store that refuses and clears out anything it does not accept.
+- **Cooking**: a galley or a campfire takes standing bills, a cook turns raw food into meals (with a burn curve for an unwatched pan), and colonists eat the best tier available.
+- **Power**: a wood-fired generator, lines that run anywhere (through walls, under floors), and an electric heater — a net with no power goes dark as a whole.
+- A carried load rides the hands, up out of the lift's crouch and back down on the stow; piles on the ground are drawn at their size.
 
-**Under the hood.** A fixed-tick, single-threaded simulation whose state hash is a first-class test: same seed, same hash; byte-stable saves (format 6); resume-equivalence and golden-master one-day runs; ten headless days survived on three seeds. Two test tiers gate every change — roughly 1,300 fast-tier tests in seconds with no Unity, and the authoritative Unity tier at roughly 2,000 — plus generated-content checks that keep the wiki, the CSVs and the HUD labels from disagreeing.
+### Combat and defence
+
+- **Draft and move**, melee and **ranged combat** (a pistol, 3D line of sight, weapon quality, a reach rule that switches a gun to a club up close).
+- **Cover**: partial cover from terrain and **sandbags**, drawn bag by bag, with crouching, a hit-chance readout at the pointer, and cover that wears down under fire.
+- **Health**: injuries land on one of six body regions, merge, bleed and are tended by a doctor (or, in a pinch, self-treated); pain, consciousness and mobility are derived from the damage; falls hurt.
+- **Bandits and raids**: dressed, named raiders that steal or fight; a raid is a band of hostiles that arrives, gathers, probes and assaults the colony's hearth, breaking off once it takes enough losses.
+- Buildings and doors can be fought over, damaged and destroyed; friendly fire and rescue-to-a-bed are modelled.
+
+### Wildlife and animals
+
+- Worlds **generate wildlife** (hog sounders, rats) that wander, shelter from rain and eventually leave; a separate framework spawns **tame-able animals** with their own species, gait and simple wandering mind.
+- An Animals tab lists what is on the board; wildlife stays off the main orders bar.
+
+### The interface
+
+- A main screen with **seed entry and reroll**; **three-candidate colonist select** (name, age, occupation, skills) and a naming page; named **save/load** with an autosave.
+- **F1–F5 panels**: Work (a priority grid with a schedule), Research (the placeholder tree), Inventory (what every store holds, with a jump-to-store), Storage (per-store filters and priorities), Animals, Health, and an Assign tab for home area and combat response.
+- The **build palette**, an orders strip whose colours match on panel, cursor and ground mark, a paged and drag-reorderable roster, alerts with chimes, an events panel, and a **debug menu** for granting resources, spawning pawns, firing events and skipping time.
+- A redesigned **settings window and title screen**, graphics presets from Low to Ultra, and a **selection highlight** that outlines the selected thing at its own edges instead of bracketing it.
+
+### Events
+
+- An **incident layer** with gated Defs and a saved, hashed ledger: a **supply drop** (meals fall from the sky) and **raids** (a band that gathers, probes and assaults), both currently fired from the debug menu rather than an automatic storyteller.
+
+### Under the hood
+
+- A **fixed-tick, single-threaded simulation** whose state hash is a first-class test: same seed, same hash; byte-stable saves (format 10); resume-equivalence and golden-master one-day runs; ten headless days survived on three seeds, including seven raids.
+- Two test tiers gate every change: a **fast tier** with no Unity (roughly 1,800 Sim + 1,200 Hud tests in well under a minute, plus a ~50-test Long tier), and the **authoritative Unity tier** (EditMode and PlayMode, several thousand tests between them) — plus generated-content checks that keep the wiki, the CSVs and the HUD labels from disagreeing.
+- A running player writes its own **performance trace** (frame p50/p95/p99, GPU/CPU split, every render and tick section) to `Logs/perf/`, readable with `tools/perf/trace.py`.
 
 ## Honest limitations
 
 What the game does **not** have yet, so nobody has to guess:
 
-- **No storyteller.** Nothing fires on its own; the supply drop is debug-menu only. The seams a scheduler needs (incident gates, refire memory in the ledger) are in and waiting.
-- **Nobody can be hurt.** There is no health model: no injuries, illness, death or combat. A colonist rides a collapsing floor down unharmed, and fall damage has a number and nothing to apply it to.
-- **The environment is uniform.** No rooms, temperature, weather, seasons, fire or light levels. Enclosed or not, every cell is comfortable.
-- **Food has no source.** Meals come from the starting kit or supply drops. No growing (a branch is in review), cooking, spoilage or seeds. Starving colonists collapse rather than die.
-- **Going up is barely possible.** Stairs are the next unit, and a hauler cannot climb a ladder, so materials cannot be carried between floors — multi-storey building is impractical today.
-- **No doors.** A functional-doors branch is in review; until it merges there is no room enclosure and every hut is open-fronted.
+- **No storyteller.** Nothing fires an event or a raid on its own; both are debug-menu only. The seams a scheduler needs (incident gates, a raid ledger, refire memory) are in and waiting.
+- **Medicine has no supply chain.** Medical supplies exist as an item but nothing in the world produces them yet; a standing patient can still walk mid-treatment; and while extreme cold and heat slow a colonist badly, dying of exposure or of starvation is not yet modelled.
+- **Going up is barely possible.** Stairs are the next building unit, and a hauler cannot climb a ladder, so materials cannot move between floors — multi-storey building is impractical today.
 - **No fog of war.** A sealed cavern is visible if you scroll the layer down.
-- **Known cosmetic faults.** A colonist who sleeps, or an item dropped, at the foot of a terrace step can be hidden inside the drawn bank façade. Swimming is a drawn pose only — deep water is not passable.
+- **The colonist schedule is not enforced.** The Work tab's day grid is real and saved, but a colonist still sleeps and eats by need rather than by the assigned hour.
+- **Known cosmetic faults.** A colonist who sleeps, or an item dropped, at the foot of a terrace step can be hidden inside the drawn bank façade. An animal beyond the 64-figure cap is not drawn at all.
 - **Backing out of the in-game load screen loses the colony** — the world is torn down before the save list appears, so there is nothing to go back to.
-- **Everything else on the roadmap** — animals, health, combat, research, power, trade, factions, modding API — is catalogued with milestones in [`docs/design/03-systems-catalogue.md`](docs/design/03-systems-catalogue.md), not started.
+- **Everything else on the roadmap** — factions, trade, research that does anything, a world map, a modding API — is catalogued with milestones in [`docs/design/03-systems-catalogue.md`](docs/design/03-systems-catalogue.md).
 - **Single-player only, ever.** Design nothing for multiplayer; nothing here is built for it.
 - **The art is not in this repository.** Licensed Synty packs live under the gitignored `Assets/Synty/`. A clone without them builds, runs and tests — and draws untextured primitives.
-- **Performance is measured on dev hardware only.** Frame time is comfortable on the RTX 5070 Ti dev box, but the 2022 mid-range laptop target has not been measured.
-- **Clicks are not integration-tested.** The PlayMode harness cannot press a button, so input wiring is proven only by a person playing — which is why that line of work has had silent failures.
+- **Performance is measured on dev hardware only**, mostly at 640 × 480, on an RTX 5070 Ti; the 2022 mid-range laptop target and full 4K play resolution are only partly measured.
+- **Clicks are not integration-tested.** The PlayMode harness cannot press a button, so input wiring is proven only by a person playing.
 
 ## Documentation
 
@@ -58,10 +100,10 @@ What the game does **not** have yet, so nobody has to guess:
 | Read | For |
 |---|---|
 | [`docs/README.md`](docs/README.md) | the documentation map and a concepts primer |
-| [`CLAUDE.md`](CLAUDE.md) | the project guide: working rules, current status, and the index of which design doc owns which code |
+| [`CLAUDE.md`](CLAUDE.md) | the project guide: working rules, current status track-by-track, and the index of which design doc owns which code |
 | [`docs/brief.md`](docs/brief.md) | the governing brief — the decisions everything else descends from |
-| [`docs/design/`](docs/design/) | one document per mechanic (world and layers, building, AI and jobs, UI, events, …) |
-| [`docs/adr/`](docs/adr/) | ten short records of the irreversible decisions (engine, cell size, architecture, audio, …) |
+| [`docs/design/`](docs/design/) | one document per mechanic (world and layers, building, AI and jobs, combat, health, weather, UI, …) |
+| [`docs/adr/`](docs/adr/) | short records of the irreversible decisions (engine, cell size, architecture, audio, …) |
 | [`docs/journal.md`](docs/journal.md) | the narrative record: every decision, measurement and reversal, and why |
 | [`docs/process.md`](docs/process.md), [`docs/lessons.md`](docs/lessons.md), [`docs/bug-patterns.md`](docs/bug-patterns.md) | how work moves; what has cost time before; the recurring bug shapes and the checks that catch them |
 | [`docs/audit/`](docs/audit/), [`docs/plans/playtest-queue.md`](docs/plans/playtest-queue.md), [`docs/milestones/`](docs/milestones/) | the baseline audit; what is waiting on a person to play it; milestone reports |
@@ -81,8 +123,8 @@ python3 tools/wiki/build_wiki.py --check   # content gates — must pass on a co
 python3 tools/wiki/emit_labels.py --check  # (both of them)
 ```
 
-Smoke-test a player build with `Build/Win64/Odyssey.exe -odyssey-newgame`, which boots straight into a colony. CI runs the fast tier on every push and pull request; the Unity tier runs on a self-hosted Windows runner behind the `UNITY_RUNNER=1` repository variable. Work reaches `main` only through a pull request with both tiers green and a review.
+Smoke-test a player build with `Build/Win64/Odyssey.exe -odyssey-newgame`, which boots straight into a colony. CI runs the fast tier on every push and pull request, selecting further tiers by which paths a change can break (`tools/ci/tiers.py`); the Unity tier runs on a self-hosted Windows runner behind the `UNITY_RUNNER=1` repository variable. Work reaches `main` only through a pull request with both tiers green and a review.
 
 ## Asset licensing
 
-Synty POLYGON packs (Sci-Fi City, Farm, Western Frontier, Particle FX, ANIMATION Base Locomotion) are licensed content: they live only under `Assets/Synty/`, which is gitignored, are never committed, and the simulation and its tests never depend on them. The owner's source art sits outside `Assets/` in [`art-source/`](art-source/). Study other games' *mechanics* in a clean room; nothing copyrighted is copied into this repository.
+Synty POLYGON packs (Sci-Fi City, Farm, Western Frontier, Battle Royale, Particle FX, ANIMATION Base Locomotion, Shops) are licensed content: they live only under `Assets/Synty/`, which is gitignored, are never committed, and the simulation and its tests never depend on them. The owner's source art sits outside `Assets/` in [`art-source/`](art-source/). Study other games' *mechanics* in a clean room; nothing copyrighted is copied into this repository.

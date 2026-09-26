@@ -84,6 +84,16 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         Refresh,
 
+        /// <summary>
+        /// The sky on the clock (design 43 §5): a sun, a cloud, a cloud with rain, a cloud with a
+        /// bolt. Drawn rather than written, because the clock's one row has no room for a word
+        /// (the owner's overflow report, 2026-09-23) and the word lives in the tooltip instead.
+        /// </summary>
+        WeatherClear,
+        WeatherCloudy,
+        WeatherRain,
+        WeatherStorm,
+
         // ---------------------------------------------------------------- Build palette
         //
         // Forty-two more, drawn for the same reason the eleven above are and under the same
@@ -120,13 +130,17 @@ namespace Odyssey.Presentation.Ui
         ToolTable,
         ToolLamp,
         ToolShelf,
+        ToolCampfire,
         ToolConduit,
+        ToolUnwire,
         ToolBattery,
         ToolGenerator,
+        ToolHeater,
         ToolReactor,
         ToolTurret,
         ToolTrap,
         ToolBarricade,
+        ToolSandbag,
         ToolDeckplate,
         ToolGrating,
         ToolTile,
@@ -139,6 +153,7 @@ namespace Odyssey.Presentation.Ui
         ToolDeconstruct,
         ToolCancel,
         ToolGrowZone,
+        ToolHarvest,
         ToolStockpile,
         ToolDumping,
         PlantCarrot,
@@ -146,6 +161,15 @@ namespace Odyssey.Presentation.Ui
         LayoutRows,
         LayoutRail,
         LayoutBar,
+
+        /// <summary>A brick wall standing its full height: the walls are up (design 42 §7).</summary>
+        WallsUp,
+
+        /// <summary>
+        /// The same wall cut to a stump, with where the rest of it stood left as a dashed outline:
+        /// the walls are down. Drawn rather than typed — neither shipped font has a wall.
+        /// </summary>
+        WallsDown,
     }
 
     /// <summary>
@@ -401,6 +425,32 @@ namespace Odyssey.Presentation.Ui
                     Polyline(painter, true, P(17.5f, 6.5f), P(6.5f, 17.5f));
                     return;
 
+                case HudGlyphKind.WeatherClear:
+                    Circle(painter, P(12f, 12f), 4.2f * scale);
+                    for (int ray = 0; ray < 8; ray++)
+                    {
+                        float a = ray * Mathf.PI / 4f;
+                        float cx = Mathf.Cos(a), cy = Mathf.Sin(a);
+                        Polyline(painter, true, P(12f + cx * 6.8f, 12f + cy * 6.8f), P(12f + cx * 9.6f, 12f + cy * 9.6f));
+                    }
+                    return;
+
+                case HudGlyphKind.WeatherCloudy:
+                    Cloud(painter, P, 0f);
+                    return;
+
+                case HudGlyphKind.WeatherRain:
+                    Cloud(painter, P, -3.5f);
+                    Polyline(painter, true, P(8.5f, 17f), P(7.5f, 21f));
+                    Polyline(painter, true, P(12.5f, 17f), P(11.5f, 21f));
+                    Polyline(painter, true, P(16.5f, 17f), P(15.5f, 21f));
+                    return;
+
+                case HudGlyphKind.WeatherStorm:
+                    Cloud(painter, P, -3.5f);
+                    Polyline(painter, true, P(13f, 15.5f), P(10.5f, 19f), P(13.5f, 19f), P(11f, 22.5f));
+                    return;
+
                 case HudGlyphKind.Refresh:
                     // Three quarters of a circle with an arrowhead on the open end. Drawn as a
                     // polyline of eight points rather than with an arc, because every other shape
@@ -410,6 +460,33 @@ namespace Odyssey.Presentation.Ui
                         P(4.3f, 8.9f), P(4.0f, 13.6f), P(6.4f, 17.7f), P(10.6f, 19.9f),
                         P(15.3f, 19.5f), P(18.7f, 16.6f));
                     FillTriangle(painter, P(20.6f, 3.4f), P(21.0f, 10.0f), P(14.8f, 8.0f));
+                    return;
+
+                case HudGlyphKind.WallsUp:
+                    // Three courses of brick, the joints staggered, the whole wall standing.
+                    Polyline(painter, false, P(3, 5), P(21, 5), P(21, 19), P(3, 19));
+                    painter.ClosePath();
+                    painter.Stroke();
+                    Polyline(painter, true, P(3, 9.7f), P(21, 9.7f));
+                    Polyline(painter, true, P(3, 14.3f), P(21, 14.3f));
+                    Polyline(painter, true, P(12, 5), P(12, 9.7f));
+                    Polyline(painter, true, P(7.5f, 9.7f), P(7.5f, 14.3f));
+                    Polyline(painter, true, P(16.5f, 9.7f), P(16.5f, 14.3f));
+                    Polyline(painter, true, P(12, 14.3f), P(12, 19));
+                    return;
+
+                case HudGlyphKind.WallsDown:
+                    // One course left standing, solid, and the rest of the wall a dotted ghost of
+                    // itself — what it was, and what walls-down leaves.
+                    FillRect(painter, P(3, 15), P(21, 19));
+                    painter.lineWidth = Mathf.Max(1f, painter.lineWidth * 0.6f);
+                    for (float y = 5f; y < 13.5f; y += 3f)
+                    {
+                        Polyline(painter, true, P(3, y), P(3, y + 1.4f));
+                        Polyline(painter, true, P(21, y), P(21, y + 1.4f));
+                    }
+                    for (float x = 3f; x < 20.5f; x += 3f)
+                        Polyline(painter, true, P(x, 5), P(x + 1.4f, 5));
                     return;
 
                 case HudGlyphKind.Info:
@@ -424,6 +501,15 @@ namespace Odyssey.Presentation.Ui
             // one box, one stroke rule and one set of path helpers — which is what makes a
             // category tile and a play button read as belonging to the same interface.
             PaintPalette(painter, P, scale);
+        }
+
+        /// <summary>A cloud's outline on the 24 grid, lifted by <paramref name="dy"/> to make room beneath it.</summary>
+        static void Cloud(Painter2D painter, System.Func<float, float, Vector2> P, float dy)
+        {
+            Polyline(painter, true,
+                P(5.5f, 17f + dy), P(18.5f, 17f + dy), P(21f, 15f + dy), P(20.5f, 12.2f + dy),
+                P(17.6f, 10.8f + dy), P(16.4f, 7.8f + dy), P(13f, 6.2f + dy), P(9.6f, 7.4f + dy),
+                P(8.2f, 10.2f + dy), P(5f, 10.8f + dy), P(3f, 13.5f + dy), P(3.6f, 16f + dy), P(5.5f, 17f + dy));
         }
 
         static void Polyline(Painter2D painter, bool stroke, params Vector2[] points)

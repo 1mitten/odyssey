@@ -1,5 +1,5 @@
 key,label,namespace,milestone,tooltip_seed
-ui.res.scrap,Scrap,ui.res,M1,Mixed unsorted salvage. Feeds the reclaimer
+ui.res.scrap,Scrap metal,ui.res,M1,"Salvaged metal. Power lines and machines are built from it"
 ui.res.rubble,Rubble,ui.res,M1,"Broken concrete and masonry. Cleared, not mined"
 ui.res.girder,Girder,ui.res,M1,"Structural steel cut from a shell. Heavy, valuable"
 ui.res.panel,Hull panel,ui.res,M1,Flat salvaged plating. The cheapest wall material
@@ -23,7 +23,9 @@ ui.res.cord,Cord,ui.res,M1,"Rope and cable. Ladders, lifts, bindings"
 ui.res.insulation,Insulation,ui.res,M1,Foam batting. Slows heat through a wall
 ui.res.paper,Paper,ui.res,M1,Records and packaging. Research feedstock
 ui.res.rations,Rations,ui.res,M1,"Sealed pre-collapse food. Never spoils, nobody enjoys it"
-ui.res.meal,Meal,ui.res,M1,Cooked at a galley. Mood as well as nutrition
+ui.res.meal,Meal,ui.res,M3,"Cooked at an electric cooker or a campfire. The best food there is, and it rots in four days"
+ui.res.meal.veg,Vegetable meal,ui.res,M3,"A meal cooked without meat. As filling and as welcome as one with"
+ui.res.meal.burnt,Burnt meal,ui.res,M3,"A meal the cook let catch. Edible, less filling, and nobody enjoys it"
 ui.res.protein,Protein paste,ui.res,M1,Reclaimed nutrition. Edible; that is all
 ui.res.meat,Raw meat,ui.res,M1,Butchered. Spoils without cold
 ui.res.produce,Produce,ui.res,M1,"Grown food, uncooked"
@@ -32,11 +34,13 @@ ui.res.stone,Stone,ui.res,M3,"Broken rock from a mined face. Heavy, and there is
 ui.res.ironore,Iron ore,ui.res,M3,Raw ore. Worthless until something smelts it
 ui.res.coal,Coal,ui.res,M3,"Burns hot. Found deeper than iron, and for that reason"
 ui.res.carrots,Carrots,ui.res,M3,"The first field crop. Eaten straight, no cooking and no spoilage"
+ui.res.berries,Berries,ui.res,M3,"Picked from a wild berry bush. Eaten straight; the bush grows more"
+ui.res.mushrooms,Mushrooms,ui.res,M3,"Found under the trees. Eaten straight; more come up somewhere else"
 ui.res.grain,Grain,ui.res,M1,"Bulk staple. Stores well, needs cooking"
 ui.res.fungus,Fungus,ui.res,M1,Grows without light. The underground staple
 ui.res.stimulant,Stimulant,ui.res,M1,Buys an hour of wakefulness at a cost
 ui.res.alcohol,Alcohol,ui.res,M1,"Recreation, and a problem for some"
-ui.res.medkit,Medkit,ui.res,M1,Field tending. Consumed per treatment
+ui.res.medkit,Medical supplies,ui.res,M1,Dressings and drugs. One is used up per treatment
 ui.res.medicine,Medicine,ui.res,M1,Compounded drugs. Better outcomes than a medkit
 ui.res.organ,Organ,ui.res,M1,"Harvested and kept cold. Surgery, or trade"
 ui.res.prosthetic,Prosthetic,ui.res,M1,Replaces a lost part. Quality varies wildly
@@ -65,13 +69,13 @@ ui.mood.broken,Breaking down,ui.mood,M2,In a mental break now
 ui.skill.construction,Construction,ui.skill,M2,"Building, and the quality of what is built"
 ui.skill.mining,Mining,ui.skill,M2,"Digging, rubble clearance and salvage extraction"
 ui.skill.salvage,Salvage,ui.skill,M2,Stripping a shell without wrecking what is in it
-ui.skill.cooking,Cooking,ui.skill,M2,"Meal quality, and food poisoning avoided"
+ui.skill.cooking,Cooking,ui.skill,M3,"How fast a colonist cooks, and how seldom the meal burns"
 ui.skill.growing,Growing,ui.skill,M2,Yield and harvest speed
 ui.skill.cutting,Chopping,ui.skill,M2,"Felling trees. How fast the axe comes down, and how fast the trunk goes over"
 ui.skill.animals,Animals,ui.skill,M2,"Taming, training and husbandry"
 ui.skill.crafting,Crafting,ui.skill,M2,Bench work and item quality
 ui.skill.fabrication,Fabrication,ui.skill,M2,Advanced production. Gates the best gear
-ui.skill.medicine,Medicine,ui.skill,M2,"Tending, surgery and survival odds"
+ui.skill.medicine,Medicine,ui.skill,M2,How fast a colonist treats the hurt
 ui.skill.social,Social,ui.skill,M2,"Negotiation, recruitment and warden work"
 ui.skill.shooting,Shooting,ui.skill,M2,Ranged accuracy
 ui.skill.melee,Melee,ui.skill,M2,"Close combat, hit and parry"
@@ -88,6 +92,11 @@ ui.pawn.prisoner,Prisoner,ui.pawn,M2,"Held, and someone must feed them"
 ui.pawn.animal,Animal,ui.pawn,M2,Tame or wild creature
 ui.pawn.synth,Synth,ui.pawn,M2,"Machine intelligence. Not alive, not harmless"
 ui.pawn.corpse,Corpse,ui.pawn,M2,"Rots, upsets people, can be buried or worse"
+ui.pawn.hog,Midden hog,ui.pawn,AN,"Pig-descended, thrives on refuse heaps. Wild for now; the one you meet first"
+ui.pawn.rat,Duct rat,ui.pawn,AN,"Vermin from the ducts and the caverns. Climbs anything"
+ui.pawn.frog,Culvert frog,ui.pawn,AN,"A big frog of the banks. Keeps to the water's edge and hops"
+ui.pawn.bandit,Bandit,ui.pawn,CB,"Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing"
+ui.pawn.gunman,Gunman,ui.pawn,RD,"A bandit with a pistol, dressed as the rest. Shoots whoever it can see, and clubs whoever comes close"
 ui.status.hauling,Hauling,ui.status,M2,Carrying something to storage
 ui.status.building,Building,ui.status,M2,Working a frame or blueprint
 ui.status.deconstructing,Deconstructing,ui.status,M3,Taking one of our own buildings apart
@@ -95,6 +104,8 @@ ui.status.mining,Mining,ui.status,M2,"Cutting into rubble, concrete or rock"
 ui.status.felling,Chopping,ui.status,M3,Cutting a tree down for wood
 ui.status.sowing,Sowing,ui.status,M3,Breaking ground and planting a zone cell
 ui.status.harvesting,Harvesting,ui.status,M3,Cutting a ripe crop and gathering it
+ui.status.foraging,Picking,ui.status,M3,Picking the berries off a wild bush
+ui.status.refuelling,Refuelling,ui.status,M3,Carrying fuel to a generator and filling it
 ui.status.sleeping,Sleeping,ui.status,M2,"Asleep, and should stay that way"
 ui.status.eating,Eating,ui.status,M2,Taking a meal
 ui.status.idle,Idle,ui.status,M2,Nothing to do. Usually a priorities problem
@@ -104,13 +115,50 @@ ui.status.downed,Downed,ui.status,M2,Cannot move. Needs rescue
 ui.status.bleeding,Bleeding,ui.status,M2,Losing blood. Timed problem
 ui.status.burning,On fire,ui.status,M2,Burning now
 ui.status.drafted,Drafted,ui.status,M2,"Under direct order, not the work list"
+ui.status.wandering,Wandering,ui.status,AN,"An animal on a leg of its own: going somewhere nearby for no reason"
+ui.status.resting,Resting,ui.status,AN,"An animal between legs"
+ui.status.fighting,Fighting,ui.status,CB,Closing on a target and swinging at it
+ui.status.fleeing,Fleeing,ui.status,CB,"Running from danger, or from whatever hurt it"
+ui.status.equipping,Equipping,ui.status,CB,Fetching a weapon to hold
+ui.status.rescuing,Rescuing,ui.status,CB,Carrying the downed to a bed
+ui.status.stealing,Stealing,ui.status,CB,"A bandit carrying something off the board"
+ui.status.treating,Treating,ui.status,M3,"Tending the hurt, or herself"
+ui.status.patient,Resting as a patient,ui.status,M3,In bed until the wound allows getting up
+ui.status.cooking,Cooking,ui.status,M3,"At an electric cooker or a campfire, or fetching food for the pan"
+ui.status.sheltering,Sheltering,ui.status,WE,"An animal waiting out the rain under a roof or a tree, or walking to one"
+ui.status.inrain,In the rain,ui.status,WE,"A colonist under open sky while it rains, and walking slower for it. Said beside her pace"
+ui.stat.pace,Pace,ui.stat,WE,"How fast a colonist walks, as a share of the standard walk. Not the tile's walk speed, which is the ground"
+ui.stat.pace.rolled,Rolled,ui.stat,WE,"The pace a colonist was born with, between 85% and 115% of the standard walk"
+ui.stat.pace.condition,Condition,ui.stat,WE,"What hunger, cold or heat is taking off her pace. Never above 100%, never below 70%"
+ui.stat.pace.rain,Rain,ui.stat,WE,"What walking in the rain under open sky takes off her pace. A roof or a tree gives it back"
+ui.stat.pace.drafted,Drafted,ui.stat,WE,"A drafted colonist runs"
+ui.stat.pace.running,Running,ui.stat,WE,"Running to a fight or away from one"
+ui.stat.pace.standard,The standard walk,ui.stat,WE,"The pace tooltip when nothing is making her faster or slower"
+ui.status.shooting,Shooting,ui.status,RC,"Standing where the line is open and firing at a target"
+ui.combat.miss,Miss,ui.combat,CB,A swing that did not land
+ui.combat.dodge,Dodge,ui.combat,CB,A swing the target stepped out of
+ui.combat.cover,Cover,ui.combat,CB,"A bullet the cover in its way took instead"
+ui.combat.shot.tohit,to hit,ui.combat,CB,"The chance a shot from the selected colonist lands on the one under the pointer"
+ui.combat.shot.above,from above,ui.combat,CB,"How much a shot coming down leaves of low cover"
+ui.combat.shot.outofrange,Out of range,ui.combat,CB,"Too far for this gun"
+ui.combat.shot.nosight,No line of sight,ui.combat,CB,"Something solid is in the way"
+ui.combat.stunned,Stunned,ui.combat,CB,"Knocked senseless by a blunt blow, for a moment"
+ui.combat.health,Health,ui.combat,CB,"Hit points left, out of the whole"
+ui.combat.dead,Dead,ui.combat,CB,"Gone. Lies where it fell"
+ui.combat.unhurt,Unhurt,ui.combat,CB,Not a mark on them
+ui.combat.hurt,Hurt,ui.combat,CB,"Wounded. A colonist heals only in a bed"
+ui.combat.condition,Condition,ui.combat,CB,"Standing, hurt, stunned or down"
+ui.combat.weapon,Weapon,ui.combat,CB,What is in the hand
+ui.combat.barehands,Bare hands,ui.combat,CB,No weapon held: fists
+ui.combat.drawn,Drawn,ui.combat,CB,"Out and in the right hand, ready to swing"
+ui.combat.athip,At the hip,ui.combat,CB,"Sheathed at the left hip until there is a fight"
 ui.work.firefighting,Firefighting,ui.work,M7,Put out fires. Always first
 ui.work.patient,Patient,ui.work,M7,Accept treatment when hurt
 ui.work.bedrest,Bed rest,ui.work,M7,Stay in bed while recovering
-ui.work.doctor,Doctor,ui.work,M7,Tend the injured and operate
+ui.work.doctor,Doctor,ui.work,M3,"Treat the hurt, with medical supplies or without"
 ui.work.warden,Warden,ui.work,M7,"Feed, talk to and recruit prisoners"
 ui.work.handling,Handling,ui.work,M7,"Tame, train and feed animals"
-ui.work.cooking,Cooking,ui.work,M7,Prepare meals and butcher
+ui.work.cooking,Cooking,ui.work,M3,Work the bills at an electric cooker or a campfire
 ui.work.hunting,Hunting,ui.work,M7,Kill wild animals for meat
 ui.work.construction,Construction,ui.work,M7,Build frames and blueprints
 ui.work.growing,Growing,ui.work,M7,Sow and harvest growing zones
@@ -132,6 +180,21 @@ ui.schedule.sleep,Sleep,ui.schedule,M7,Go to bed whether tired or not
 ui.schedule.recreation,Recreation,ui.schedule,M7,Rest and recover mood
 ui.schedule.eat,Eat,ui.schedule,M7,Take a meal even if not yet hungry
 ui.schedule.meditate,Meditate,ui.schedule,M7,"Quiet hours, for whatever comes to need them"
+ui.recipe.meal,Cook a meal,ui.recipe,M3,"Any raw food, three carrots' worth, into one meal"
+ui.bill.heading,Bills,ui.bill,M3,What this station is told to make. The top one is worked first
+ui.bill.add,Add a bill,ui.bill,M3,Put a new order at the bottom of the list
+ui.bill.none,No bills yet,ui.bill,M3,Nothing will be made here until a bill is added
+ui.bill.mode.until,Until you have,ui.bill,M3,"Cook while the colony holds fewer than this many meals, and start again when it drops below"
+ui.bill.mode.times,Make,ui.bill,M3,"Cook this many, then stop"
+ui.bill.mode.forever,Forever,ui.bill,M3,Never stop cooking
+ui.bill.suspended,Paused,ui.bill,M3,"Stopped by you. The next bill down is worked instead"
+ui.bill.done,Done,ui.bill,M3,"This bill's count is met. It starts again by itself when it needs to"
+ui.bill.unpowered,No power,ui.bill,M3,"The electric cooker needs power to cook. Nothing on the hob will spoil in the meantime"
+ui.bill.waiting,Waiting for power,ui.bill,M3,"This bill will be worked once the station has power again"
+ui.bill.needs,"Each meal: raw food, about 3 carrots",ui.bill,M3,"A meal takes 500 of any raw food by nutrition: three carrots, or meat once there is any"
+ui.bill.needs.fire,"Each meal: raw food, about 3 carrots, and 1 wood",ui.bill,M3,"A campfire burns one wood for every meal it cooks"
+ui.bill.supply,Raw food for {n} meals,ui.bill,M3,"What the raw food on the map, in stores and on the ground, would cook into"
+ui.bill.nosupply,No raw food on the map,ui.bill,M3,"Nothing to cook. Grow carrots, or use the debug menu's Give carrots"
 ui.arch.category.structure,Structure,ui.arch.category,M3,"Walls, doors, floors and vertical connectors"
 ui.arch.category.zones,Zones,ui.arch.category,M3,"Stockpiles, growing zones and allowed areas"
 ui.arch.category.orders,Orders,ui.arch.category,M3,One-off designations on existing things
@@ -163,12 +226,13 @@ ui.arch.tool.salvage,Salvage,ui.arch.tool,M3,"Strip a ruin. Slower than deconstr
 ui.arch.tool.haulurgent,Haul urgently,ui.arch.tool,M3,Jump this to the top of the haul list
 ui.arch.tool.cancel,Cancel,ui.arch.tool,M3,Remove designations and orders
 ui.arch.tool.forbid,Forbid,ui.arch.tool,M3,Hands off this
-ui.arch.tool.fell,Chop trees,ui.arch.tool,M3,Cut a tree down for wood
+ui.arch.tool.fell,Chop and clear,ui.arch.tool,M3,"Cut a tree down for wood, or clear a bush out of the way"
 ui.arch.tool.allowitem,Allow,ui.arch.tool,M3,Hands back on
 ui.arch.tool.clearrubble,Clear rubble,ui.arch.tool,M3,Remove loose debris from a cell
 ui.arch.tool.extinguish,Extinguish,ui.arch.tool,M3,Put this fire out now
-ui.arch.tool.harvest,Harvest,ui.arch.tool,M3,Take the crop
+ui.arch.tool.harvest,Harvest,ui.arch.tool,M3,"Pick the berries from a ripe berry bush. They grow back in three days"
 ui.arch.tool.conduit,Conduit,ui.arch.tool,M3,Carries power. Connects vertically
+ui.arch.tool.unwire,Remove conduit,ui.arch.tool,M3,"Takes a conduit up, and nothing else in the cell"
 ui.arch.tool.battery,Battery,ui.arch.tool,M3,Stores charge against the night
 ui.arch.tool.generator,Generator,ui.arch.tool,M3,Burns fuel for power
 ui.arch.tool.solar,Solar array,ui.arch.tool,M3,"Free power, and useless in the dark"
@@ -177,7 +241,7 @@ ui.arch.tool.geothermal,Geothermal tap,ui.arch.tool,M3,"Deep, expensive, constan
 ui.arch.tool.switch,Power switch,ui.arch.tool,M3,Cuts a net in two
 ui.arch.tool.reactor,Reactor,ui.arch.tool,M3,"Late, enormous, dangerous"
 ui.arch.tool.fabricator,Fabricator,ui.arch.tool,M3,Makes refined materials and components
-ui.arch.tool.galley,Galley,ui.arch.tool,M3,Cooks meals
+ui.arch.tool.galley,Electric Cooker,ui.arch.tool,M3,"Cooks meals from bills. Needs power"
 ui.arch.tool.reclaimer,Reclaimer,ui.arch.tool,M3,Sorts scrap into usable material
 ui.arch.tool.hydroponics,Hydroponics basin,ui.arch.tool,M3,"Grows without soil, needs power"
 ui.arch.tool.bench,Crafting bench,ui.arch.tool,M3,General making
@@ -188,6 +252,7 @@ ui.arch.tool.researchbench,Research bench,ui.arch.tool,M3,Where research happens
 ui.arch.tool.comms,Comms console,ui.arch.tool,M3,Talk to factions and traders
 ui.arch.tool.bunk,Bunk,ui.arch.tool,M3,Cheap sleeping. Poor comfort
 ui.arch.tool.bed,Bed,ui.arch.tool,M3,"Better rest, better mood"
+ui.arch.tool.campfire,Campfire,ui.arch.tool,M4,"A fire: warmth you can build"
 ui.arch.tool.table,Table,ui.arch.tool,M3,Eating at one beats eating on the floor
 ui.arch.tool.chair,Chair,ui.arch.tool,M3,Comfort while working or eating
 ui.arch.tool.lamp,Lamp,ui.arch.tool,M3,Light. Costs power
@@ -201,7 +266,7 @@ ui.arch.tool.turret,Turret,ui.arch.tool,M3,Shoots hostiles. Needs power and ammu
 ui.arch.tool.trap,Trap,ui.arch.tool,M3,"One-shot, cheap, forgettable by your own colonists"
 ui.arch.tool.barricade,Barricade,ui.arch.tool,M3,Cover without blocking sight
 ui.arch.tool.blastdoor,Blast door,ui.arch.tool,M3,"Slow, strong, holds a breach"
-ui.arch.tool.sandbag,Sandbags,ui.arch.tool,M3,Fast cover from salvage
+ui.arch.tool.sandbag,Sandbags,ui.arch.tool,M3,"Cheap, quick low cover. Climbed over, never stood on"
 ui.arch.tool.searchlight,Searchlight,ui.arch.tool,M3,Light where you need to shoot
 ui.arch.tool.deckplate,Floor,ui.arch.tool,M3,Laid on ground you already walk on
 ui.arch.tool.grating,Grating,ui.arch.tool,M3,See and fall through. Light passes
@@ -261,6 +326,11 @@ ui.command.gift,Gift,ui.command,M3,Give this away for goodwill
 ui.command.evacuate,Evacuate,ui.command,M3,Everyone out of this area
 ui.command.hunt,Hunt,ui.command,M3,Kill this wild animal for meat
 ui.command.strip,Strip,ui.command,M3,Take everything they carry
+ui.command.fightback,Fight back,ui.command,CB,"Fights only whoever strikes her. Press to change"
+ui.command.defend,Defend,ui.command,CB,"Joins a fight near her, then goes back to work. Press to change"
+ui.command.flee,Flee,ui.command,CB,"Runs from danger near her, and fights only when cornered. Press to change"
+ui.command.sethearth,Make this the hearth,ui.command,M3,"Centre the colony's home on this campfire"
+ui.menu.cancel,Cancel,ui.menu,CB,"Close the menu a right-click opened, and order nothing"
 ui.overlay.temperature,Temperature,ui.overlay,M1,Warm to cold across the slice
 ui.overlay.light,Light,ui.overlay,M1,How lit each cell is
 ui.overlay.beauty,Beauty,ui.overlay,M1,What the room looks like to a colonist
@@ -268,6 +338,7 @@ ui.overlay.cleanliness,Cleanliness,ui.overlay,M1,"Filth, and where it matters"
 ui.overlay.roofs,Roofs,ui.overlay,M1,"What is roofed, and by what"
 ui.overlay.zones,Zones,ui.overlay,M1,"Stockpiles, growing and allowed areas"
 ui.overlay.power,Power,ui.overlay,M1,"Nets, and which of them are short"
+ui.overlay.home,Home,ui.overlay,M3,"The colony's home: the base joined to the hearth, and five cells round it"
 ui.overlay.salvage,Salvage density,ui.overlay,M1,Where the worthwhile scrap is
 ui.overlay.support,Structural support,ui.overlay,M1,What is holding this layer up
 ui.overlay.traffic,Traffic,ui.overlay,M1,Where colonists actually walk
@@ -277,7 +348,7 @@ ui.tab.schedule,Schedule,ui.tab,M1,"Folded into Work: one table says who does wh
 ui.tab.research,Research,ui.tab,M1,"The tree, and what is being worked on"
 ui.tab.colonists,Colonists,ui.tab,M1,"Everyone, at a glance"
 ui.tab.animals,Animals,ui.tab,M1,Tame beasts and their training
-ui.tab.wildlife,Wildlife,ui.tab,M1,What is out there
+ui.tab.wildlife,Wildlife,ui.tab,M1,"What is out there. Listed under Animals for now; not on the bar"
 ui.tab.bills,Bills,ui.tab,M1,Standing production orders
 ui.tab.trade,Trade,ui.tab,M1,Caravans and traders
 ui.tab.factions,Factions,ui.tab,M1,"Who likes us, and how much"
@@ -303,15 +374,25 @@ ui.alert.prisonerescape,Prisoner escaping,ui.alert,M2,One is getting out
 ui.alert.raid,Raid,ui.alert,M2,Hostiles are here
 ui.alert.drop,Drop from above,ui.alert,M2,Something came in through open sky
 ui.alert.powerloss,Power failure,ui.alert,M2,A net has gone dark
+ui.alert.nofuel,Out of fuel,ui.alert,M3,A generator is empty and its net wants power
 ui.alert.spoilage,Spoiling,ui.alert,M2,Food is going off
 ui.alert.darkness,No light,ui.alert,M2,Work is slowed for want of a lamp
 ui.alert.trapped,Trapped,ui.alert,M2,Someone cannot reach the colony
+ui.alert.storagestuck,Store cannot be emptied,ui.alert,M3,"A shelf is marked for removal and there is nowhere to put what is in it"
+ui.alert.norescuebed,No bed for the wounded,ui.alert,M3,"A downed colonist has no free bed to be carried to, so nobody can rescue her"
+ui.alert.nohearth,No hearth,ui.alert,M3,"Somebody is kept home, and there is no hearth: build or mark a campfire"
+ui.alert.hearthdown,Hearth marked to come down,ui.alert,M3,"When it comes down the colony has no home"
 ui.toast.skillup,{name} has reached {skill} {level},ui.toast,M2,A colonist's skill has gone up a level
 ui.bulletin.salvage,Salvage found,ui.bulletin,M2,Something worthwhile in the rubble
+ui.bulletin.scrapdrop,Scrap drop,ui.bulletin,M3,Scrap metal fell from the sky
+ui.bulletin.medicaldrop,Medical drop,ui.bulletin,M3,Medical supplies fell from the sky
 ui.bulletin.arrival,Arrival,ui.bulletin,M2,Someone new is here
 ui.bulletin.trader,Trader,ui.bulletin,M2,A trader has come to us
 ui.bulletin.caravan,Caravan,ui.bulletin,M2,Ours has arrived or returned
 ui.bulletin.raidincoming,Raid warning,ui.bulletin,M2,Hostiles are on the way
+ui.raid.mix.bandits,Bandits,ui.raid,RD,"A band of bandits, every one hand to hand with a crowbar or a bat"
+ui.raid.mix.gunmen,Gunmen,ui.raid,RD,"A band of gunmen, every one with a pistol"
+ui.raid.mix.mixed,Mixed,ui.raid,RD,"Mostly bandits, with about three in ten carrying pistols"
 ui.bulletin.weather,Weather,ui.bulletin,M2,The conditions have turned
 ui.bulletin.death,Death,ui.bulletin,M2,We have lost someone
 ui.bulletin.recruited,Recruited,ui.bulletin,M2,A prisoner has joined us
@@ -323,6 +404,8 @@ ui.bulletin.animaljoin,Animal joined,ui.bulletin,M2,A tame beast has attached it
 ui.bulletin.crash,Crash,ui.bulletin,M2,Something has come down nearby
 ui.bulletin.supplydrop,Supply drop,ui.bulletin,M3,"Something has fallen from the sky. Fetch it before the weather does"
 ui.bulletin.birth,Birth,ui.bulletin,M2,A tame animal has given birth
+ui.bulletin.theft,Theft,ui.bulletin,CB,"A bandit carried something off the board"
+ui.bulletin.banditleft,Bandit left,ui.bulletin,CB,"A bandit walked off the board with nothing"
 ui.weather.clear,Clear,ui.weather,M1,Open sky
 ui.weather.cloudy,Cloudy,ui.weather,M1,"Less light, no other effect"
 ui.weather.rain,Rain,ui.weather,M1,"Puts out fires, waters crops"
@@ -375,6 +458,17 @@ ui.health.fracture,Fracture,ui.health,M6,"Broken, not severed"
 ui.health.missing,Missing part,ui.health,M6,Gone. Replace or adapt
 ui.health.implant,Implant,ui.health,M6,"Fitted, and working"
 ui.health.anaesthetic,Anaesthetic,ui.health,M6,"Under, and safe to operate on"
+ui.health.arm.left,Left arm,ui.health,HE,"Half of what her hands can do"
+ui.health.arm.right,Right arm,ui.health,HE,"Half of what her hands can do"
+ui.health.leg.left,Left leg,ui.health,HE,Half of her walking
+ui.health.leg.right,Right leg,ui.health,HE,Half of her walking
+ui.health.pain,Pain,ui.health,HE,"Every point of injury hurts. At 80 per cent she goes down"
+ui.health.consciousness,Consciousness,ui.health,HE,"What pain and blood loss take. Under 30 per cent she goes down"
+ui.health.moving,Moving,ui.health,HE,"Her legs, and how awake she is. How fast she walks"
+ui.health.manipulation,Manipulation,ui.health,HE,"Her arms, and how awake she is. How fast she works"
+ui.health.bruise,Bruise,ui.health,HE,"From a blunt blow or a short fall. Hurts, and never bleeds"
+ui.health.tended,Tended,ui.health,HE,"Treated. The bleeding has stopped, and it heals out of bed"
+ui.health.todeath,to death,ui.health,HE,"How long the bleeding leaves her, untreated"
 ui.item.knife,Knife,ui.item,M3,"Close work, and butchery"
 ui.item.sword,Blade,ui.item,M3,Reach and damage in melee
 ui.item.club,Club,ui.item,M3,Blunt. Downs rather than kills
@@ -386,13 +480,17 @@ ui.item.wrench,Wrench,ui.item,M3,Machinery and repair
 ui.item.drill,Drill,ui.item,M3,Powered cutting. Fast salvage
 ui.item.axe,Axe,ui.item,M3,"Cutting, and chopping"
 ui.item.cutter,Cutting torch,ui.item,M3,Opens a hull. Opens a wall
-ui.item.pistol,Sidearm,ui.item,M3,"Short range, always to hand"
+ui.item.pistol,Pistol,ui.item,M3,"Short range, always to hand"
 ui.item.rifle,Rifle,ui.item,M3,The standard ranged weapon
 ui.item.shotgun,Scattergun,ui.item,M3,"Devastating close, useless far"
 ui.item.crossbow,Crossbow,ui.item,M3,"Silent, slow, makeable"
 ui.item.grenade,Grenade,ui.item,M3,"Area damage, and friendly fire"
 ui.item.shield,Shield,ui.item,M3,Melee defence
 ui.item.helmet,Helmet,ui.item,M3,Protects the head
+ui.item.bat,Bat,ui.item,CB,"Blunt, and now and then it stuns"
+ui.item.crowbar,Crowbar,ui.item,CB,"Heavier than a bat, slower, and stuns more often"
+ui.item.machete,Machete,ui.item,CB,Sharp and quick
+ui.item.arcblade,Arc blade,ui.item,CB,A powered edge. The best thing a colonist can hold
 ui.item.vest,Vest,ui.item,M3,Torso armour
 ui.item.jacket,Jacket,ui.item,M3,Warmth and a little protection
 ui.item.mask,Mask,ui.item,M3,Filters what you would rather not breathe
@@ -416,8 +514,13 @@ ui.terrain.rock,Rock,ui.terrain,M1,"Natural stone. Mined, not cleared"
 ui.terrain.subsoil,Subsoil,ui.terrain,M1,"The band between soil and rock. Cheap to dig"
 ui.terrain.bedrock,Bedrock,ui.terrain,M1,"The floor of the world. Deliberately punitive to mine"
 ui.terrain.packedgravel,Packed Gravel,ui.terrain,M3,"Stony ground, packed hard. Firm footing, poor soil"
-ui.terrain.tree.conifer,Conifer,ui.terrain,M3,"An evergreen of the meadow. Chopped for wood"
-ui.terrain.tree.broadleaf,Broadleaf,ui.terrain,M3,"A broad-crowned tree of the meadow. Chopped for wood"
+ui.terrain.tree.birch,Birch,ui.terrain,M3,"A slim white-barked tree. Quick to chop, not much wood in it"
+ui.terrain.tree.meadow,Meadow tree,ui.terrain,M3,"A broad round-crowned tree of the open meadow. Chopped for wood"
+ui.terrain.tree.fruit,Fruit tree,ui.terrain,M3,"A low spreading tree. It will bear fruit one day; for now it is wood"
+ui.terrain.tree.giant,Giant tree,ui.terrain,M3,"A rare old giant. Slow to bring down, and a great deal of wood"
+ui.terrain.bush,Bush,ui.terrain,M3,"Dense undergrowth. Slow to push through; cleared before anything is built here"
+ui.terrain.bush.berry,Berry bush,ui.terrain,M3,"A bush that bears berries"
+ui.terrain.bush.picked,Picked berry bush,ui.terrain,M3,"A berry bush picked bare, growing its berries back"
 ui.terrain.carrot,Carrot,ui.terrain,M3,"A root vegetable of the meadow. Grown in zones, cut at full growth"
 ui.settings.panel,Settings,ui.settings,M1,"What the game does, not what the colony does"
 ui.settings.graphics,Graphics,ui.settings,M1,"How the world is drawn. None of it reaches the simulation"
@@ -425,10 +528,11 @@ ui.settings.interface,Interface,ui.settings,M1,"How the interface itself is draw
 ui.settings.uiscale,Interface scale,ui.settings,M1,"How large the HUD is drawn. Larger type covers more of the board"
 ui.settings.shadows,Shadows,ui.settings,M1,"Whether people and buildings cast shadows on the ground"
 ui.settings.surround,Surrounding land,ui.settings,M1,"The land carried past the rim so the board does not end in mid-air"
-ui.settings.grass,Grass tufts,ui.settings,M1,"Tufts strewn over the meadow. Decoration, in no cell and no save"
 ui.settings.relief,Ground relief,ui.settings,M1,"The roll of the drawn ground. The cells underneath stay flat"
 ui.settings.seethrough,See through to selection,ui.settings,M1,"Fade whatever stands between the camera and a selected colonist"
+ui.settings.seethroughall,Trees fade for every colonist,ui.settings,M3,"Fade the trees in front of every colonist on screen, not only the selected ones"
 ui.settings.cutaway,Cut away the ceiling,ui.settings,M3,"See into rooms on this layer. Off shows the floor above you"
+ui.settings.wallsdown,Walls down,ui.settings,M3,"Lower walls to a stump and hide the storeys above, so you can see inside. Building shows them in full"
 ui.settings.keys,Keys,ui.settings,M3,"Every key the game reads, and what each one may be changed to"
 ui.settings.resetkeys,Reset keys to defaults,ui.settings,M3,"Put every action back on the key it shipped with"
 ui.keys.forward,Camera forward,ui.keys,M3,"Move the camera up the screen"
@@ -440,6 +544,7 @@ ui.keys.turnright,Turn camera right,ui.keys,M3,"Orbit the view clockwise while h
 ui.keys.sliceup,Slice up,ui.keys,M3,"Step the visible layer up one"
 ui.keys.slicedown,Slice down,ui.keys,M3,"Step the visible layer down one"
 ui.keys.cycleabove,Cycle above-slice view,ui.keys,M3,"Step through how the layers above the slice are drawn"
+ui.keys.wallsdown,Walls down,ui.keys,M3,"Lower walls to a stump, or raise them again"
 ui.keys.frame,Frame the map,ui.keys,M3,"Pull the camera back until the whole board is in view"
 ui.keys.pause,Pause,ui.keys,M3,"Stop the clock, or start it again"
 ui.keys.speed1,Speed one,ui.keys,M3,"Run the clock at its first speed"
@@ -453,22 +558,66 @@ ui.keys.build,Build palette,ui.keys,M3,"Open and close the Build palette"
 ui.keys.debugmenu,Debug menu,ui.keys,M3,"Open the debug menu"
 ui.keys.worktab,Work tab,ui.keys,M3,"Open the work priority grid"
 ui.keys.almanac,Almanac,ui.keys,M3,"Open and close the Almanac reference browser"
+ui.keys.draft,Draft,ui.keys,M3,"Draft or release the selected colonists"
+ui.keys.animals,Animals,ui.keys,WL,"Open and close the Animals tab"
+ui.animals.kind,Kind,ui.animals,WL,"What sort of animal it is"
+ui.animals.doing,Doing,ui.animals,WL,"Wandering or resting"
+ui.animals.empty,No animals on the board,ui.animals,WL,"The Animals tab with nothing to list"
 ui.settings.audio,Audio,ui.settings,M3,"How loud each part of the game is. Stored on the machine, in decibels"
 ui.settings.camspeed,Camera speed,ui.settings,M3,"How fast the camera pans and zooms, as a share of its tuned speed"
 ui.settings.buildlayout,Build palette layout,ui.settings,M3,"Which of the three shapes the Build palette takes: rows, rail or bar"
+ui.settings.selectionstyle,Selection style,ui.settings,M3,"How the selected thing is marked: a line round the thing itself, or corner brackets"
 ui.settings.developer,Developer overlay,ui.settings,M3,"The frame-time and draw-call readout, kept on the machine between sessions"
 ui.debug.panel,Debug,ui.debug,M3,"Debug-only actions: not saved and not for a shipping build"
 ui.debug.spawnpawn,Spawn colonist,ui.debug,M3,"Adds a colonist with no scenario and no starting kit"
 ui.debug.givewood,Give wood,ui.debug,M3,"Adds 50 wood near the camera"
 ui.debug.givestone,Give stone,ui.debug,M3,"Adds 50 stone near the camera"
-ui.debug.givefood,Give food,ui.debug,M3,"Adds 50 meals near the camera"
+ui.debug.givefood,Give food,ui.debug,M3,"Adds 50 ration packs near the camera"
+ui.debug.givecarrots,Give carrots,ui.debug,M3,"Adds 50 carrots near the camera: raw food a cook can put in a pan"
 ui.debug.tab.cheats,Cheats,ui.debug,M3,"The overlay toggle and the grants"
 ui.debug.tab.events,Events,ui.debug,M3,"One row per event the content declares, each fired on click"
+ui.debug.tab.spawn,Spawn,ui.debug,AN,"Colonists and animals, placed near the camera"
 ui.debug.skipday,Skip one day,ui.debug,GR,"Spends one whole game day of ticks at once"
+ui.debug.skipmonth,Skip one month,ui.debug,M4,"Spends a whole game month of ticks at once, so the year and its seasons can be walked through"
 ui.debug.skipmorning,Skip to morning,ui.debug,GR,"Skips the night and hands the clock back at dawn"
+ui.debug.skipnight,Skip to night,ui.debug,AB,"Skips to ten at night, when it is fully dark and the butterflies glow"
 ui.debug.ripen,Ripen crops,ui.debug,GR,"Brings every standing crop to ripeness at once"
+ui.debug.spawnhog,Spawn midden hog,ui.debug,AN,"Adds a wild midden hog near the camera"
+ui.debug.spawnbandit,Spawn bandit,ui.debug,CB,"Adds a hostile bandit near the camera, armed. It hunts whoever is still standing"
+ui.debug.spawnbat,Spawn bat,ui.debug,CB,"Adds a bat near the camera"
+ui.debug.spawncrowbar,Spawn crowbar,ui.debug,CB,"Adds a crowbar near the camera"
+ui.debug.spawnmachete,Spawn machete,ui.debug,CB,"Adds a machete near the camera"
+ui.debug.spawnarcblade,Spawn arc blade,ui.debug,CB,"Adds an arc blade near the camera"
+ui.debug.spawnpistol,Spawn pistol,ui.debug,RC,"Adds a pistol near the camera"
+ui.debug.spawnrat,Spawn duct rat,ui.debug,AN,"Adds a duct rat near the camera"
+ui.debug.spawnfrog,Spawn culvert frog,ui.debug,AN,"Adds a culvert frog near the camera"
+ui.debug.spawnbandits,Spawn 3 bandits,ui.debug,CB,"Adds three bandits near the camera, each on its own tile"
+ui.debug.spawngunman,Spawn gunman,ui.debug,RC,"Adds a gunman near the camera: a bandit with a pistol. It shoots whoever it can see"
+ui.debug.raid.size,Raid size,ui.debug,RD,"How many the next raid brings. Auto sizes it from the colonists standing and the days survived"
+ui.debug.raid.mix,Raid mix,ui.debug,RD,"Who the next raid is made of: bandits, gunmen, or a mix of both"
+ui.debug.raid.auto,Auto,ui.debug,RD,"The raid picks its own size: one per colonist standing, and one more every five days"
+ui.debug.armcolonists,Arm every colonist,ui.debug,CB,"Every colonist standing with nothing in hand takes a random melee weapon"
+ui.debug.hurt,Hurt a colonist,ui.debug,HE,"The colonist nearest the camera takes a 20-point cut, which bleeds until somebody tends it"
+ui.debug.heal,Heal a colonist,ui.debug,HE,The colonist nearest the camera is made whole and gets up
+ui.debug.kill,Kill a colonist,ui.debug,HE,"The colonist nearest the camera dies where she stands, and is mourned"
+ui.debug.givemedkits,Give medical supplies,ui.debug,HE,Adds 10 medical supplies near the camera
+ui.debug.jumpsfail,Jumps always fail,ui.debug,JP,"Every jump over a stream falls short into the water, so a failed jump can be watched"
+ui.debug.group.colonists,Colonists,ui.debug,CB,"The Spawn tab heading over the colonist rows"
+ui.debug.group.hostiles,Hostiles,ui.debug,CB,"The Spawn tab heading over the bandit rows"
+ui.debug.group.animals,Animals,ui.debug,CB,"The Spawn tab heading over the animal rows"
+ui.debug.group.weapons,Weapons,ui.debug,CB,"The Spawn tab heading over the weapon rows"
+ui.debug.group.items,Items,ui.debug,CB,"The Spawn tab heading over the resource grants"
 ui.debug.marktrace,Mark this moment,ui.debug,PT,"Writes a marker into the performance trace, so the seconds around now can be found"
 ui.debug.trace,Performance trace,ui.debug,PT,"Stops or starts the per-second performance trace this session writes"
+ui.debug.tab.weather,Weather,ui.debug,WE,"The sky set by hand: clear, overcast, three strengths of rain and a storm, drawn only"
+ui.debug.weather.clear,Clear,ui.debug,WE,"No cloud and no rain: the day as the clock has it"
+ui.debug.weather.overcast,Overcast,ui.debug,WE,"A grey day with no rain: the sun and its shadows faded, the colour drained"
+ui.debug.weather.drizzle,Drizzle,ui.debug,WE,"Light rain in full colour; the ground half wet"
+ui.debug.weather.rain,Rain,ui.debug,WE,"Steady rain in full colour; the ground wet and puddles starting"
+ui.debug.weather.downpour,Downpour,ui.debug,WE,"The heaviest ordinary rain, still in colour; the ground soaked and puddled"
+ui.debug.rainparticles,Draw as particles,ui.debug,WE,"Draws the rain the way the weather design first wrote it, with CPU particles, to compare"
+ui.debug.weather.storm,Storm,ui.debug,WE,"The rarer dim day: heavy rain, the colour drained to grey, and a stronger wind"
+ui.debug.wetgloss,Wet ground: gloss only,ui.debug,WE,"Draws wet ground as shine and puddles only, rather than richer and a little darker, to compare"
 ui.settings.display,Display,ui.settings,M3,"How the frame is paced and how large it is drawn"
 ui.settings.detail,Detail,ui.settings,M3,"What the board is drawn with. None of it reaches the simulation"
 ui.settings.vsync,VSync,ui.settings,M3,"Match the screen's refresh rate. Stops tearing, and paces the frame"
@@ -477,21 +626,43 @@ ui.settings.renderscale,Render scale,ui.settings,M3,"How large the world is draw
 ui.settings.antialias,Anti-aliasing,ui.settings,M3,"Smooth the stepped edges of the board. The most expensive thing on this page"
 ui.settings.shadowdist,Shadow distance,ui.settings,M3,"How far from the camera shadows are still drawn"
 ui.settings.displaymode,Display mode,ui.settings,M3,"Fullscreen, borderless or a window"
+ui.settings.quality,Quality,ui.settings,MF,"Set every lever on this page at once, from Low to Ultra. Custom once any is moved by hand"
+ui.settings.vegetation,Grass,ui.settings,MF,"How thick the grass is strewn, from bare ground to every cell. Decoration, in no cell and no save"
+ui.settings.grassdist,Grass distance,ui.settings,MF,"How far from the camera grass is still drawn. Past it the ground carries the field"
+ui.settings.butterflies,Butterflies,ui.settings,AB,"How many butterflies the meadow near the camera may hold, from none to a swarm. They glow at night. Decoration, in no cell and no save"
+ui.settings.foliageshadows,Grass shadows,ui.settings,MF,"Whether grass casts shadows. Off, as it has always shipped: a shadow centimetres long on grass the same colour"
 ui.settings.resolution,Resolution,ui.settings,M3,"How many pixels the game is drawn at. Only a built game can change it"
 ui.settings.exit,Exit game,ui.settings,M3,"Leave the game. The row asks twice, because leaving is not undoable"
+ui.settings.gameplay,Gameplay,ui.settings,MS,"What the game does for you while you play"
+ui.settings.autosave,Autosave,ui.settings,MS,"How often the colony is written over its own save. Off writes nothing unless you ask"
 ui.settings.volume.master,Master volume,ui.settings,M3,"Everything at once"
 ui.settings.volume.music,Music volume,ui.settings,M3,"What plays under the game"
 ui.settings.volume.ambience,Ambience volume,ui.settings,M3,"The sound of the place itself"
 ui.settings.volume.effects,Effects volume,ui.settings,M3,"Axes, picks and the noises of work"
 ui.settings.volume.alerts,Alerts volume,ui.settings,M3,"What asks for attention"
+ui.settings.group.scale,Scale,ui.settings,M3,"How large the interface is drawn"
+ui.settings.group.camera,Camera,ui.settings,M3,"How the camera moves, and the keys that move it"
+ui.settings.group.palette,Build palette,ui.settings,M3,"The shape of the Build palette"
+ui.settings.group.selection,Selection,ui.settings,M3,"How a selected colonist, item, building or tile is marked in the world"
+ui.settings.group.performance,Performance,ui.settings,M3,"What the frame costs to draw"
+ui.settings.group.volume,Volume,ui.settings,M3,"The loudness of the game and its music and ambience"
+ui.settings.group.cues,Cues,ui.settings,M3,"The loudness of work and of what asks for attention"
+ui.settings.group.saving,Saving,ui.settings,M3,"When the colony is written to disk without being asked"
+ui.settings.group.game,Game,ui.settings,M3,"Saving, loading and leaving, pinned under the tabs"
+ui.settings.group.view,View,ui.settings,M3,"The keys that move the slice and frame the map"
+ui.settings.group.tools,Tools,ui.settings,M3,"The keys that arm an order"
+ui.settings.group.time,Time,ui.settings,M3,"The keys that pause the game and set its speed"
 ui.session.newgame,New game,ui.session,MS,"Start a colony on a fresh board"
 ui.session.load,Load,ui.session,MS,"Open a saved colony. The list reads each file's header, never its body"
 ui.session.save,Save,ui.session,MS,"Write this colony over the save it came from. Names one the first time"
 ui.session.saveas,Save as,ui.session,MS,"Write this colony to a save of its own, leaving the one it came from alone"
 ui.session.quittomenu,Quit to main menu,ui.session,MS,"Put this colony down and go back to the start screen"
+ui.session.autosave,Autosaved,ui.session,MS,"The game wrote this colony over its own save by itself"
 ui.prompt.savename,Name this save,ui.prompt,MS,"What to call it. The name is the file, so two saves of one name are one save"
 ui.prompt.overwrite,Overwrite,ui.prompt,MS,"Write over the save already using this name. It asks twice"
 ui.prompt.cancel,Cancel,ui.prompt,MS,"Leave without writing anything"
+ui.prompt.saveandleave,Save and leave,ui.prompt,MS,"Write this colony over its own save, then go"
+ui.prompt.leaveunsaved,Leave without saving,ui.prompt,MS,"Go now. Anything since the last save is lost"
 ui.start.screen,Odyssey,ui.start,MS,"The screen before the game, and the only one that exists with no world built"
 ui.start.load,Load a colony,ui.start,MS,"Every save in the folder, newest first"
 ui.start.back,Back,ui.start,MS,"Back to the start screen"
@@ -702,3 +873,55 @@ ui.res.category.items,Items,ui.res.category,M3,"Made things that are carried, wo
 ui.res.category.weapons,Weapons,ui.res.category,M3,What a colonist fights with
 ui.tab.storage,Storage,ui.tab,M3,"What a store takes, and how much it matters"
 ui.tab.tile,Tile,ui.tab,M3,"The ground itself, under whatever is standing on it"
+ui.keys.research,Research tab,ui.keys,RS,"Open and close the research window"
+ui.debug.finishresearch,Finish research,ui.debug,RS,"Completes the project being researched and starts the next in the queue"
+ui.research.category.power,Power,ui.research.category,RS,"Making current, carrying it and storing it"
+ui.research.category.furniture,Furniture,ui.research.category,RS,"What a colony builds to live and move among"
+ui.research.project.electricity,Electricity,ui.research.project,RS,"How current is made and carried. It builds nothing by itself; power lines and the generator both start here."
+ui.research.project.powerlines,Power lines,ui.research.project,RS,"Lines that carry current from where it is made to where it is wanted, through walls and between floors."
+ui.research.project.generator,Generator,ui.research.project,RS,"A burner that turns fuel into current. Loud and hungry, and the first power a colony can count on."
+ui.research.project.ladder,Ladder,ui.research.project,RS,"A way up that takes one cell. Slow to climb and cheap to build."
+ui.research.hud.now,Current,ui.research.hud,RS,"The label of the strip that says what is being researched. Not Now, which the HUD reads as a placeholder"
+ui.research.hud.then,"then {list}",ui.research.hud,RS,"What the queue does next, after the project in hand"
+ui.research.hud.idle,Nothing being researched. Pick a project.,ui.research.hud,RS,The Now strip when no project is in hand
+ui.research.hud.project,Project,ui.research.hud,RS,Column heading
+ui.research.hud.status,Status,ui.research.hud,RS,Column heading
+ui.research.hud.cost,Cost,ui.research.hud,RS,Column heading
+ui.research.hud.meta,"{category}, cost {cost}",ui.research.hud,RS,The line under a selected project's name
+ui.research.hud.needs,Needs,ui.research.hud,RS,The projects that must be done first
+ui.research.hud.unlocks,Unlocks,ui.research.hud,RS,What finishing the project gives the colony
+ui.research.hud.leadsto,Leads to,ui.research.hud,RS,The projects this one opens up
+ui.research.hud.none,None,ui.research.hud,RS,An empty list in the facts
+ui.research.hud.needsfirst,"Needs {project} first.",ui.research.hud,RS,Why a locked project cannot be started
+ui.research.hud.research,Research,ui.research.hud,RS,Start this project now
+ui.research.hud.queue,Queue,ui.research.hud,RS,Research this project after the one in hand
+ui.research.hud.unqueue,Unqueue,ui.research.hud,RS,Take this project back out of the queue
+ui.research.hud.pause,Pause,ui.research.hud,RS,"Stop researching, keeping the progress"
+ui.research.status.researching,Researching,ui.research.status,RS,Being worked on now
+ui.research.status.available,Available,ui.research.status,RS,Everything it needs is done
+ui.research.status.done,Done,ui.research.status,RS,Finished; what it unlocks is the colony's
+ui.research.status.locked,Locked,ui.research.status,RS,Something it needs is not done yet
+ui.tab.inventory,Inventory,ui.tab,INV,"Everything in the colony's stores, and which store holds it"
+ui.keys.inventory,Inventory tab,ui.keys,INV,"Open and close the inventory window"
+ui.inventory.hud.search,Find an item,ui.inventory.hud,INV,The search field's placeholder
+ui.inventory.hud.item,Item,ui.inventory.hud,INV,Column heading
+ui.inventory.hud.places,Places,ui.inventory.hud,INV,"Column heading: how many stores hold the item"
+ui.inventory.hud.total,Total,ui.inventory.hud,INV,"Column heading: how many the colony's stores hold"
+ui.inventory.hud.where,Where,ui.inventory.hud,INV,Column heading
+ui.inventory.hud.qty,Count,ui.inventory.hud,INV,"Column heading: how many of the item the store holds. Not Qty, which the HUD reads as a placeholder"
+ui.inventory.hud.go,Go,ui.inventory.hud,INV,Move the camera to this store and select it
+ui.inventory.hud.goto,Go to {place},ui.inventory.hud,INV,The primary button: the selected store
+ui.inventory.hud.inplaces,"{category}, in {count} places",ui.inventory.hud,INV,The line under a selected item's name
+ui.inventory.hud.inplace,"{category}, in 1 place",ui.inventory.hud,INV,The line under a selected item's name when one store holds it
+ui.inventory.hud.hint,Go moves the camera to that place and selects it. Clicking the item row itself goes to the place holding the most.,ui.inventory.hud,INV,The hint under the list of places
+ui.inventory.hud.empty,Nothing is in a store yet.,ui.inventory.hud,INV,The table when the colony's stores are empty
+ui.inventory.hud.nomatch,No item matches.,ui.inventory.hud,INV,The table when a search finds nothing
+ui.home.hearth,Hearth,ui.home,HA,"This campfire is the colony's hearth: home is the base joined to it"
+ui.tab.assign,Assign,ui.tab,HA,"Where each colonist may work, and what she does about danger"
+ui.keys.assign,Assign tab,ui.keys,HA,"Open and close the Assign tab"
+ui.assign.colonist,Colonist,ui.assign,HA,"The colonist, in the roster's order. Click to select her"
+ui.assign.area,Area,ui.assign,HA,"Where she may work. Press a cell to change it"
+ui.assign.response,Response,ui.assign,HA,"What she does about danger. Press a cell to change it"
+ui.assign.anywhere,Anywhere,ui.assign,HA,"She takes work wherever it is"
+ui.assign.home,Home,ui.assign,HA,"She takes no work outside home, and walks home when idle. A draft overrides it"
+ui.assign.nohearth,No hearth yet,ui.assign,HA,"There is no hearth, so there is no home and Home keeps nobody in. Mark a campfire as the hearth"

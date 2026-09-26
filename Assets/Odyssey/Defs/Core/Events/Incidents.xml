@@ -37,4 +37,123 @@
     <fallTicks>360</fallTicks>
   </IncidentDef>
 
+  <!--
+    Scrap metal from the sky (design 32 §14): the supply drop's own worker with another cargo, so a
+    storyteller that can fire one can fire the other. Fifteen to thirty is under a stack of fifty,
+    one haul, and enough for a generator's parts or a run of line. The owner's second source of
+    scrap metal beside the wreckage; every gate is the supply drop's and every one is tuning.
+  -->
+  <IncidentDef>
+    <defName>Incident_ScrapDrop</defName>
+    <label>scrap drop</label>
+    <description>Drops a stack of scrap metal from the sky somewhere on the board. Lands on the next tick, so unpause to see it</description>
+    <bulletinKey>ui.bulletin.scrapdrop</bulletinKey>
+    <favourability>Good</favourability>
+    <category>Misc</category>
+    <worker>SupplyDrop</worker>
+    <earliestDay>1</earliestDay>
+    <minRefireDays>2</minRefireDays>
+    <weight>60</weight>
+    <minColonists>1</minColonists>
+    <maxFires>0</maxFires>
+    <item>Item_Salvage</item>
+    <stackMin>15</stackMin>
+    <stackMax>30</stackMax>
+    <fallTicks>360</fallTicks>
+  </IncidentDef>
+  <!--
+    Medical supplies from the sky (design 37 section 5): the supply drop's worker with a third
+    cargo, and the colony's only source of supplies after the starting kit. Four to eight is under
+    a stack of ten, so one haul (owner's numbers). Weight 40, rarer than either other drop, is
+    INVENTED and read by nothing until a storyteller exists.
+  -->
+  <IncidentDef>
+    <defName>Incident_MedicalDrop</defName>
+    <label>medical drop</label>
+    <description>Drops a few medical supplies from the sky somewhere on the board. Lands on the next tick, so unpause to see it</description>
+    <bulletinKey>ui.bulletin.medicaldrop</bulletinKey>
+    <favourability>Good</favourability>
+    <category>Misc</category>
+    <worker>SupplyDrop</worker>
+    <earliestDay>1</earliestDay>
+    <minRefireDays>2</minRefireDays>
+    <weight>40</weight>
+    <minColonists>1</minColonists>
+    <maxFires>0</maxFires>
+    <item>Item_MedicalSupplies</item>
+    <stackMin>4</stackMin>
+    <stackMax>8</stackMax>
+    <fallTicks>360</fallTicks>
+  </IncidentDef>
+
+  <!--
+    A bandit with nobody left to fight and nothing left to break carried a stack off the board
+    (docs/design/33-combat.md section 17; owner, 2026-09-24: "thieve items ... creating a negative
+    event"). Written down by the world when it happens and never fired, so its worker is Recorded,
+    which the debug menu's Events tab leaves off its list; the bulletin carries the item and the
+    amount. The gates are the defaults and read by nothing, since no storyteller picks it.
+  -->
+  <IncidentDef>
+    <defName>Incident_Theft</defName>
+    <label>theft</label>
+    <description>A bandit carried a stack off the board. Recorded when it happens; nothing fires it</description>
+    <bulletinKey>ui.bulletin.theft</bulletinKey>
+    <favourability>Bad</favourability>
+    <category>ThreatSmall</category>
+    <worker>Recorded</worker>
+  </IncidentDef>
+
+  <!--
+    The same bandit with nothing it could reach to take: it walks off the board empty-handed.
+    Neutral, because nothing was lost; on the panel so a player who watched it go knows it has.
+  -->
+  <IncidentDef>
+    <defName>Incident_BanditLeft</defName>
+    <label>bandit left</label>
+    <description>A bandit walked off the board with nothing. Recorded when it happens; nothing fires it</description>
+    <bulletinKey>ui.bulletin.banditleft</bulletinKey>
+    <favourability>Neutral</favourability>
+    <category>ThreatSmall</category>
+    <worker>Recorded</worker>
+  </IncidentDef>
+
+  <!--
+    A raid (docs/design/55-raids.md): a band of hostiles walks on along one edge, gathers for two to
+    four hours, probes about halfway in for an hour, then assaults the hearth, and the rest withdraw
+    once half are down. The debug menu names a size and a mix; a caller that names neither gets the
+    headcount-and-days size below and the Mixed band. The gates are for the storyteller that will
+    read them: nothing before day 3 and four quiet days between (both INVENTED). Every number in
+    the raid block but the owner's (loiter, probe, early trigger, retreat) is INVENTED.
+  -->
+  <IncidentDef>
+    <defName>Incident_Raid</defName>
+    <label>raid</label>
+    <description>A band of hostiles walks in from one edge, gathers there for a few hours, probes closer, then attacks the hearth. The size and mix are chosen below</description>
+    <bulletinKey>ui.bulletin.raidincoming</bulletinKey>
+    <favourability>Bad</favourability>
+    <category>ThreatBig</category>
+    <worker>Raid</worker>
+    <earliestDay>3</earliestDay>
+    <minRefireDays>4</minRefireDays>
+    <weight>100</weight>
+    <minColonists>1</minColonists>
+    <maxFires>0</maxFires>
+    <raid>
+      <perColonist>1</perColonist>
+      <daysPerExtra>5</daysPerExtra>
+      <minSize>1</minSize>
+      <maxAutoSize>30</maxAutoSize>
+      <arrivalTicks>300</arrivalTicks>
+      <gatherInset>12</gatherInset>
+      <gatherRadius>5</gatherRadius>
+      <loiterHoursMin>2</loiterHoursMin>
+      <loiterHoursMax>4</loiterHoursMax>
+      <probePerMille>500</probePerMille>
+      <probeHours>1</probeHours>
+      <earlyTriggerCells>15</earlyTriggerCells>
+      <retreatPerMille>500</retreatPerMille>
+      <mix>RaidMix_Mixed</mix>
+    </raid>
+  </IncidentDef>
+
 </Defs>

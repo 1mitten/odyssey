@@ -59,46 +59,104 @@ namespace Odyssey.Tests.Sim
         // 2026-09-20: Appended Building_Door at handle 6 — edifice 2 (CoreContent.EdificeDoor),
         // passable (blocking false), 5 stuff and 135 ticks matching a wall. Gained `rotates`
         // so doors can be oriented by the player before placement and at wall corners/reveals.
+        // 2026-09-21: Appended Building_Shelf at handle 7 — edifice 13 (CoreContent.EdificeShelf),
+        // the colony's first buildable *store*. Passable and needsClearCell like the bed, 5 stuff
+        // and 180 ticks like the bed, and rotatable because a shelf has a front and a back: it is
+        // drawn with its carcass against one side of its cell, so a shelf that could not be turned
+        // would face the same way in every room. It takes no quality — a container's tier would be
+        // read by nothing, and the pane's owner row keys off a non-zero quality.
+        // Same day, same row: BuildingDef gained `storageSlots`, and the shelf declares 8. A field
+        // rather than a rule keyed off the edifice id, for the reason `needsClearCell` is one — it
+        // is a fact about the shape of the thing — and it is what makes a second, larger store one
+        // row of content rather than a second code path.
+        // 2026-09-22: Appended Building_Campfire at handle 8 — edifice 14, the first heat source
+        // (design 28 §7) and the one building whose `heatPerPass` is not zero. Blocking, wanting a
+        // clear cell like the bed, 3 stuff and 60 ticks. Written at handle 7 / edifice 13 and moved
+        // here on the merge with main: the shelf reached main first and both numbers are contracts,
+        // so the later branch is the one that moves — the same rule Building_Bed records at 5.
+        // The same merge added `heatPerPass` to BuildingDef, which is nought on every other row.
+        // 2026-09-23: Appended Building_Conduit, Building_Generator and Building_Heater at handles
+        // 9, 10 and 11 (design 32, power). The conduit is edifice 0 and `conduit`: a line in its
+        // own layer, always wood (then), 1 a cell, 40 ticks. The generator is edifice 15,
+        // two cells, rotatable, 1,000 W, a 75-wood hopper burning 22 a day at full load, 400 heat
+        // at full load, 30 stuff and 600 ticks. The heater is edifice 16, 175 W, 1,000 heat while
+        // powered, 10 stuff and 240 ticks. BuildingDef gained `conduit`, `fixedStuff` (since gone),
+        // `powerOutputW`, `powerDrawW`, `fuelItem`, `fuelCapacity` and `fuelPerDay`, nought or -1
+        // on every other row.
+        // Same day, second interview (design 32 §14): `fixedStuff` is gone and `partItem` /
+        // `partCount` replace it — a second payment in one fixed item beside the chosen material.
+        // The conduit is all part (costCount 0, one scrap metal); the generator takes 20 scrap
+        // metal and the heater 5 beside their wood or stone.
+        // Same day, third look (design 32 §14c): the heater rotates. Its facing is drawing only
+        // and backs on to a wall where there is one; nothing in the simulation reads it.
+        // 2026-09-23, on the merge of radiance into a main that had taken power: both
+        // branches added fields to BuildingDef — `radiantC` here, and the conduit, generator
+        // and heater rows with their own — so neither side's number covers the merged table.
+        // Re-taken from a freshly loaded pack.
         //
-        // RF1 appended Building_Pillar at handle 7 - a column in one cell, blocking, 3 stuff and
-        // 90 ticks, whose only job is to hold up the slab above it. It needed no change to the
-        // support solver at all: IsGrounded already ends at `Edifice[below] >= 0`, so a pillar has
-        // grounded the slab over it for as long as the solver has run and there was simply nothing
-        // that could build one.
+        // `radiantC` is what a heat source is like to STAND BESIDE (design 36), against
+        // `heatPerPass`, which is energy into the room's air. Two fields because they tune
+        // apart: making one tile read hot by raising heatPerPass would cook the whole hut.
         //
-        // U44 appended Building_Stair at handle 8 - rotatable, blocking false, 6 stuff and 150
-        // ticks. It landed as TWO adjacent cells on one layer finishing as two edifice values
-        // (`secondEdifice`: EdificeStairLower at the head, EdificeStairUpper at the far cell,
-        // which is what worldgen stamps). The new field went on every row, so the whole table's
-        // fingerprint moved and not only the stair's.
+        // 2026-09-23, the combat contracts step (design 33 §4, §5): BuildingDef gained
+        // `maxHitPoints`, what a finished thing has when it is struck (C6) — wall 300, floor 250,
+        // deck plate 150, ladder 80, bed 120, door 160, shelf 100, all INVENTED and C6's to tune.
+        // Added to the XML and the code oracle together, and taken from a freshly loaded pack.
+        // Moved again, 2026-09-24, merging main (power) into the combat line: neither side's number
+        // covers the merged table, so it is re-taken from a freshly loaded pack. Power's three rows
+        // and the campfire carry no maxHitPoints yet (0); C6 gives them one when anything strikes.
+        // Moved again, 2026-09-24, merging main (combat) into the campfire line: `radiantC` there
+        // and `maxHitPoints` here, so neither number covers the merged table. Re-taken from a
+        // freshly loaded pack.
+        // Moved once, deliberately, 2026-09-24, C6 buildings as targets (design 33 §13c): the
+        // campfire 60, conduit 40, generator 300 and heater 100 `maxHitPoints`, all INVENTED,
+        // in the XML and the code oracle together. Nothing else in the table moved.
+        // Moved once, deliberately, 2026-09-25, the kitchen (design 48 §5): Building_Galley
+        // appended at handle 12 — 350 W, 15 stuff and 10 scrap, 300 ticks, 100 hit points — in the
+        // XML and the code oracle together. Nothing else in the table moved.
+        // Moved on merging main (design 45): the galley's edifice renumbered 17 -> 22, after the
+        // wild things, which reached main first. Re-taken from the merged table.
+        // Moved once, deliberately, 2026-09-25, cover (design 53 §3): BuildingDef gained coverPerMille,
+        // coverTall, passThrough, crossCost and wreckRefundPerMille; the bed 300, shelf 500, campfire 250,
+        // generator 500, heater 400 and galley 500 cover, all INVENTED, in the XML and the code oracle together.
+        // Moved once, deliberately, 2026-09-25, cover (design 53 §4): Building_Sandbags (handle 13, edifice 23:
+        // 5 stone fixed, 180 work, 300 hp, 550 low cover, pass-through at +150, a quarter left as wreck) and
+        // Building_Barricade (14, 24: 5 wood or stone, 320 work, 300 hp, 550, +250) appended, and BuildingDef
+        // gained fixedStuff. In the XML and the code oracle together.
+        // Moved once, deliberately, 2026-09-25, design 53 §13: Building_Barricade taken out again on the
+        // owner's first look; the table is the sandbags' alone. Re-taken.
         //
-        // Seven and eight, not six and seven: the door reached main first and took 6, so this
-        // branch moved down by one when it merged. Handle order is the save contract and positions
-        // are append-only; it is safe only because no save with a pillar or a stair in it has ever
-        // left this branch.
-        //
-        // **2026-09-21: the stair became ONE cell and the fingerprint moved again.** The owner
-        // played the two-cell flight and asked for one square, flush with the floor above; the
-        // pack's SM_Bld_Base_Stairs_02 rises a full 3.00 m in one cell and had been listed as an
-        // optional variant in the research all along. So on the stair's row: `footprint` 2 -> 1,
-        // `secondEdifice` EdificeStairUpper -> 0, and `edifice` EdificeStairLower -> the new
-        // EdificeStairFull (13). Nothing else in the table moved, and the costs did not: a stair
-        // still costs 6 wood and 150 ticks. docs/design/28-stairs.md 10.
-        const ulong BuildingFingerprint = 4885284094868351627UL;
+        // Moved once, deliberately, 2026-09-26, merging RF1 + U44 (designs 59 and 60) into main:
+        // Building_Pillar appended at handle 14 (edifice 4, CoreContent.EdificePillar, blocking,
+        // 3 stuff, 90 ticks, 200 hit points) and Building_Stair at 15 (edifice 24,
+        // CoreContent.EdificeStairFull, one cell, rotatable, passable, 6 stuff, 150 ticks, 120 hit
+        // points), in the XML and the code oracle together. Both were written at 7 and 8 and moved
+        // because everything from the shelf to sandbags reached main first; the stair's edifice
+        // was 13 and moved to 24 for the same reason. The hit points are INVENTED on the merge,
+        // because the branch predates combat. Re-taken from the merged table.
+        const ulong BuildingFingerprint = 1380534130894489342UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone
         /// 15). Update this only when you meant to change a material's numbers, and say what moved
         /// in the commit message.
+        ///
+        /// <para>Moved once, deliberately, 2026-09-24 (design 33 §14d; the owner: blunt against
+        /// stone, sharp against wood): <c>sharpDamagePerMille</c> and <c>bluntDamagePerMille</c>,
+        /// wood 1,250 and 1,000, stone 500 and 1,250, the city's four and nothing at the default
+        /// 1,000 — all INVENTED, in the XML and the code oracle together. Nothing else moved.</para>
         /// </summary>
-        const ulong StuffFingerprint = 5872933115437906559UL;
+        const ulong StuffFingerprint = 3846353424243238969UL;
 
         /// <summary>
         /// The quality tiers as they stand: Poor 85, Normal 100, Decent 112, Uber 125, Epic 140
         /// per cent of a plain bed's rest — the owner's interview answers, 2026-09-17. Update this
         /// only when the owner retunes a tier, and say which one moved.
         /// </summary>
-        const ulong QualityFingerprint = 11231177996547656315UL;
+        // 2026-09-25, design 47 §11: every tier gained weaponDamagePerMille and weaponAccuracyPerMille
+        // (Poor 900/900, Normal 1000/1000, Decent 1100/1050, Uber 1200/1100, Epic 1350/1150); no
+        // rest effectiveness moved. The owner asked for weapon quality "like you do with beds".
+        const ulong QualityFingerprint = 6254407845041903790UL;
 
         [Test]
         public void TheBuildingTableIsStillWhatItWas()

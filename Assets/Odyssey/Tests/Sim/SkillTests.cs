@@ -83,6 +83,16 @@ namespace Odyssey.Tests.Sim
             Assert.That(SkillIndex.Names, Is.EqualTo(new[]
                 {
                     "hauling", "cutting", "mining", "construction", "growing",
+                    // The combat contracts step (design 33 §5): SkillCatalogue's melee row went
+                    // live in the same commit, and SkillCatalogueTests with it.
+                    "melee",
+                    // Medical supplies (design 37): SkillCatalogue's medicine row went live with it.
+                    "medicine",
+                    // The kitchen (design 48): SkillCatalogue's cooking row went live with it.
+                    "cooking",
+                    // The ranged line's contracts step (design 47 §3a): SkillCatalogue's shooting
+                    // row went live in the same commit, and SkillCatalogueTests with it.
+                    "shooting",
                 }),
                 "the simulation's skills have changed. A skill that trains is a skill the " +
                 "colonist pane must stop calling unavailable: add or remove the matching live " +

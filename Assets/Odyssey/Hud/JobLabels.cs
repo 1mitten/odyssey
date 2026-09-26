@@ -35,6 +35,30 @@ namespace Odyssey.Hud
             Idle, Idle, "ui.status.felling", "ui.status.mining",
             "ui.status.hauling", "ui.status.building", "ui.status.deconstructing",
             "ui.status.sowing", "ui.status.harvesting",
+            // The draft's two jobs (design 33 §2c): holding and walking to an order both read as
+            // drafted, because what the player needs from the line is that this colonist is
+            // theirs to command and not the work list's.
+            "ui.status.drafted", "ui.status.drafted",
+            // Power (design 32): laying a line is building, taking one up is deconstructing, and
+            // feeding a generator has a word of its own.
+            "ui.status.building", "ui.status.deconstructing", "ui.status.refuelling",
+            // The combat line's five (design 33 §5), in JobHandle order 17 to 21, after power's three: attacking,
+            // fleeing, lying downed, fetching a weapon, carrying the downed to bed.
+            "ui.status.fighting", "ui.status.fleeing", "ui.status.downed",
+            "ui.status.equipping", "ui.status.rescuing",
+            // A bandit carrying something off the board (design 33 §17), JobHandle 22. With a
+            // load in its arms the line reads "Stealing · Meal × 12" by Carrying below.
+            "ui.status.stealing",
+            // Medical supplies (design 37): Job_Treat and Job_Patient, 23 and 24, after Steal.
+            "ui.status.treating", "ui.status.patient",
+            // Picking a berry bush (design 45 §6), JobHandle 25, after medical supplies.
+            "ui.status.foraging",
+            // The kitchen (design 48): Job_Cook, 26 — fetching food for the pan reads as cooking,
+            // because it is the bill being worked.
+            "ui.status.cooking",
+            // The ranged attack (design 47 §2d), JobHandle 27, after the kitchen's: a word of its own rather than
+            // "Fighting", so a line of shooters reads as shooting.
+            "ui.status.shooting",
         };
 
         public static string IconKey(int jobDef) =>

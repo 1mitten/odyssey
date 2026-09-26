@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-36 entries, 18 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+63 entries, 45 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -15,6 +15,11 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Animal** | `ui.pawn.animal` | Tame or wild creature | sheet 06 (action tiles), med | M2 |
 | **Synth** | `ui.pawn.synth` | Machine intelligence. Not alive, not harmless <br>**Needs:** a machine intelligence. Nothing in the sheets is recognisably robotic | no art | M2 |
 | **Corpse** | `ui.pawn.corpse` | Rots, upsets people, can be buried or worse | sheet 07 (anatomy), high | M2 |
+| **Midden hog** | `ui.pawn.hog` | Pig-descended, thrives on refuse heaps. Wild for now; the one you meet first | no art | AN |
+| **Duct rat** | `ui.pawn.rat` | Vermin from the ducts and the caverns. Climbs anything | no art | AN |
+| **Culvert frog** | `ui.pawn.frog` | A big frog of the banks. Keeps to the water's edge and hops | no art | AN |
+| **Bandit** | `ui.pawn.bandit` | Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing | no art | CB |
+| **Gunman** | `ui.pawn.gunman` | A bandit with a pistol, dressed as the rest. Shoots whoever it can see, and clubs whoever comes close | no art | RD |
 
 ## Needs
 
@@ -50,6 +55,8 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Chopping** | `ui.status.felling` | Cutting a tree down for wood <br>**Needs:** an axe swung at a trunk | no art | M3 |
 | **Sowing** | `ui.status.sowing` | Breaking ground and planting a zone cell | no art | M3 |
 | **Harvesting** | `ui.status.harvesting` | Cutting a ripe crop and gathering it | no art | M3 |
+| **Picking** | `ui.status.foraging` | Picking the berries off a wild bush <br>**Needs:** a hand picking a berry | no art | M3 |
+| **Refuelling** | `ui.status.refuelling` | Carrying fuel to a generator and filling it | no art | M3 |
 | **Sleeping** | `ui.status.sleeping` | Asleep, and should stay that way | sheet 08 (salvage gear), high | M2 |
 | **Eating** | `ui.status.eating` | Taking a meal | sheet 02 (food), high | M2 |
 | **Idle** | `ui.status.idle` | Nothing to do. Usually a priorities problem | sheet 06 (action tiles), med | M2 |
@@ -59,6 +66,31 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Bleeding** | `ui.status.bleeding` | Losing blood. Timed problem | sheet 06 (action tiles), low | M2 |
 | **On fire** | `ui.status.burning` | Burning now | sheet 06 (action tiles), high | M2 |
 | **Drafted** | `ui.status.drafted` | Under direct order, not the work list | sheet 05 (tools and weapons), med | M2 |
+| **Wandering** | `ui.status.wandering` | An animal on a leg of its own: going somewhere nearby for no reason | no art | AN |
+| **Resting** | `ui.status.resting` | An animal between legs | no art | AN |
+| **Fighting** | `ui.status.fighting` | Closing on a target and swinging at it | no art | CB |
+| **Fleeing** | `ui.status.fleeing` | Running from danger, or from whatever hurt it | no art | CB |
+| **Equipping** | `ui.status.equipping` | Fetching a weapon to hold | no art | CB |
+| **Rescuing** | `ui.status.rescuing` | Carrying the downed to a bed | no art | CB |
+| **Stealing** | `ui.status.stealing` | A bandit carrying something off the board | no art | CB |
+| **Treating** | `ui.status.treating` | Tending the hurt, or herself <br>**Needs:** hands dressing a wound. Blocked on the missing human figure | no art | M3 |
+| **Resting as a patient** | `ui.status.patient` | In bed until the wound allows getting up <br>**Needs:** a figure lying in bed. Blocked on the missing human figure | no art | M3 |
+| **Cooking** | `ui.status.cooking` | At an electric cooker or a campfire, or fetching food for the pan <br>**Needs:** a figure stirring a pan. Blocked on the missing human figure | no art | M3 |
+| **Sheltering** | `ui.status.sheltering` | An animal waiting out the rain under a roof or a tree, or walking to one | no art | WE |
+| **In the rain** | `ui.status.inrain` | A colonist under open sky while it rains, and walking slower for it. Said beside her pace | no art | WE |
+| **Shooting** | `ui.status.shooting` | Standing where the line is open and firing at a target | no art | RC |
+
+## Pace and what it is made of
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Pace** | `ui.stat.pace` | How fast a colonist walks, as a share of the standard walk. Not the tile's walk speed, which is the ground | no art | WE |
+| **Rolled** | `ui.stat.pace.rolled` | The pace a colonist was born with, between 85% and 115% of the standard walk | no art | WE |
+| **Condition** | `ui.stat.pace.condition` | What hunger, cold or heat is taking off her pace. Never above 100%, never below 70% | no art | WE |
+| **Rain** | `ui.stat.pace.rain` | What walking in the rain under open sky takes off her pace. A roof or a tree gives it back | no art | WE |
+| **Drafted** | `ui.stat.pace.drafted` | A drafted colonist runs | no art | WE |
+| **Running** | `ui.stat.pace.running` | Running to a fight or away from one | no art | WE |
+| **The standard walk** | `ui.stat.pace.standard` | The pace tooltip when nothing is making her faster or slower | no art | WE |
 
 ---
 
