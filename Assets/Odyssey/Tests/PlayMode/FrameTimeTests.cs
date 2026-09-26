@@ -801,6 +801,68 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// The frame with a raid of two hundred on the board (design 55 §11): the measurement the
+        /// pawn ceiling's rule asks for before it moved from 200 to 400. Twenty colonists, then the
+        /// raid fired through the debug menu's own intent — the Mixed band, two hundred — timed while
+        /// it gathers at the edge and again once the assault has brought it into the colony. One run,
+        /// so the difference is the raid and not the machine. Most of the band is past the 64-figure
+        /// ceiling and drawn in the far form; the draw calls beside the frame say what that cost.
+        /// Asserts only that the raid was there.
+        /// </summary>
+        [UnityTest, Category("Measurement")]
+        public IEnumerator TheFrameWithARaidOfTwoHundred()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+                Assert.That(boot.Colony, Is.Not.Null, "the bootstrap never built a colony");
+
+                yield return GrowColonyTo(boot, 20);
+                float peace = 0f;
+                yield return TimeFrames("raid/peace", boot, WarmupFrames, x => peace = x);
+                int peaceDraws = boot.Renderer?.DrawCalls ?? 0;
+
+                boot.World!.Intents.Submit(new Intent(IntentKind.InvokeIncident, default, IncidentHandle.Raid, 200, 3));
+                for (int i = 0; i < 420; i++)
+                {
+                    boot.World.Tick();
+                    if (i % 20 == 0) yield return null;
+                }
+                Odyssey.Sim.Events.RaidSystem raids = boot.Colony!.Pawns.Raids!;
+                Assert.That(raids.Count, Is.EqualTo(1), "the raid was refused");
+
+                float gathering = 0f;
+                yield return TimeFrames("raid/gathering", boot, 30, x => gathering = x);
+                int gatherDraws = boot.Renderer?.DrawCalls ?? 0;
+                int gatherFigures = boot.Figures?.FigureCount ?? 0;
+
+                raids.SetPhase(raids.Groups[0], RaidPhase.Assaulting, boot.World.CurrentTick);
+                for (int i = 0; i < 3_000; i++)
+                {
+                    boot.World.Tick();
+                    if (i % 50 == 0) yield return null;
+                }
+                float assault = 0f;
+                yield return TimeFrames("raid/assault", boot, 30, x => assault = x);
+
+                WorldSnapshot frame = boot.World.Views.Current;
+                int hostiles = Hostiles(frame);
+                Debug.Log($"[FrameTime] raid of 200: peace {peace:0.00} ms ({peaceDraws} draw calls); " +
+                          $"gathering {gathering:0.00} ms ({gatherDraws} draw calls, {gatherFigures} figures); " +
+                          $"assault {assault:0.00} ms ({boot.Renderer?.DrawCalls ?? 0} draw calls, " +
+                          $"{boot.Figures?.FigureCount ?? 0} figures), {frame.Pawns.Length} pawns, {hostiles} hostile");
+                Assert.That(hostiles, Is.GreaterThan(100), "the raid was not on the board");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// The frame with a fight in view (design 33, the C2/C3 integration): ten colonists at the
         /// start timed at peace, then ten bandits spawned among them and the same colony timed
         /// again once the swinging has started — one run, so the difference is the fight and not

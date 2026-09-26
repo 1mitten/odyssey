@@ -249,6 +249,19 @@ namespace Odyssey.Sim.Pawns
         public World.Hearth? Hearth { get; set; }
 
         /// <summary>
+        /// Every raid on the board and the clock that runs them (design 55). Set by the composition
+        /// root; null only in a hand-built context, where no raid can fire.
+        /// </summary>
+        public Events.RaidSystem? Raids { get; set; }
+
+        /// <summary>
+        /// Where the colony started — the generator's start cell — or null where there was none (a
+        /// hand-built test board). What a raid makes for with no hearth (design 55 §5). Derived:
+        /// set at every build, so a load has it as the new game did, and neither saved nor hashed.
+        /// </summary>
+        public CellRef? ColonyStart { get; set; }
+
+        /// <summary>
         /// Where a thing is, as a cell a colonist can walk to: its own cell, the cell of the store
         /// holding it, or -1 while it is in a pair of hands.
         ///

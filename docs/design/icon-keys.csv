@@ -96,6 +96,7 @@ ui.pawn.hog,Midden hog,ui.pawn,AN,"Pig-descended, thrives on refuse heaps. Wild 
 ui.pawn.rat,Duct rat,ui.pawn,AN,"Vermin from the ducts and the caverns. Climbs anything"
 ui.pawn.frog,Culvert frog,ui.pawn,AN,"A big frog of the banks. Keeps to the water's edge and hops"
 ui.pawn.bandit,Bandit,ui.pawn,CB,"Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing"
+ui.pawn.gunman,Gunman,ui.pawn,RD,"A bandit with a pistol, dressed as the rest. Shoots whoever it can see, and clubs whoever comes close"
 ui.status.hauling,Hauling,ui.status,M2,Carrying something to storage
 ui.status.building,Building,ui.status,M2,Working a frame or blueprint
 ui.status.deconstructing,Deconstructing,ui.status,M3,Taking one of our own buildings apart
@@ -389,6 +390,9 @@ ui.bulletin.arrival,Arrival,ui.bulletin,M2,Someone new is here
 ui.bulletin.trader,Trader,ui.bulletin,M2,A trader has come to us
 ui.bulletin.caravan,Caravan,ui.bulletin,M2,Ours has arrived or returned
 ui.bulletin.raidincoming,Raid warning,ui.bulletin,M2,Hostiles are on the way
+ui.raid.mix.bandits,Bandits,ui.raid,RD,"A band of bandits, every one hand to hand with a crowbar or a bat"
+ui.raid.mix.gunmen,Gunmen,ui.raid,RD,"A band of gunmen, every one with a pistol"
+ui.raid.mix.mixed,Mixed,ui.raid,RD,"Mostly bandits, with about three in ten carrying pistols"
 ui.bulletin.weather,Weather,ui.bulletin,M2,The conditions have turned
 ui.bulletin.death,Death,ui.bulletin,M2,We have lost someone
 ui.bulletin.recruited,Recruited,ui.bulletin,M2,A prisoner has joined us
@@ -588,7 +592,10 @@ ui.debug.spawnpistol,Spawn pistol,ui.debug,RC,"Adds a pistol near the camera"
 ui.debug.spawnrat,Spawn duct rat,ui.debug,AN,"Adds a duct rat near the camera"
 ui.debug.spawnfrog,Spawn culvert frog,ui.debug,AN,"Adds a culvert frog near the camera"
 ui.debug.spawnbandits,Spawn 3 bandits,ui.debug,CB,"Adds three bandits near the camera, each on its own tile"
-ui.debug.spawngunman,Spawn pistol bandit,ui.debug,RC,"Adds a hostile bandit near the camera, holding a pistol. It shoots whoever it can see"
+ui.debug.spawngunman,Spawn gunman,ui.debug,RC,"Adds a gunman near the camera: a bandit with a pistol. It shoots whoever it can see"
+ui.debug.raid.size,Raid size,ui.debug,RD,"How many the next raid brings. Auto sizes it from the colonists standing and the days survived"
+ui.debug.raid.mix,Raid mix,ui.debug,RD,"Who the next raid is made of: bandits, gunmen, or a mix of both"
+ui.debug.raid.auto,Auto,ui.debug,RD,"The raid picks its own size: one per colonist standing, and one more every five days"
 ui.debug.armcolonists,Arm every colonist,ui.debug,CB,"Every colonist standing with nothing in hand takes a random melee weapon"
 ui.debug.hurt,Hurt a colonist,ui.debug,HE,"The colonist nearest the camera takes a 20-point cut, which bleeds until somebody tends it"
 ui.debug.heal,Heal a colonist,ui.debug,HE,The colonist nearest the camera is made whole and gets up

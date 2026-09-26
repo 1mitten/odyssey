@@ -219,4 +219,22 @@
     <motive>Loot</motive>
   </PawnKindDef>
 
+  <!--
+    The gunman (design 55 section 8): the bandit with a pistol. Its own kind rather than a bandit
+    handed a weapon, so a raid mix can name it and a storyteller can draw it; everything else is
+    the bandit's - a person, Hostile, the same traverse mode and motive, and the same outfit,
+    because PawnOutfits keys on a hostile person rather than on the kind. The pistol is the only
+    row in its table, so every gunman carries one.
+  -->
+  <PawnKindDef>
+    <defName>PawnKind_Gunman</defName>
+    <species>Species_Person</species>
+    <faction>Hostile</faction>
+    <weapons>
+      <li>Item_Pistol</li>
+    </weapons>
+    <traverseMode>Bandit</traverseMode>
+    <motive>Loot</motive>
+  </PawnKindDef>
+
 </Defs>

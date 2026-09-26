@@ -589,8 +589,11 @@ namespace Odyssey.Tests.Sim
             // Then the frogs' legs diverge from each other (design 30 §8e): Simulated only; the
             // probe differs from the line above in the animals' wander count alone (217 -> 216).
             // Merged with main (wander claims, design 31 §20), 2026-09-26: re-taken from the merged code.
-            Generated = 5971917863521832692UL,
-            Simulated = 6269988894017776259UL,
+            // Merged with raids (design 55), 2026-09-26: the gunman keeps kind 4 and the frog moves
+            // to 5, and a pawn's kind is hashed. GoldenColonyProbe on the frog branch (fca2ef08) and
+            // on the merge is identical on all three boards, so only the number moved.
+            Generated = 5385105565351640744UL,
+            Simulated = 1457182368184692081UL,
         };
 
         /// <summary>

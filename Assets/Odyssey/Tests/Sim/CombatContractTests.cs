@@ -109,9 +109,11 @@ namespace Odyssey.Tests.Sim
             Assert.That(SkillIndex.Shooting, Is.EqualTo(8));
             Assert.That(SkillIndex.Count, Is.EqualTo(9));
             Assert.That(PawnKindIndex.Bandit, Is.EqualTo(3));
-            // And the culvert frog at 4, after the bandit (design 30 §8): five.
-            Assert.That(PawnKindIndex.CulvertFrog, Is.EqualTo(4));
-            Assert.That(PawnKindIndex.Count, Is.EqualTo(5));
+            // 5 since the raid appended the gunman at 4 (design 55 §8).
+            Assert.That(PawnKindIndex.Gunman, Is.EqualTo(4));
+            // And the culvert frog at 5, after the gunman (design 30 §8): six.
+            Assert.That(PawnKindIndex.CulvertFrog, Is.EqualTo(5));
+            Assert.That(PawnKindIndex.Count, Is.EqualTo(6));
 
             // IntentKind is an enum whose numbers an intent log carries: the three orders are
             // together and after everything main shipped first (power's four, since the merge of
@@ -230,7 +232,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(JobSystem.AnimalMind.Select(n => n.Name),
                 Is.EqualTo(new[] { "Downed", "AnimalCombat", "AnimalShelter", "AnimalIdle" }));
             Assert.That(JobSystem.HostileMind.Select(n => n.Name),
-                Is.EqualTo(new[] { "Downed", "Hostile", "Idle" }));
+                Is.EqualTo(new[] { "Downed", "Raid", "Hostile", "Idle" }), "the raid asks its band first (design 55 §3)");
         }
 
         [Test]

@@ -244,6 +244,18 @@ MonoBehaviour:
     MaxDistance: 500
     Priority: 16
     Cooldown: 10
+  - Id: odyssey.sound.alert.raid.arrive
+    Clips:
+    - {fileID: 8300000, guid: d8b373bf5b6d4a6d8772afca5cabf710, type: 3}
+    Bus: 4
+    Volume: 0.78
+    VolumeVariance: 0
+    PitchVariance: 0
+    SpatialBlend: 0
+    MinDistance: 1
+    MaxDistance: 500
+    Priority: 16
+    Cooldown: 19
   - Id: odyssey.sound.campfire
     Clips:
     - {fileID: 8300000, guid: a97e41f278ac2b14b94ec85c94a90269, type: 3}

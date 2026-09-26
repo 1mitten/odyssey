@@ -205,7 +205,7 @@ frog like. Frogs hang out near streams, rivers, ponds and lakes so placement wou
 banks in places throughout"*). The model is the owner's `Frog.fbx`, the same author and rig
 convention as the hog and the rat (Quaternius, Blender 2.79): 2,442 vertices, four flat-colour
 materials (green, yellow, red, black — a red-eyed frog), and four clips, **Idle, Jump, Attack and
-Death**. No walk. It lives at `Assets/Art/Custom/Animals/Frog.fbx`, kind **4** (after the bandit),
+Death**. No walk. It lives at `Assets/Art/Custom/Animals/Frog.fbx`, kind **5** (after the gunman, which the raids took 4 for),
 species 3, `ui.pawn.frog` *Culvert frog*, `creature.amphibian` in `proper-nouns.csv` — proposed, in
 the register of the midden hog and the duct rat, for the owner to correct in the CSV.
 

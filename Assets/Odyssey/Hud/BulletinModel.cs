@@ -86,10 +86,17 @@ namespace Odyssey.Hud
         /// <summary>The loudest thing that arrived last refresh, by favourability: 0 neutral, 1 good, 2 bad.</summary>
         public int ArrivedFavourability { get; private set; }
 
+        /// <summary>
+        /// A raid arrived last refresh (design 55 §7): its row sounds the war horn rather than the
+        /// chime its favourability would pick, because a raid and a theft are not the same news.
+        /// </summary>
+        public bool ArrivedRaid { get; private set; }
+
         public void Refresh(WorldSnapshot snapshot)
         {
             Arrived = 0;
             ArrivedFavourability = 0;
+            ArrivedRaid = false;
 
             var tail = snapshot.Bulletins;
             for (int i = 0; i < tail.Length; i++)
@@ -103,6 +110,7 @@ namespace Odyssey.Hud
                 Version++;
                 if (!_primed) continue;
                 Arrived++;
+                if (view.IncidentDef == IncidentHandle.Raid) ArrivedRaid = true;
                 if (view.Favourability == 2 || ArrivedFavourability == 0)
                     ArrivedFavourability = view.Favourability;
             }
@@ -186,8 +194,22 @@ namespace Odyssey.Hud
         static BulletinRow Make(in BulletinView view)
         {
             string key = IncidentLabels.IconKey(view.IncidentDef);
-            return new BulletinRow(view.Id, key, Title(key, view.Subject, view.Amount), Stamp(view.Tick), view.Cell,
+            string title = view.IncidentDef == IncidentHandle.Raid
+                ? RaidTitle(key, view.Subject, view.Amount)
+                : Title(key, view.Subject, view.Amount);
+            return new BulletinRow(view.Id, key, title, Stamp(view.Tick), view.Cell,
                 view.Tick, view.IncidentDef, view.Favourability);
+        }
+
+        /// <summary>
+        /// A raid's row (design 55 §7): its detail is the mix and the band's size rather than a thing
+        /// and a count, so it reads "Raid warning · Mixed × 20". The mix's name is the registry's.
+        /// </summary>
+        public static string RaidTitle(string key, int mix, int size)
+        {
+            string name = Registry.Label(key);
+            if (mix < 0) return name;
+            return name + " · " + RaidMixLabels.Label(mix) + " × " + size;
         }
 
         /// <summary>

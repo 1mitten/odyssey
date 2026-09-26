@@ -137,7 +137,24 @@ namespace Odyssey.Hud
             JumpsFailKey,
             WeatherTabKey, WeatherClearKey, WeatherOvercastKey, WeatherDrizzleKey, WeatherRainKey,
             WeatherDownpourKey, WeatherStormKey, RainParticlesKey, WetGlossKey,
+            RaidSizeKey, RaidMixKey, RaidAutoKey,
         };
+
+        /// <summary>
+        /// The raid's two controls on the Events tab (design 55 §9): how many, and who. Their row
+        /// labels, and the word the size reads at 0.
+        /// </summary>
+        public const string RaidSizeKey = "ui.debug.raid.size",
+            RaidMixKey = "ui.debug.raid.mix",
+            RaidAutoKey = "ui.debug.raid.auto";
+
+        /// <summary>The slider's top: the owner's 200. The simulation refuses a band that would not fit.</summary>
+        public const int RaidSizeMax = 200;
+
+        /// <summary>The two controls' tooltips, as the Spawn rows keep theirs here.</summary>
+        public const string RaidSizeTooltip =
+                "How many the next raid brings. Auto sizes it from the colonists standing and the days survived",
+            RaidMixTooltip = "Who the next raid is made of: bandits, gunmen, or a mix of both";
 
         public const string WeatherClearKey = "ui.debug.weather.clear",
             WeatherOvercastKey = "ui.debug.weather.overcast",
@@ -313,8 +330,8 @@ namespace Odyssey.Hud
                 PawnKindLabels.Bandit, GroupHostilesKey),
             Pawn(SpawnBanditsKey, "Adds three bandits near the camera, each on its own tile",
                 PawnKindLabels.Bandit, GroupHostilesKey, repeat: 3),
-            new SpawnRow(SpawnGunmanKey, "Adds a hostile bandit near the camera, holding a pistol. It shoots whoever it can see",
-                IntentKind.SpawnPawn, PawnKindLabels.Bandit, ItemHandle.Pistol + 1, GroupHostilesKey),
+            Pawn(SpawnGunmanKey, "Adds a gunman near the camera: a bandit with a pistol. It shoots whoever it can see",
+                PawnKindLabels.Gunman, GroupHostilesKey),
             Pawn(SpawnHogKey, "Adds a wild midden hog near the camera. It wanders and rests, and never takes a ladder",
                 PawnKindLabels.MiddenHogKind, GroupAnimalsKey),
             Pawn(SpawnRatKey, "Adds a duct rat near the camera. It wanders and rests, and climbs anything",
@@ -394,5 +411,42 @@ namespace Odyssey.Hud
             WetGlossOnly = on;
             WeatherChanged?.Invoke();
         }
+
+        /// <summary>
+        /// How many the next raid brings, 0 to <see cref="RaidSizeMax"/>. 0 is <i>Auto</i>: the
+        /// incident's own headcount-and-days size (design 55 §9). Kept for the session, so a second
+        /// raid is one click.
+        /// </summary>
+        public int RaidSize { get; private set; }
+
+        /// <summary>Which mix the next raid is made from, as an index into <see cref="RaidMixLabels.Keys"/>. Mixed until chosen.</summary>
+        public int RaidMix { get; private set; } = RaidMixLabels.Default;
+
+        public void SetRaidSize(int size) => RaidSize = Math.Max(0, Math.Min(RaidSizeMax, size));
+
+        public void SetRaidMix(int mix)
+        {
+            if (mix >= 0 && mix < RaidMixLabels.Keys.Length) RaidMix = mix;
+        }
+
+        /// <summary>
+        /// What the Raid row says when the raid it was asked for will not fire (design 55 §9:
+        /// refused, not trimmed, and says so): too many for the room left under the pawn ceiling,
+        /// or, when there is room, no edge the band can reach. A debug line, so plain ASCII.
+        /// </summary>
+        public static string RaidRefusal(int wanted, int room) =>
+            wanted > room
+                ? $"Refused: {wanted} will not fit, room for {Math.Max(0, room)} under the ceiling"
+                : "Refused: no edge the band can reach";
+
+        /// <summary>What the size slider's figure reads: the number, or <i>Auto</i> at 0.</summary>
+        public static string RaidSizeText(int size) => size <= 0 ? Registry.Label(RaidAutoKey) : size.ToString();
+
+        /// <summary>
+        /// The raid, as the debug row sends it (design 55 §9): the incident in A, the size in B (0 for
+        /// the incident's own) and the mix plus one in C.
+        /// </summary>
+        public Intent RaidIntent(int incidentDef) =>
+            new Intent(IntentKind.InvokeIncident, default, incidentDef, RaidSize, RaidMix + 1);
     }
 }

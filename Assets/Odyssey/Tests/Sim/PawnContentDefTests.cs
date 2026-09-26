@@ -316,14 +316,20 @@ namespace Odyssey.Tests.Sim
         // (trees 250 tall, bushes 150 low).
         // Cover merged onto health, 2026-09-25: its three streams moved to the 22nd-24th; re-taken.
         //
+        // 2026-09-25, raids (design 55 §8): PawnKind_Gunman appended at kind 4 — a hostile person
+        // armed from a table of one, Item_Pistol, with the bandit's traverse mode and motive. No
+        // golden moved: no golden spawns a hostile.
+        // Raids merged onto cover, 2026-09-26: re-taken from the merged pack.
         // 2026-09-25, the culvert frog (design 30 §8): Species_CulvertFrog and PawnKind_CulvertFrog
-        // appended (kind 4, species 3), and SpeciesDef gained bankRadius and ignoresRain, both
+        // appended (kind 4, species 3; kind 5 since the merge with raids), and SpeciesDef gained bankRadius and ignoresRain, both
         // nought/false on every other species. Taken from a freshly loaded pack.
         // 2026-09-26, the owner's first ask on the frog: bodyLengthMm 400 -> 870 and movePerMille
         // 800 -> 1,000, so the bigger frog hops a body and a half. Taken from a freshly loaded pack.
         // And SpeciesDef gained divergeRadius (frog 6; design 30 §8e), the same day.
         // The frog merged with cover, 2026-09-26: re-taken from the merged pack.
-        const ulong ContentFingerprint = 6767576614922530108UL;
+        // The frog merged with raids, 2026-09-26: the gunman keeps kind 4 and the frog moves to 5;
+        // re-taken from the merged pack.
+        const ulong ContentFingerprint = 11744128507824195914UL;
 
 
         [Test]

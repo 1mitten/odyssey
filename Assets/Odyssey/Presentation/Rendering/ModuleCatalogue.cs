@@ -772,8 +772,9 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const string AnimalBase = Prefix + "pawn.animal";
 
-        /// <remarks>Kind 3 is the bandit, a person, and has no row; the frog is kind 4 (design 30 §8).</remarks>
-        public static readonly string[] AnimalNames = { string.Empty, "hog", "rat", string.Empty, "frog" };
+        /// <remarks>Kinds 3 and 4 are the bandit and the gunman, people, and have no row; the frog is kind 5
+        /// (design 30 §8).</remarks>
+        public static readonly string[] AnimalNames = { string.Empty, "hog", "rat", string.Empty, string.Empty, "frog" };
 
         /// <summary>The row for a kind, or empty for a person and for a kind past the table.</summary>
         public static string Animal(int kind) =>

@@ -528,11 +528,12 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// A bandit's mind (design 33 §1, §5): down, else hunt — a colonist, else a building, else
         /// what it came for, which it carries off the board (§14b, §17) — else idle. No needs, no
-        /// work, no draft: it is debug-spawned to fight and is never one of ours.
+        /// work, no draft: it is never one of ours. A raid member asks its band first (design 55 §3):
+        /// the raid's node declines for a pawn in no raid, so a lone bandit thinks as it always did.
         /// </summary>
         static readonly ThinkNode[] HostileTree =
         {
-            new DownedThinkNode(), new HostileThinkNode(), new IdleThinkNode(),
+            new DownedThinkNode(), new Events.RaidThinkNode(), new HostileThinkNode(), new IdleThinkNode(),
         };
 
         /// <summary>The animal tree, in traversal order, so a test can assert it.</summary>

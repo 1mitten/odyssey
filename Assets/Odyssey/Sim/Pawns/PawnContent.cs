@@ -208,10 +208,15 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int Bandit = 3;
 
-        /// <summary>The frog of the banks (design 30 §8): kind 4, species 3.</summary>
-        public const int CulvertFrog = 4;
+        /// <summary>
+        /// The bandit with a pistol (design 55 §8): its own kind so a raid mix can name it. Appended.
+        /// </summary>
+        public const int Gunman = 4;
 
-        public const int Count = 5;
+        /// <summary>The frog of the banks (design 30 §8): kind 5, species 3. Appended after the gunman.</summary>
+        public const int CulvertFrog = 5;
+
+        public const int Count = 6;
     }
 
     /// <summary>
@@ -1627,7 +1632,9 @@ namespace Odyssey.Sim.Pawns
                 "PawnKind_Colonist", "PawnKind_MiddenHog", "PawnKind_DuctRat",
                 // The debug-spawned hostile person (design 33 §1), appended.
                 "PawnKind_Bandit",
-                // The frog of the banks (design 30 §8), appended.
+                // The bandit with a pistol, a raid's second kind (design 55 §8), appended.
+                "PawnKind_Gunman",
+                // The frog of the banks (design 30 §8), appended after the gunman.
                 "PawnKind_CulvertFrog");
             content.Species = ByName<SpeciesDef>(defs,
                 "Species_Person", "Species_MiddenHog", "Species_DuctRat", "Species_CulvertFrog");

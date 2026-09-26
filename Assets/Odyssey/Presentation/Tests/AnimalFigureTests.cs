@@ -72,11 +72,12 @@ namespace Odyssey.Tests.Presentation
 
             Assert.That(ModuleIds.Animal(0), Is.Empty, "the colonist has no animal row");
             Assert.That(ModuleIds.Animal(3), Is.Empty, "nor the bandit, a person");
+            Assert.That(ModuleIds.Animal(4), Is.Empty, "nor the gunman");
             Assert.That(ModuleIds.Animal(99), Is.Empty, "nor does a kind past the table");
         }
 
         /// <summary>
-        /// <b>The frog hops on its own Jump clip</b> (design 30 §8): kind 4's row resolves from the
+        /// <b>The frog hops on its own Jump clip</b> (design 30 §8): kind 5's row resolves from the
         /// project's art, asks for the hop pacing rather than the computed trot, and has the idle
         /// and the jump as its two gaits — both looping, or the frog would take one hop and freeze
         /// in the air.
@@ -84,7 +85,7 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void TheFrogRowResolvesAndHopsOnItsJumpClip()
         {
-            ModuleEntry? frog = Catalogue().Find(ModuleIds.Animal(4));
+            ModuleEntry? frog = Catalogue().Find(ModuleIds.Animal(5));
             Assert.That(frog, Is.Not.Null, "the frog row is in the catalogue");
             Assert.That(frog!.prefab, Is.Not.Null, "the frog's model resolved");
             Assert.That(AssetDatabase.GetAssetPath(frog.prefab), Does.StartWith("Assets/Art/Custom/"));

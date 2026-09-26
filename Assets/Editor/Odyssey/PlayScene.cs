@@ -1825,7 +1825,7 @@ namespace Odyssey.EditorTools
                     new LocomotionEntry { clipName = "RatArmature|Rat_Run", metresPerSecond = 2.2f },
                 },
             });
-            // The frog (design 30 §8), kind 4: kind 3 is the bandit, a person, with no row here.
+            // The frog (design 30 §8), kind 5: kinds 3 and 4 are the bandit and the gunman, people, with no row here.
             // It has no walk; it hops. Its locomotion is the idle and the Jump clip, and the row
             // asks for the hop pacing (hopGait) so the figure is still while it crouches and
             // lands and carried forward only while it is in the air. The jump's speed is the
@@ -1836,7 +1836,7 @@ namespace Odyssey.EditorTools
             // measured speed.
             rows.Add(new ModuleEntry
             {
-                moduleId = ModuleIds.Animal(4), shape = ModuleShape.Pillar,
+                moduleId = ModuleIds.Animal(5), shape = ModuleShape.Pillar,
                 prefabName = "Frog",
                 poseClipName = "FrogArmature|Frog_Idle",
                 centreXZ = true, baseAtY = true,
