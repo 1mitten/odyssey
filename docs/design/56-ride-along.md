@@ -1,6 +1,6 @@
 # 56 — Riding along with a colonist
 
-**Status: built 2026-09-26, not yet compiled in Unity or played.** Branch `claude/planning-session-fok6wm`.
+**Status: built 2026-09-26; compiled and tested in Unity the same day, not yet played.** Branch `claude/planning-session-fok6wm`.
 The ground and the owner's answers are `docs/research/first-person-interview.md`. The owner's request:
 *"Plan out a first person mode. Use a button on the colonist card next to draft etc. This will lock
 the user into a fps mode until they push esc. This camera will look into the colonist's view, what
@@ -213,5 +213,9 @@ beside it:
 
 `HudModelTests` now expects Ride along among the live commands.
 
-None of this compiles the Presentation half. That is Unity's (process §5), and on this branch the
-first compile is the CI run.
+None of this compiles the Presentation half. That is Unity's (process §5). **First Unity run,
+2026-09-26, after merging `main`:** the Presentation half compiled clean first time; EditMode 4,387
+total, 4,348 passed, 1 failed (`WeaponSheathGapTests`, a bat 3.2 cm off the hip, which fails on a
+clean `main` with the same numbers and is recorded in the journal); PlayMode 161 total, 144 passed,
+0 failed. Nothing tests a ride end to end in PlayMode: a PlayMode test cannot press the card's
+button (CLAUDE.md, *Nothing tests that a click reaches the game*), so the first ride is the playtest.
