@@ -1,6 +1,6 @@
 # 62 — Deep mining
 
-**Status: designed 2026-09-26, nothing built; the plan waits for the owner's approval.** Branch
+**Status: built 2026-09-26 (DM1–DM8 and U44), not yet compiled in Unity or played.** Approved the same day (owner: *"Ok go for it and use agents - can you fold it more as possible"*); §13 is what was built and every departure. Branch
 `claude/intelligent-davinci-rbnjm7`. Interview `docs/research/deep-mining-interview.md` (sixteen
 answers), research `a-12-ore-by-depth.md` and `a-04-cave-ins-and-prospecting.md`, plan
 `docs/plans/deep-mining.md`. It builds on `docs/research/mining-interview.md` (the 2026-09-16 mining
@@ -267,3 +267,134 @@ Each with a control in the same run, per `docs/process.md`:
 - DM2: memory, generation time and the frame on all four boards at 32.
 - DM3: the ore census per band per seed against §5c.
 - DM7: the support pass on a mine of 1,000 dug cells against the same mine with the rule off.
+
+## 13. As built (2026-09-26)
+
+Each unit was built by one agent in its own worktree and merged into
+`claude/intelligent-davinci-rbnjm7` in dependency order, with the fast tier and the three content gates
+green after every merge. **None of the Presentation or Editor code has been compiled by Unity yet** — the
+fast tier builds only Sim and Hud — so the Unity tiers and a player build are the first thing owed.
+
+### 13a. DM1 — unopened rock is free
+
+- The rule lives in **`NavGrid.KindOf`**, not `FloodBlock`: a solid, unwalkable terrain cell is
+  `RegionKind.None`, so a region started on a wall cannot grow into the rock beside it. **Walls keep
+  their regions** (the audit found nothing reads them either; the conservative choice). A measurement
+  switch restores the old rule for the before/after arms (`UnopenedRockTests`).
+- **Regions were never in the world hash** (`NavGraph.ContributeTo` has no caller), so §2b's
+  expectation that the hash would move was wrong: no golden moved.
+- Measured in this container (Linux, 4 logical CPUs, .NET 8 Debug, other agents' runs on the same CPUs),
+  played map, seed 4242, before and after interleaved in one run:
+
+  | Board | Regions before → after | Edit tick before | Edit tick after |
+  |---|---|---|---|
+  | Standard @16 / @24 / @32 | 2,110 / 3,262 / 4,414 → 392 each | 1.15 / 1.16 / 1.07 ms | 0.77 / 0.63 / 0.64 ms |
+  | Huge @16 / @24 / @32 | 8,406 / 13,018 / 17,626 → 1,501 / 1,506 / 1,506 | 2.73 / 2.96 / 3.33 ms | 2.02 / 2.04 / 2.01 ms |
+  | Scale target 250² @40 | 24,141 → 1,649 | 4.19 ms | 2.32 ms |
+
+  **The gate holds: the edit tick at 32 layers is below today's at 16, and neither regions nor the tick
+  move with depth any more.**
+- Underground, **7 layers below the slice** are drawn (`SliceSettings`): layers 1–7 get distinct
+  shades and the 8th would clamp to `ShadeBelow`'s 0.08 floor.
+- The door list rescans only chunks whose version moved, through **`Odyssey.Hud.ChunkedCellList`**, so the
+  fast tier can test it. `FireDirector` still rescans every cell and could reuse it.
+- **Not fixed, found**: `NavGraph.RecomputeLayerChangeEstimate` divides portals by `SizeY − 1`, so the
+  pathfinder's layer-change hint still rises with depth (Standard 2,500 → 3,600). Fixing it moves the
+  goldens; its own unit.
+
+### 13b. DM2 — 32 layers
+
+- **`GridSize.OfferedLayers = 32`** is the one owner of board depth. §3 counted three places that chose it;
+  there were more (`PlayScene.PlayLayers`, `Play.unity`, the `WorldChoice` defaults, the `BoardSizes`
+  test mirror). A mountainous site is 32 like every board, so its depth row left the site panel.
+- Old saves keep their own depth (`OldSaveDepthTests`).
+- Measured at 32 layers: Small 16.0 MiB / 42 ms / 67 KB saved; Standard 35.8 / 99 / 154; Large 80.1 /
+  216 / 368; **Huge 142.5 MiB / 422 ms / 641 KB** — inside §2d's estimate and the laptop ceiling.
+  `28-map-size.md` §12.
+- `Golden.PlayedBoard` moved to 120 × 120 × 32; the probe says the same colony shifted up 16 layers.
+
+### 13c. DM3 — strata and minerals
+
+- **Terrains** appended: `DeepStone` 21 (work 1,400, from 14 layers below the surface), `CopperOre` 22,
+  `GoldOre` 23, `Gems` 24, `Emberquartz` 25. **Items**: `Item_CopperOre` 18, `Item_GoldOre` 19,
+  `Item_Gems` 20, `Item_Emberquartz` 21.
+- **The ore table has one owner**, `Ores.xml`, each row carrying band, shape, size, frequency, yield,
+  off-band and cave-wall shares. `orePerCell` left the colonist tuning; `oreAbundancePerMille` replaced the
+  deposit count and blob sizes. `MineJob.Yield` is a table lookup.
+- **The rock-like rule is DM4's** (`TerrainHandle.IsRockLike`); worldgen composes `NaturalContent.IsHostRock`
+  (rock-like, solid, not ore, not bedrock) on it. No second owner.
+- **`RockSpan.Cells = 6`** (`Sim/World/RockSpan.cs`) is the one owner of the cave-in span: a supporting
+  column is solid from layer 0 to the hole's ceiling within 6 Manhattan steps. The cavern pass keeps
+  every chamber inside it, and re-checks earlier chambers so a later one cannot hollow out their pillars.
+- Census, played map, seed 1, 32 layers (seeds 2 and 3 within a few per cent): iron 65 deposits / 1,696
+  cells (95 % in band), coal 50 / 2,227, copper 86 / 1,707, gold 17 / 85, gems 9 / 23, Emberquartz 3 / 74;
+  four caverns of 406–1,041 cells at depths 11, 12, 17 and 18, 24 pillars; 45 % of gold and 44 % of gem
+  deposits touch a cave wall. On 16 layers every kind is still present, pressed into the rock there is.
+- **Departures**: coal outweighs iron (the table's order), so `IronOutweighsCoal` became
+  `TheCommonFindsOutweighThePreciousOnes`; the ore terrains use the `ui.res.*` item names as iron and coal
+  already did; caverns are full size on a 16-layer board too.
+- **Owed**: `ModuleCatalogue.asset` rebuilt with the packs, or the new items draw as the fallback box and
+  the new terrains as flat-coloured lumps.
+
+### 13d. DM4 — Dig and Mine
+
+- `TerrainHandle.IsRockLike` / `IsSoftGround` in `Sim.Contracts/Catalogue.cs`; a Sim test holds every
+  terrain to one or the other, so a new stone added without a decision fails.
+- The drag decides once in `DesignateDirector.Begin` from the start cell and hands `DesignateRun.RockOnly`
+  or `Everything` in every intent of the drag; `DesignationGrid.Designate(cell, kind, rockOnly)` applies it.
+- Words: the armed banner (`BuildPaletteModel.ArmedWordKey`), the tile pane ("diggable"/"digging"), and
+  the activity line from a published `odyssey.pawn.digging` flag (unsaved, unhashed). Keys `ui.arch.tool.dig`,
+  `ui.status.digging`. The city's engineered fill, buried seam and salvage read Dig. The job icon stays the
+  pickaxe.
+
+### 13e. DM5 — fog
+
+- **`Sim/World/UnseenCells.cs`**, one bit a cell, allocated only when a board has a cavern, owned by
+  `CellGrid.Unseen`. **`SeenTerrain` is the one owner of what the colony sees** (an unseen cell or an
+  undiscovered seam reads as rock). Save section `odyssey.unseen`, no bump, hashed only while non-empty.
+- **`CavernBreach.Open`** floods the chamber on a breach, discovers its walls, drops orders on it and
+  dirties its chunks. Only `MineJobDriver.MineCell` can breach today; a cave-in that removes rock must call
+  it too (DM7). A save made before DM5 re-opens chambers it had already broken into, on load.
+- **The inspect-pane leak is fixed**: terrain, work, crossing cost, support, indoors and temperature read as
+  rock's for an unseen cell; an undiscovered seam shows rock's terrain and work. Construction, power lines
+  and zones are refused in an unseen cell.
+- **Known leaks left**: a Mine order on an undiscovered seam advances at the ore's work rate; a drafted move
+  to a cavern cell is refused as unreachable rather than as rock; debug spawns can land in a cavern.
+
+### 13f. DM6 — prospecting
+
+- `JobHandle.Prospect = 28`, `DesignationKind.Prospect = 5`, `Job_Prospect`: 140 ticks, Mining at half the
+  usual training, **radius 3, +1 at Mining 6, 12 and 18** (`revealRadius`, `revealRadiusBands` on the job
+  def). Voids are never revealed.
+- **`CellGrid.IsExposedFace`** (discovered *and* an open face neighbour) is the one owner of "a face",
+  because a prospect now sets `Discovered` on buried rock without cutting anything.
+- **The tool is a Structure-row tile, not an orders-strip button**: an eighth pinned button overlapped the
+  views strip at 1280 × 720 (`HudLayoutTests`). The banner reads `PaletteTools.CategoryOrders`.
+- **Found, not fixed: `MineJobDriver` never calls `Work(ctx)`, so mining has never trained the Mining
+  skill.** Fixing it moves every golden; §13i.
+
+### 13g. U44 — stairs (design 63)
+
+Two cells for one layer, 8 wood, stone or steel, rotatable, the ladder's stairwell rule on both cells;
+`BuildingHandle.Stair` 14, `EdificeHandle` 24; a diagonal `ConnectorKind.Stair`. Two real faults fixed on
+the way (a ladder refresh tearing out a stair's connector; `RemoveSlab` not refreshing stairs). Eleven owner
+questions in design 63 §10.
+
+### 13h. DM8 — the smelter
+
+- **Recipes**: `RecipeDef` has a crafted shape (ingredients, products, `fuelPerBatch`) beside the food
+  shape; `Kitchen` claims only food stations and is bit-identical; `Crafting.Workshop` is the sibling
+  (`odyssey.workshop`, hashed only once a smelter is used); bill edits have one owner, `BillEdits.Apply`.
+- Handles: job 29 Craft, work 8 **Crafting** (rated and trained on Construction — no new skill, no format
+  bump), building 15 / edifice 25 Smelter, items 22 iron bar and 23 copper bar, recipes 1 and 2.
+- **Fuel**: coal worth 3, wood 1 in the hopper (`hopperFuels`); a batch burns 3 — **1 coal or 3 wood** —
+  and turns **10 ore into 5 bars** in 450 ticks. The Refuel job fills a smelter's hopper (coal first) while
+  it has an unpaused bill.
+- **Where the bars go** (answers §11.4 provisionally): **iron bars are steel**, a third building material
+  beside wood and stone, for anything built of wood or stone (about 1.4× wood's work, twice its hit
+  points — untuned). **Copper bars lay power lines** in place of scrap metal. Generators, heaters and the
+  galley still take scrap only. Gold, gems and Emberquartz are not smelted.
+- Every golden moved for one reason — a ninth work priority per colonist — shown by hashing only the
+  first eight and getting every committed value back.
+- **Not done**: an out-of-fuel alert, smelter heat, keeping the ore and fuel in a smelter that is taken
+  down. The art is a guessed prefab (`SM_Prop_Pizza_Oven_01`, POLYGON Shops); the bars borrow the gold ingot.
