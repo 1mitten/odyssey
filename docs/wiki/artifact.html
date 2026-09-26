@@ -138,12 +138,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 </div></div></header>
 <div class="wrap">
 <nav aria-label="Sections"><h2>Sections</h2><ul class="navlist">
-<li><a href="#commodities">Commodities<b>58</b></a></li>
+<li><a href="#commodities">Commodities<b>61</b></a></li>
 <li><a href="#items">Items and equipment<b>34</b></a></li>
-<li><a href="#buildings">Buildings and orders<b>85</b></a></li>
+<li><a href="#buildings">Buildings and orders<b>86</b></a></li>
 <li><a href="#commands">Commands<b>55</b></a></li>
-<li><a href="#work">Work and skills<b>57</b></a></li>
-<li><a href="#colonists">Colonists<b>65</b></a></li>
+<li><a href="#work">Work and skills<b>66</b></a></li>
+<li><a href="#colonists">Colonists<b>66</b></a></li>
 <li><a href="#health">Health and anatomy<b>39</b></a></li>
 <li><a href="#events">Events<b>51</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
@@ -156,21 +156,21 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>989</b><i>named entries</i></div>
+<div class="stat"><b>1003</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>717</b><i>no art yet</i></div>
+<div class="stat m"><b>731</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
 <p id="nohits" class="empty" hidden>Nothing matches that search.</p>
 <section id="commodities" data-sec="1">
-<h2>Commodities <em class="count">58 entries</em></h2>
+<h2>Commodities <em class="count">61 entries</em></h2>
 <p class="blurb">What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the ore classes a wilderness colony sim would have, because the setting is a dead city and the ground is already full of manufactured things. These names appear in the resource ledger, in every bill and in every trade, so they are the names worth arguing about first.</p>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
-<div class="row" id="ui.res.scrap" data-hay="scrap metal ui.res.scrap salvaged metal. power lines and machines are built from it " data-gap="0">
+<div class="row" id="ui.res.scrap" data-hay="scrap metal ui.res.scrap salvaged metal. power lines and machines are built from it; a copper bar lays a line as well " data-gap="0">
 <div class="nm">Scrap metal<span class="k">ui.res.scrap</span></div>
-<div class="dsc">Salvaged metal. Power lines and machines are built from it</div>
+<div class="dsc">Salvaged metal. Power lines and machines are built from it; a copper bar lays a line as well</div>
 <div class="art"><span class="pill">med</span> manufactured</div>
 <div class="ms">M1</div>
 </div>
@@ -360,9 +360,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
-<div class="row gap" id="ui.res.ironore" data-hay="iron ore ui.res.ironore raw ore. worthless until something smelts it dark rock flecked with rust-orange" data-gap="1">
+<div class="row gap" id="ui.res.ironore" data-hay="iron ore ui.res.ironore raw ore. a smelter makes it into iron bars dark rock flecked with rust-orange" data-gap="1">
 <div class="nm">Iron ore<span class="k">ui.res.ironore</span></div>
-<div class="dsc">Raw ore. Worthless until something smelts it<span class="need">Needs drawing: dark rock flecked with rust-orange</span></div>
+<div class="dsc">Raw ore. A smelter makes it into iron bars<span class="need">Needs drawing: dark rock flecked with rust-orange</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -377,6 +377,24 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Raw ore. The commonest find in the first few layers down<span class="need">Needs drawing: rock flecked with green and a coppery sheen</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.res.ironbar" data-hay="iron bar ui.res.ironbar smelted iron. what steel is built of: walls, doors and floors that stand longest a dull grey ingot, stepped at the ends" data-gap="1">
+<div class="nm">Iron bar<span class="k">ui.res.ironbar</span></div>
+<div class="dsc">Smelted iron. What steel is built of: walls, doors and floors that stand longest<span class="need">Needs drawing: a dull grey ingot, stepped at the ends</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
+</div>
+<div class="row gap" id="ui.res.copperbar" data-hay="copper bar ui.res.copperbar smelted copper. lays a power line in place of scrap metal a reddish-orange ingot, stepped at the ends" data-gap="1">
+<div class="nm">Copper bar<span class="k">ui.res.copperbar</span></div>
+<div class="dsc">Smelted copper. Lays a power line in place of scrap metal<span class="need">Needs drawing: a reddish-orange ingot, stepped at the ends</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
+</div>
+<div class="row gap" id="ui.res.steel" data-hay="steel ui.res.steel iron bars, as a building material. slower to put up than wood, and twice as hard to knock down a grey girder section, in plan. our own concept" data-gap="1">
+<div class="nm">Steel<span class="k">ui.res.steel</span></div>
+<div class="dsc">Iron bars, as a building material. Slower to put up than wood, and twice as hard to knock down<span class="need">Needs drawing: a grey girder section, in plan. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
 </div>
 <div class="row gap" id="ui.res.goldore" data-hay="gold ore ui.res.goldore small clusters deep down, most often in deep stone or on a cave wall. stored; nothing uses it yet pale rock threaded with gold" data-gap="1">
 <div class="nm">Gold ore<span class="k">ui.res.goldore</span></div>
@@ -732,7 +750,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="buildings" data-sec="1">
-<h2>Buildings and orders <em class="count">85 entries</em></h2>
+<h2>Buildings and orders <em class="count">86 entries</em></h2>
 <p class="blurb">Everything on the architect menu: what can be built, and the one-off orders that can be given to things that already exist. The vertical connectors matter more here than in a flat colony sim, because a stair occupies two cells and a ladder one.</p>
 <h3 class="nsh">Architect categories</h3>
 <div class="tbl">
@@ -1034,6 +1052,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Cooks meals from bills. Needs power</div>
 <div class="art"><span class="pill">high</span> camp and crafting</div>
 <div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.arch.tool.smelter" data-hay="smelter ui.arch.tool.smelter smelts iron and copper ore into bars from bills. burns coal or wood, coal the better a squat brick furnace with a glowing mouth" data-gap="1">
+<div class="nm">Smelter<span class="k">ui.arch.tool.smelter</span></div>
+<div class="dsc">Smelts iron and copper ore into bars from bills. Burns coal or wood, coal the better<span class="need">Needs drawing: a squat brick furnace with a glowing mouth</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
 </div>
 <div class="row gap" id="ui.arch.tool.reclaimer" data-hay="reclaimer ui.arch.tool.reclaimer sorts scrap into usable material a machine that sorts scrap. our own invention" data-gap="1">
 <div class="nm">Reclaimer<span class="k">ui.arch.tool.reclaimer</span></div>
@@ -1598,7 +1622,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="work" data-sec="1">
-<h2>Work and skills <em class="count">57 entries</em></h2>
+<h2>Work and skills <em class="count">66 entries</em></h2>
 <p class="blurb">The work types a colonist can be assigned, in priority order of urgency, the skills that govern how well they do them, and the schedule blocks that say when. Salvaging is ours: it sits beside mining because taking a ruin apart without wrecking what is inside it is a different craft from digging. Work and schedule share one tab and one table, so they share a page here.</p>
 <h3 class="nsh">Work types</h3>
 <div class="tbl">
@@ -1699,11 +1723,11 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M7</div>
 </div>
-<div class="row" id="ui.work.crafting" data-hay="crafting ui.work.crafting general bench work " data-gap="0">
+<div class="row" id="ui.work.crafting" data-hay="crafting ui.work.crafting work the bills at a smelter. construction buys speed at it " data-gap="0">
 <div class="nm">Crafting<span class="k">ui.work.crafting</span></div>
-<div class="dsc">General bench work</div>
+<div class="dsc">Work the bills at a smelter. Construction buys speed at it</div>
 <div class="art"><span class="pill">high</span> camp and crafting</div>
-<div class="ms">M7</div>
+<div class="ms">DM</div>
 </div>
 <div class="row" id="ui.work.tailoring" data-hay="tailoring ui.work.tailoring make apparel from fabric and leather " data-gap="0">
 <div class="nm">Tailoring<span class="k">ui.work.tailoring</span></div>
@@ -1873,6 +1897,18 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.recipe.smelt.iron" data-hay="smelt iron ui.recipe.smelt.iron ten iron ore into five iron bars, burning one coal or three wood a grey ingot over a flame. our own concept" data-gap="1">
+<div class="nm">Smelt iron<span class="k">ui.recipe.smelt.iron</span></div>
+<div class="dsc">Ten iron ore into five iron bars, burning one coal or three wood<span class="need">Needs drawing: a grey ingot over a flame. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
+</div>
+<div class="row gap" id="ui.recipe.smelt.copper" data-hay="smelt copper ui.recipe.smelt.copper ten copper ore into five copper bars, burning one coal or three wood an orange ingot over a flame. our own concept" data-gap="1">
+<div class="nm">Smelt copper<span class="k">ui.recipe.smelt.copper</span></div>
+<div class="dsc">Ten copper ore into five copper bars, burning one coal or three wood<span class="need">Needs drawing: an orange ingot over a flame. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
+</div>
 </div>
 <h3 class="nsh">Bills, and the words of a station's pane</h3>
 <div class="tbl">
@@ -1961,11 +1997,53 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.bill.needs.smelter" data-hay="each batch: 10 ore, and 1 coal or 3 wood ui.bill.needs.smelter a batch takes ten of its ore and burns fuel from the hopper: coal is worth three wood interface words, no icon wanted" data-gap="1">
+<div class="nm">Each batch: 10 ore, and 1 coal or 3 wood<span class="k">ui.bill.needs.smelter</span></div>
+<div class="dsc">A batch takes ten of its ore and burns fuel from the hopper: coal is worth three wood<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
+</div>
+<div class="row gap" id="ui.bill.supply.ore" data-hay="ore for {n} batches ui.bill.supply.ore what the ore on the map, in stores and on the ground, would smelt into for the bill being worked interface words, no icon wanted" data-gap="1">
+<div class="nm">Ore for {n} batches<span class="k">ui.bill.supply.ore</span></div>
+<div class="dsc">What the ore on the map, in stores and on the ground, would smelt into for the bill being worked<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
+</div>
+<div class="row gap" id="ui.bill.noore" data-hay="no ore on the map ui.bill.noore nothing to smelt. mine iron or copper ore an empty ore cart. our own concept" data-gap="1">
+<div class="nm">No ore on the map<span class="k">ui.bill.noore</span></div>
+<div class="dsc">Nothing to smelt. Mine iron or copper ore<span class="need">Needs drawing: an empty ore cart. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
+</div>
+<div class="row gap" id="ui.bill.fuel" data-hay="fuel for {n} ui.bill.fuel how many batches the coal and wood in the hopper would burn for interface words, no icon wanted" data-gap="1">
+<div class="nm">Fuel for {n}<span class="k">ui.bill.fuel</span></div>
+<div class="dsc">How many batches the coal and wood in the hopper would burn for<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
+</div>
+<div class="row gap" id="ui.bill.hopperempty" data-hay="hopper empty ui.bill.hopperempty a hauler fills it with coal or wood while the smelter has a bill interface words, no icon wanted" data-gap="1">
+<div class="nm">Hopper empty<span class="k">ui.bill.hopperempty</span></div>
+<div class="dsc">A hauler fills it with coal or wood while the smelter has a bill<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
+</div>
+<div class="row gap" id="ui.bill.nofuel" data-hay="no fuel ui.bill.nofuel the hopper cannot pay for the next batch. a hauler brings coal or wood while there is any a cold grate. our own concept" data-gap="1">
+<div class="nm">No fuel<span class="k">ui.bill.nofuel</span></div>
+<div class="dsc">The hopper cannot pay for the next batch. A hauler brings coal or wood while there is any<span class="need">Needs drawing: a cold grate. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
+</div>
+<div class="row gap" id="ui.bill.waitingfuel" data-hay="waiting for fuel ui.bill.waitingfuel this bill will be worked once the hopper has fuel for a batch interface words, no icon wanted" data-gap="1">
+<div class="nm">Waiting for fuel<span class="k">ui.bill.waitingfuel</span></div>
+<div class="dsc">This bill will be worked once the hopper has fuel for a batch<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
+</div>
 </div>
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">65 entries</em></h2>
+<h2>Colonists <em class="count">66 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -2192,9 +2270,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
-<div class="row gap" id="ui.status.refuelling" data-hay="refuelling ui.status.refuelling carrying fuel to a generator and filling it " data-gap="1">
+<div class="row gap" id="ui.status.refuelling" data-hay="refuelling ui.status.refuelling carrying fuel to a generator or a smelter and filling it " data-gap="1">
 <div class="nm">Refuelling<span class="k">ui.status.refuelling</span></div>
-<div class="dsc">Carrying fuel to a generator and filling it</div>
+<div class="dsc">Carrying fuel to a generator or a smelter and filling it</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -2311,6 +2389,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">At an electric cooker or a campfire, or fetching food for the pan<span class="need">Needs drawing: a figure stirring a pan. Blocked on the missing human figure</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.status.crafting" data-hay="crafting ui.status.crafting at a smelter, or fetching ore for it a figure at a furnace mouth. blocked on the missing human figure" data-gap="1">
+<div class="nm">Crafting<span class="k">ui.status.crafting</span></div>
+<div class="dsc">At a smelter, or fetching ore for it<span class="need">Needs drawing: a figure at a furnace mouth. Blocked on the missing human figure</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">DM</div>
 </div>
 <div class="row gap" id="ui.status.sheltering" data-hay="sheltering ui.status.sheltering an animal waiting out the rain under a roof or a tree, or walking to one " data-gap="1">
 <div class="nm">Sheltering<span class="k">ui.status.sheltering</span></div>
@@ -4506,7 +4590,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 989, "gaps": 717};</script>
+<script>window.WIKI={"total": 1003, "gaps": 731};</script>
 <script>
 (function(){
   var D = window.WIKI;

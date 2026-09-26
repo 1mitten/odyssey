@@ -220,6 +220,9 @@ namespace Odyssey.Sim.Pawns
                 // from before has no section, so the board keeps the chambers its seed carved —
                 // and RebuildDerived opens again any of them that save had already broken into.
                 pawns.Cells.Unseen,
+                // The crafting stations (design 62 §9): the smelter's bills, batch and hopper.
+                // Appended, no format bump; a save from before has no section and loads with none.
+                pawns.Workshop!,
             };
         }
 

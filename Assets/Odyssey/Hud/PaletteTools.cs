@@ -146,6 +146,9 @@ namespace Odyssey.Hud
         /// <summary>The galley (design 48 §5): the electric cooker, where bills are worked.</summary>
         public const string Galley = "ui.arch.tool.galley";
 
+        /// <summary>The smelter (design 62 §9): iron and copper ore into bars, burning coal or wood.</summary>
+        public const string Smelter = "ui.arch.tool.smelter";
+
         /// <summary>Sandbags (design 53 §4): cheap low cover, always stone, dragged as a line.</summary>
         public const string Sandbag = "ui.arch.tool.sandbag";
 
@@ -215,7 +218,8 @@ namespace Odyssey.Hud
             // Prospect (design 62 §7) is the one order here, beside the stair and the ladder: the
             // things a player reaches for going down. Eight fills the Rail grid's two rows of four.
             ("ui.arch.category.structure", new[] { Wall, Paving, Door, Stair, Ladder, Slab, "ui.arch.tool.reclaim", Prospect }),
-            ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", Galley, "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
+            // The smelter (design 62 §9) beside the cooker: the two stations that take bills.
+            ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", Galley, Smelter, "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
             ("ui.arch.category.furniture", new[] { Bed, Shelf, Campfire, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp" }),
             // Power (design 32): the line and its undoing, then what makes power and what spends
             // it. Battery and reactor stay drawn and disabled — the shape of what is coming.
@@ -236,13 +240,16 @@ namespace Odyssey.Hud
         /// What a thing may be made of, in the order the player meets them — and only what the
         /// colony can actually build with.
         ///
-        /// <para>Two entries, because <c>ConstructionContent.IsBuildable</c> admits two. The other
-        /// four <see cref="StuffHandle"/> values are what the ruined city is made <i>of</i> rather
-        /// than what a colony builds <i>with</i>; <see cref="BuildLabels.StuffKeys"/> leaves them
-        /// unnamed for the same reason. <see cref="HudTheme.MaterialTintOf"/> already holds tints
-        /// for four, so a third and fourth buildable material is one row here.</para>
+        /// <para>Three entries, because <c>ConstructionContent.IsBuildable</c> admits three: steel
+        /// joined wood and stone when the smelter gave it an item, the iron bar (design 62 §9), and
+        /// was one row here as this note had promised — its tint was already waiting in
+        /// <see cref="HudTheme.MaterialTintOf"/>. The other three <see cref="StuffHandle"/> values
+        /// are what the ruined city is made <i>of</i> rather than what a colony builds
+        /// <i>with</i>; <see cref="BuildLabels.StuffKeys"/> leaves them unnamed for the same
+        /// reason. A material the colony holds none of is drawn out of stock, so steel reads dim
+        /// until the first bars are smelted.</para>
         /// </summary>
-        public static readonly int[] Materials = { StuffHandle.Wood, StuffHandle.Stone };
+        public static readonly int[] Materials = { StuffHandle.Wood, StuffHandle.Stone, StuffHandle.Steel };
 
         /// <summary>
         /// What a zone may be planted with, in the order the player meets them — the plant
@@ -432,6 +439,11 @@ namespace Odyssey.Hud
             new PaletteTool(Galley,
                 d => d.ArmBuild(BuildingHandle.Galley),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Galley,
+                wantsMaterial: true),
+            // The smelter (design 62 §9): built of any material, with no parts and no power.
+            new PaletteTool(Smelter,
+                d => d.ArmBuild(BuildingHandle.Smelter),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Smelter,
                 wantsMaterial: true),
             // Cover (design 53 §4). Sandbags are always stone, so they offer no material. The
             // barricade is dim again, beside the turret and the trap (design 53 §13).

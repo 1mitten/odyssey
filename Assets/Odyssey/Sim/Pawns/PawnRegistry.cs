@@ -486,6 +486,8 @@ namespace Odyssey.Sim.Pawns
             new AttackRangedJobDriver(),
             // Reading the rock round an exposed face (design 62 §7), JobHandle 28.
             new ProspectJobDriver(),
+            // Working a bill at a crafting station (design 62 §9), JobHandle 29.
+            new Crafting.CraftJobDriver(),
         };
 
         /// <summary>

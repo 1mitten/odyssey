@@ -9,6 +9,7 @@ namespace Odyssey.Hud
         public static string Wood => Registry.Label("ui.res.wood");
         public static string Stone => Registry.Label("ui.res.stone");
         public static string Coal => Registry.Label("ui.res.coal");
+        public static string Steel => Registry.Label("ui.res.steel");
         public static string Carrots => Registry.Label("ui.res.carrots");
         public static string Scrap => Registry.Label("ui.res.scrap");
         public static string PlantMatter => Registry.Label("ui.res.plantmatter");
@@ -356,7 +357,7 @@ namespace Odyssey.Hud
                     new[] { ("Pavement", "primary finished surface application"), ("Gravel", "raw aggregate component"), (AlmanacKeys.Salvage, "alternative scrap re-binder") }
                 ),
                 new AlmanacEntry(
-                    "Steel", AlmanacKeys.Materials, "Industrial alloy sheets salvaged from hull plating", "Material", "Metal", true, "#5c7080",
+                    AlmanacKeys.Steel, AlmanacKeys.Materials, "Iron bars from the smelter, built into walls, doors and floors that stand longest", "Material", "Metal", true, "#5c7080",
                     new AlmanacIcon("steel", "#5c7080", "M3 7l4-4h10l4 4v10l-4 4H7l-4-4V7z"),
                     "High-tensile refined metallic alloy. Critical for power conduits, automated security turrets, and reinforced blast doors.",
                     "Stocked in colony · 190 units · Secure vault", "View stockpile",
@@ -415,7 +416,7 @@ namespace Odyssey.Hud
                             ("Holding capability", "Repels wild predators", "Prevents starving duct rats raiding larder"),
                             ("Remote lock", "Player toggleable", "Enables colony lockdown during raids")
                         }),
-                    new[] { (AlmanacKeys.Wall, "enclosing partition frame"), (AlmanacKeys.Wood, "fast-opening interior door stock"), ("Steel", "blast-resistant security door") }
+                    new[] { (AlmanacKeys.Wall, "enclosing partition frame"), (AlmanacKeys.Wood, "fast-opening interior door stock"), (AlmanacKeys.Steel, "blast-resistant security door") }
                 ),
                 new AlmanacEntry(
                     AlmanacKeys.Ladder, "Structures", "Vertical transit link between vertical world layers", AlmanacKeys.Structure, "Fabricated", false, "#7fd0e0",
@@ -515,7 +516,7 @@ namespace Odyssey.Hud
                             ("Hauling priority", "Low urgency until shelter is complete", "Immune to rain corrosion"),
                             ("Crafting alternate", "Early tool and spike trap fabrication", "Economical defense material")
                         }),
-                    new[] { ("Steel", "smelted refined alloy product"), ("Haul", "logistics work hauling scrap"), ("Construct", "re-use in crude barricades") }
+                    new[] { (AlmanacKeys.Steel, "smelted refined alloy product"), ("Haul", "logistics work hauling scrap"), ("Construct", "re-use in crude barricades") }
                 ),
                 new AlmanacEntry(
                     "Iron Ore", AlmanacKeys.Items, "Crude hematite chunks dug from subterranean veins", "Item", "Mineral", false, "#9c5a4c",
@@ -534,7 +535,7 @@ namespace Odyssey.Hud
                             ("Shaft exploration", "Found in clusters behind granite seams", "Detected by deep survey scans"),
                             ("Hauling strain", "Heavy cargo loads", "Utilize dedicated pack beasts or high-strength haulers")
                         }),
-                    new[] { (AlmanacKeys.Mining, "extraction skill"), (AlmanacKeys.Coal, "reduction smelting partner"), ("Steel", "refined output product") }
+                    new[] { (AlmanacKeys.Mining, "extraction skill"), (AlmanacKeys.Coal, "reduction smelting partner"), (AlmanacKeys.Steel, "refined output product") }
                 ),
                 new AlmanacEntry(
                     AlmanacKeys.Coal, AlmanacKeys.Items, "Carbonaceous fossil fuel rock with high thermal energy", "Item", "Combustible", false, "#3a3a3c",
@@ -1005,7 +1006,7 @@ namespace Odyssey.Hud
                             ("Immediate haul order", "Assign priority hauling to collect packaged rations from impact point."),
                             ("Roof warning", "Pods crashing through thin sheet metal can crush sleeping pawns beneath.")
                         }),
-                    new[] { ("Ration Pack", "typical dropped bounty cargo"), ("Steel", "common structural payload"), ("Haul", "urgent recovery work type") }
+                    new[] { ("Ration Pack", "typical dropped bounty cargo"), (AlmanacKeys.Steel, "common structural payload"), ("Haul", "urgent recovery work type") }
                 ),
                 new AlmanacEntry(
                     "Cold Snap", "Events", "Severe arctic air mass plunging temperatures below freezing", "Event", "Threat", false, "#7fd0e0",

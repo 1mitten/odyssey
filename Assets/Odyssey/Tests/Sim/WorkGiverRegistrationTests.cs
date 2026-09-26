@@ -140,7 +140,9 @@ namespace Odyssey.Tests.Sim
                 "Rescue", "Doctor", "Deliver", "Build", "LayConduit", "Deconstruct", "RemoveConduit",
                 // Prospect (design 62 §7) is mining work and sorts by name after Mine: a colonist
                 // with both in reach cuts before she looks.
-                "Forage", "Harvest", "Sow", "Cook", "Fell", "Mine", "Prospect", "Refuel", "Haul",
+                // Craft (design 62 §9) is bench work, after mining and before hauling: the
+                // reference's place for it.
+                "Forage", "Harvest", "Sow", "Cook", "Fell", "Mine", "Prospect", "Craft", "Refuel", "Haul",
             }));
         }
 

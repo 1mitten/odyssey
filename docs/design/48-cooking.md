@@ -382,3 +382,21 @@ Approved with *"go for it"*, 2026-09-25, which took every recommendation:
 - **Not in K1: the food in the pan going raw → cooked → burnt, and the steam.** The Shops food
   models are in now, so this is the next piece of presentation. The station already publishes what they need
   (`StationView.CookPerMille`, `Burning`, `HasMeat`).
+
+## 15. As built beside the smelter (DM8, 2026-09-26)
+
+Design 62 §9's smelter works bills through the same `Bill`, the same three modes and the same pane,
+and **the kitchen is unbent**: `Recipe_Meal`, `Kitchen` and `CookJobs` behave bit for bit as K1
+built them, and no cooking test changed. What moved around them:
+
+- **`RecipeDef` has two shapes, told apart by `Crafted`** (`ingredients` non-empty): the kitchen's
+  raw food by nutrition, and a crafted recipe's named ingredients and products with a
+  `RecipeStation.fuelPerBatch` burnt from the station's hopper. One recipe table, because a bill
+  carries one handle. `Kitchen.IsStation` counts only the food recipes, so a smelter is never the
+  kitchen's; `Crafting.Workshop` is the sibling that works the rest.
+- **The bill edits have one owner**, `BillEdits.Apply` (remove, reorder, mode, target, suspend),
+  called by both lists. The `EditBill` intent is routed by the colony — to the workshop for a
+  crafting station, to the kitchen otherwise — instead of being registered by the kitchen.
+- `MealsHeld`'s one-number cache is keyed by recipe now; only the meal is ever asked, so it is the
+  same number.
+- `CookWorkGiver.StandAt(edifice, cell)` is the stance rule by edifice, shared with the smelter.

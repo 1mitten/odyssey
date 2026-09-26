@@ -540,6 +540,9 @@ namespace Odyssey.Presentation.World
             : jobDef == JobHandle.Build ? BuildingIndex
             // The kitchen (design 48 §10): a cook at the hob tosses a pan, never swings an axe.
             : jobDef == JobHandle.Cook ? CookingIndex
+            // The smelter (design 62 §9): a crafter works the batch with the builder's hammer,
+            // the nearest stroke there is to working metal. Proposed, like the pan was.
+            : jobDef == JobHandle.Craft ? BuildingIndex
             : FellingIndex;
 
         /// <summary>The same, resolved. Anything that is not mining swings an axe.</summary>

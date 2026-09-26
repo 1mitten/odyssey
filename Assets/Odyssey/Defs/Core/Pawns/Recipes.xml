@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  What a cooking station can make (design 48 section 5). One recipe in the kitchen unit.
+  What a station can make. The kitchen's one recipe (design 48 section 5), then the smelter's two
+  (design 62 section 9). A RecipeHandle is a position in PawnContent.FromDefs's list, appended,
+  never inserted: a bill stores it.
 
   Any raw food, 500 of it by nutrition, into one meal of 900: a-18's simple meal exactly. That is
   three carrots (540) or ten pieces of meat; what is over stays in the pan for the next meal. A
@@ -41,6 +43,57 @@
         <burnFactorPerMille>1500</burnFactorPerMille>
         <fuelItem>2</fuelItem>
         <fuelCount>1</fuelCount>
+      </li>
+    </stations>
+  </RecipeDef>
+
+  <!--
+    THE SMELTER'S TWO (design 62 section 9). A crafted recipe names its ingredients and products
+    item by item, which is what tells it from the kitchen's: Workshop works these, Kitchen never
+    sees them, and the food fields above mean nothing here.
+
+    Ten ore into five bars, both metals alike. Iron ore comes up fifteen to a cut cell (Ores.xml),
+    so a cell is a batch and a half; a steel wall's five bars are ten ore. 450 ticks at the
+    standard pace, divided by the smelter's crafter's speed (Work_Crafting, on Construction):
+    seven and a half seconds at level 10, the galley's meal and a half.
+
+    fuelPerBatch 3 is in the smelter's hopper worth (Buildings.xml, Building_Smelter's
+    hopperFuels: coal 3, wood 1), so a batch burns one coal or three wood. Coal is the better fuel
+    because it is worth three times as much, and that is said once, on the building. INVENTED.
+  -->
+  <RecipeDef>
+    <defName>Recipe_SmeltIron</defName>
+    <label>smelt iron</label>
+    <workTicks>450</workTicks>
+    <ingredients>
+      <li><item>Item_IronOre</item><count>10</count></li>
+    </ingredients>
+    <products>
+      <li><item>Item_IronBar</item><count>5</count></li>
+    </products>
+    <stations>
+      <!-- The smelter, BuildingHandle 15. -->
+      <li>
+        <building>15</building>
+        <fuelPerBatch>3</fuelPerBatch>
+      </li>
+    </stations>
+  </RecipeDef>
+
+  <RecipeDef>
+    <defName>Recipe_SmeltCopper</defName>
+    <label>smelt copper</label>
+    <workTicks>450</workTicks>
+    <ingredients>
+      <li><item>Item_CopperOre</item><count>10</count></li>
+    </ingredients>
+    <products>
+      <li><item>Item_CopperBar</item><count>5</count></li>
+    </products>
+    <stations>
+      <li>
+        <building>15</building>
+        <fuelPerBatch>3</fuelPerBatch>
       </li>
     </stations>
   </RecipeDef>

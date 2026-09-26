@@ -161,7 +161,12 @@ namespace Odyssey.Tests.Sim
             Assert.That(woodDef.bluntDamagePerMille, Is.EqualTo(1_000));
             Assert.That(stoneDef.sharpDamagePerMille, Is.EqualTo(500));
             Assert.That(stoneDef.bluntDamagePerMille, Is.EqualTo(1_250));
-            foreach (int other in new[] { StuffHandle.None, StuffHandle.Concrete, StuffHandle.Steel, StuffHandle.Composite })
+            // Steel since the smelter made it buildable (design 62 §9): an edge barely marks it and
+            // a club does less than to stone. INVENTED, like wood's and stone's.
+            var steelDef = ConstructionContent.StuffAt(StuffHandle.Steel);
+            Assert.That(steelDef.sharpDamagePerMille, Is.EqualTo(400));
+            Assert.That(steelDef.bluntDamagePerMille, Is.EqualTo(750));
+            foreach (int other in new[] { StuffHandle.None, StuffHandle.Concrete, StuffHandle.Composite })
             {
                 var def = ConstructionContent.StuffAt(other);
                 Assert.That(def.sharpDamagePerMille, Is.EqualTo(1_000), def.defName);

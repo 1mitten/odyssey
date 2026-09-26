@@ -134,7 +134,7 @@ namespace Odyssey.Hud
                 if (title.StartsWith(AlmanacKeys.Wood, StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, AlmanacKeys.Wood);
                 if (title.StartsWith(AlmanacKeys.Stone, StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, AlmanacKeys.Stone);
                 if (title.StartsWith("Concrete", StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, "Concrete");
-                if (title.StartsWith("Steel", StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, "Steel");
+                if (title.StartsWith(AlmanacKeys.Steel, StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, AlmanacKeys.Steel);
 
                 if (title.StartsWith("Ration", StringComparison.OrdinalIgnoreCase) || iconKey == "ui.res.rations")
                     return (AlmanacKeys.Items, "Ration Pack");
@@ -175,7 +175,7 @@ namespace Odyssey.Hud
                 if (title.IndexOf(AlmanacKeys.Wood, StringComparison.OrdinalIgnoreCase) >= 0) return (AlmanacKeys.Materials, AlmanacKeys.Wood);
                 if (title.IndexOf(AlmanacKeys.Stone, StringComparison.OrdinalIgnoreCase) >= 0) return (AlmanacKeys.Materials, AlmanacKeys.Stone);
                 if (title.IndexOf("Concrete", StringComparison.OrdinalIgnoreCase) >= 0) return (AlmanacKeys.Materials, "Concrete");
-                if (title.IndexOf("Steel", StringComparison.OrdinalIgnoreCase) >= 0) return (AlmanacKeys.Materials, "Steel");
+                if (title.IndexOf(AlmanacKeys.Steel, StringComparison.OrdinalIgnoreCase) >= 0) return (AlmanacKeys.Materials, AlmanacKeys.Steel);
 
                 if (title.IndexOf("Grass", StringComparison.OrdinalIgnoreCase) >= 0) return ("Terrain", "Grass");
                 if (title.IndexOf("Soil", StringComparison.OrdinalIgnoreCase) >= 0) return ("Terrain", "Soil");

@@ -190,6 +190,7 @@ namespace Odyssey.Sim.Pawns
         public const int Cook = JobHandle.Cook;
         public const int AttackRanged = JobHandle.AttackRanged;
         public const int Prospect = JobHandle.Prospect;
+        public const int Craft = JobHandle.Craft;
         public const int Count = JobHandle.Count;
     }
 
@@ -370,6 +371,9 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Working the bills at a galley or a campfire (design 48 §5).</summary>
         public const int Cooking = WorkHandle.Cooking;
 
+        /// <summary>Working the bills at a crafting station: the smelter, today (design 62 §9).</summary>
+        public const int Crafting = WorkHandle.Crafting;
+
         public const int Count = WorkHandle.Count;
 
         /// <summary>
@@ -383,7 +387,7 @@ namespace Odyssey.Sim.Pawns
         /// than a missing aspect — which is why growing is in both or in neither.</para>
         /// </summary>
         public static readonly string[] Names =
-            { "haul", "cutting", "mining", "construction", "growing", "rescue", "doctor", "cooking" };
+            { "haul", "cutting", "mining", "construction", "growing", "rescue", "doctor", "cooking", "crafting" };
     }
 
     /// <summary>
@@ -754,12 +758,43 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// One thing a cooking station can make (design 48 §5): raw food in, by nutrition, and one
-    /// product out — which of three is decided by what went in and whether it burnt. Loaded from
-    /// <c>Recipes.xml</c>; a <see cref="RecipeHandle"/> is its index.
+    /// One thing a station can make. Loaded from <c>Recipes.xml</c>; a <see cref="RecipeHandle"/>
+    /// is its index. Two shapes on one Def, told apart by <see cref="Crafted"/>:
+    ///
+    /// <list type="bullet">
+    /// <item><b>A kitchen recipe</b> (design 48 §5): raw food in, by nutrition, and one product
+    /// out — which of three is decided by what went in and whether it burnt. The food fields below
+    /// are its, and <c>Kitchen</c> is the only thing that reads them.</item>
+    /// <item><b>A crafted recipe</b> (design 62 §9): named ingredients in, each by count, and named
+    /// products out, each by count; fuel from the station's hopper by
+    /// <see cref="RecipeStation.fuelPerBatch"/>. <c>Workshop</c> is the only thing that reads
+    /// these, and the food fields mean nothing to it.</item>
+    /// </list>
+    ///
+    /// <para><b>One table, not two</b>, because a bill carries a recipe handle and the bill list
+    /// is one control for every station (design 49 §2): two tables would be two handle spaces
+    /// for one number on the published frame.</para>
     /// </summary>
     public class RecipeDef : Def
     {
+        /// <summary>
+        /// What a crafted recipe takes, item by item, per batch. <b>Empty for a kitchen recipe</b>,
+        /// which takes any raw food by <see cref="ingredientNutrition"/>, and that emptiness is
+        /// what <see cref="Crafted"/> reads.
+        /// </summary>
+        public System.Collections.Generic.List<RecipeCount> ingredients =
+            new System.Collections.Generic.List<RecipeCount>();
+
+        /// <summary>What a batch of a crafted recipe puts down, item by item. Unread for a kitchen recipe.</summary>
+        public System.Collections.Generic.List<RecipeCount> products =
+            new System.Collections.Generic.List<RecipeCount>();
+
+        /// <summary>
+        /// Is this a crafted recipe — named ingredients into named products — rather than the
+        /// kitchen's raw food into a meal? The one owner of which system works a recipe.
+        /// </summary>
+        public bool Crafted => ingredients.Count > 0;
+
         /// <summary>Work at the standard pace, in ticks, before the station's own factor and the cook's speed.</summary>
         public int workTicks = 300;
 
@@ -809,6 +844,23 @@ namespace Odyssey.Sim.Pawns
         }
     }
 
+    /// <summary>
+    /// One item and a count, by name, in a crafted recipe's <see cref="RecipeDef.ingredients"/> or
+    /// <see cref="RecipeDef.products"/> (design 62 §9). The name is resolved to an item handle once,
+    /// at load.
+    /// </summary>
+    public class RecipeCount
+    {
+        /// <summary>The item, by def name.</summary>
+        public string item = "";
+
+        /// <summary>How many a batch takes or makes.</summary>
+        public int count = 1;
+
+        /// <summary>The item def index, resolved at load from <see cref="item"/>. A property, which the binder never sees.</summary>
+        public int Item { get; set; } = -1;
+    }
+
     /// <summary>One place a <see cref="RecipeDef"/> can be made (design 48 §5).</summary>
     public class RecipeStation
     {
@@ -828,6 +880,14 @@ namespace Odyssey.Sim.Pawns
         public int fuelCount;
 
         public bool NeedsFuel => fuelItem >= 0 && fuelCount > 0;
+
+        /// <summary>
+        /// What a batch burns from the station's <b>hopper</b>, in the worth units the building's
+        /// <c>hopperFuels</c> price each fuel in (design 62 §9): the smelter's 3 is one coal or
+        /// three wood. Nought for a station with no hopper. The fuel's worth is the building's and
+        /// this is the recipe's, so neither number is written twice.
+        /// </summary>
+        public int fuelPerBatch;
     }
 
     /// <summary>Movement tuning. One unit of cost is 1/100 of a flat orthogonal cell crossing.</summary>
@@ -1609,7 +1669,9 @@ namespace Odyssey.Sim.Pawns
                 // The ranged attack (design 47 §2d).
                 "Job_AttackRanged",
                 // Reading the rock round an exposed face (design 62 §7).
-                "Job_Prospect");
+                "Job_Prospect",
+                // Working a bill at a crafting station (design 62 §9).
+                "Job_Craft");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",
@@ -1619,7 +1681,9 @@ namespace Odyssey.Sim.Pawns
                 // Medical supplies (design 37).
                 "Work_Doctor",
                 // The kitchen (design 48 §5).
-                "Work_Cooking");
+                "Work_Cooking",
+                // The smelter (design 62 §9): bench work, on the Construction skill.
+                "Work_Crafting");
             content.Skills = ByName<SkillDef>(defs,
                 "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction",
                 "Skill_Growing",
@@ -1648,16 +1712,30 @@ namespace Odyssey.Sim.Pawns
                 // The pistol (design 47), the first ranged weapon.
                 "Item_Pistol",
                 // Deep mining's finds (design 62 §5c), appended after the pistol.
-                "Item_CopperOre", "Item_GoldOre", "Item_Gems", "Item_Emberquartz");
+                "Item_CopperOre", "Item_GoldOre", "Item_Gems", "Item_Emberquartz",
+                // The smelter's bars (design 62 §9), appended after the finds.
+                "Item_IronBar", "Item_CopperBar");
             var ores = Worldgen.WorldContent.OresFromDefs(defs);
             content.OreYields = new OreYield[ores.Length];
             for (int o = 0; o < ores.Length; o++)
                 content.OreYields[o] = new OreYield(ores[o].Terrain,
                     ItemNamed(content, ores[o].Item, Worldgen.WorldContent.OreOrder[o]), ores[o].YieldPerCell);
-            content.Recipes = ByName<RecipeDef>(defs, "Recipe_Meal");
+            content.Recipes = ByName<RecipeDef>(defs, "Recipe_Meal",
+                // The smelter (design 62 §9), appended: a bill stores its recipe as this index.
+                "Recipe_SmeltIron", "Recipe_SmeltCopper");
             for (int r = 0; r < content.Recipes.Length; r++)
             {
                 RecipeDef recipe = content.Recipes[r];
+                if (recipe.Crafted)
+                {
+                    // A crafted recipe names its things one by one; the food fields stay unread.
+                    if (recipe.products.Count == 0)
+                        throw new DefLoadException($"RecipeDef '{recipe.defName}' takes ingredients and makes nothing.");
+                    foreach (RecipeCount c in recipe.ingredients) c.Item = ItemNamed(content, c.item, recipe.defName);
+                    foreach (RecipeCount c in recipe.products) c.Item = ItemNamed(content, c.item, recipe.defName);
+                    continue;
+                }
+
                 recipe.ProductItem = ItemNamed(content, recipe.product, recipe.defName);
                 recipe.ProductNoMeatItem = ItemNamed(content, recipe.productNoMeat, recipe.defName);
                 recipe.BurntItem = ItemNamed(content, recipe.burntProduct, recipe.defName);

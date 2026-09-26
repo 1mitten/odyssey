@@ -373,4 +373,22 @@
     </revealRadiusBands>
   </JobDef>
 
+  <!--
+    Working a bill at a crafting station (design 62 section 9), driver 29: fetch one load of what
+    the recipe takes into the station, or work the batch the station holds into its products. The
+    smelter is the only station. The work is the recipe's (Recipes.xml), so there is no workTicks
+    here - Job_Cook's argument. It trains Construction (3), the skill Work_Crafting rates by, at
+    every working job's rate. Not casually interruptible, as a cook is not; the work is banked on
+    the station all the same. Expiry is the walking jobs' generous one: ore comes up from deep.
+  -->
+  <JobDef>
+    <defName>Job_Craft</defName>
+    <driver>29</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>3</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
 </Defs>

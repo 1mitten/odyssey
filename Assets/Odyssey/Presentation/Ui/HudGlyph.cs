@@ -123,6 +123,7 @@ namespace Odyssey.Presentation.Ui
         ToolReclaim,
         ToolFabricator,
         ToolGalley,
+        ToolSmelter,
         ToolReclaimer,
         ToolBench,
         ToolBunk,

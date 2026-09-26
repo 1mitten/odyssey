@@ -85,7 +85,9 @@ namespace Odyssey.Tests.Sim
             Assert.That(JobHandle.AttackRanged, Is.EqualTo(27));
             // And the prospector's (design 62 §7), 28 after the ranged attack.
             Assert.That(JobHandle.Prospect, Is.EqualTo(28));
-            Assert.That(JobHandle.Count, Is.EqualTo(29));
+            // And the crafter's (design 62 §9), 29 after the prospector's.
+            Assert.That(JobHandle.Craft, Is.EqualTo(29));
+            Assert.That(JobHandle.Count, Is.EqualTo(30));
             Assert.That(new[] { ItemHandle.Bat, ItemHandle.Crowbar, ItemHandle.Machete, ItemHandle.ArcBlade },
                 Is.EqualTo(new[] { 7, 8, 9, 10 }));
             // Medical supplies at 11 (design 37), the wild foods at 12 and 13 (design 45 §6), and
@@ -99,12 +101,16 @@ namespace Odyssey.Tests.Sim
             // Deep mining's four finds at 18 to 21, after the pistol (design 62 §5c).
             Assert.That(new[] { ItemHandle.CopperOre, ItemHandle.GoldOre, ItemHandle.Gems, ItemHandle.Emberquartz },
                 Is.EqualTo(new[] { 18, 19, 20, 21 }));
-            Assert.That(ItemHandle.Count, Is.EqualTo(22));
+            // And the smelter's two bars at 22 and 23, after the finds (design 62 §9).
+            Assert.That(new[] { ItemHandle.IronBar, ItemHandle.CopperBar }, Is.EqualTo(new[] { 22, 23 }));
+            Assert.That(ItemHandle.Count, Is.EqualTo(24));
             Assert.That(WorkHandle.Rescue, Is.EqualTo(5));
             Assert.That(WorkHandle.Doctor, Is.EqualTo(6));
             // 8 since the kitchen appended Work_Cooking at 7 (design 48).
             Assert.That(WorkHandle.Cooking, Is.EqualTo(7));
-            Assert.That(WorkHandle.Count, Is.EqualTo(8));
+            // 9 since the smelter appended Work_Crafting at 8 (design 62 §9).
+            Assert.That(WorkHandle.Crafting, Is.EqualTo(8));
+            Assert.That(WorkHandle.Count, Is.EqualTo(9));
             Assert.That(SkillIndex.Melee, Is.EqualTo(5));
             // 7 since medical supplies appended Skill_Medicine at 6 (design 37), and 8 since the
             // kitchen appended Skill_Cooking at 7 (design 48).
@@ -135,7 +141,8 @@ namespace Odyssey.Tests.Sim
             PawnContent content = ContentPack.Pawns();
             Assert.That(content.Jobs.Skip(17).Select(j => j.defName), Is.EqualTo(new[]
                 { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue", "Job_Steal",
-                  "Job_Treat", "Job_Patient", "Job_Forage", "Job_Cook", "Job_AttackRanged", "Job_Prospect" }));
+                  "Job_Treat", "Job_Patient", "Job_Forage", "Job_Cook", "Job_AttackRanged", "Job_Prospect",
+                  "Job_Craft" }));
             for (int i = 0; i < content.Jobs.Length; i++)
                 Assert.That(content.Jobs[i].driver, Is.EqualTo(i), content.Jobs[i].defName + " names another driver");
             Assert.That(content.Jobs[JobIndex.AttackMelee].trainsSkill, Is.EqualTo(SkillIndex.Melee));
@@ -155,7 +162,9 @@ namespace Odyssey.Tests.Sim
                   // The pistol (design 47), after the kitchen.
                   "Item_Pistol",
                   // Deep mining's finds (design 62 §5c), after the pistol.
-                  "Item_CopperOre", "Item_GoldOre", "Item_Gems", "Item_Emberquartz" }));
+                  "Item_CopperOre", "Item_GoldOre", "Item_Gems", "Item_Emberquartz",
+                  // The smelter's bars (design 62 §9), after the finds.
+                  "Item_IronBar", "Item_CopperBar" }));
             Assert.That(content.Items[ItemIndex.Pistol].weapon!.ranged, Is.Not.Null, "the pistol is a gun");
             Assert.That(content.Items[ItemIndex.Machete].weapon!.ranged, Is.Null, "a machete is not");
             Assert.That(content.Kinds[PawnKindIndex.Bandit].defName, Is.EqualTo("PawnKind_Bandit"));

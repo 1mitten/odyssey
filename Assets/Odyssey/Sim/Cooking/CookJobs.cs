@@ -81,11 +81,17 @@ namespace Odyssey.Sim.Cooking
         /// stand, else beside it. A galley is worked from the front (design 48 §3); a fire from
         /// any side, and so is a galley someone has backed against the wrong wall.
         /// </summary>
-        public static int StandFor(PawnContext ctx, Pawn pawn, Kitchen kitchen, CookStation station)
+        public static int StandFor(PawnContext ctx, Pawn pawn, Kitchen kitchen, CookStation station) =>
+            StandAt(ctx, pawn, station.Edifice, kitchen.CellOf(station));
+
+        /// <summary>
+        /// <see cref="StandFor"/> by edifice and cell, so every station that is worked from its
+        /// front — the galley, and the smelter (design 62 §9) — shares the one rule.
+        /// </summary>
+        public static int StandAt(PawnContext ctx, Pawn pawn, int edifice, int cell)
         {
             PlacedEdifice placed = ctx.Construction != null
-                ? ctx.Construction.Edifices.Records[station.Edifice] : default;
-            int cell = kitchen.CellOf(station);
+                ? ctx.Construction.Edifices.Records[edifice] : default;
             GridSize size = ctx.Size;
             CellRef at = size.FromIndex(cell);
             int f = placed.Facing & 3;

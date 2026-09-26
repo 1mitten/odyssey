@@ -157,6 +157,10 @@ namespace Odyssey.Sim.Pawns
             // would have a galley whose bill pane silently did nothing.
             var kitchen = new Cooking.Kitchen(pawns, edifices);
             pawns.Kitchen = kitchen;
+            // And its sibling for crafted recipes (design 62 §9): the smelter's bills, batch and
+            // hopper, for the same argument once more.
+            var workshop = new Crafting.Workshop(pawns, edifices);
+            pawns.Workshop = workshop;
 
             // The home (design 43): derived from everything above, so it is built last and is
             // neither a system, a hashable nor a save section. It rebuilds itself when asked.
@@ -345,6 +349,12 @@ namespace Odyssey.Sim.Pawns
             storage.Attach(builder);
             units.Attach(builder);
             kitchen.Attach(builder);
+            workshop.Attach(builder);
+            // One bill intent for every station (design 48 §5, design 49): the building in the cell
+            // decides whose list it is. A crafted recipe's station is the workshop's and every
+            // other is the kitchen's, which answers exactly as it did before there was a workshop.
+            builder.AddIntentHandler(IntentKind.EditBill, intent =>
+                workshop.ClaimsCell(intent.Cell) ? workshop.HandleEditBill(intent) : kitchen.HandleEditBill(intent));
             return builder;
         }
     }

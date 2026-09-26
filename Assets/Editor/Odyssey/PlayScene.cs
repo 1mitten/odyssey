@@ -1457,6 +1457,18 @@ namespace Odyssey.EditorTools
                 moduleId = ModuleIds.Galley, shape = ModuleShape.Pillar, prefabName = "SM_Prop_Kitchen_Stove_Oven_01",
                 centreXZ = true, baseAtY = true, fitFootprint = new Vector2(2.3f, 1.6f), fitHeight = 1.6f,
             });
+            // The smelter (design 62 §9): a domed brick oven is the nearest thing to a furnace in
+            // the imported packs — POLYGON Shops' pizza oven (e-10 names two and measured neither).
+            // PROPOSED and UNVERIFIED: the prefab name is a guess at the pack's pattern. If it does
+            // not resolve the smelter draws as the tinted block, the fallback every machine has;
+            // the name is one line to correct when the catalogue is next rebuilt with the packs.
+            // Fitted to the cell like the galley, turned to the player's facing (its mouth faces
+            // the crafter).
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.Smelter, shape = ModuleShape.Pillar, prefabName = "SM_Prop_Pizza_Oven_01",
+                centreXZ = true, baseAtY = true, fitFootprint = new Vector2(2.3f, 2.0f), fitHeight = 2.2f,
+            });
 
             // The campfire (design 31 §3). The owner's report was that it drew as a wooden block,
             // on the ghost and on the board alike, which it did: ModuleIds.Campfire had no row, so
@@ -2046,6 +2058,23 @@ namespace Odyssey.EditorTools
                 prefabName = "SM_Gen_Env_Rock_08",
                 centreXZ = true, baseAtY = true,
                 scale = new Vector3(0.18f, 0.18f, 0.18f),
+            });
+            // The smelter's bars (design 62 §9): Western Frontier's gold ingot, 0.24 m long at source,
+            // the only ingot in the imported packs. PROPOSED: both bars draw gold until each has a
+            // colour of its own; told apart by size meanwhile, iron the larger.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemIronBar, shape = ModuleShape.Pillar,
+                prefabName = "SM_Prop_Gold_Ingot_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1.6f, 1.6f, 1.6f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemCopperBar, shape = ModuleShape.Pillar,
+                prefabName = "SM_Prop_Gold_Ingot_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1.3f, 1.3f, 1.3f),
             });
             // A harvest dropped on the field. The heap pass scatters one lump per few carrots in
             // the stack, so the row is one carrot you could carry, not a pile: the mature crop's

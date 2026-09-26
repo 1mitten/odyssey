@@ -1,5 +1,5 @@
 key,label,namespace,milestone,tooltip_seed
-ui.res.scrap,Scrap metal,ui.res,M1,"Salvaged metal. Power lines and machines are built from it"
+ui.res.scrap,Scrap metal,ui.res,M1,"Salvaged metal. Power lines and machines are built from it; a copper bar lays a line as well"
 ui.res.rubble,Rubble,ui.res,M1,"Broken concrete and masonry. Cleared, not mined"
 ui.res.girder,Girder,ui.res,M1,"Structural steel cut from a shell. Heavy, valuable"
 ui.res.panel,Hull panel,ui.res,M1,Flat salvaged plating. The cheapest wall material
@@ -31,9 +31,12 @@ ui.res.meat,Raw meat,ui.res,M1,Butchered. Spoils without cold
 ui.res.produce,Produce,ui.res,M1,"Grown food, uncooked"
 ui.res.wood,Wood,ui.res,M3,"Felled timber. The first thing the colony builds with"
 ui.res.stone,Stone,ui.res,M3,"Broken rock from a mined face. Heavy, and there is always more"
-ui.res.ironore,Iron ore,ui.res,M3,Raw ore. Worthless until something smelts it
+ui.res.ironore,Iron ore,ui.res,M3,"Raw ore. A smelter makes it into iron bars"
 ui.res.coal,Coal,ui.res,M3,"Burns hot. Found deeper than iron, and for that reason"
 ui.res.copperore,Copper ore,ui.res,M3,"Raw ore. The commonest find in the first few layers down"
+ui.res.ironbar,Iron bar,ui.res,DM,"Smelted iron. What steel is built of: walls, doors and floors that stand longest"
+ui.res.copperbar,Copper bar,ui.res,DM,"Smelted copper. Lays a power line in place of scrap metal"
+ui.res.steel,Steel,ui.res,DM,"Iron bars, as a building material. Slower to put up than wood, and twice as hard to knock down"
 ui.res.goldore,Gold ore,ui.res,M3,"Small clusters deep down, most often in deep stone or on a cave wall. Stored; nothing uses it yet"
 ui.res.gems,Gems,ui.res,M3,"A few stones at a time, often on a cave wall. Stored; nothing uses them yet"
 ui.res.emberquartz,Emberquartz,ui.res,M3,"The deepest find, and it glows once a face exposes it. Stored; nothing uses it yet"
@@ -111,7 +114,7 @@ ui.status.felling,Chopping,ui.status,M3,Cutting a tree down for wood
 ui.status.sowing,Sowing,ui.status,M3,Breaking ground and planting a zone cell
 ui.status.harvesting,Harvesting,ui.status,M3,Cutting a ripe crop and gathering it
 ui.status.foraging,Picking,ui.status,M3,Picking the berries off a wild bush
-ui.status.refuelling,Refuelling,ui.status,M3,Carrying fuel to a generator and filling it
+ui.status.refuelling,Refuelling,ui.status,M3,"Carrying fuel to a generator or a smelter and filling it"
 ui.status.sleeping,Sleeping,ui.status,M2,"Asleep, and should stay that way"
 ui.status.eating,Eating,ui.status,M2,Taking a meal
 ui.status.idle,Idle,ui.status,M2,Nothing to do. Usually a priorities problem
@@ -131,6 +134,7 @@ ui.status.stealing,Stealing,ui.status,CB,"A bandit carrying something off the bo
 ui.status.treating,Treating,ui.status,M3,"Tending the hurt, or herself"
 ui.status.patient,Resting as a patient,ui.status,M3,In bed until the wound allows getting up
 ui.status.cooking,Cooking,ui.status,M3,"At an electric cooker or a campfire, or fetching food for the pan"
+ui.status.crafting,Crafting,ui.status,DM,"At a smelter, or fetching ore for it"
 ui.status.sheltering,Sheltering,ui.status,WE,"An animal waiting out the rain under a roof or a tree, or walking to one"
 ui.status.inrain,In the rain,ui.status,WE,"A colonist under open sky while it rains, and walking slower for it. Said beside her pace"
 ui.stat.pace,Pace,ui.stat,WE,"How fast a colonist walks, as a share of the standard walk. Not the tile's walk speed, which is the ground"
@@ -174,7 +178,7 @@ ui.work.cutting,Chopping,ui.work,M7,Fell trees and clear growth
 ui.work.hauling,Hauling,ui.work,M7,Move things to storage
 ui.work.cleaning,Cleaning,ui.work,M7,Clear filth from rooms
 ui.work.research,Research,ui.work,M7,Work the research bench
-ui.work.crafting,Crafting,ui.work,M7,General bench work
+ui.work.crafting,Crafting,ui.work,DM,"Work the bills at a smelter. Construction buys speed at it"
 ui.work.tailoring,Tailoring,ui.work,M7,Make apparel from fabric and leather
 ui.work.fabrication,Fabrication,ui.work,M7,Advanced production
 ui.work.art,Art,ui.work,M7,Make sculptures and decoration
@@ -187,6 +191,8 @@ ui.schedule.recreation,Recreation,ui.schedule,M7,Rest and recover mood
 ui.schedule.eat,Eat,ui.schedule,M7,Take a meal even if not yet hungry
 ui.schedule.meditate,Meditate,ui.schedule,M7,"Quiet hours, for whatever comes to need them"
 ui.recipe.meal,Cook a meal,ui.recipe,M3,"Any raw food, three carrots' worth, into one meal"
+ui.recipe.smelt.iron,Smelt iron,ui.recipe,DM,"Ten iron ore into five iron bars, burning one coal or three wood"
+ui.recipe.smelt.copper,Smelt copper,ui.recipe,DM,"Ten copper ore into five copper bars, burning one coal or three wood"
 ui.bill.heading,Bills,ui.bill,M3,What this station is told to make. The top one is worked first
 ui.bill.add,Add a bill,ui.bill,M3,Put a new order at the bottom of the list
 ui.bill.none,No bills yet,ui.bill,M3,Nothing will be made here until a bill is added
@@ -201,6 +207,13 @@ ui.bill.needs,"Each meal: raw food, about 3 carrots",ui.bill,M3,"A meal takes 50
 ui.bill.needs.fire,"Each meal: raw food, about 3 carrots, and 1 wood",ui.bill,M3,"A campfire burns one wood for every meal it cooks"
 ui.bill.supply,Raw food for {n} meals,ui.bill,M3,"What the raw food on the map, in stores and on the ground, would cook into"
 ui.bill.nosupply,No raw food on the map,ui.bill,M3,"Nothing to cook. Grow carrots, or use the debug menu's Give carrots"
+ui.bill.needs.smelter,"Each batch: 10 ore, and 1 coal or 3 wood",ui.bill,DM,"A batch takes ten of its ore and burns fuel from the hopper: coal is worth three wood"
+ui.bill.supply.ore,Ore for {n} batches,ui.bill,DM,"What the ore on the map, in stores and on the ground, would smelt into for the bill being worked"
+ui.bill.noore,No ore on the map,ui.bill,DM,"Nothing to smelt. Mine iron or copper ore"
+ui.bill.fuel,Fuel for {n},ui.bill,DM,"How many batches the coal and wood in the hopper would burn for"
+ui.bill.hopperempty,Hopper empty,ui.bill,DM,"A hauler fills it with coal or wood while the smelter has a bill"
+ui.bill.nofuel,No fuel,ui.bill,DM,"The hopper cannot pay for the next batch. A hauler brings coal or wood while there is any"
+ui.bill.waitingfuel,Waiting for fuel,ui.bill,DM,"This bill will be worked once the hopper has fuel for a batch"
 ui.arch.category.structure,Structure,ui.arch.category,M3,"Walls, doors, floors and vertical connectors"
 ui.arch.category.zones,Zones,ui.arch.category,M3,"Stockpiles, growing zones and allowed areas"
 ui.arch.category.orders,Orders,ui.arch.category,M3,One-off designations on existing things
@@ -250,6 +263,7 @@ ui.arch.tool.switch,Power switch,ui.arch.tool,M3,Cuts a net in two
 ui.arch.tool.reactor,Reactor,ui.arch.tool,M3,"Late, enormous, dangerous"
 ui.arch.tool.fabricator,Fabricator,ui.arch.tool,M3,Makes refined materials and components
 ui.arch.tool.galley,Electric Cooker,ui.arch.tool,M3,"Cooks meals from bills. Needs power"
+ui.arch.tool.smelter,Smelter,ui.arch.tool,DM,"Smelts iron and copper ore into bars from bills. Burns coal or wood, coal the better"
 ui.arch.tool.reclaimer,Reclaimer,ui.arch.tool,M3,Sorts scrap into usable material
 ui.arch.tool.hydroponics,Hydroponics basin,ui.arch.tool,M3,"Grows without soil, needs power"
 ui.arch.tool.bench,Crafting bench,ui.arch.tool,M3,General making

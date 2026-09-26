@@ -323,8 +323,8 @@
   <!--
     Deep mining's finds (design 62 §5c), appended after the pistol: handles 18 to 21. They stack
     to 75 like the other ores, so a worked deposit comes up in a few hauls. Nothing consumes any
-    of them in this build - copper waits for the smelter (DM8), gold, gems and Emberquartz are
-    stored with their uses recorded (Q13).
+    of them in this build but copper, which the smelter (DM8) makes into bars; gold, gems and
+    Emberquartz are stored with their uses recorded (Q13).
   -->
   <ItemDef>
     <defName>Item_CopperOre</defName>
@@ -351,6 +351,26 @@
     <defName>Item_Emberquartz</defName>
     <label>Emberquartz</label>
     <stackLimit>75</stackLimit>
+    <category>Materials</category>
+  </ItemDef>
+
+  <!--
+    The smelter's bars (design 62 section 9), appended after the finds: handles 22 and 23. Scrap
+    metal's stack of 50, because a bar is metal worked to a shape as scrap is metal found in one.
+    An iron bar is what steel is built of (Buildings.xml, Stuff_Steel); a copper bar lays a power
+    line in place of scrap metal (Building_Conduit's partAltItem).
+  -->
+  <ItemDef>
+    <defName>Item_IronBar</defName>
+    <label>iron bar</label>
+    <stackLimit>50</stackLimit>
+    <category>Materials</category>
+  </ItemDef>
+
+  <ItemDef>
+    <defName>Item_CopperBar</defName>
+    <label>copper bar</label>
+    <stackLimit>50</stackLimit>
     <category>Materials</category>
   </ItemDef>
 

@@ -25,7 +25,7 @@
   <WorkTypeDef>
     <defName>Work_Haul</defName>
     <label>hauling</label>
-    <order>5</order>
+    <order>6</order>
   </WorkTypeDef>
 
   <WorkTypeDef>
@@ -115,7 +115,7 @@
   <WorkTypeDef>
     <defName>Work_Rescue</defName>
     <label>rescue</label>
-    <order>6</order>
+    <order>7</order>
   </WorkTypeDef>
 
   <!--
@@ -127,7 +127,7 @@
   <WorkTypeDef>
     <defName>Work_Doctor</defName>
     <label>doctor</label>
-    <order>7</order>
+    <order>8</order>
     <rateSkill>6</rateSkill>
     <workRateBasePerMille>600</workRateBasePerMille>
     <workRateSlopePerLevel>100</workRateSlopePerLevel>
@@ -149,6 +149,24 @@
     <rateSkill>7</rateSkill>
     <workRateBasePerMille>400</workRateBasePerMille>
     <workRateSlopePerLevel>60</workRateSlopePerLevel>
+  </WorkTypeDef>
+  <!--
+    Working the bills at a crafting station (design 62 section 9): the ui.work.crafting column,
+    live with the smelter. It scans after mining and before hauling - the reference's own place
+    for bench work - so hauling, rescue and doctor moved down one rank to make room; the order
+    among them is unchanged and nothing saves it.
+    No skill of its own: a Crafting skill would be a ninth per-pawn array and a save-format
+    change for one station, so the smelter rates on Construction (3), the skill of making
+    building material into buildings, on construction's own shallow curve. A crafting bench
+    that wants its own skill is where one is added.
+  -->
+  <WorkTypeDef>
+    <defName>Work_Crafting</defName>
+    <label>crafting</label>
+    <order>5</order>
+    <rateSkill>3</rateSkill>
+    <workRateBasePerMille>700</workRateBasePerMille>
+    <workRateSlopePerLevel>75</workRateSlopePerLevel>
   </WorkTypeDef>
 
 </Defs>

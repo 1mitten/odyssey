@@ -1676,11 +1676,13 @@ namespace Odyssey.Presentation.Rendering
                 case CoreContent.EdificeGenerator:
                 case CoreContent.EdificeHeater:
                 case CoreContent.EdificeGalley:
+                case CoreContent.EdificeSmelter:
                     if (shape == ModuleShape.Pillar)
                     {
                         // The galley's facing is the player's too: it is the side the cook
                         // stands on (design 48 §5), so it is drawn turned to it and never backed.
-                        if (def == CoreContent.EdificeGalley)
+                        // The smelter's likewise (design 62 §9): its mouth faces the crafter.
+                        if (def == CoreContent.EdificeGalley || def == CoreContent.EdificeSmelter)
                         {
                             if (_model.EdificeHead(index))
                                 AddBody(batch, module, TintCode.Stuff(CoreContent.StuffNone),

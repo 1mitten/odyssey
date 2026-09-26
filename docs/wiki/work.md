@@ -2,7 +2,7 @@
 
 The work types a colonist can be assigned, in priority order of urgency, the skills that govern how well they do them, and the schedule blocks that say when. Salvaging is ours: it sits beside mining because taking a ruin apart without wrecking what is inside it is a different craft from digging. Work and schedule share one tab and one table, so they share a page here.
 
-57 entries, 22 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+66 entries, 31 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Work types
 
@@ -24,7 +24,7 @@ The work types a colonist can be assigned, in priority order of urgency, the ski
 | **Hauling** | `ui.work.hauling` | Move things to storage | sheet 08 (salvage gear), low | M7 |
 | **Cleaning** | `ui.work.cleaning` | Clear filth from rooms | sheet 08 (salvage gear), low | M7 |
 | **Research** | `ui.work.research` | Work the research bench | sheet 06 (action tiles), high | M7 |
-| **Crafting** | `ui.work.crafting` | General bench work | sheet 03 (camp and crafting), high | M7 |
+| **Crafting** | `ui.work.crafting` | Work the bills at a smelter. Construction buys speed at it | sheet 03 (camp and crafting), high | DM |
 | **Tailoring** | `ui.work.tailoring` | Make apparel from fabric and leather | sheet 04 (manufactured), high | M7 |
 | **Fabrication** | `ui.work.fabrication` | Advanced production | sheet 06 (action tiles), med | M7 |
 | **Art** | `ui.work.art` | Make sculptures and decoration | sheet 06 (action tiles), low | M7 |
@@ -66,6 +66,8 @@ The work types a colonist can be assigned, in priority order of urgency, the ski
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
 | **Cook a meal** | `ui.recipe.meal` | Any raw food, three carrots' worth, into one meal <br>**Needs:** a pan with food in it. Our own concept | no art | M3 |
+| **Smelt iron** | `ui.recipe.smelt.iron` | Ten iron ore into five iron bars, burning one coal or three wood <br>**Needs:** a grey ingot over a flame. Our own concept | no art | DM |
+| **Smelt copper** | `ui.recipe.smelt.copper` | Ten copper ore into five copper bars, burning one coal or three wood <br>**Needs:** an orange ingot over a flame. Our own concept | no art | DM |
 
 ## Bills, and the words of a station's pane
 
@@ -85,6 +87,13 @@ The work types a colonist can be assigned, in priority order of urgency, the ski
 | **Each meal: raw food, about 3 carrots, and 1 wood** | `ui.bill.needs.fire` | A campfire burns one wood for every meal it cooks <br>**Needs:** Interface words, no icon wanted | no art | M3 |
 | **Raw food for {n} meals** | `ui.bill.supply` | What the raw food on the map, in stores and on the ground, would cook into <br>**Needs:** Interface words, no icon wanted | no art | M3 |
 | **No raw food on the map** | `ui.bill.nosupply` | Nothing to cook. Grow carrots, or use the debug menu's Give carrots <br>**Needs:** an empty basket. Our own concept | no art | M3 |
+| **Each batch: 10 ore, and 1 coal or 3 wood** | `ui.bill.needs.smelter` | A batch takes ten of its ore and burns fuel from the hopper: coal is worth three wood <br>**Needs:** Interface words, no icon wanted | no art | DM |
+| **Ore for {n} batches** | `ui.bill.supply.ore` | What the ore on the map, in stores and on the ground, would smelt into for the bill being worked <br>**Needs:** Interface words, no icon wanted | no art | DM |
+| **No ore on the map** | `ui.bill.noore` | Nothing to smelt. Mine iron or copper ore <br>**Needs:** an empty ore cart. Our own concept | no art | DM |
+| **Fuel for {n}** | `ui.bill.fuel` | How many batches the coal and wood in the hopper would burn for <br>**Needs:** Interface words, no icon wanted | no art | DM |
+| **Hopper empty** | `ui.bill.hopperempty` | A hauler fills it with coal or wood while the smelter has a bill <br>**Needs:** Interface words, no icon wanted | no art | DM |
+| **No fuel** | `ui.bill.nofuel` | The hopper cannot pay for the next batch. A hauler brings coal or wood while there is any <br>**Needs:** a cold grate. Our own concept | no art | DM |
+| **Waiting for fuel** | `ui.bill.waitingfuel` | This bill will be worked once the hopper has fuel for a batch <br>**Needs:** Interface words, no icon wanted | no art | DM |
 
 ---
 

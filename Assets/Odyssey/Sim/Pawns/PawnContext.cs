@@ -174,6 +174,12 @@ namespace Odyssey.Sim.Pawns
         public Cooking.Kitchen? Kitchen { get; set; }
 
         /// <summary>
+        /// The crafting stations (design 62 §9): every smelter's bills, batch and hopper. Null in a
+        /// bare pawn fixture, which has nothing to smelt on.
+        /// </summary>
+        public Crafting.Workshop? Workshop { get; set; }
+
+        /// <summary>
         /// The structure of this cell changed, so the boundary above it has to be re-judged.
         ///
         /// <para>Both the cell and the one above it, always, because they are two different

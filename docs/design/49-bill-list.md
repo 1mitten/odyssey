@@ -111,3 +111,22 @@ resumed.
   `bills-empty.png`.
 - Not tested and cannot be: whether a click reaches a button (`docs/bug-patterns.md`, the known
   gap). The buttons send the same intents the old ones did and `BillsModelTests` pins each one.
+
+## 7. The second station (DM8, 2026-09-26)
+
+The smelter (design 62 §9) is a row in `BillsModel.Stations`, as §2 promised a bench would be. What
+the row needed that the cooker's did not, each an optional field on `BillStation`:
+
+- **Two recipes** (`Recipes`). *Add a bill* adds the station's recipe the list holds fewest bills
+  of, the first on a tie — iron, then copper — and **pressing a row's name** goes round what it
+  makes (`PressRecipe`, `BillEdit.SetRecipe`), keeping its mode and target. That is the chooser
+  §5 said was owed, without a menu; a station with one recipe ignores the press.
+- **A hopper** (`Burns`). The supply line carries the fuel too — *Ore for 3 batches · Fuel for 12*
+  — from `StationView.FuelBatches`, and the warn strip says **No fuel** (and the rows *Waiting for
+  fuel*) when the hopper cannot pay for the next batch, in the place a cooker says *No power*. No
+  switch is offered: there is nothing to switch on.
+- **Its own supply words and hint** (`SupplyKey`, `NoSupplyKey`, `SupplyHint`): the empty-line
+  tooltip was a literal in `BillList` and is the model's now.
+
+`BillList` changed in two lines: the supply tooltip reads `SupplyHint`, and the name column is a
+button that sends `PressRecipe`. Tests: `SmelterBillsTests` (fast tier).

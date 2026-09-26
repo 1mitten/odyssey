@@ -29,6 +29,69 @@ namespace Odyssey.Sim.Cooking
     }
 
     /// <summary>
+    /// The edits a bill list takes once the bill is found (design 48 §5): remove, reorder, mode,
+    /// target, suspend. <b>One owner for both lists</b> — the kitchen's and the workshop's (design
+    /// 62 §9) — so a rule like "a changed mode counts from nought" cannot come to differ between a
+    /// cooker and a smelter. Adding a bill is not here, because what may be added is the station's
+    /// question.
+    /// </summary>
+    public static class BillEdits
+    {
+        /// <summary>Apply edit <paramref name="op"/> to bill <paramref name="index"/>, which the caller has checked is in the list.</summary>
+        public static IntentRejection Apply(List<Bill> bills, int op, int index, int value)
+        {
+            Bill bill = bills[index];
+
+            switch (op)
+            {
+                case BillEdit.Remove:
+                    bills.RemoveAt(index);
+                    return IntentRejection.None;
+
+                case BillEdit.MoveUp:
+                    if (index == 0) return IntentRejection.AlreadyInThatState;
+                    bills[index] = bills[index - 1];
+                    bills[index - 1] = bill;
+                    return IntentRejection.None;
+
+                case BillEdit.MoveDown:
+                    if (index == bills.Count - 1) return IntentRejection.AlreadyInThatState;
+                    bills[index] = bills[index + 1];
+                    bills[index + 1] = bill;
+                    return IntentRejection.None;
+
+                case BillEdit.SetMode:
+                    if ((uint)value >= (uint)BillModeHandle.Count) return IntentRejection.NotPermitted;
+                    if (bill.Mode == value) return IntentRejection.AlreadyInThatState;
+                    bill.Mode = value;
+                    // A count of meals made means nothing across a change of what is being counted:
+                    // "make 10" after "keep 10" starts from nought, which is what a player expects.
+                    bill.Done = 0;
+                    return IntentRejection.None;
+
+                case BillEdit.SetTarget:
+                {
+                    int target = value < 1 ? 1 : value > Kitchen.MaxTarget ? Kitchen.MaxTarget : value;
+                    if (bill.Target == target) return IntentRejection.AlreadyInThatState;
+                    bill.Target = target;
+                    return IntentRejection.None;
+                }
+
+                case BillEdit.SetSuspended:
+                {
+                    bool suspended = value != 0;
+                    if (bill.Suspended == suspended) return IntentRejection.AlreadyInThatState;
+                    bill.Suspended = suspended;
+                    return IntentRejection.None;
+                }
+
+                default:
+                    return IntentRejection.UnknownIntent;
+            }
+        }
+    }
+
+    /// <summary>
     /// A cooking station's state (design 48 §5): its bills, and the meal in its pan.
     ///
     /// <para><b>The pan is the station's, not the cook's.</b> Food put in stays in whoever put it
@@ -116,6 +179,7 @@ namespace Odyssey.Sim.Cooking
         // The colony's meal count, taken once a tick at most: every cook's think asks it for every
         // bill, and the answer cannot change between two thinks in one tick that make nothing.
         int _countedTick = -1;
+        int _countedRecipe = -1;
         int _counted;
 
         public Kitchen(PawnContext ctx, IReadOnlyList<PlacedEdifice> edifices)
@@ -142,8 +206,10 @@ namespace Odyssey.Sim.Cooking
         public int BuildingOf(CookStation station) => ConstructionContent.BuildingForEdifice(_edifices[station.Edifice].Def);
 
         /// <summary>
-        /// Can anything be cooked on the thing standing as this edifice? Any building some recipe
-        /// names. Asked of the edifice record, because that is what a cell carries.
+        /// Can anything be cooked on the thing standing as this edifice? Any building some kitchen
+        /// recipe names — a crafted recipe's station is the workshop's (design 62 §9), and
+        /// <see cref="RecipeDef.Crafted"/> is the one rule that says which. Asked of the edifice
+        /// record, because that is what a cell carries.
         /// </summary>
         public bool IsStation(int edifice)
         {
@@ -154,7 +220,7 @@ namespace Odyssey.Sim.Cooking
             if (building == BuildingHandle.None) return false;
             RecipeDef[] recipes = _ctx.Content.Recipes;
             for (int r = 0; r < recipes.Length; r++)
-                if (recipes[r].At(building) != null) return true;
+                if (!recipes[r].Crafted && recipes[r].At(building) != null) return true;
             return false;
         }
 
@@ -224,7 +290,7 @@ namespace Odyssey.Sim.Cooking
         public int MealsHeld(int recipe)
         {
             if ((uint)recipe >= (uint)_ctx.Content.Recipes.Length) return 0;
-            if (_countedTick == _ctx.CurrentTick) return _counted;
+            if (_countedTick == _ctx.CurrentTick && _countedRecipe == recipe) return _counted;
 
             RecipeDef def = _ctx.Content.Recipes[recipe];
             int total = 0;
@@ -238,8 +304,10 @@ namespace Odyssey.Sim.Cooking
                 total += item.Stack;
             }
 
-            // Only one recipe exists, so one cached number serves; a second recipe would key this.
+            // One cached number, keyed by the recipe since the recipe table grew past one (design
+            // 62 §9): only the meal is ever asked here, so it is the same one number as before.
             _countedTick = _ctx.CurrentTick;
+            _countedRecipe = recipe;
             _counted = total;
             return total;
         }
@@ -298,55 +366,7 @@ namespace Odyssey.Sim.Cooking
             }
 
             if (station == null || (uint)index >= (uint)station.Bills.Count) return IntentRejection.NotPermitted;
-            List<Bill> bills = station.Bills;
-            Bill bill = bills[index];
-
-            switch (op)
-            {
-                case BillEdit.Remove:
-                    bills.RemoveAt(index);
-                    return IntentRejection.None;
-
-                case BillEdit.MoveUp:
-                    if (index == 0) return IntentRejection.AlreadyInThatState;
-                    bills[index] = bills[index - 1];
-                    bills[index - 1] = bill;
-                    return IntentRejection.None;
-
-                case BillEdit.MoveDown:
-                    if (index == bills.Count - 1) return IntentRejection.AlreadyInThatState;
-                    bills[index] = bills[index + 1];
-                    bills[index + 1] = bill;
-                    return IntentRejection.None;
-
-                case BillEdit.SetMode:
-                    if ((uint)value >= (uint)BillModeHandle.Count) return IntentRejection.NotPermitted;
-                    if (bill.Mode == value) return IntentRejection.AlreadyInThatState;
-                    bill.Mode = value;
-                    // A count of meals made means nothing across a change of what is being counted:
-                    // "make 10" after "keep 10" starts from nought, which is what a player expects.
-                    bill.Done = 0;
-                    return IntentRejection.None;
-
-                case BillEdit.SetTarget:
-                {
-                    int target = value < 1 ? 1 : value > MaxTarget ? MaxTarget : value;
-                    if (bill.Target == target) return IntentRejection.AlreadyInThatState;
-                    bill.Target = target;
-                    return IntentRejection.None;
-                }
-
-                case BillEdit.SetSuspended:
-                {
-                    bool suspended = value != 0;
-                    if (bill.Suspended == suspended) return IntentRejection.AlreadyInThatState;
-                    bill.Suspended = suspended;
-                    return IntentRejection.None;
-                }
-
-                default:
-                    return IntentRejection.UnknownIntent;
-            }
+            return BillEdits.Apply(station.Bills, op, index, value);
         }
 
         CookStation Create(int edifice)
@@ -444,10 +464,14 @@ namespace Odyssey.Sim.Cooking
 
         // ---- registration --------------------------------------------------------------------------
 
+        /// <summary>
+        /// Registration. <b>Not the <c>EditBill</c> intent</b>: that is one kind for every station
+        /// that takes bills, and the colony routes it — to this for a cooking station, to the
+        /// workshop for a crafting one (design 62 §9, <c>ColonyComposition</c>).
+        /// </summary>
         public SimWorldBuilder Attach(SimWorldBuilder builder) =>
             builder.AddTickable(_ => this)
-                .AddSnapshotContributor(this)
-                .AddIntentHandler(IntentKind.EditBill, HandleEditBill);
+                .AddSnapshotContributor(this);
 
         public TickGroup TickGroup => TickGroup.Never;
         public int TickPhaseOffset => 0;

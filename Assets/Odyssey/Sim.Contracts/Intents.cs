@@ -344,7 +344,9 @@ namespace Odyssey.Sim.Contracts
         /// <see cref="BillEdit.Add"/>, the <see cref="RecipeHandle"/> instead), and <c>C</c> the
         /// value a setting takes. One kind for the whole pane, because every row of it is a setting
         /// over one station, and a kind per button would be seven entries saying the same thing.
-        /// Handler: <c>Kitchen.HandleEditBill</c>. Appended last, so no recorded intent renumbers.
+        /// Handler: <c>Kitchen.HandleEditBill</c>, or <c>Workshop.HandleEditBill</c> for a crafting
+        /// station (design 62 §9), chosen by what stands in the cell. Appended last, so no recorded
+        /// intent renumbers.
         /// </summary>
         EditBill,
 
@@ -397,6 +399,13 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>Suspend bill <c>B</c> (<c>C</c> = 1) or let it run again (<c>C</c> = 0).</summary>
         public const int SetSuspended = 6;
+
+        /// <summary>
+        /// Make bill <c>B</c> a bill for recipe <c>C</c>, another the same station can make (design
+        /// 62 §9): the smelter's one bill row goes from iron to copper without being removed. Its
+        /// count starts again from nought. A station with one recipe refuses it.
+        /// </summary>
+        public const int SetRecipe = 7;
     }
 
     /// <summary>

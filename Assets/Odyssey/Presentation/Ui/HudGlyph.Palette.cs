@@ -167,6 +167,15 @@ namespace Odyssey.Presentation.Ui
                     Polyline(painter, true, p(9, 19), p(15, 19));
                     return;
 
+                // A smelter (design 62 §9): a squat furnace with an arched mouth and a stub of
+                // chimney — where the galley is a pot, this is the oven the ore goes into.
+                case HudGlyphKind.ToolSmelter:
+                    Polyline(painter, true, p(4, 20), p(4, 9), p(20, 9), p(20, 20));
+                    Polyline(painter, true, p(3, 20), p(21, 20));
+                    Polyline(painter, true, p(9, 20), p(9, 15), p(12, 12.5f), p(15, 15), p(15, 20));
+                    Polyline(painter, true, p(15, 9), p(15, 4), p(18, 4), p(18, 9));
+                    return;
+
                 // A reclaimer: a hopper sorting into two streams.
                 case HudGlyphKind.ToolReclaimer:
                     Polyline(painter, true, p(3, 5), p(21, 5), p(15, 13), p(9, 13));
@@ -535,6 +544,7 @@ namespace Odyssey.Presentation.Ui
 
             { "ui.arch.tool.fabricator", HudGlyphKind.ToolFabricator },
             { "ui.arch.tool.galley", HudGlyphKind.ToolGalley },
+            { PaletteTools.Smelter, HudGlyphKind.ToolSmelter },
             { "ui.arch.tool.reclaimer", HudGlyphKind.ToolReclaimer },
             { "ui.arch.tool.bench", HudGlyphKind.ToolBench },
 

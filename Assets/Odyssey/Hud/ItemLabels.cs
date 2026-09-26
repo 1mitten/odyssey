@@ -43,6 +43,8 @@ namespace Odyssey.Hud
             "ui.item.pistol",
             // Deep mining's finds (design 62 §5c), ItemHandle 18 to 21, after the pistol.
             "ui.res.copperore", "ui.res.goldore", "ui.res.gems", "ui.res.emberquartz",
+            // The smelter's bars (design 62 §9), ItemHandle 22 and 23.
+            "ui.res.ironbar", "ui.res.copperbar",
         };
 
         public static string IconKey(int def) =>

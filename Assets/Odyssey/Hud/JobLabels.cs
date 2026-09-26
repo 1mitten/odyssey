@@ -61,6 +61,9 @@ namespace Odyssey.Hud
             "ui.status.shooting",
             // Reading the rock round an exposed face (design 62 §7), JobHandle 28.
             "ui.status.prospecting",
+            // Working a bill at a crafting station (design 62 §9), JobHandle 29: fetching ore for
+            // the smelter reads as crafting, as fetching food reads as cooking.
+            "ui.status.crafting",
         };
 
         public static string IconKey(int jobDef) =>

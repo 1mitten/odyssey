@@ -1320,8 +1320,8 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// One cooking station — a galley or a campfire — that has anything to say (design 48 §5): a
-    /// bill, or food in its pan. A station with neither is not published, so a board of campfires
+    /// One station that takes bills — a galley, a campfire, or a smelter (design 62 §9) — that has
+    /// anything to say (design 48 §5): a bill, or food in its pan, or ore in its crucible. A station with neither is not published, so a board of campfires
     /// nobody cooks at costs nothing here.
     ///
     /// <para>Its bills are the <see cref="BillCount"/> rows of <see cref="WorldSnapshot.Bills"/>
@@ -1360,9 +1360,20 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Where this station's bills start in <see cref="WorldSnapshot.Bills"/>, and how many.</summary>
         public readonly int FirstBill, BillCount;
 
+        /// <summary>
+        /// How many batches the fuel in the station's hopper would burn for, capped at 999 (design
+        /// 62 §9): the smelter's coal and wood, by what a batch of its work takes. -1 for a station
+        /// with no hopper, which is every kitchen station — a campfire's wood is fetched per meal.
+        /// For a crafting station <see cref="RawMeals"/> is the batches the ore on the map would
+        /// make, <see cref="PanPerMille"/> how much of a batch is in, and
+        /// <see cref="CookPerMille"/> how far it is worked.
+        /// </summary>
+        public readonly short FuelBatches;
+
         public StationView(int cellIndex, ushort edifice, bool ready, short panPerMille, short cookPerMille,
-            bool burning, bool hasMeat, int firstBill, int billCount, short rawMeals = 0)
+            bool burning, bool hasMeat, int firstBill, int billCount, short rawMeals = 0, short fuelBatches = -1)
         {
+            FuelBatches = fuelBatches;
             RawMeals = rawMeals;
             CellIndex = cellIndex;
             Edifice = edifice;

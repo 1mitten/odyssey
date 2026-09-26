@@ -297,7 +297,9 @@
     A POWER LINE (design 32 §3, §14). conduit true: not an edifice, so the order goes to the power
     grid and the line into a layer of its own, where it can run through a wall or under a floor.
     All part and no material: partItem 1 is Item_Salvage, scrap metal, one a cell. workToBuild 40
-    is a-07's 35 rounded to the table's tens.
+    is a-07's 35 rounded to the table's tens. partAltItem 23 is Item_CopperBar (design 62 section
+    9): a copper bar lays a line in place of the scrap metal, whichever is nearer. Only the line
+    layer honours it; taking a line up gives back scrap metal whichever paid.
   -->
   <BuildingDef>
     <defName>Building_Conduit</defName>
@@ -308,6 +310,7 @@
     <costCount>0</costCount>
     <partItem>1</partItem>
     <partCount>1</partCount>
+    <partAltItem>23</partAltItem>
     <workToBuild>40</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.conduit</iconKey>
@@ -376,12 +379,12 @@
   </BuildingDef>
 
   <!--
-    The four stuffs with no item are what the ruined city is MADE OF, not what a colony builds
-    with: nothing produces them, no colonist can carry one, and offering them would be offering an
-    order that can never be filled. They keep their indices, because every stamped wall in the city
-    carries one, and ConstructionContent.IsBuildable is what keeps them off the menu. A salvage
-    line that turned rubble into steel would give one an item and put it there, with no other
-    change anywhere.
+    The stuffs with no item are what the ruined city is MADE OF, not what a colony builds with:
+    nothing produces them, no colonist can carry one, and offering them would be offering an order
+    that can never be filled. They keep their indices, because every stamped wall in the city
+    carries one, and ConstructionContent.IsBuildable is what keeps them off the menu. Steel was one
+    of them until the smelter (design 62 section 9) gave it an item, the iron bar - with no other
+    change anywhere, as this note had promised.
 
     sharpDamagePerMille and bluntDamagePerMille (design 33 section 14d; the owner, 2026-09-24:
     blunt against stone, sharp against wood) scale a blow at a thing built of the material, in
@@ -404,12 +407,25 @@
     <thermalConductancePerMille>1100</thermalConductancePerMille>
   </StuffDef>
 
+  <!--
+    STEEL (design 62 section 9): the city's material, buildable since the smelter gave it an item.
+    item 22 is ItemHandle.IronBar, and that one field is the whole of what IsBuildable asks. The
+    rest is the colony's, INVENTED: 1.4x the work and 20 ticks' fitting (between wood and stone),
+    twice a wooden wall's hit points, an edge barely marks it and a club does less than to stone.
+    The conductance is the city's own.
+  -->
   <StuffDef>
     <defName>Stuff_Steel</defName>
     <label>steel</label>
     <stuff>2</stuff>
-    <item>-1</item>
+    <item>22</item>
+    <workFactorPerMille>1400</workFactorPerMille>
+    <workOffsetTicks>20</workOffsetTicks>
+    <hitPointsFactorPerMille>2000</hitPointsFactorPerMille>
+    <iconKey>ui.res.steel</iconKey>
     <thermalConductancePerMille>1400</thermalConductancePerMille>
+    <sharpDamagePerMille>400</sharpDamagePerMille>
+    <bluntDamagePerMille>750</bluntDamagePerMille>
   </StuffDef>
 
   <StuffDef>
@@ -550,6 +566,40 @@
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.stair</iconKey>
     <maxHitPoints>160</maxHitPoints>
+  </BuildingDef>
+
+  <!--
+    THE SMELTER (design 62 section 9). edifice 25 is CoreContent.EdificeSmelter, after the stair.
+    Iron and copper ore into bars by bill (Recipes.xml), burning coal or wood from a hopper a
+    hauler keeps fed below half whenever the smelter has a bill to work. One cell, blocking,
+    rotating - worked from the front, as the galley is - wanting a clear cell. No power and no
+    parts, so a colony can build one before it has either: the galley's 15 stuff and 300 ticks.
+
+    hopperFuels says what the hopper takes and what a unit is worth, in the order a hauler looks
+    for them: item 5 is Item_Coal at 3, item 2 is Item_Wood at 1. A batch burns the recipe's
+    fuelPerBatch (3), so one coal or three wood - coal is the better fuel, said once, here.
+    hopperCapacity 75 is one stack of wood or twenty-five coal: twenty-five batches. It gives off
+    no heat yet; a burning smelter warming its room is a recorded hook. INVENTED.
+  -->
+  <BuildingDef>
+    <defName>Building_Smelter</defName>
+    <label>smelter</label>
+    <edifice>25</edifice>
+    <blocking>true</blocking>
+    <rotates>true</rotates>
+    <needsClearCell>true</needsClearCell>
+    <hopperCapacity>75</hopperCapacity>
+    <hopperFuels>
+      <li><item>5</item><worth>3</worth></li>
+      <li><item>2</item><worth>1</worth></li>
+    </hopperFuels>
+    <costCount>15</costCount>
+    <workToBuild>300</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.smelter</iconKey>
+    <maxHitPoints>150</maxHitPoints>
+    <!-- Cover beside it (design 53 section 3), low. INVENTED. -->
+    <coverPerMille>500</coverPerMille>
   </BuildingDef>
 
 </Defs>
