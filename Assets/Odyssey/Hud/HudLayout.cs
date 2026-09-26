@@ -1070,9 +1070,6 @@ namespace Odyssey.Hud
         // the candidates, the chosen one's skills, and the Story block in the space the skills cap
         // left empty. Every length here is pinned against Hud.uss by HudStyleSheetTests.
 
-        /// <summary>The candidates' column on the setup page (25a: 400, up from 340).</summary>
-        public const int SetupPeopleColumn = 400;
-
         /// <summary>Between the page's three columns.</summary>
         public const int SetupColumnGap = 48;
 
@@ -1095,7 +1092,7 @@ namespace Odyssey.Hud
         /// page sees at 150% or on a narrower aspect; the page asks its own laid-out width.
         /// </summary>
         public const int SetupCompactBelow =
-            SetupPeopleColumn + SetupColumnGap + SetupSkillsWidth + SetupColumnGap + StoryMinWidth;
+            ColonistColumnWidth + SetupColumnGap + SetupSkillsWidth + SetupColumnGap + StoryMinWidth;
 
         public const int StoryCardGap = 9;
         public const int StoryCardPad = 12;
@@ -1425,8 +1422,12 @@ namespace Odyssey.Hud
         /// is where a name at <see cref="HudTextRole.Name"/> and a skills line at
         /// <see cref="HudTextRole.Row"/> want to be rather than where a 12 px meta line was
         /// comfortable.</para>
+        ///
+        /// <para><b>400 since 2026-09-26</b>, Claude Design's mockup 25a for the Story block: the
+        /// page became three columns, 400 / 636 / the rest, and the candidates took the width the
+        /// mockup gave them. 260 on the compact page (<see cref="SetupPeopleColumnCompact"/>).</para>
         /// </summary>
-        public const int ColonistColumnWidth = 340;
+        public const int ColonistColumnWidth = 400;
 
         /// <summary>
         /// The three cards and the two rows under them — Keep, then Reroll.

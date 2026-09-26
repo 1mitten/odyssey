@@ -54,6 +54,17 @@ namespace Odyssey.Presentation.Ui
         readonly Dictionary<BuildPaletteLayout, Label> _layoutRungs = new();
         readonly Dictionary<SelectionStyle, Label> _selectionRungs = new();
         readonly Dictionary<bool, Label> _wakeRungs = new();
+
+        // The Gameplay tab's Story and Pausing sections (design 59 §12, mockups 25d-25f).
+        readonly Dictionary<int, Label> _storytellerRungs = new();
+        SwitchView _pauseSwitch = null!;
+        RowView _storytellerRow = null!;
+        RowView _difficultyRow = null!;
+        DropdownField _difficultySelect = null!;
+        VisualElement _customRows = null!;
+        SwitchView _customBigThreats = null!;
+        readonly Dictionary<string, (Slider Fader, VisualElement Fill, Label Value)> _customFaders = new();
+        Label _storyNote = null!;
         readonly Dictionary<GraphicsOption, SwitchView> _settingRows = new();
 
         /// <summary>One rank of segments per number ladder, so a value that moves lights its own
@@ -944,6 +955,154 @@ namespace Odyssey.Presentation.Ui
                     days => _directors?.Settings.SetAutosaveDays(days),
                     _autosaveRungs, numeric: false),
                 "Written over this colony's own save, keeping one previous copy beside it");
+
+            // Pausing: its own section, because it is a machine preference and stays live with no
+            // colony open, where everything under Story is greyed (mockup 25d).
+            _pauseSwitch = Switch();
+            void FlipPause()
+            {
+                HudDirectors? d = _directors;
+                d?.Settings.SetPauseOnBigThreats(!d.Settings.PauseOnBigThreats);
+            }
+            RowView pause = Row(Section(cols[0], SettingsTab.Gameplay, SettingsLayout.PausingGroupKey),
+                SettingsDirector.PauseOnBigThreatsKey, _pauseSwitch.Control,
+                "Stop the clock when a raid or other big threat arrives, so you can look before it starts");
+            pause.Row.RegisterCallback<ClickEvent>(_ => FlipPause());
+            KeyStop(_pauseSwitch.Control, FlipPause);
+
+            BuildStorySection(cols[1]);
+        }
+
+        /// <summary>
+        /// Story (mockup 25d): the storyteller as a segmented row of three, the difficulty as a
+        /// select because seven segments measure about 410 px against about 300 of room, and
+        /// Custom's four levers under them only while Custom is picked. Everything here edits the
+        /// open colony's <see cref="StoryDirector"/>, so with no colony the rows are greyed and say
+        /// why; there is no portrait or blurb in Settings, which are the New game page's.
+        /// </summary>
+        void BuildStorySection(VisualElement column)
+        {
+            VisualElement story = Section(column, SettingsTab.Gameplay, SettingsLayout.StoryGroupKey);
+            _storyNote = HudText.Make(Registry.Label(SettingsDirector.StoryChosenKey), HudTextRole.Meta,
+                ussClass: "sw__story-note");
+            story.Add(_storyNote);
+
+            var tellers = new int[StoryCatalogue.Tellers.Count];
+            for (int i = 0; i < tellers.Length; i++) tellers[i] = i;
+            VisualElement segs = Segmented(tellers,
+                i => StoryCatalogue.Tellers[i].Label,
+                i => StoryCatalogue.Tellers[i].Blurb,
+                i => _directors?.Story.ChooseStoryteller(i),
+                _storytellerRungs, numeric: false);
+            segs.AddToClassList("sw__segs--story");
+            _storytellerRow = Row(story, StoryCatalogue.StorytellerHeadingKey, segs);
+
+            var rungNames = new List<string>(StoryCatalogue.Rungs.Count);
+            foreach (StoryCatalogue.Rung rung in StoryCatalogue.Rungs) rungNames.Add(rung.Label);
+            _difficultySelect = new DropdownField(rungNames, StoryCatalogue.RungAt(StoryCatalogue.NormalRung).Label);
+            _difficultySelect.AddToClassList("sw__select");
+            if (_difficultySelect.labelElement != null) _difficultySelect.labelElement.style.display = DisplayStyle.None;
+            var textElem = _difficultySelect.Q<TextElement>(className: "unity-base-popup-field__text");
+            if (textElem != null) HudText.Apply(textElem, HudTextRole.Body);
+            VisualElement? input = _difficultySelect.Q(className: "unity-base-popup-field__input");
+            VisualElement? arrow = _difficultySelect.Q(className: "unity-base-popup-field__arrow");
+            if (arrow != null) arrow.style.display = DisplayStyle.None;
+            input?.Add(new PathGlyph(SettingsLayout.SelectArrow, 10f, 6f, Ink(HudTheme.TextMeta), 10f, fill: true));
+            _difficultySelect.RegisterValueChangedCallback(evt =>
+            {
+                int rung = rungNames.IndexOf(evt.newValue);
+                if (rung >= 0) _directors?.Story.ChooseRung(rung);
+            });
+            _difficultySelect.AddToClassList("sw__focus");
+            _difficultyRow = Row(story, StoryCatalogue.DifficultyHeadingKey, _difficultySelect,
+                "How hard threats hit, and how forgiving the game is after a disaster");
+
+            // Custom's four, indented under the Difficulty row and shown only on Custom. Settings
+            // has room for them to appear (the column has 502 px and the tab uses about 290 with
+            // them open), unlike the New game page, where they are always drawn.
+            _customRows = new VisualElement();
+            _customRows.AddToClassList("sw__custom");
+            story.Add(_customRows);
+            CustomFader(StoryCatalogue.ThreatScaleKey, StoryCatalogue.ThreatMin, StoryCatalogue.ThreatMax,
+                v => _directors?.Story.SetThreat(v));
+            _customBigThreats = Switch();
+            void FlipBig()
+            {
+                HudDirectors? d = _directors;
+                d?.Story.SetBigThreats(!d.Story.Choice.BigThreats);
+            }
+            RowView big = Row(_customRows, StoryCatalogue.BigThreatsKey, _customBigThreats.Control);
+            big.Row.RegisterCallback<ClickEvent>(_ => FlipBig());
+            KeyStop(_customBigThreats.Control, FlipBig);
+            CustomFader(StoryCatalogue.AdaptationKey, StoryCatalogue.AdaptationMin, StoryCatalogue.AdaptationMax,
+                v => _directors?.Story.SetAdaptation(v));
+            CustomFader(StoryCatalogue.GraceKey, StoryCatalogue.GraceMin, StoryCatalogue.GraceMax,
+                v => _directors?.Story.SetGrace(v));
+        }
+
+        /// <summary>One of Custom's sliders: the window's own fader, a fill up to the thumb and the
+        /// figure after it in 12 mono.</summary>
+        void CustomFader(string key, int min, int max, Action<int> set)
+        {
+            var control = new VisualElement();
+            control.AddToClassList("sw__slider");
+            var fader = new Slider(min, max, SliderDirection.Horizontal);
+            fader.AddToClassList("settings__fader");
+            fader.AddToClassList("sw__focus");
+            VisualElement tracker = fader.Q(className: "unity-base-slider__tracker") ?? fader;
+            var fill = new VisualElement { pickingMode = PickingMode.Ignore };
+            fill.AddToClassList("sw__fill");
+            tracker.Add(fill);
+            control.Add(fader);
+            Label value = HudText.Make(string.Empty, HudTextRole.Meta, numeric: true, ussClass: "settings__value");
+            control.Add(value);
+            fader.RegisterValueChangedCallback(evt => set(Mathf.RoundToInt(evt.newValue)));
+            Row(_customRows, key, control);
+            _customFaders[key] = (fader, fill, value);
+        }
+
+        /// <summary>The Story rows follow the open colony's choice; with none open they grey.
+        /// Event-driven, never per frame.</summary>
+        void OnStoryChanged()
+        {
+            if (_directors == null || _storytellerRow == null) return;
+            StoryDirector story = _directors.Story;
+            StoryChoice choice = story.Choice;
+
+            bool live = story.HasColony;
+            _storyNote.style.display = live ? DisplayStyle.None : DisplayStyle.Flex;
+            _storytellerRow.SetLive(live, null);
+            _difficultyRow.SetLive(live, null);
+
+            LightRung(_storytellerRungs, choice.Teller);
+            _difficultySelect.SetValueWithoutNotify(StoryCatalogue.RungAt(choice.Rung).Label);
+
+            _customRows.style.display = live && choice.IsCustom ? DisplayStyle.Flex : DisplayStyle.None;
+            _customBigThreats.Control.EnableInClassList("sw__switch--on", choice.BigThreats);
+            _customBigThreats.Word.text = choice.BigThreats ? "On" : "Off";
+            SetCustomFader(StoryCatalogue.ThreatScaleKey, choice.ThreatPercent,
+                StoryCatalogue.ThreatMin, StoryCatalogue.ThreatMax, StoryCatalogue.Percent(choice.ThreatPercent));
+            SetCustomFader(StoryCatalogue.AdaptationKey, choice.AdaptationPercent,
+                StoryCatalogue.AdaptationMin, StoryCatalogue.AdaptationMax, StoryCatalogue.Percent(choice.AdaptationPercent));
+            SetCustomFader(StoryCatalogue.GraceKey, choice.GraceHundredths,
+                StoryCatalogue.GraceMin, StoryCatalogue.GraceMax, StoryCatalogue.Stretch(choice.GraceHundredths));
+
+            RefreshTensionGauge();
+        }
+
+        void SetCustomFader(string key, int at, int min, int max, string text)
+        {
+            if (!_customFaders.TryGetValue(key, out var view)) return;
+            if (!Mathf.Approximately(view.Fader.value, at)) view.Fader.SetValueWithoutNotify(at);
+            view.Fill.style.width = Length.Percent(max > min ? (at - min) * 100f / (max - min) : 0f);
+            HudText.Set(view.Value, text, HudTextRole.Meta);
+        }
+
+        void OnPauseOnBigThreatsChanged(bool on)
+        {
+            if (_pauseSwitch == null) return;
+            _pauseSwitch.Control.EnableInClassList("sw__switch--on", on);
+            _pauseSwitch.Word.text = on ? "On" : "Off";
         }
 
         // ============================================================ the rail's actions

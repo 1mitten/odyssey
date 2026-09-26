@@ -161,6 +161,11 @@ namespace Odyssey.Presentation.Ui
         Label _clockDate = null!;
         Label _clockTemp = null!;
         HudGlyph? _clockWeather;
+
+        /// <summary>The tension gauge beside the weather (design 59 §12), and its tooltip, which
+        /// is rebuilt only when what it says moves.</summary>
+        TensionGauge? _clockTension;
+        readonly TensionTip _tensionTip = new TensionTip();
         readonly List<VisualElement> _speedButtons = new List<VisualElement>();
 
         // ---- alerts (A5)
@@ -684,6 +689,9 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.BuildPaletteLayoutChanged += OnBuildLayoutChanged;
             _directors.Settings.SelectionStyleChanged += OnSelectionStyleChanged;
             _directors.Settings.WakeUpChanged += OnWakeUpChanged;
+            _directors.Settings.PauseOnBigThreatsChanged += OnPauseOnBigThreatsChanged;
+            _directors.Story.Changed += OnStoryChanged;
+            _directors.Story.TensionChanged += RefreshTensionGauge;
             _directors.Settings.DeveloperOverlayChanged += OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged += OnBusDbChanged;
             _directors.Settings.ExitChanged += OnExitChanged;
@@ -720,6 +728,8 @@ namespace Odyssey.Presentation.Ui
             OnBuildLayoutChanged(_directors.Settings.BuildPaletteLayout);
             OnSelectionStyleChanged(_directors.Settings.SelectionStyle);
             OnWakeUpChanged(_directors.Settings.WakeUp);
+            OnPauseOnBigThreatsChanged(_directors.Settings.PauseOnBigThreats);
+            OnStoryChanged();
             OnDeveloperOverlayChanged();
             foreach (SettingsBus bus in SettingsDirector.Buses) OnBusDbChanged(bus);
             OnExitChanged();
@@ -758,6 +768,9 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.BuildPaletteLayoutChanged -= OnBuildLayoutChanged;
             _directors.Settings.SelectionStyleChanged -= OnSelectionStyleChanged;
             _directors.Settings.WakeUpChanged -= OnWakeUpChanged;
+            _directors.Settings.PauseOnBigThreatsChanged -= OnPauseOnBigThreatsChanged;
+            _directors.Story.Changed -= OnStoryChanged;
+            _directors.Story.TensionChanged -= RefreshTensionGauge;
             _directors.Settings.DeveloperOverlayChanged -= OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged -= OnBusDbChanged;
             _directors.Settings.ExitChanged -= OnExitChanged;

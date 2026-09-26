@@ -307,7 +307,7 @@ namespace Odyssey.Tests.Hud
             int content = 1920 - 2 * 24 - 2 * 40;
             Assert.That(content, Is.GreaterThanOrEqualTo(HudLayout.SetupCompactBelow),
                 "the page would go compact at the scale it is designed at");
-            int story = content - HudLayout.SetupPeopleColumn - HudLayout.SetupSkillsWidth - 2 * HudLayout.SetupColumnGap;
+            int story = content - HudLayout.ColonistColumnWidth - HudLayout.SetupSkillsWidth - 2 * HudLayout.SetupColumnGap;
             Assert.That(story, Is.EqualTo(660), "mockup 25a: the third column is about 660 wide");
         }
 

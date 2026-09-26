@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
@@ -767,6 +768,67 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(returned.height, Is.EqualTo(atRoot.height).Within(0.5f));
                 Assert.That(returned.x, Is.EqualTo(atRoot.x).Within(0.5f));
                 Assert.That(returned.y, Is.EqualTo(atRoot.y).Within(0.5f));
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// The New game page's Story block (design 59 §12, mockups 25a-25c) stands inside the page
+        /// at the scale it is designed at and at 150%, where the page goes compact, and picking
+        /// Custom moves nothing: its block is always drawn and only lights.
+        ///
+        /// <para>The one check of the page's fit the fast tier cannot make: it knows the columns'
+        /// widths, not how tall the laid-out text and the wrapping ladder come to.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheStoryBlockFitsThePageAndCustomMovesNothing()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell shell, buildOnPlay: false);
+            try
+            {
+                yield return Settle();
+                var doc = boot.GetComponent<UIDocument>();
+                shell.Menu.Choose(SessionCommands.NewGameKey);
+                yield return Settle();
+
+                foreach (int scale in new[] { 100, 150 })
+                {
+                    boot.Preferences.SetUiScale(scale);
+                    yield return Settle();
+
+                    VisualElement page = doc.rootVisualElement.Q("setup")!;
+                    VisualElement story = page.Q(className: "story")!;
+                    Assert.That(page.ClassListContains("setup--compact"), Is.EqualTo(scale == 150),
+                        $"at {scale}% the page chose the wrong layout");
+
+                    Rect bounds = page.worldBound;
+                    foreach (VisualElement part in story.Query(className: "story__card").ToList()
+                                 .Concat(story.Query(className: "story__rung").ToList())
+                                 .Concat(story.Query(className: "story__lever").ToList()))
+                    {
+                        Rect r = part.worldBound;
+                        Assert.That(r.xMax, Is.LessThanOrEqualTo(bounds.xMax + 0.5f),
+                            $"at {scale}% a Story element runs off the right of the page");
+                        Assert.That(r.yMax, Is.LessThanOrEqualTo(bounds.yMax + 0.5f),
+                            $"at {scale}% a Story element runs off the bottom of the page");
+                    }
+
+                    var before = new List<Rect>();
+                    foreach (VisualElement e in story.Query<VisualElement>().ToList()) before.Add(e.worldBound);
+                    shell.Menu.ChooseRung(StoryCatalogue.CustomRung);
+                    yield return Settle();
+                    List<VisualElement> after = story.Query<VisualElement>().ToList();
+                    Assert.That(after.Count, Is.EqualTo(before.Count), "picking Custom added or took away an element");
+                    for (int i = 0; i < after.Count; i++)
+                        Assert.That(after[i].worldBound, Is.EqualTo(before[i]),
+                            $"at {scale}% picking Custom moved {after[i].name}/{string.Join(".", after[i].GetClasses())}");
+                    shell.Menu.ChooseRung(StoryCatalogue.NormalRung);
+                    yield return Settle();
+                }
             }
             finally
             {

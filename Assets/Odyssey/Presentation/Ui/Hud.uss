@@ -501,6 +501,15 @@
     flex-shrink: 0;
 }
 
+/* How hard the storyteller is pressing (design 59 §5a): a 16 px glyph after the weather's, on the
+   same line. Drawn by TensionGauge; not drawn at all without a storyteller. */
+.clock__tension {
+    width: 16px;
+    height: 16px;
+    margin-left: 6px;
+    flex-shrink: 0;
+}
+
 .speed {
     flex-direction: row;
     margin-top: 9px;
@@ -2965,8 +2974,9 @@
 
 /* The one being read, beside the three. */
 .setup__detail {
-    flex-grow: 1;
-    margin-left: 32px;
+    flex-shrink: 0;
+    width: 636px;
+    margin-left: 48px;
 }
 
 /* The portrait and the record it belongs to, side by side (docs/design/20-avatars.md §3). */
@@ -3001,7 +3011,7 @@
 
 .colonists {
     flex-shrink: 0;
-    width: 340px;
+    width: 400px;
 }
 
 /* A row wrapping a column since avatars landed (docs/design/20-avatars.md §3): the face, then the
@@ -3909,3 +3919,232 @@
 /* She has gone from the frame and the camera is holding on where she was. */
 .ride--lost .ride__name,
 .ride--lost .ride__job { color: #7d8792; }
+
+/* ---------------------------------------------------------------- the Story block (design 59 §12)
+
+   Claude Design's mockups 25a-25c: the third column of the New game page, in the space the skills
+   cap left empty. Three storyteller cards, always all shown; a seven-rung ladder; and the Custom
+   block, always drawn so that picking Custom moves nothing. Every length is a HudLayout constant
+   that HudStyleSheetTests pins. */
+
+.story {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    margin-left: 48px;
+}
+
+.story__heading {
+    flex-direction: row;
+    align-items: center;
+    height: 18px;
+    margin-bottom: 9px;
+}
+
+.story__heading-label { color: rgba(255, 255, 255, 0.50); }
+
+.story__heading-rule {
+    flex-grow: 1;
+    height: 1px;
+    margin-left: 9px;
+    background-color: rgba(255, 255, 255, 0.13);
+}
+
+.story__heading--gap { margin-top: 26px; }
+
+.story__cards { flex-direction: row; }
+
+/* A card: an outlined, pressable row like every other on this page, stood up as a column. */
+.story .story__card {
+    flex-grow: 1;
+    flex-basis: 0;
+    flex-direction: column;
+    align-items: stretch;
+    height: auto;
+    padding: 12px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+}
+
+.story__card--after { margin-left: 9px; }
+
+.story .story__card--on:hover { background-color: rgba(111, 211, 227, 0.06); }
+
+.story .story__card--on {
+    border-color: rgb(111, 211, 227);
+    background-color: rgba(111, 211, 227, 0.06);
+}
+
+.story__head {
+    flex-direction: row;
+    align-items: center;
+}
+
+.story__portrait {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    background-color: rgba(12, 16, 20, 1);
+}
+
+.story__name {
+    margin-left: 12px;
+    color: rgb(238, 243, 246);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.story__blurb {
+    height: 54px;
+    margin-top: 9px;
+    color: rgba(255, 255, 255, 0.66);
+    white-space: normal;
+    overflow: hidden;
+}
+
+.story__strip {
+    height: 40px;
+    margin-top: 9px;
+}
+
+/* Only on the compact page: the chosen storyteller's blurb, once, under the cards. */
+.story__blurb-compact {
+    display: none;
+    height: 36px;
+    margin-top: 9px;
+    color: rgba(255, 255, 255, 0.66);
+    white-space: normal;
+    overflow: hidden;
+}
+
+.story__ladder { flex-direction: row; }
+
+.story__rung {
+    flex-grow: 1;
+    flex-basis: 0;
+    height: 36px;
+    margin-left: -1px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.26);
+    color: rgb(238, 243, 246);
+    -unity-text-align: middle-center;
+}
+
+.story__rung:first-child { margin-left: 0; }
+
+.story__rung:hover { background-color: rgba(255, 255, 255, 0.07); }
+
+.story__rung--on {
+    background-color: rgb(111, 211, 227);
+    border-color: rgb(111, 211, 227);
+    color: rgb(11, 17, 22);
+}
+
+.story__rung--on:hover { background-color: rgb(111, 211, 227); }
+
+.story__rung--after-on { border-left-color: rgb(111, 211, 227); }
+
+.story__custom { margin-top: 12px; }
+
+.story__custom--dim { opacity: 0.4; }
+
+/* The block's own dim is the only one: the engine's disabled look would compound it. */
+.story__custom .unity-disabled { opacity: 1; }
+
+.story__custom-label { color: rgba(255, 255, 255, 0.50); height: 18px; }
+
+.story__custom-note { color: rgba(255, 255, 255, 0.66); height: 18px; }
+
+.story__levers {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.story__lever {
+    flex-direction: row;
+    align-items: center;
+    width: 50%;
+    height: 30px;
+}
+
+.story__lever--left { padding-right: 12px; }
+
+.story__lever--right { padding-left: 12px; }
+
+.story__lever-label {
+    flex-grow: 1;
+    color: rgb(238, 243, 246);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.story__lever .story__fader { width: 140px; }
+
+.story__figure {
+    width: 44px;
+    color: rgb(238, 243, 246);
+    -unity-text-align: middle-right;
+}
+
+/* ---- the compact page (25c): what gives way at a narrow width. */
+
+.setup--compact .colonists { width: 260px; }
+
+.setup--compact .setup__detail {
+    width: 420px;
+    margin-left: 24px;
+}
+
+.setup--compact .skills--setup { max-width: 420px; }
+
+.setup--compact .skill--setup { width: 192px; }
+
+.setup--compact .story { margin-left: 24px; }
+
+.setup--compact .story__head { flex-direction: column; }
+
+.setup--compact .story__name {
+    margin-left: 0;
+    margin-top: 6px;
+    -unity-text-align: middle-center;
+}
+
+.setup--compact .story__blurb { display: none; }
+
+.setup--compact .story__strip { height: 28px; }
+
+.setup--compact .story__blurb-compact { display: flex; }
+
+.setup--compact .story__heading--gap { margin-top: 16px; }
+
+.setup--compact .story__ladder { flex-wrap: wrap; }
+
+.setup--compact .story__rung {
+    flex-grow: 0;
+    flex-basis: auto;
+    width: 25%;
+    height: 30px;
+}
+
+.setup--compact .story__lever { height: 28px; }
+
+.setup--compact .story__lever .story__fader { display: none; }
+
+.setup--compact .story__custom-note { display: none; }
+
+/* ---- Settings > Gameplay > Story (25d-25f). */
+
+.sw__segs--story .sw__seg { padding: 0 14px; }
+
+.sw__custom { padding-left: 12px; }
+
+.sw__story-note {
+    color: rgba(255, 255, 255, 0.66);
+    height: 18px;
+    margin-bottom: 6px;
+}

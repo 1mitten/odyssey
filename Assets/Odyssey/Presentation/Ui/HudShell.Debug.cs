@@ -318,6 +318,66 @@ namespace Odyssey.Presentation.Ui
                 _debugEvents.Add(DebugActionRow(IncidentLabels.IconKey(i),
                     content.Defs[i].description ?? string.Empty, () => InvokeIncident(def)));
             }
+
+            // The tension gauge's preview (design 59 §12): nothing drives tension until the
+            // storyteller is built, so this is how the five bands and their tooltip are seen.
+            _debugEvents.Add(DebugPickRow(DebugDirector.TensionKey, TensionChoices(),
+                (_directors?.Story.TensionPreview ?? TensionModel.NoBand) + 1,
+                picked => _directors?.Story.SetTensionPreview(picked - 1)));
+            _debugEvents.Add(DebugPickRow(DebugDirector.TensionCauseKey, CauseChoices(),
+                (int)(_directors?.Story.PreviewCause ?? TensionCause.None),
+                picked =>
+                {
+                    StoryDirector? story = _directors?.Story;
+                    if (story == null) return;
+                    while ((int)story.PreviewCause != picked) story.NextPreviewCause();
+                }));
+        }
+
+        static List<string> TensionChoices()
+        {
+            var choices = new List<string> { Registry.Label(DebugDirector.TensionOffKey) };
+            for (int band = 0; band < TensionModel.BandCount; band++) choices.Add(TensionModel.LabelOf(band));
+            return choices;
+        }
+
+        static List<string> CauseChoices() => new List<string>
+        {
+            TensionModel.CauseLine(TensionCause.None, StoryDirector.PreviewDays),
+            TensionModel.CauseLine(TensionCause.Died, StoryDirector.PreviewDays),
+            TensionModel.CauseLine(TensionCause.Downed, StoryDirector.PreviewDays),
+            TensionModel.CauseLine(TensionCause.Quiet, StoryDirector.PreviewDays),
+        };
+
+        /// <summary>A labelled select on a debug tab, the raid mix's idiom: the row's name from
+        /// the registry, and the pick handed back as an index into <paramref name="choices"/>.</summary>
+        VisualElement DebugPickRow(string key, List<string> choices, int current, System.Action<int> onPick)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("settings__row");
+            var icon = new IconBadge(key, IconBadge.RowSize);
+            icon.Inherit(HudTokens.TextMeta);
+            row.Add(icon);
+            row.Add(HudText.Make(Registry.Label(key), HudTextRole.Row, ussClass: "settings__label"));
+            row.tooltip = Registry.Describe(key).Length > 0 ? Registry.Describe(key)
+                : "Until the storyteller drives it. The gauge shows only with a storyteller chosen at New game";
+
+            var dropdown = new DropdownField(choices, System.Math.Clamp(current, 0, choices.Count - 1));
+            dropdown.AddToClassList("sw__select");
+            if (dropdown.labelElement != null) dropdown.labelElement.style.display = DisplayStyle.None;
+            var textElem = dropdown.Q<TextElement>(className: "unity-base-popup-field__text");
+            if (textElem != null) HudText.Apply(textElem, HudTextRole.Body);
+            VisualElement? input = dropdown.Q(className: "unity-base-popup-field__input");
+            VisualElement? arrow = dropdown.Q(className: "unity-base-popup-field__arrow");
+            if (arrow != null) arrow.style.display = DisplayStyle.None;
+            input?.Add(new PathGlyph(SettingsLayout.SelectArrow, 10f, 6f, Ink(HudTheme.TextMeta), 10f, fill: true));
+            dropdown.RegisterValueChangedCallback(evt =>
+            {
+                int picked = choices.IndexOf(evt.newValue);
+                if (picked >= 0) onPick(picked);
+            });
+            row.Add(dropdown);
+            return row;
         }
 
         /// <summary>

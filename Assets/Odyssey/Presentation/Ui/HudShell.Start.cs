@@ -216,7 +216,9 @@ namespace Odyssey.Presentation.Ui
             WireTitleKeyboard();
 
             _setupPage = BuildSetupPage();
+            _setupPage.RegisterCallback<GeometryChangedEvent>(OnSetupGeometry);
             _hud.Add(_setupPage);
+            RefreshStory();
 
             _menu.Changed += RefreshSetupPage;
             _menu.ShowingChanged += RefreshStartScreen;
@@ -757,6 +759,9 @@ namespace Odyssey.Presentation.Ui
             _colonistDetail.Add(_detailTraits);
 
             screen.Add(_colonistDetail);
+
+            // The Story block, in the column the skills cap left empty (design 59 §12, 25a).
+            screen.Add(BuildStoryBlock());
             return screen;
         }
 
@@ -906,6 +911,7 @@ namespace Odyssey.Presentation.Ui
                 _colonyBox.SetValueWithoutNotify(_menu.ColonyName);
 
             HudText.Set(_sizeLabel, MapSizes.At(_menu.Size).Label, HudTextRole.Row);
+            RefreshStory();
         }
 
         void RefreshSeed()
@@ -1060,6 +1066,12 @@ namespace Odyssey.Presentation.Ui
 
             // A menu raised in the last colony names its colonists and things (design 33 §7a).
             CloseContextMenu();
+
+            // A colony that arrives without a story is a load: until the storyteller is saved
+            // (ST1) a loaded colony has none, which is design 59 §7's old-save rule, and the
+            // Settings rows are live so one can be chosen. A new game names its own a moment later
+            // (OnStartNewGame), over this.
+            if (live != null && !live.Story.HasColony) live.Story.Begin(StoryChoice.Nobody);
 
             if (!ReferenceEquals(_directors, live ?? _screenDirectors))
             {
@@ -1270,6 +1282,11 @@ namespace Odyssey.Presentation.Ui
                 // the line above. The seeds go with the names so the bootstrap can check it is
                 // naming the person the player was looking at rather than whoever landed in that slot.
                 _boot.NameColonists(choice.Names, choice.Colonists);
+
+                // The storyteller and difficulty chosen on the page, carried into the session's
+                // interface state (design 59 §12). Nothing in the simulation reads them until the
+                // storyteller is built; the Settings rows and the gauge do.
+                _boot.Directors?.Story.Begin(choice.Story);
             });
         }
 

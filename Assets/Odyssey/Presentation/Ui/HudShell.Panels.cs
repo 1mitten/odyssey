@@ -951,6 +951,17 @@ namespace Odyssey.Presentation.Ui
             _clockWeather.AddToClassList("clock__weather");
             _clockWeather.pickingMode = PickingMode.Position;
             line.Add(_clockWeather);
+
+            // How hard the storyteller is pressing (design 59 §5a, mockup 25g): a 16 px glyph after
+            // the weather's, on the same line. The date gave up its season to make the room (the
+            // line measured about 297 px against the 247 the panel holds), so the gauge adds no
+            // second line to a strip whose height budget a test holds. Not drawn at all without a
+            // storyteller, and the gap closes with it.
+            _clockTension = new TensionGauge();
+            _clockTension.AddToClassList("clock__tension");
+            _clockTension.pickingMode = PickingMode.Position;
+            _clockTension.style.display = DisplayStyle.None;
+            line.Add(_clockTension);
             line.Add(_clockTemp);
 
             clock.Add(line);
@@ -1138,9 +1149,10 @@ namespace Odyssey.Presentation.Ui
             long tick = world.CurrentTick;
             HudText.Set(_clockTime, $"{GameClock.HourOfDay(tick):00}:00", HudTextRole.Clock);
 
-            HudText.Set(_clockDate,
-                $"Day {GameClock.DayOfMonth(tick)} · {GameClock.MonthName(tick)} · {GameClock.SeasonName(tick)}",
-                HudTextRole.Body);
+            // Day and month only: the season moved to the weather's tooltip and the date's own, to
+            // make room for the tension gauge (design 59 §12).
+            HudText.Set(_clockDate, GameClock.DateLine(tick), HudTextRole.Body);
+            _clockDate.tooltip = GameClock.FullDate(tick);
 
             // The outdoor reading, on its own row and in its own colour. The word "outdoors" is
             // gone with the overflow it caused (owner, 2026-09-23) — which costs the one thing it
@@ -1167,8 +1179,26 @@ namespace Odyssey.Presentation.Ui
                     WeatherKind.Storm => HudGlyphKind.WeatherStorm,
                     _ => HudGlyphKind.WeatherClear,
                 };
-                _clockWeather.tooltip = word;
+                _clockWeather.tooltip = GameClock.WeatherTip(word, tick);
             }
+
+            RefreshTensionGauge();
+        }
+
+        /// <summary>
+        /// The gauge: shown only with a storyteller and a band, painted in the band's columns, and
+        /// its two-line tooltip. The band is the debug menu's preview until the storyteller drives
+        /// it (design 59 §12); the rule that no storyteller means no gauge is already the real one.
+        /// </summary>
+        void RefreshTensionGauge()
+        {
+            if (_clockTension == null) return;
+            StoryDirector? story = _directors?.Story;
+            bool shows = story != null && story.GaugeShows;
+            _clockTension.style.display = shows ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!shows) return;
+            _clockTension.Band = story!.TensionPreview;
+            _clockTension.tooltip = _tensionTip.For(story.TensionPreview, story.PreviewCause, StoryDirector.PreviewDays);
         }
 
         void RefreshSpeed()
@@ -1277,6 +1307,14 @@ namespace Odyssey.Presentation.Ui
             // library's (BulletinChime): a raid's war horn, else by favourability.
             if (_bulletins.Arrived > 0)
                 _boot.Audio?.PlayAlert(Audio.BulletinChime.For(_bulletins.ArrivedRaid, _bulletins.ArrivedFavourability));
+
+            // A big threat stops the clock, unless the player said not to (design 59 §2, ruling 9).
+            // Only a running world is paused: a pause request on a paused world is the resume
+            // toggle (SpeedControl), and would start the clock the raid should have stopped. The
+            // pause remembers the speed it stopped, so the next Space resumes at it.
+            if (_bulletins.ArrivedRaid && world.GameSpeed > 0
+                && _directors != null && _directors.Settings.PauseOnBigThreats)
+                _rig?.RequestGameSpeed(0);
 
             if (_bulletinsDrawn == _bulletins.Version) return;
             _bulletinsDrawn = _bulletins.Version;
