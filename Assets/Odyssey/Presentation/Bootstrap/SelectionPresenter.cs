@@ -28,8 +28,9 @@ namespace Odyssey.Presentation.Bootstrap
     /// </summary>
     public sealed class SelectionPresenter : MonoBehaviour
     {
-        /// <summary>Two presses closer than this, on the same colonist, are a double click.</summary>
-        const float DoubleClickSeconds = 0.35f;
+        /// <summary>Two presses closer than this, on the same colonist, are a double click — one
+        /// threshold shared with the roster card's double click, owned by <see cref="DoubleClick"/>.</summary>
+        const float DoubleClickSeconds = DoubleClick.Seconds;
 
         OdysseyBootstrap? _bootstrap;
         SliceCameraRig? _rig;
@@ -325,7 +326,7 @@ namespace Odyssey.Presentation.Bootstrap
                 {
                     if (_bootstrap?.Figures == null || !_bootstrap.Figures.TryGetFeet(pawn.Id, out Vector3 feet))
                         feet = Odyssey.Presentation.Rendering.PawnPose.Of(
-                            pawn, tickAlpha, movePerTick, out _, _bootstrap?.Model);
+                            pawn, tickAlpha, movePerTick, out _, _bootstrap?.Model, pawns, _bootstrap?.CrowdIndex);
                     bounds = new Bounds(feet + Vector3.up * (box.y * 0.5f), box);
                 }
                 if (!bounds.IntersectRay(ray, out float distance) || distance >= nearest) continue;

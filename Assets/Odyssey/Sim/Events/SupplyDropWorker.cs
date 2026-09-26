@@ -79,7 +79,18 @@ namespace Odyssey.Sim.Events
             if (parms.Cell is { } forced)
             {
                 landing = ctx.Cells.SkyLanding(forced.X, forced.Z);
-                return landing >= 0 && ctx.Items.CellHasSpace(landing, item, stack);
+                if (landing >= 0 && ctx.Items.CellHasSpace(landing, item, stack)) return true;
+
+                // **A tree's column lands beside the trunk** (owner, 2026-09-25: *"around it or the
+                // next tile"*). A canopy stops nothing, so the fall reaches the ground the tree
+                // stands on, and the tree's own cell is refused by the space test; the load goes
+                // to the nearest column round it that takes it. Only for a tree: a wall, deep water
+                // or bare rock still refuses the column, which is what a forced cell has always
+                // meant (design 23 §6, §11).
+                if (landing >= 0 && ctx.Items.TreeAt(landing))
+                    return TryBesideTree(ctx, forced, item, stack, out landing);
+                landing = -1;
+                return false;
             }
 
             var draw = ctx.Random(IncidentPurpose.Landing);
@@ -92,6 +103,28 @@ namespace Odyssey.Sim.Events
                 if (landing >= 0 && ctx.Items.CellHasSpace(landing, item, stack)) return true;
             }
 
+            landing = -1;
+            return false;
+        }
+
+        /// <summary>How far round a tree a forced drop looks for open ground, in rings.</summary>
+        public const int BesideTreeRings = 2;
+
+        /// <summary>
+        /// The nearest column round <paramref name="tree"/> whose sky landing takes the load: ring
+        /// by ring out to <see cref="BesideTreeRings"/>, each ring in a fixed order, so the answer
+        /// is a function of the board. At most 24 column walks.
+        /// </summary>
+        static bool TryBesideTree(IncidentContext ctx, CellRef tree, int item, int stack, out int landing)
+        {
+            for (int ring = 1; ring <= BesideTreeRings; ring++)
+            for (int dz = -ring; dz <= ring; dz++)
+            for (int dx = -ring; dx <= ring; dx++)
+            {
+                if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dz)) != ring) continue;
+                landing = ctx.Cells.SkyLanding(tree.X + dx, tree.Z + dz);
+                if (landing >= 0 && ctx.Items.CellHasSpace(landing, item, stack)) return true;
+            }
             landing = -1;
             return false;
         }

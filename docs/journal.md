@@ -13737,3 +13737,37 @@ thing that made it cheap to get right is that 2.5 m is exactly three stretchers:
 cell, so a dragged line is continuous without any piece knowing its place in the line, and "the
 cell a bag starts in draws it" gives every straddling bag exactly one owner. The Blender set the
 design planned is not needed unless the owner's eye says otherwise. Design 53 §7a-bis and §13.
+
+## 2026-09-25 — Six polish reports in one PR (`claude/polish-batch`)
+
+The owner sent six reports at once and asked for them in parallel, folded into one PR. Four
+questions were settled first. **Trees fade for the selection only**, with a Graphics switch for
+everyone that starts off: this reverses the 2026-09-24 call (design 38 §17c) because the trees
+cleared round colonists with nothing selected. **The colonist pane at 85%**; roster cards and the
+other panels stay opaque, since the 2026-09-21 call for opacity was about them. **A roster double
+click glides and zooms in close.** And **the no-shared-tile rule goes in both the sim and the
+drawing**.
+
+Three lanes worked in one worktree on files that did not overlap, and each committed by path.
+
+- **Sim.** One predicate for where someone may lie down (`JobSystem.FreeSpot`). The tree rule for
+  landings lives inside `ColonyItems.CellHasSpace`, so every drop, refund, grant and falling load
+  obeys it. A "claimed by another" check covers standing, stepping-into and heading-to;
+  `PawnRegistry.IsClaimedByOther` is asked only when a pawn starts a stay, never per tick. The
+  fireside grew a second ring for when the first is full.
+- **Goldens.** Two moved: the played board and the city. `GoldenColonyProbe` shows every economy
+  number identical. Only positions changed, plus one extra wander per colony, which is the wander
+  now skipping taken tiles.
+- **Drawing.** `PawnPose.StandApart` spreads anyone standing still on a shared cell round a ring,
+  0.7 m apart, in id order. It uses `PawnCrowdIndex.Here` (one bucket), so the cost stays bounded
+  (P12). Six fallback pose calls in the bootstrap and the pick were asking without the crowd, so a
+  pawn past the figure cap had its ring and bracket at the cell centre while the body stood apart.
+  They now pass it.
+
+**Measured, not assumed.** EditMode on the merge: 4,153 tests, one failure,
+`WeaponSheathGapTests`. `origin/main` in the same worktree fails the same assertion (4,152, one
+failure), which agrees with the birds entry above: it is `main`'s and still needs its own fix.
+
+**What the parallel lanes cost.** Two agents' fast-tier runs locked each other's test DLLs, and one
+agent saw the other's half-finished Sim edits fail to compile. Lanes that share a worktree should
+not share a test binary. Next time, give the Sim lane its own worktree.

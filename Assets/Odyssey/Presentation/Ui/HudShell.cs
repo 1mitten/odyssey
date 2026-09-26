@@ -134,6 +134,9 @@ namespace Odyssey.Presentation.Ui
         // page it covers is copied into the scratch list at the press.
         readonly RosterSweep _rosterSweep = new RosterSweep();
         readonly List<PawnId> _sweepPage = new List<PawnId>();
+        // Two plain clicks on one card are a double click (owner, 2026-09-25): the threshold is
+        // the world pick's, shared through the model rather than copied.
+        readonly DoubleClick _rosterDoubleClick = new DoubleClick();
         VisualElement? _rosterPager;
         VisualElement? _prevPageBtn;
         VisualElement? _nextPageBtn;

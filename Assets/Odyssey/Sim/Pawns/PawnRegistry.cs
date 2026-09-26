@@ -50,6 +50,37 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// Does some pawn other than <paramref name="me"/> hold this cell — standing or lying in
+        /// it, finishing a step into it, or on its way to it (owner, 2026-09-25: *"don't have them
+        /// exactly over each other — that should never happen in any scenario"*)?
+        ///
+        /// <para>"On its way" is the path's destination and, for the three jobs whose target
+        /// <i>is</i> where the pawn will stand — a wander, a sleep and a move order — the job's
+        /// target as well. The second is what makes two idlers thinking on the same tick choose
+        /// different cells: a job handed out this tick has not asked for its path yet, so its
+        /// destination is still -1 while its target already names the cell. A carried patient
+        /// is in somebody's arms and holds nothing; the dead hold nothing.</para>
+        ///
+        /// <para><b>Scales with the pawns</b>, one pass, and is asked per candidate cell by a
+        /// chooser that runs when a pawn <i>starts</i> a stay — an idle settle, a lie-down, a
+        /// wander leg — never per tick. Design 31 §20 has the arithmetic.</para>
+        /// </summary>
+        public bool IsClaimedByOther(Pawn me, int cell)
+        {
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                Pawn other = _pawns[i];
+                if (other == me || other.CarriedBy != 0 || Melee.IsDead(other)) continue;
+                if (other.Cell == cell || other.FinishingStepTo == cell || other.Destination == cell) return true;
+                Job? job = other.CurrentJob;
+                if (job != null && job.TargetCell == cell &&
+                    (job.DefIndex == JobIndex.Wander || job.DefIndex == JobIndex.Sleep || job.DefIndex == JobIndex.Goto))
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Build a colonist at a cell. This is the whole public API for making a pawn: one call,
         /// no partially-initialised intermediate state, and the driver pool built up front so no
         /// job start ever allocates.

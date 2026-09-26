@@ -36,6 +36,13 @@
  * it and HudStyleSheetTests checks them against it, so the alpha cannot be changed in one
  * place only. The nearly-opaque surfaces above it (BarFill .90, PopoverFill .96) are left
  * alone: at 4–10% they never showed the world, which is the thing that was wrong here.
+ *
+ * ONE EXCEPTION, 2026-09-25. The inspect pane — the colonist info pane, and the same element for
+ * any other selection — is HudTheme.InspectFill, the panel colour at .85 (owner: "the colonist
+ * info pane at 85% opacity"). It is the pane the player reads while watching the colonist it
+ * describes, so a little of the board showing through is wanted there and nowhere else: the
+ * roster cards and every other panel stay opaque. The cost is measured, not assumed: the dim ink
+ * is 4.44:1 over pure white terrain (HudLayoutTests), a hair under body minimum.
  */
 
 /* Unity's runtime theme gives every Label a small vertical margin of its own. Inside a row of a
@@ -882,11 +889,16 @@
 /* ---------------------------------------------------------------- A9/A10 inspect */
 
 /* Docked to the left edge with the stores panel above it. Its bottom sits flush against the command
-   bar, so both bottom corners and the top-left corner are squared. */
+   bar, so both bottom corners and the top-left corner are squared.
+
+   The one panel that is not opaque (owner, 2026-09-25: the colonist info pane at 85%): HudTheme.
+   InspectFill, held to it by HudStyleSheetTests. It overrides .panel's fill by coming later in the
+   sheet at the same specificity. See the header's note on the opaque fill. */
 .inspect {
     left: 0;
     bottom: 50px;
     width: 560px;
+    background-color: rgba(12, 16, 20, 0.85);
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;

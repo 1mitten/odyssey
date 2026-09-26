@@ -423,6 +423,120 @@ namespace Odyssey.Tests.Sim
                 "it should wander off as it did before there were fires");
         }
 
+        /// <summary>
+        /// Everybody who is standing still or lying down, by cell: the number of cells with two or
+        /// more in them, and the number of colonists within two cells of the fire.
+        /// </summary>
+        static (int shared, int atHearth) Crowding(ColonyWorld colony, int fire)
+        {
+            var seen = new System.Collections.Generic.Dictionary<int, int>();
+            int atHearth = 0;
+            foreach (Pawn pawn in colony.Pawns.Pawns.All)
+            {
+                if (pawn.HasPath || pawn.FinishingStepTo >= 0) continue;
+                seen.TryGetValue(pawn.Cell, out int n);
+                seen[pawn.Cell] = n + 1;
+                CellRef p = Size.FromIndex(pawn.Cell), f = Size.FromIndex(fire);
+                if (p.Y == f.Y && System.Math.Max(System.Math.Abs(p.X - f.X), System.Math.Abs(p.Z - f.Z)) <= 2) atHearth++;
+            }
+            int shared = 0;
+            foreach (var pair in seen) if (pair.Value > 1) shared++;
+            return (shared, atHearth);
+        }
+
+        /// <summary>
+        /// Six idlers round one fire stand in six different cells, on every tick (owner,
+        /// 2026-09-25: *"colonists stand around the campfire in the same tile … first separate
+        /// tiles. Don't have them exactly over each other — that should never happen in any
+        /// scenario"*).
+        ///
+        /// <para>Asserted over thousands of ticks and over everybody standing still or lying down,
+        /// not over one decision: the fault was two idlers choosing on the same tick, or one
+        /// choosing a cell somebody else was already walking to, and either happens only now and
+        /// then. With the claim test switched off this counts shared cells within the first few
+        /// hundred ticks.</para>
+        /// </summary>
+        [Test]
+        public void SixIdlersAtAFireStandInSixDifferentCells()
+        {
+            ColonyWorld colony = Board(colonists: 6, beds: 0);
+            int fire = Fire(colony, 12, 12);
+
+            int worst = 0, gathered = 0;
+            for (int i = 0; i < 6_000; i++)
+            {
+                colony.World.Tick();
+                (int shared, int atHearth) = Crowding(colony, fire);
+                worst = System.Math.Max(worst, shared);
+                gathered = System.Math.Max(gathered, atHearth);
+            }
+
+            Assert.That(gathered, Is.GreaterThanOrEqualTo(4), "the idlers never gathered at the fire, so nothing was asked");
+            Assert.That(worst, Is.Zero, "two colonists stood or lay in one cell");
+        }
+
+        /// <summary>
+        /// More idlers than the eight beside the fire: the rest stand a step further out, and still
+        /// nobody shares. Twelve, so the second ring is certainly used.
+        /// </summary>
+        [Test]
+        public void ACrowdLargerThanTheRingStandsBehindItAndNobodyShares()
+        {
+            ColonyWorld colony = Board(colonists: 12, beds: 0);
+            int fire = Fire(colony, 12, 12);
+
+            int worst = 0, gathered = 0;
+            for (int i = 0; i < 6_000; i++)
+            {
+                colony.World.Tick();
+                (int shared, int atHearth) = Crowding(colony, fire);
+                worst = System.Math.Max(worst, shared);
+                gathered = System.Math.Max(gathered, atHearth);
+            }
+
+            Assert.That(gathered, Is.GreaterThan(8), "the crowd never spilled past the first ring, so nothing was asked");
+            Assert.That(worst, Is.Zero, "two colonists stood or lay in one cell");
+        }
+
+        /// <summary>
+        /// The chooser's own contract, one decision at a time: a ring cell somebody is standing on,
+        /// or walking to, is not offered to anyone else, and a colonist sharing her cell is sent
+        /// on rather than told she has arrived.
+        /// </summary>
+        [Test]
+        public void ARingCellSomebodyHoldsIsNotOffered()
+        {
+            ColonyWorld colony = Board(colonists: 2, beds: 0);
+            int fire = Fire(colony, 12, 12);
+            colony.World.Tick(Odyssey.Sim.Temperature.TemperatureSystem.IntervalTicks * 2);
+
+            var pawns = colony.Pawns.Pawns.All;
+            Pawn first = pawns[0], second = pawns[1];
+            int ring = FiresideRing(fire);
+
+            // Both standing in the one ring cell: neither is "already there".
+            first.Cell = ring; first.ClearPath();
+            second.Cell = ring; second.ClearPath();
+            var job = new Job();
+            Assume.That(new IdleThinkNode().TryGiveJob(second, colony.Pawns, job), Is.True);
+            if (colony.Pawns.Content.Jobs[job.DefIndex].driver == JobIndex.Wander)
+                Assert.That(job.TargetCell, Is.Not.EqualTo(ring), "she was sent to the cell she shares");
+            Assert.That(colony.Pawns.Pawns.IsClaimedByOther(second, ring), Is.True);
+
+            // One walking to it: it is held, by her job's target, before her path exists.
+            first.Cell = colony.Grid.NearestWalkableInColumn(30, 30, Size.SizeY - 1);
+            second.Cell = colony.Grid.NearestWalkableInColumn(32, 30, Size.SizeY - 1);
+            second.CurrentJob = null;
+            var walk = new Job();
+            walk.Reset(JobIndex.Wander);
+            walk.TargetCell = ring;
+            first.CurrentJob = walk;
+            Assert.That(colony.Pawns.Pawns.IsClaimedByOther(second, ring), Is.True,
+                "a cell somebody is walking to was not held");
+            Assert.That(colony.Pawns.Pawns.IsClaimedByOther(first, ring), Is.False,
+                "her own destination counted against her");
+        }
+
         /// <summary>The first free cell of a fire's ring — where a colonist at the hearth stands.</summary>
         static int FiresideRing(int fire)
         {

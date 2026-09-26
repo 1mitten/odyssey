@@ -117,6 +117,7 @@ namespace Odyssey.Presentation.CameraRig
         Vector3 _focus;
         Vector3? _glideTarget;
         CellRef? _glidingTo;
+        int _glideSerial = -1;
         float _targetYaw;
         float _targetDistance;
         bool _orbiting;
@@ -849,6 +850,12 @@ namespace Odyssey.Presentation.CameraRig
         /// Realise the camera director's jump: a glide to the cell at the current zoom, on the
         /// smoothing the rest of the camera uses, because a cut would lose the player their
         /// bearings where a glide keeps them. The director is told when the rig has landed.
+        ///
+        /// <para>A jump that carries a distance (a roster double-click, 2026-09-25) sets the zoom
+        /// target once, when the request is taken, so the zoom rides the same smoothing as the
+        /// glide and a wheel turn during it still wins. A second request for the cell already
+        /// being glided to is taken again when its serial is new, or a double-click on the
+        /// colonist a single click had just sent the camera to would never zoom.</para>
         /// </summary>
         void TakeJumpRequest()
         {
@@ -859,12 +866,16 @@ namespace Odyssey.Presentation.CameraRig
                 _glidingTo = null;
                 return;
             }
-            if (_glidingTo.HasValue && _glidingTo.Value == wanted.Value) return;
+            int serial = _directors!.Camera.JumpSerial;
+            if (_glidingTo.HasValue && _glidingTo.Value == wanted.Value && _glideSerial == serial) return;
 
             Vector3 target = CellMetrics.FloorCentre(wanted.Value);
             target.y = _focus.y;
             _glideTarget = target;
             _glidingTo = wanted;
+            _glideSerial = serial;
+            float? zoom = _directors!.Camera.JumpDistance;
+            if (zoom.HasValue) _targetDistance = Mathf.Clamp(zoom.Value, minDistance, maxDistance);
         }
 
         // -------------------------------------------------------- selection
