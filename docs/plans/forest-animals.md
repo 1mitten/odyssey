@@ -34,6 +34,17 @@ window, four signature behaviours, activity hours, 32/48/64/80 animals by board,
 | **The Eat clip's driver** (66 §6, used by 65's `Job_Feed` and 67's `Job_Graze`) | One aspect, `grazing`, published for *any* eating job an animal does; the name stays although a wolf is feeding. FA1 lays the plumbing and a test; FA2 and FA3 set it. | FA1 |
 | **Rage duration** (64: 10–26 k, research: 10 k min, 18 k mean) | 64's range stands; the mean is 18 k. | FA2 |
 
+## 1a. The Almanac carries every animal's whole behaviour (owner, 2026-09-26)
+
+*"Make sure you document all this information in the almanac as well so we understand all of the
+animals behaviour."* Each animal's Almanac entry shows its full behaviour — temperament, when
+approached, when struck, group, hours, what it hunts or eats, its danger to colonists, its signature
+— from **one engine-free table** (`Odyssey.Hud`), every fact carrying a *live* flag. A fact the build
+does not yet do is shown **not yet in the game**, the World screen's *Not yet available* precedent,
+so the Almanac never claims a behaviour a playtest cannot find. **FA2 and FA3 flip each fact to live
+in the same commit that builds it**, and a Hud test lists exactly which facts are live, so a flag
+that runs ahead of the code (or behind it) fails the fast tier.
+
 ## 2. The wildlife table (FA1)
 
 | Change | Detail |
