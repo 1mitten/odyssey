@@ -134,7 +134,9 @@ namespace Odyssey.Tests.Presentation
                 director = new PawnFigureDirector(Catalogue(), parent.transform, 0);
                 Assume.That(director.Enabled, Is.True, "the animal rows alone make the director able to draw");
 
-                WorldSnapshot frame = Frame(Standing(1, 1, 2, 2), Standing(2, 2, 4, 2), Standing(3, 9, 6, 2),
+                // Kind 99 is past every table: 9 was unknown until it became the butcher king
+                // (design 62 §4b), which is drawn.
+                WorldSnapshot frame = Frame(Standing(1, 1, 2, 2), Standing(2, 2, 4, 2), Standing(3, 99, 6, 2),
                     Standing(4, Odyssey.Hud.PawnKindLabels.CulvertFrogKind, 8, 2));
                 director.Sync(frame, 0, new SliceSettings(), 0f, 1, 0.016f);
 

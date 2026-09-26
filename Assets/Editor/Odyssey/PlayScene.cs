@@ -1763,6 +1763,36 @@ namespace Odyssey.EditorTools
             for (int b = 0; b < BanditBodies.Length; b++) BanditBody(Cast.Length + b, BanditBodies[b]);
             for (int variant = 0; variant < HeadgearPieces.Length; variant++) Headgear(variant);
 
+            // The butcher (design 62 §8), kind 6: a hostile drawn as itself, out of the colonist
+            // family so no lottery, no swatches and no look index of anybody else's moves. The
+            // POLYGON Fantasy Rivals giant on a person's clips (a Battle Royale rig, Humanoid,
+            // research e-16), in the pack's own paint. Its scale is MEASURED by ButcherProbe, not
+            // guessed: see ButcherScale. The cleaver is the pack's own, held in the right hand as the
+            // butcher's natural weapon (PawnFigureDirector.Weapons, NaturalWeaponDef).
+            // Four levels (design 62 §4b; owner, 2026-09-26: "different levels based on their
+            // appearance ... a bit bigger each level"): the same giant in the pack's four colourways
+            // of its atlas, each a size up. The body and its cleaver wear the level's material.
+            for (int level = 0; level < ButcherLevels.Length; level++)
+            {
+                var (kind, materialName, scale) = ButcherLevels[level];
+                ModuleEntry butcher = PersonRow(0, ButcherPrefab);
+                butcher.moduleId = ModuleIds.Hostile(kind);
+                butcher.prefabUnder = FantasyRivalsFolder;
+                butcher.colonistPool = false;
+                butcher.uniform = false;
+                butcher.scale = new Vector3(scale, scale, scale);
+                butcher.materialName = materialName;
+                rows.Add(butcher);
+                rows.Add(new ModuleEntry
+                {
+                    moduleId = ModuleIds.HostileWeapon(kind), shape = ModuleShape.Pillar,
+                    prefabName = "SM_Wep_PigButcher_01",
+                    prefabUnder = FantasyRivalsFolder,
+                    materialName = materialName,
+                    centreXZ = false, baseAtY = false,
+                });
+            }
+
             void BanditBody(int variant, (string Prefab, string Vest) body)
             {
                 ModuleEntry row = PersonRow(variant, body.Prefab);
@@ -2559,7 +2589,35 @@ namespace Odyssey.EditorTools
         const string MeadowFolder = "Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest";
 
         /// <summary>Packs imported after the catalogue's rows were chosen, which lose a name tie to any older pack.</summary>
-        static readonly string[] LaterPacks = { "Assets/Synty/PolygonShops" };
+        static readonly string[] LaterPacks = { "Assets/Synty/PolygonShops", "Assets/Synty/PolygonFantasyRivals" };
+
+        /// <summary>POLYGON Fantasy Rivals, the butcher's pack (design 62, research e-16).</summary>
+        const string FantasyRivalsFolder = "Assets/Synty/PolygonFantasyRivals";
+
+        /// <summary>The butcher's prefab, which every level shares.</summary>
+        const string ButcherPrefab = "SM_Chr_BR_PigButcher_01";
+
+        /// <summary>
+        /// The butcher's four levels (design 62 §4b): kind (<c>PawnKindIndex.Butcher</c> to
+        /// <c>ButcherKing</c>), the colourway of its atlas, and its scale. Level 1's scale is
+        /// <see cref="ButcherScale"/>; each after it is a size up, 4.4 to 5.6 m drawn.
+        /// </summary>
+        static readonly (int Kind, string Material, float Scale)[] ButcherLevels =
+        {
+            (6, "FantasyRivals_01_A", ButcherScale),
+            (7, "FantasyRivals_01_B", 2.6f),
+            (8, "FantasyRivals_01_C", 2.85f),
+            (9, "FantasyRivals_01_D", 3.1f),
+        };
+
+        /// <summary>
+        /// The butcher's scale, MEASURED by <c>ButcherProbe</c> (design 62 §8a, 2026-09-26): the pack's
+        /// giant is 1.822 m sole to crown against a colonist body's 1.791, so at a colonist's 1.4 it
+        /// would be a colonist's height with twice the girth. 2.0 stands it 3.64 m tall, 1.45 times
+        /// a colonist's 2.51 m — the design's target — and taller than a 3 m storey, which the first
+        /// play judges indoors.
+        /// </summary>
+        const float ButcherScale = 2.4f;
         /// <summary>POLYGON Battle Royale, which the pistol is pinned to (design 47 §4a).</summary>
         const string BattleRoyaleFolder = "Assets/Synty/PolygonBattleRoyale";
 

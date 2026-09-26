@@ -126,6 +126,7 @@ About ninety minutes, most of it the editor download. What differed from the fir
    | `POLYGON_Farm_…_v1_7_3`, `POLYGON_Western_Frontier_…_v1_7_2`, `POLYGON_Particle_FX_…_v1_4_1` | own folder only |
    | `POLYGON_NatureBiomes_MeadowForest_…_v1_10_5` | `PolygonNatureBiomes` and `PNB_Core` |
    | `POLYGON_BattleRoyale_…_v1_9_2`, `POLYGON_Shops_…_v1_6_6` | own folder only (both ship PolygonGeneric under the same GUIDs) |
+   | `POLYGON_Fantasy_Rivals_…_v1_4_2` | `PolygonFantasyRivals` minus `Scenes` (ships PolygonGeneric under the same GUIDs; the Pig Butcher, design 62) |
    | `ANIMATION_Base_Locomotion_…_v1_1_3` | all |
    | `ANIMATION_Sword_Combat_…_v1_2_0` | `AnimationSwordCombat` minus `Samples`; not `Tools` (C# that would compile into the project) |
 

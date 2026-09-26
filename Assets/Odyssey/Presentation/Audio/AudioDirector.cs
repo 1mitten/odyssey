@@ -192,6 +192,13 @@ namespace Odyssey.Presentation.Audio
         /// <summary>Diagnostic counters, for the developer overlay and the tests. A test that
         /// wants to know why nothing played reads these instead of guessing.</summary>
         public int OneShotsPlayed { get; private set; }
+
+        /// <summary>
+        /// Raised with the sound's id each time a one-shot actually plays. For tests and the
+        /// photographs (design 62 §8d: which of the butcher's voices a fight was heard in); nothing
+        /// in the game listens.
+        /// </summary>
+        public event Action<string>? Played;
         public int DistanceCulled { get; private set; }
         public int CooldownSkipped { get; private set; }
         public int VoiceStarved { get; private set; }
@@ -402,7 +409,13 @@ namespace Odyssey.Presentation.Audio
         /// it played too recently — are exactly the things a test (and the developer overlay)
         /// wants to tell apart from each other and from a bug.
         /// </summary>
-        public bool PlayOneShot(string id, Vector3 worldPosition)
+        public bool PlayOneShot(string id, Vector3 worldPosition) => PlayOneShot(id, worldPosition, 1f);
+
+        /// <summary>
+        /// The same, pitched by <paramref name="pitchScale"/> on top of the def's own variance: a
+        /// creature's voice at its level's pitch (design 62 §8d, <c>SpeciesDef.voicePitchPerMille</c>).
+        /// </summary>
+        public bool PlayOneShot(string id, Vector3 worldPosition, float pitchScale)
         {
             if (!_byId.TryGetValue(id, out AudioCatalogue.SoundDef def)) return false;
 
@@ -443,7 +456,7 @@ namespace Odyssey.Presentation.Audio
                 return false;
             }
 
-            float pitch = 1f + Range(-def.PitchVariance, def.PitchVariance);
+            float pitch = (1f + Range(-def.PitchVariance, def.PitchVariance)) * Mathf.Max(0.1f, pitchScale);
             float gain = Mathf.Clamp01(
                 def.Volume * (1f + Range(-def.VolumeVariance, def.VolumeVariance)))
                 * AudioMath.DbToLinear(GainDb(def.Bus));
@@ -467,6 +480,7 @@ namespace Odyssey.Presentation.Audio
             _voicePriority[index] = def.Priority;
             _lastPlayed[def] = _time;
             OneShotsPlayed++;
+            Played?.Invoke(id);
             return true;
         }
 

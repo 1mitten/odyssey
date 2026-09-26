@@ -80,6 +80,7 @@ namespace Odyssey.Sim.Pawns
                 // state and hashes exactly as it did before it (design 33 §6).
                 if (pawn.StunnedUntilTick != 0 && tick >= pawn.StunnedUntilTick) pawn.StunnedUntilTick = 0;
                 if (pawn.KnockedDownUntilTick != 0 && tick >= pawn.KnockedDownUntilTick) pawn.KnockedDownUntilTick = 0;
+                if (pawn.KnockbackImmuneUntilTick != 0 && tick >= pawn.KnockbackImmuneUntilTick) pawn.KnockbackImmuneUntilTick = 0;
                 if (pawn.NextSwingTick != 0 && tick >= pawn.NextSwingTick
                     && !(pawn.Driver is AttackMeleeJobDriver { InWindup: true }))
                     pawn.NextSwingTick = 0;
@@ -123,6 +124,9 @@ namespace Odyssey.Sim.Pawns
             if (!swing.WindupDone(armament)) return;
             bool decided = attacker.HasPendingSwing;
             SwingOutcome held = attacker.HeldSwing;
+            // A sweep's facing, kept with the swing from its wind-up (design 62 §5); nought for
+            // every swing that does not sweep.
+            int facing = attacker.HeldFacing;
             swing.EndSwing();
 
             // A building (design 33 §13g): it cannot step away, so the blow lands on it if it still
@@ -138,7 +142,12 @@ namespace Odyssey.Sim.Pawns
             }
 
             Pawn? target = _ctx.Pawns.Get(new PawnId(attacker.CombatTarget));
-            if (target == null) return;
+            if (target == null)
+            {
+                // The target has gone, and the cleaver still sweeps its arc.
+                if (facing != 0) SweepFlanks(attacker, facing, attacker.CombatTarget, armament, tick);
+                return;
+            }
 
             // Stepped out of reach during the wind-up, or struck down by somebody else before this
             // blow arrived on a job that stops at that: the blow falls on air.
@@ -150,6 +159,10 @@ namespace Odyssey.Sim.Pawns
                 ? new SwingOutcome(CombatEventKind.Miss)
                 : decided ? held : _ctx.MeleeRules.Resolve(attacker, target, armament, _ctx, tick);
             ApplySwing(attacker, target, armament, outcome, tick);
+
+            // A sweep carries on through the two cells either side of the target (design 62 §5),
+            // whether the target was struck or had stepped away.
+            if (facing != 0) SweepFlanks(attacker, facing, target.Id.Value, armament, tick);
         }
 
         /// <summary>

@@ -1170,10 +1170,17 @@ namespace Odyssey.Presentation.Bootstrap
             // Which family each weapon swings in (design 33 §5j), read once off the content, so a
             // figure can pick its clip row from the event's weapon without asking the simulation.
             if (_figures != null && _pawns != null)
+            {
                 _figures.WeaponStyles = CombatPose.StylesOf(_pawns.Content.Items);
+                // And what a pawn holding nothing swings in, by kind (design 62 §8): the butcher's
+                // cleaver is its species' own attack, not an item.
+                _figures.KindStyles = CombatPose.NaturalStylesOf(_pawns.Content);
+            }
 
             // Which blows cut (design 33 §7d), read once off the same content, for the blood seam.
             _combatFeedback.BloodSides = CombatFeedback.BloodSidesOf(_pawns?.Content);
+            // Whose voices a fight is heard in (design 62 §8d), off the same content.
+            (_combatFeedback.Voices, _combatFeedback.VoicePitch) = CombatFeedback.VoicesOf(_pawns?.Content);
 
             // Which weapons are guns (design 47 §4c), off the same content, so a bullet's miss throws
             // dust and its streak is told where it landed.
@@ -1728,6 +1735,7 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             DrawStandingOrders(_world.Views.Current);
+            DrawSweepTelegraphs(_world.Views.Current);
             DrawCracks(_world.Views.Current);
             HearDemolitions(_world.Views.Current);
             DrawZones(_world.Views.Current);
@@ -2079,6 +2087,43 @@ namespace Odyssey.Presentation.Bootstrap
         /// came down or was ordered again gives its scratch batch back. Filtered to the band a
         /// click can reach, as the orders are: anything drawn solid, never a ghost.
         /// </summary>
+        /// <summary>
+        /// The butcher's telegraph (design 62 §8): while a sweep winds up, the front arc of three it
+        /// will land on — the target's cell and the two either side — as dim red plates, gathered
+        /// with the order marks into their one instanced call. Read off the published facing
+        /// (<c>odyssey.pawn.sweep.facing</c>), so it is there in a paused frame and after a load
+        /// with nothing of its own to keep. <b>Scales with the pawns in the frame</b>: one flag test
+        /// each, and an aspect lookup for a hostile only.
+        /// </summary>
+        void DrawSweepTelegraphs(WorldSnapshot snapshot)
+        {
+            if (_renderer == null) return;
+            System.ReadOnlySpan<PawnView> pawns = snapshot.Pawns;
+            GridSize size = snapshot.Size;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                if ((pawns[i].Flags & PawnFlags.Hostile) == 0) continue;
+                if (!snapshot.TryGetPawnAspect(pawns[i].Id, CombatAspectNames.SweepFacingKey, out int facing)) continue;
+                CellRef at = pawns[i].Cell;
+                TelegraphCell(size, at, facing);
+                TelegraphCell(size, at, SweepArc.Left(facing));
+                TelegraphCell(size, at, SweepArc.Right(facing));
+            }
+        }
+
+        /// <summary>
+        /// The telegraph's red. At 42 per cent over the meadow it read brown — red and green make
+        /// brown — in the first photograph (design 62 §8b), so it is stronger than an order's mark.
+        /// </summary>
+        public static readonly Color SweepTelegraphColour = new Color(0.92f, 0.06f, 0.05f, 0.68f);
+
+        void TelegraphCell(GridSize size, CellRef from, int facing)
+        {
+            var (dx, dz) = SweepArc.Step(facing);
+            if (!size.Contains(from.X + dx, from.Z + dz, from.Y)) return;
+            _renderer!.DrawCellMark(new CellRef(from.X + dx, from.Z + dz, from.Y), SweepTelegraphColour, 0.12f);
+        }
+
         void DrawCracks(WorldSnapshot snapshot)
         {
             if (_renderer == null || cameraRig == null) return;
@@ -3500,7 +3545,7 @@ namespace Odyssey.Presentation.Bootstrap
                 // The top of the pawn as the cursor has it: the colonist's box, an animal's own,
                 // and a body on the ground much lower.
                 float top = colonistCursor.y;
-                if (pawn.IsAnimal)
+                if (PawnFigureDirector.HasOwnBox(pawn))
                     top = _figures != null && _figures.TryGetAnimalBox(pawn.Id, out _, out Vector3 box) ? box.y : 1.0f;
                 if (pawn.IsDowned) top = CombatMarks.DownedTop;
 
@@ -3677,7 +3722,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
                 feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model, everyone, _crowd);
 
-            if (pawn.IsAnimal && _figures != null
+            if (PawnFigureDirector.HasOwnBox(pawn) && _figures != null
                 && _figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 box, out Vector3 size))
             {
                 Vector3 middle = box.GetPosition();
@@ -3766,7 +3811,7 @@ namespace Odyssey.Presentation.Bootstrap
                     // An animal is bracketed as its own drawn box, turned the way it faces, with
                     // the item bracket's margin (owner, 2026-09-22: the cell-sized column round a
                     // hog highlighted the whole tile). A colonist keeps the one fixed box below.
-                    if (pawn.IsAnimal && _figures != null
+                    if (PawnFigureDirector.HasOwnBox(pawn) && _figures != null
                         && _figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 place, out Vector3 box))
                     {
                         _renderer.DrawSelectionBracket(place, box + Vector3.one * ItemCursorMargin, strength, seeThrough: true);

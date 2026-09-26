@@ -71,17 +71,25 @@ namespace Odyssey.Hud
     {
         readonly bool?[] _weapon;
         readonly bool?[] _natural;
+        readonly bool[] _wields;
         readonly bool _fists;
 
         /// <param name="weaponSharp">By item def: whether its attack is sharp, or null for an item that is not a weapon.</param>
         /// <param name="naturalSharp">By pawn kind: whether its species' natural attack is sharp, or null for a species with none (a person).</param>
         /// <param name="fistsSharp">Whether bare hands are sharp. They are not, but the content says so, not this file.</param>
-        public BloodSides(bool?[] weaponSharp, bool?[] naturalSharp, bool fistsSharp)
+        /// <param name="wieldsNatural">By pawn kind: whether its species' own attack is a weapon it
+        /// swings (a Heavy or Light style, the butcher's cleaver) rather than teeth or fists, or
+        /// null for none. What makes a natural attack whoosh (design 62 §8d).</param>
+        public BloodSides(bool?[] weaponSharp, bool?[] naturalSharp, bool fistsSharp, bool[]? wieldsNatural = null)
         {
             _weapon = weaponSharp ?? Array.Empty<bool?>();
             _natural = naturalSharp ?? Array.Empty<bool?>();
+            _wields = wieldsNatural ?? Array.Empty<bool>();
             _fists = fistsSharp;
         }
+
+        /// <summary>Does a pawn of this kind swing a weapon of its own when it holds none (design 62 §8d)?</summary>
+        public bool WieldsNatural(int attackerKind) => (uint)attackerKind < (uint)_wields.Length && _wields[attackerKind];
 
         /// <summary>Everything blunt: the table before any content is read, and a checkout with none.</summary>
         public static readonly BloodSides AllBlunt = new BloodSides(Array.Empty<bool?>(), Array.Empty<bool?>(), false);
