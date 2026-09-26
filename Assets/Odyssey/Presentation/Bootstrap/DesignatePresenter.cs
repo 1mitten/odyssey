@@ -141,6 +141,23 @@ namespace Odyssey.Presentation.Bootstrap
             // break it the moment the player scrolled a layer up (U42, `18-paving.md` §4).
             bool structure = director.Tool == DesignateTool.Build && what.slab && !what.covering;
             director.WorkingLayer = structure && _rig != null ? _rig.ActiveLayer : (int?)null;
+
+            // And what the ground is made of, the one other thing the director cannot see: a Mine
+            // drag's run is decided from its start cell's terrain (design 62 §4), and the banner
+            // names the order Dig or Mine by it. The render mirror is the terrain the player is
+            // looking at — an undiscovered seam reads as the rock it is drawn as, and both are
+            // rock-like, so the two cannot disagree about a drag.
+            director.TerrainAt = _terrainAt ??= TerrainAt;
+        }
+
+        System.Func<CellRef, int>? _terrainAt;
+
+        /// <summary>The terrain drawn at a cell, as a <c>TerrainHandle</c> value, or -1 off the board or with no world.</summary>
+        int TerrainAt(CellRef cell)
+        {
+            Odyssey.Presentation.World.WorldRenderModel? model = _bootstrap != null ? _bootstrap.Model : null;
+            if (model == null || !model.Size.Contains(cell)) return -1;
+            return model.Terrain(model.Size.Index(cell));
         }
 
         void OnToolDragCancelled() => Director.Abandon();
@@ -394,8 +411,13 @@ namespace Odyssey.Presentation.Bootstrap
                   : tool == DesignateTool.Deconstruct ? (int)DesignationKind.Deconstruct
                   : 0;
 
+            // The run, decided once from the start cell when the gesture began (design 62 §4, P4)
+            // and carried on every intent of it: a Mine drag begun on rock marks only rock. Not
+            // decided here, and never per cell — the director answered it at Begin.
+            int run = tool == DesignateTool.Mine ? Director.LastRun : DesignateRun.Everything;
+
             for (int i = 0; i < cells.Count; i++)
-                world.Intents.Submit(new Intent(IntentKind.Designate, cells[i], a));
+                world.Intents.Submit(new Intent(IntentKind.Designate, cells[i], a, run));
         }
     }
 }
