@@ -107,7 +107,7 @@ namespace Odyssey.Sim.Worldgen.Natural
         static void Uncover(NaturalGenContext ctx, int index)
         {
             ushort was = ctx.Grid.Terrain[index];
-            if (NaturalContent.IsRockLike(was)) return;
+            if (NaturalContent.IsHostRock(was)) return;
 
             if (was == NaturalContent.TerrainGrass) ctx.Report.GrassCells--;
             else if (was == NaturalContent.TerrainBareEarth) ctx.Report.BareEarthCells--;
@@ -139,7 +139,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// chambers sit at the bottom of its rock, lower and smaller, and none is dropped for it.</para>
     ///
     /// <para><b>Every chamber keeps a rock shell.</b> A cell is carved only where the terrain is
-    /// rock-like and the cell sits strictly inside its own column's rock band, so a chamber can
+    /// host rock and the cell sits strictly inside its own column's rock band, so a chamber can
     /// neither undermine the subsoil holding the surface up nor breach the bedrock. See
     /// <see cref="CanHollow"/> for why the band, and not the neighbouring terrain, is what it
     /// reads.</para>
@@ -377,7 +377,7 @@ namespace Odyssey.Sim.Worldgen.Natural
         }
 
         /// <summary>
-        /// Rock-like here, and strictly inside this column's rock band so that a layer of rock is
+        /// Host rock here (rock or deep stone), and strictly inside this column's rock band so that a layer of rock is
         /// left under the subsoil and over the bedrock.
         ///
         /// <para>The band is read from the column's own stratum boundaries rather than from the
@@ -395,7 +395,7 @@ namespace Odyssey.Sim.Worldgen.Natural
             int column = ctx.Column(x, z);
             if (y < ctx.BedrockTopY[column] + 1) return false;
             if (y > ctx.SubsoilBaseY[column] - 2) return false;
-            return NaturalContent.IsRockLike(ctx.Grid.Terrain[ctx.Index(x, z, y)]);
+            return NaturalContent.IsHostRock(ctx.Grid.Terrain[ctx.Index(x, z, y)]);
         }
 
         /// <summary>
@@ -454,7 +454,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// A share of deposits is drawn anywhere in the rock instead, and a share of gold and gems is
     /// hung on a cavern wall inside the band, so opening a cave pays.</para>
     ///
-    /// <para><b>A deposit only ever replaces rock-like cells</b> (<see cref="NaturalContent.IsRockLike"/>),
+    /// <para><b>A deposit only ever replaces rock-like cells</b> (<see cref="NaturalContent.IsHostRock"/>),
     /// so ore is never found in soil, subsoil, bedrock or the open, and never over another ore —
     /// mining it always means digging into stone.</para>
     ///
@@ -612,7 +612,7 @@ namespace Odyssey.Sim.Worldgen.Natural
                 x = at.X + dx[i];
                 z = at.Z + dz[i];
                 if (!ctx.Size.Contains(x, z, at.Y)) continue;
-                if (NaturalContent.IsRockLike(ctx.Grid.Terrain[ctx.Index(x, z, at.Y)])) return true;
+                if (NaturalContent.IsHostRock(ctx.Grid.Terrain[ctx.Index(x, z, at.Y)])) return true;
             }
 
             x = at.X;
@@ -643,7 +643,7 @@ namespace Odyssey.Sim.Worldgen.Natural
             int column = ctx.Column(x, z);
             if (y < ctx.BedrockTopY[column] || y >= ctx.SubsoilBaseY[column]) return false;
             int index = ctx.Index(x, z, y);
-            if (!NaturalContent.IsRockLike(ctx.Grid.Terrain[index])) return false;
+            if (!NaturalContent.IsHostRock(ctx.Grid.Terrain[index])) return false;
             ctx.SetTerrain(index, material);
             placed.Add(index);
             return true;
@@ -688,7 +688,7 @@ namespace Odyssey.Sim.Worldgen.Natural
                     if (!ctx.Size.Contains(nx, nz, ny)) continue;
                     int column = ctx.Column(nx, nz);
                     if (ny < ctx.BedrockTopY[column] || ny >= ctx.SubsoilBaseY[column]) continue;
-                    if (!NaturalContent.IsRockLike(ctx.Grid.Terrain[ctx.Index(nx, nz, ny)])) continue;
+                    if (!NaturalContent.IsHostRock(ctx.Grid.Terrain[ctx.Index(nx, nz, ny)])) continue;
                     x = nx; z = nz; y = ny;
                     return true;
                 }

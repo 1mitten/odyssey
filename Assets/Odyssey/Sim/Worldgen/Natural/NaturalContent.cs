@@ -109,21 +109,19 @@ namespace Odyssey.Sim.Worldgen.Natural
         public const ushort TerrainRock = CoreContent.TerrainRock;
 
         /// <summary>
-        /// <b>The one rock-like test</b> (design 62 §5): plain rock or deep stone — the country rock
-        /// an ore deposit replaces and a cavern is carved from, and what a loose stone lies beside.
-        /// Not ore (a deposit never grows over another) and not bedrock (never cut).
+        /// Host rock: the stone the strata laid — rock or deep stone — which an ore deposit
+        /// replaces, a cavern is carved from, and a cut turns into stone (design 62 §5).
         ///
-        /// <para>There used to be three <c>== TerrainRock</c> tests in the generator alone, and a
-        /// fourth kind of stone would have been missed by every one of them.</para>
+        /// <para><b>Not a second rock-like rule.</b> Rock-like has one owner,
+        /// <see cref="Contracts.TerrainHandle.IsRockLike"/>, which the interface asks too; this is
+        /// that rule with what cannot host a deposit taken out — anything not solid (rubble), an
+        /// ore already there (a deposit never grows over another) and bedrock (never cut). There
+        /// used to be three <c>== TerrainRock</c> tests in the generator alone, and deep stone would
+        /// have been missed by every one of them.</para>
         /// </summary>
-        public static bool IsRockLike(ushort terrain) =>
-            terrain == TerrainRock || terrain == TerrainDeepStone;
-
-        /// <summary>
-        /// Stone a pick cuts for something: rock-like or ore. What a scenario means by "an outcrop",
-        /// and (with bedrock) what is drawn as a lump rather than a cube.
-        /// </summary>
-        public static bool IsStone(ushort terrain) => IsRockLike(terrain) || IsOre(terrain);
+        public static bool IsHostRock(ushort terrain) =>
+            Contracts.TerrainHandle.IsRockLike(terrain) && IsSolid(terrain) && !IsOre(terrain) &&
+            terrain != TerrainBedrock;
 
         public const ushort TerrainAir = CoreContent.TerrainAir;
 

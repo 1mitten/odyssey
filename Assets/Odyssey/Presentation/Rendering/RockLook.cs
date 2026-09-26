@@ -1,5 +1,5 @@
 #nullable enable
-using Odyssey.Sim.Worldgen;
+using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Worldgen.Natural;
 
 namespace Odyssey.Presentation.Rendering
@@ -27,12 +27,12 @@ namespace Odyssey.Presentation.Rendering
         /// Rock, deep stone, bedrock and every ore: the things a pick goes through. Soil, subsoil,
         /// sand and grass stay flat-topped cubes on purpose — they are the ground a colony stands
         /// and builds on, and a chipped, uneven floor would read as damage rather than as earth.
-        /// The simulation's <see cref="NaturalContent.IsStone"/> plus bedrock, so a new ore or a
-        /// new rock-like stone is drawn as a lump without this line changing.
+        /// Rock-like and solid: the one rock-like rule (<see cref="TerrainHandle.IsRockLike"/>)
+        /// without rubble, which is a heap on a floor rather than a face. So a new ore or a new
+        /// rock-like stone is drawn as a lump without this line changing.
         /// </summary>
         public static bool IsStone(ushort terrain) =>
-            terrain == NaturalContent.TerrainBedrock ||
-            NaturalContent.IsStone(terrain);
+            TerrainHandle.IsRockLike(terrain) && NaturalContent.IsSolid(terrain);
 
         /// <summary>Which of <see cref="RockMesh.Variants"/> lumps this cell wears.</summary>
         public static int Variant(int x, int z, int y) =>

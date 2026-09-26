@@ -238,11 +238,19 @@ namespace Odyssey.Tests.Sim
             for (ushort t = 0; t < NaturalContent.TerrainCount; t++)
                 Assert.That(NaturalContent.IsOre(t), Is.EqualTo(ores.Contains(t)), $"terrain {WorldContent.TerrainOrder[t]}");
 
-            Assert.That(NaturalContent.IsRockLike(NaturalContent.TerrainDeepStone), Is.True);
-            Assert.That(NaturalContent.IsRockLike(CoreContent.TerrainRock), Is.True);
-            Assert.That(NaturalContent.IsRockLike(NaturalContent.TerrainBedrock), Is.False);
-            Assert.That(NaturalContent.IsRockLike(NaturalContent.TerrainIronOre), Is.False, "ore never grows over ore");
-            Assert.That(NaturalContent.IsStone(NaturalContent.TerrainEmberquartz), Is.True);
+            // Every ore is rock-like, by the one owner of that rule (design 62 §4): a kind added to
+            // Ores.xml without a word in TerrainHandle.IsRockLike would read "Dig" and host nothing.
+            for (int k = 0; k < fromXml.Length; k++)
+                Assert.That(TerrainHandle.IsRockLike(fromXml[k].Terrain), Is.True,
+                    $"{WorldContent.OreOrder[k]} is not rock-like");
+
+            // Host rock is rock-like with what cannot host a deposit taken out.
+            Assert.That(NaturalContent.IsHostRock(NaturalContent.TerrainDeepStone), Is.True);
+            Assert.That(NaturalContent.IsHostRock(CoreContent.TerrainRock), Is.True);
+            Assert.That(NaturalContent.IsHostRock(NaturalContent.TerrainBedrock), Is.False);
+            Assert.That(NaturalContent.IsHostRock(CoreContent.TerrainRubble), Is.False);
+            Assert.That(NaturalContent.IsHostRock(NaturalContent.TerrainIronOre), Is.False, "ore never grows over ore");
+            Assert.That(TerrainHandle.IsRockLike(NaturalContent.TerrainDeepStone), Is.True);
         }
 
         /// <summary>

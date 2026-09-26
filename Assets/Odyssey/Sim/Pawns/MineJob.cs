@@ -517,7 +517,7 @@ namespace Odyssey.Sim.Pawns
                 return true;
             }
 
-            if (NaturalContent.IsRockLike(terrain))
+            if (NaturalContent.IsHostRock(terrain))
             {
                 var rng = DeterministicRandom.ForTick(ctx.Seed, cell, PawnPurpose.StoneYield);
                 if (rng.NextInt(ctx.Content.StoneChanceOneIn) == 0)

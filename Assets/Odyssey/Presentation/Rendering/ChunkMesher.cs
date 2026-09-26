@@ -722,9 +722,9 @@ namespace Odyssey.Presentation.Rendering
                         if (NaturalContent.IsTree(edifice)) woodEdge = true;
                         else if (!NaturalContent.IsBush(edifice)) ringFree = false;
                     }
-                    if (_model.IsSolid(up) && NaturalContent.IsRockLike(_model.DrawnTerrain(up))) nearRock = true;
+                    if (_model.IsSolid(up) && TerrainHandle.IsRockLike(_model.DrawnTerrain(up))) nearRock = true;
                 }
-                if (NaturalContent.IsRockLike(_model.DrawnTerrain(n))) nearRock = true;
+                if (TerrainHandle.IsRockLike(_model.DrawnTerrain(n))) nearRock = true;
             }
 
             // The big piece, on its lattice.
