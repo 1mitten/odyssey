@@ -224,6 +224,7 @@ ui.arch.tool.dumping,Dumping zone,ui.arch.tool,M3,Where rubbish and rubble go
 ui.arch.tool.kennel,Animal area,ui.arch.tool,M3,Where tame animals may roam
 ui.arch.tool.mine,Mine,ui.arch.tool,M3,"Dig out a cell. A drag begun on rock marks only rock; one begun on soft ground marks everything"
 ui.arch.tool.dig,Dig,ui.arch.tool,DM,"The Mine order on soft ground: grass, earth, sand, gravel or subsoil. The same job and the same work"
+ui.arch.tool.prospect,Prospect,ui.arch.tool,DM,"Read the rock round a face you have cut. Every seam within a few cells shows; skill in Mining sees further"
 ui.arch.tool.deconstruct,Deconstruct,ui.arch.tool,M3,Take our own building apart for materials
 ui.arch.tool.salvage,Salvage,ui.arch.tool,M3,"Strip a ruin. Slower than deconstruct, better yield"
 ui.arch.tool.haulurgent,Haul urgently,ui.arch.tool,M3,Jump this to the top of the haul list

@@ -534,7 +534,9 @@ namespace Odyssey.Presentation.World
         /// virtual on the driver, and nothing written here is wasted.</para>
         /// </summary>
         public static int IndexForJob(int jobDef) =>
-            jobDef == JobHandle.Mine ? MiningIndex
+            // A prospector (design 62 §7) taps the face with the miner's pick, at the miner's
+            // stances, so she works it in the miner's stroke.
+            jobDef == JobHandle.Mine || jobDef == JobHandle.Prospect ? MiningIndex
             : jobDef == JobHandle.Build ? BuildingIndex
             // The kitchen (design 48 §10): a cook at the hob tosses a pan, never swings an axe.
             : jobDef == JobHandle.Cook ? CookingIndex

@@ -69,12 +69,13 @@ namespace Odyssey.Tests.Hud
             Assert.That(OrderColours.ToolOf(1), Is.EqualTo(DesignateTool.Mine));
             Assert.That(OrderColours.ToolOf(2), Is.EqualTo(DesignateTool.Deconstruct));
             Assert.That(OrderColours.ToolOf(3), Is.EqualTo(DesignateTool.Fell));
+            Assert.That(OrderColours.ToolOf(5), Is.EqualTo(DesignateTool.Prospect), "design 62 §7");
 
             // Kind 0 is "no order". Nothing draws it, and it falls to the build accent rather
             // than throwing, because a total mapping is what this whole file is about.
             Assert.That(OrderColours.ToolOf(0), Is.EqualTo(DesignateTool.Build));
 
-            foreach (byte kind in new byte[] { 1, 2, 3 })
+            foreach (byte kind in new byte[] { 1, 2, 3, 5 })
             {
                 HudColour mark = OrderColours.Mark(kind);
                 HudColour direct = OrderColours.Mark(OrderColours.ToolOf(kind));
@@ -124,6 +125,8 @@ namespace Odyssey.Tests.Hud
             {
                 DesignateTool.Fell, DesignateTool.Mine, DesignateTool.Deconstruct,
                 DesignateTool.Cancel, DesignateTool.Build,
+                // Prospecting (design 62 §7) is given over Mine's own faces.
+                DesignateTool.Prospect,
             };
 
             for (int i = 0; i < tools.Length; i++)
@@ -159,7 +162,7 @@ namespace Odyssey.Tests.Hud
             foreach (DesignateTool tool in new[]
                      {
                          DesignateTool.Fell, DesignateTool.Mine, DesignateTool.Deconstruct, DesignateTool.Cancel,
-                         DesignateTool.Build, DesignateTool.GrowZone, DesignateTool.Stockpile,
+                         DesignateTool.Build, DesignateTool.GrowZone, DesignateTool.Stockpile, DesignateTool.Prospect,
                      })
                 Assert.That(Distance(attack, OrderColours.Hue(tool)), Is.GreaterThanOrEqualTo(80),
                     $"attack {attack.Hex} is too close to {tool}'s {OrderColours.Hue(tool).Hex}");
@@ -190,7 +193,7 @@ namespace Odyssey.Tests.Hud
             foreach (DesignateTool tool in new[]
                      {
                          DesignateTool.Fell, DesignateTool.Mine, DesignateTool.Deconstruct, DesignateTool.Cancel,
-                         DesignateTool.Build, DesignateTool.GrowZone, DesignateTool.Stockpile,
+                         DesignateTool.Build, DesignateTool.GrowZone, DesignateTool.Stockpile, DesignateTool.Prospect,
                      })
                 Assert.That(Distance(move, OrderColours.Hue(tool)), Is.GreaterThanOrEqualTo(80),
                     $"move {move.Hex} is too close to {tool}'s {OrderColours.Hue(tool).Hex}");

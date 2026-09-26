@@ -756,14 +756,15 @@ namespace Odyssey.Hud
         };
 
         /// <summary>
-        /// The hue the armed banner wears for an order: a pinned action's own, or — for the one
-        /// order that lives in a category rather than on the strip, taking power lines up — its
-        /// order colour. Kept apart from <see cref="PinnedActionHue"/>, which lights the strip's
-        /// buttons and must answer nothing for a category's chip (design 32 §10).
+        /// The hue the armed banner wears for an order: a pinned action's own, or — for an order
+        /// that lives in a category rather than on the strip (<see cref="PaletteTools.CategoryOrders"/>:
+        /// taking power lines up, prospecting) — its order colour. Kept apart from
+        /// <see cref="PinnedActionHue"/>, which lights the strip's buttons and must answer nothing
+        /// for a category's chip (design 32 §10).
         /// </summary>
         public static HudColour? ArmedOrderHue(string key) =>
             PinnedActionHue(key)
-            ?? (key == PaletteTools.Unwire ? OrderColours.Hue(DesignateTool.RemoveConduit) : (HudColour?)null);
+            ?? (PaletteTools.TryCategoryOrderTool(key, out DesignateTool tool) ? OrderColours.Hue(tool) : (HudColour?)null);
 
         // ------------------------------------------------------------------ categories
 

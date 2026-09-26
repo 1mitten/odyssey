@@ -102,6 +102,7 @@ namespace Odyssey.Hud
             { "ui.arch.tool.mine", "Mine" },
             { "ui.arch.tool.pillar", "Support pillar" },
             { "ui.arch.tool.planter", "Planter" },
+            { "ui.arch.tool.prospect", "Prospect" },
             { "ui.arch.tool.reactor", "Reactor" },
             { "ui.arch.tool.recbench", "Bench" },
             { "ui.arch.tool.reclaim", "Reclaim shell" },

@@ -39,7 +39,9 @@ namespace Odyssey.Tests.Hud
                     DesignateTool.Build => false,
                     DesignateTool.Deconstruct => false,
                     DesignateTool.None or DesignateTool.Mine or DesignateTool.Fell or DesignateTool.Harvest or DesignateTool.Cancel
-                        or DesignateTool.GrowZone or DesignateTool.Stockpile or DesignateTool.RemoveConduit => true,
+                        or DesignateTool.GrowZone or DesignateTool.Stockpile or DesignateTool.RemoveConduit
+                        // Prospecting reads a face; it builds nothing (design 62 §7).
+                        or DesignateTool.Prospect => true,
                     _ => throw new AssertionException(
                         $"{tool} is a new tool: decide whether it is build mode (design 42 §2) and add it here"),
                 };

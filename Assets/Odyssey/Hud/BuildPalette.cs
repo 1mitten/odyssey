@@ -450,8 +450,9 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// The order being held, pinned or not — <see cref="ArmedPinned"/>, or the one order tool
-        /// that lives in a category rather than on the strip: taking power lines up (design 32).
+        /// The order being held, pinned or not — <see cref="ArmedPinned"/>, or an order tool that
+        /// lives in a category rather than on the strip (<see cref="PaletteTools.CategoryOrders"/>:
+        /// taking power lines up, design 32; prospecting, design 62 §7).
         /// What the armed banner names and colours itself from, so a player holding the remove
         /// tool is not told they are building a conduit.
         /// </summary>
@@ -461,7 +462,7 @@ namespace Odyssey.Hud
             {
                 string pinned = ArmedPinned;
                 if (pinned.Length > 0) return pinned;
-                return _designate.Tool == DesignateTool.RemoveConduit ? PaletteTools.Unwire : string.Empty;
+                return PaletteTools.CategoryOrderKey(_designate.Tool);
             }
         }
 
