@@ -8,8 +8,9 @@ using UnityEngine.Rendering;
 namespace Odyssey.Presentation.Rendering
 {
     /// <summary>
-    /// Cracks (design 57): a struck wall and a face being mined drawn broken, in three stages, by
-    /// drawing the cell's own meshes a second time in <c>Odyssey/Crack</c> — a multiply over what is
+    /// Cracks (design 57): a struck wall and a face being mined drawn broken, on a ladder of levels
+    /// (three stages for a wall, six for rock), by drawing the cell's own meshes a second time in
+    /// <c>Odyssey/Crack</c> — a multiply over what is
     /// already on screen, so the wall keeps its material, its light and its colour and only gains
     /// the damage. Drawn only: nothing of it is in a cell, a save or the hash.
     ///
@@ -23,7 +24,7 @@ namespace Odyssey.Presentation.Rendering
     /// changed — or when it turns from a wall into ground. A cell that stops being cracked gives its
     /// batch back the same frame.</para>
     ///
-    /// <para><b>What it costs</b> (P10): the instances are gathered by mesh, submesh and stage and
+    /// <para><b>What it costs</b> (P10): the instances are gathered by mesh, submesh and level and
     /// go out as one instanced call each, so a fight's worth of cracked wall is a handful of calls
     /// however many cells; a mined face's ground skin, where it has one, is one call a cell, and a
     /// colony mines a few cells at once. Nothing cracked is nothing submitted.</para>
@@ -60,13 +61,21 @@ namespace Odyssey.Presentation.Rendering
             public int Version = int.MinValue;
             public bool Ground;
             public bool Seen;
+
+            /// <summary>The level it was last drawn at: how cracked its pieces are if it breaks.</summary>
+            public int Level;
+
+            /// <summary>What stood in the cell when it was meshed — solid rock, the building's def —
+            /// so the break watch can tell it came down from its being repaired (§7).</summary>
+            public bool Solid;
+            public ushort Def;
         }
 
         sealed class CrackGroup
         {
             public Mesh Mesh = null!;
             public int Submesh;
-            public int Stage;
+            public int Level;
             public Matrix4x4[] Matrices = new Matrix4x4[16];
             public int Count;
         }
@@ -75,36 +84,21 @@ namespace Odyssey.Presentation.Rendering
         readonly List<int> _crackGone = new List<int>();
         readonly Dictionary<long, CrackGroup> _crackGroupIndex = new Dictionary<long, CrackGroup>();
         readonly List<CrackGroup> _crackGroups = new List<CrackGroup>();
-        readonly Material?[] _crackMaterials = new Material?[CrackModel.Stages + 1];
+        readonly Material?[] _crackMaterials = new Material?[CrackModel.Levels + 1];
         Shader? _crackShader;
         bool _crackLooked;
 
-        static readonly int CoverageId = Shader.PropertyToID("_Coverage");
-        static readonly int WidthId = Shader.PropertyToID("_Width");
-        static readonly int DarknessId = Shader.PropertyToID("_Darkness");
-        static readonly int GrimeId = Shader.PropertyToID("_Grime");
-        static readonly int FineId = Shader.PropertyToID("_Fine");
+        static readonly int SeverityId = Shader.PropertyToID("_Severity");
 
         /// <summary>
-        /// Each stage's look (design 57 §4), index 1 to 3: how much of the crack network shows, how
-        /// wide a crack is in metres, how dark a crack is (the multiply at its centre), how much the
-        /// whole surface is darkened, and how much of the finer second network shows. Tuned by eye
-        /// against the owner's first look; the stage thresholds themselves are
-        /// <see cref="CrackModel"/>'s.
+        /// How broken a level looks to the shader, 0 to 1: the level over the ladder's length. The
+        /// whole look — how far the cracks reach, how many rays, how wide, when the branches web
+        /// the face, the grime — is one curve in <c>OdysseyCrack.hlsl</c> driven by this number, so
+        /// a level added to the ladder needs no row of tuning here (design 57 §4).
         /// </summary>
-        static readonly Vector4[] StageLook =
-        {
-            Vector4.zero,
-            // coverage, width (m), darkness, grime
-            new Vector4(0.35f, 0.012f, 0.45f, 0.00f),
-            new Vector4(0.70f, 0.022f, 0.30f, 0.08f),
-            new Vector4(1.00f, 0.035f, 0.18f, 0.16f),
-        };
+        public static float SeverityOf(int level) => Mathf.Clamp01(level / (float)CrackModel.Levels);
 
-        /// <summary>How much of the finer network each stage shows: none, then a little, then all.</summary>
-        static readonly float[] StageFine = { 0f, 0f, 0.4f, 1f };
-
-        Material? CrackMaterial(int stage)
+        Material? CrackMaterial(int level)
         {
             if (!_crackLooked)
             {
@@ -113,23 +107,18 @@ namespace Odyssey.Presentation.Rendering
                 if (_crackShader == null)
                     Debug.LogWarning("Odyssey/Crack shader not found; mining keeps its cut slab and walls do not crack.");
             }
-            if (_crackShader == null || stage < 1 || stage > CrackModel.Stages) return null;
+            if (_crackShader == null || level < 1 || level > CrackModel.Levels) return null;
 
-            Material? material = _crackMaterials[stage];
+            Material? material = _crackMaterials[level];
             if (material != null) return material;
 
-            Vector4 look = StageLook[stage];
             material = new Material(_crackShader)
             {
-                name = "Odyssey/Crack#" + stage,
+                name = "Odyssey/Crack#" + level,
                 enableInstancing = true,
             };
-            material.SetFloat(CoverageId, look.x);
-            material.SetFloat(WidthId, look.y);
-            material.SetFloat(DarknessId, look.z);
-            material.SetFloat(GrimeId, look.w);
-            material.SetFloat(FineId, StageFine[stage]);
-            _crackMaterials[stage] = material;
+            material.SetFloat(SeverityId, SeverityOf(level));
+            _crackMaterials[level] = material;
             return material;
         }
 
@@ -161,10 +150,25 @@ namespace Odyssey.Presentation.Rendering
 
                     if (!_crackEntries.TryGetValue(index, out CrackEntry? entry))
                     {
-                        entry = new CrackEntry();
+                        // Listed again while it was being watched for a break — an order put
+                        // back on a face — takes its batch back rather than meshing a second.
+                        entry = ReclaimWatched(index) ?? new CrackEntry();
                         _crackEntries[index] = entry;
                     }
                     entry.Seen = true;
+                    entry.Level = cracked.Level;
+
+                    // Already gone from the mirror while still listed — the snapshot's views a
+                    // publish behind its cells — keeps the batch as it stood, rather than meshing
+                    // it again as nothing, and goes to the break watch now.
+                    bool meshed = entry.Version != int.MinValue;
+                    if (meshed && (entry.Ground
+                            ? entry.Solid && !_model.IsSolid(index)
+                            : entry.Def != 0 && _model.EdificeDef(index) != entry.Def))
+                    {
+                        entry.Seen = false;
+                        continue;
+                    }
 
                     CellRef cell = size.FromIndex(index);
                     int version = _model.ChunkVersion(_model.Chunks.ChunkIndexOfCell(cell));
@@ -173,6 +177,8 @@ namespace Odyssey.Presentation.Rendering
                         _mesher.MeshCell(entry.Batch, index, cracked.Ground);
                         entry.Version = version;
                         entry.Ground = cracked.Ground;
+                        entry.Solid = _model.IsSolid(index);
+                        entry.Def = _model.EdificeDef(index);
                         CrackCellsMeshed++;
                     }
 
@@ -180,17 +186,17 @@ namespace Odyssey.Presentation.Rendering
 
                     bool lowered = _drawnSlice != null && _drawnSlice.LowersWallsOn(_drawnLayer, cell.Y);
                     bool hideStacked = _drawnSlice != null && _drawnSlice.HidesStackedOn(_drawnLayer, cell.Y);
-                    int stage = cracked.Stage;
+                    int level = cracked.Level;
 
-                    GatherCracks(entry.Batch.Body, stage, hideStacked);
-                    GatherCracks(entry.Batch.Roof, stage, hideStacked);
-                    GatherCracks(lowered ? entry.Batch.Stumps : entry.Batch.Walls, stage, hideStacked);
+                    GatherCracks(entry.Batch.Body, level, hideStacked);
+                    GatherCracks(entry.Batch.Roof, level, hideStacked);
+                    GatherCracks(lowered ? entry.Batch.Stumps : entry.Batch.Walls, level, hideStacked);
 
                     // A mined face's ground skin is its own mesh, one per cell: drawn as it stands.
                     GroundSkinMesh skin = entry.Batch.Skin;
                     if (cracked.Ground && skin.Mesh != null)
                     {
-                        var rp = CrackParams(stage);
+                        var rp = CrackParams(level);
                         for (int g = 0; g < skin.GroupCount; g++)
                         {
                             if (SubmitToGpu) Graphics.RenderMesh(rp, skin.Mesh, g, Matrix4x4.identity);
@@ -206,23 +212,28 @@ namespace Odyssey.Presentation.Rendering
                 SubmitCrackGroups();
             }
 
-            // Give back the batches of cells no longer cracked: repaired, cleared or come down.
+            // A cell no longer cracked was repaired, cancelled, or came down. Which of those is not
+            // known yet — the order can leave the snapshot a frame before the cell's new geometry
+            // reaches the mirror — so its batch, the thing as it last stood, goes to the break
+            // watch, which either breaks it apart or gives the batch back (§7).
             _crackGone.Clear();
             foreach (KeyValuePair<int, CrackEntry> pair in _crackEntries)
                 if (!pair.Value.Seen) _crackGone.Add(pair.Key);
             for (int i = 0; i < _crackGone.Count; i++)
             {
-                _crackEntries[_crackGone[i]].Batch.Dispose();
+                Watch(_crackGone[i], _crackEntries[_crackGone[i]]);
                 _crackEntries.Remove(_crackGone[i]);
             }
+
+            DrawBreaks();
         }
 
         /// <summary>
-        /// Every instance of every part in these buckets, into its (mesh, submesh, stage) group —
+        /// Every instance of every part in these buckets, into its (mesh, submesh, level) group —
         /// the same walk as the selection highlight's <c>CollectBuckets</c>, so the parts and the
         /// matrices are the ones the chunk drew.
         /// </summary>
-        void GatherCracks(List<InstanceBucket> buckets, int stage, bool hideStacked)
+        void GatherCracks(List<InstanceBucket> buckets, int level, bool hideStacked)
         {
             for (int b = 0; b < buckets.Count; b++)
             {
@@ -237,7 +248,7 @@ namespace Odyssey.Presentation.Rendering
                 {
                     Mesh mesh = parts[p].Mesh;
                     if (mesh == null) continue;
-                    CrackGroup group = CrackGroupFor(mesh, parts[p].Submesh, stage);
+                    CrackGroup group = CrackGroupFor(mesh, parts[p].Submesh, level);
                     for (int k = 0; k < bucket.Count; k++)
                     {
                         if (group.Count == group.Matrices.Length)
@@ -248,14 +259,14 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
-        CrackGroup CrackGroupFor(Mesh mesh, int submesh, int stage)
+        CrackGroup CrackGroupFor(Mesh mesh, int submesh, int level)
         {
-            long key = ((long)mesh.GetInstanceID() << 16) ^ ((long)submesh << 4) ^ stage;
+            long key = ((long)mesh.GetInstanceID() << 16) ^ ((long)submesh << 4) ^ level;
             if (_crackGroupIndex.TryGetValue(key, out CrackGroup? group)
-                && group.Mesh == mesh && group.Submesh == submesh && group.Stage == stage)
+                && group.Mesh == mesh && group.Submesh == submesh && group.Level == level)
                 return group;
 
-            group = new CrackGroup { Mesh = mesh, Submesh = submesh, Stage = stage };
+            group = new CrackGroup { Mesh = mesh, Submesh = submesh, Level = level };
             _crackGroupIndex[key] = group;
             _crackGroups.Add(group);
             return group;
@@ -267,7 +278,7 @@ namespace Odyssey.Presentation.Rendering
             {
                 CrackGroup group = _crackGroups[g];
                 if (group.Count == 0) continue;
-                var rp = CrackParams(group.Stage);
+                var rp = CrackParams(group.Level);
                 for (int sent = 0; sent < group.Count; sent += MaxInstancesPerCall)
                 {
                     int n = Mathf.Min(MaxInstancesPerCall, group.Count - sent);
@@ -280,7 +291,7 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
-        RenderParams CrackParams(int stage) => new RenderParams(CrackMaterial(stage)!)
+        RenderParams CrackParams(int level) => new RenderParams(CrackMaterial(level)!)
         {
             layer = GameObjectLayer,
             shadowCastingMode = ShadowCastingMode.Off,
@@ -290,6 +301,7 @@ namespace Odyssey.Presentation.Rendering
         void DisposeCracks()
         {
             foreach (CrackEntry entry in _crackEntries.Values) entry.Batch.Dispose();
+            DisposeBreaks();
             _crackEntries.Clear();
             _crackGroupIndex.Clear();
             _crackGroups.Clear();
