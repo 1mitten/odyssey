@@ -137,8 +137,11 @@ namespace Odyssey.Hud
         /// </summary>
         public const string LevelPlaceholder = "{level}";
 
+        /// <summary>The key a loaded colony with no storyteller is told under (design 59 §7).</summary>
+        public const string NoStorytellerKey = "ui.toast.nostoryteller";
+
         /// <summary>Every key this stack can put on screen, for the registry test.</summary>
-        public static readonly string[] IconKeys = { LevelUpKey };
+        public static readonly string[] IconKeys = { LevelUpKey, NoStorytellerKey };
 
         /// <summary>Oldest first, so the newest arrives at the bottom nearest the world.</summary>
         public readonly List<ToastRow> Rows = new List<ToastRow>();
@@ -208,6 +211,13 @@ namespace Odyssey.Hud
                     AlertSeverity.Notice, ++_serial, before, emphasis, after));
             }
         }
+
+        /// <summary>
+        /// Say one plain line under a registry key, about nobody in particular: the words are the
+        /// registry's, so a caller names the key and nothing else.
+        /// </summary>
+        public void Say(string key, double seconds) =>
+            Raise(new ToastRow(key, Registry.Label(key), PawnId.None, seconds, AlertSeverity.Notice, ++_serial));
 
         /// <summary>Put a row up now, dropping the oldest if the stack is full.</summary>
         public void Raise(ToastRow row)

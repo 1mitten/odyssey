@@ -1182,13 +1182,27 @@ namespace Odyssey.Presentation.Ui
                 _clockWeather.tooltip = GameClock.WeatherTip(word, tick);
             }
 
+            // The storyteller as the simulation publishes it (design 59 §7): the Settings rows and
+            // the gauge read the director, and the director reads this. Sync raises its own
+            // events, so a band that moved repaints the gauge through RefreshTensionGauge.
+            StoryDirector? story = _directors?.Story;
+            if (story != null)
+            {
+                story.Sync(world.Views.Current.Storyteller);
+
+                // A loaded colony with none is told once how to choose one; until then nothing
+                // happens to it but what the debug menu fires.
+                if (story.TakeNoStorytellerNotice())
+                    _toasts.Say(ToastModel.NoStorytellerKey, Time.unscaledTimeAsDouble);
+            }
+
             RefreshTensionGauge();
         }
 
         /// <summary>
         /// The gauge: shown only with a storyteller and a band, painted in the band's columns, and
-        /// its two-line tooltip. The band is the debug menu's preview until the storyteller drives
-        /// it (design 59 §12); the rule that no storyteller means no gauge is already the real one.
+        /// its two-line tooltip. The band is the simulation's, or the debug menu's preview while
+        /// one is set (design 59 §12).
         /// </summary>
         void RefreshTensionGauge()
         {
@@ -1197,8 +1211,8 @@ namespace Odyssey.Presentation.Ui
             bool shows = story != null && story.GaugeShows;
             _clockTension.style.display = shows ? DisplayStyle.Flex : DisplayStyle.None;
             if (!shows) return;
-            _clockTension.Band = story!.TensionPreview;
-            _clockTension.tooltip = _tensionTip.For(story.TensionPreview, story.PreviewCause, StoryDirector.PreviewDays);
+            _clockTension.Band = story!.ShownBand;
+            _clockTension.tooltip = _tensionTip.For(story.ShownBand, story.ShownCause, story.ShownCauseDays);
         }
 
         void RefreshSpeed()

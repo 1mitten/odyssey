@@ -319,8 +319,9 @@ namespace Odyssey.Presentation.Ui
                     content.Defs[i].description ?? string.Empty, () => InvokeIncident(def)));
             }
 
-            // The tension gauge's preview (design 59 §12): nothing drives tension until the
-            // storyteller is built, so this is how the five bands and their tooltip are seen.
+            // The tension gauge's preview (design 59 §12): the simulation drives the band since
+            // ST3, and this overrides it while set, so all five bands and their tooltip can be
+            // seen without living through them.
             _debugEvents.Add(DebugPickRow(DebugDirector.TensionKey, TensionChoices(),
                 (_directors?.Story.TensionPreview ?? TensionModel.NoBand) + 1,
                 picked => _directors?.Story.SetTensionPreview(picked - 1)));

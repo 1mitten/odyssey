@@ -385,6 +385,7 @@ ui.alert.norescuebed,No bed for the wounded,ui.alert,M3,"A downed colonist has n
 ui.alert.nohearth,No hearth,ui.alert,M3,"Somebody is kept home, and there is no hearth: build or mark a campfire"
 ui.alert.hearthdown,Hearth marked to come down,ui.alert,M3,"When it comes down the colony has no home"
 ui.toast.skillup,{name} has reached {skill} {level},ui.toast,M2,A colonist's skill has gone up a level
+ui.toast.nostoryteller,No storyteller: choose one in Settings,ui.toast,SY,A loaded colony has no storyteller and nothing will happen to it until one is chosen
 ui.bulletin.salvage,Salvage found,ui.bulletin,M2,Something worthwhile in the rubble
 ui.bulletin.scrapdrop,Scrap drop,ui.bulletin,M3,Scrap metal fell from the sky
 ui.bulletin.medicaldrop,Medical drop,ui.bulletin,M3,Medical supplies fell from the sky

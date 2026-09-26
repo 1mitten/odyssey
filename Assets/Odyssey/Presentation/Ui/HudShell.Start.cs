@@ -1067,11 +1067,15 @@ namespace Odyssey.Presentation.Ui
             // A menu raised in the last colony names its colonists and things (design 33 §7a).
             CloseContextMenu();
 
-            // A colony that arrives without a story is a load: until the storyteller is saved
-            // (ST1) a loaded colony has none, which is design 59 §7's old-save rule, and the
-            // Settings rows are live so one can be chosen. A new game names its own a moment later
-            // (OnStartNewGame), over this.
-            if (live != null && !live.Story.HasColony) live.Story.Begin(StoryChoice.Nobody);
+            // The storyteller is colony state (ST1): a press submits an intent and the clock's
+            // refresh reads the view back. Attach opens the Settings rows without choosing
+            // anything, so a load shows what its save holds; a new game names its own a moment
+            // later (OnStartNewGame), over this.
+            if (live != null)
+            {
+                live.Story.Submit = SubmitStoryIntent;
+                live.Story.Attach();
+            }
 
             if (!ReferenceEquals(_directors, live ?? _screenDirectors))
             {
@@ -1267,6 +1271,8 @@ namespace Odyssey.Presentation.Ui
         /// type and scenario — which is what the plan's U39 row asks for: the seed is the only knob
         /// exposed, so the rest stay tunable later without new interface.</para>
         /// </summary>
+        void SubmitStoryIntent(Intent intent) => _boot?.World?.Intents.Submit(intent);
+
         void OnStartNewGame(NewGameChoice choice)
         {
             // Not built here: the menu fades to black first, and the build is asked for once the
@@ -1283,9 +1289,9 @@ namespace Odyssey.Presentation.Ui
                 // naming the person the player was looking at rather than whoever landed in that slot.
                 _boot.NameColonists(choice.Names, choice.Colonists);
 
-                // The storyteller and difficulty chosen on the page, carried into the session's
-                // interface state (design 59 §12). Nothing in the simulation reads them until the
-                // storyteller is built; the Settings rows and the gauge do.
+                // The storyteller and difficulty chosen on the page, submitted as the colony's
+                // first two intents (design 59 §7). They drain on the first tick, which is also
+                // the tick the storyteller records as the colony's start.
                 _boot.Directors?.Story.Begin(choice.Story);
             });
         }

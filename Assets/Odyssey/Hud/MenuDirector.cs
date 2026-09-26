@@ -88,9 +88,8 @@ namespace Odyssey.Hud
         public readonly int Size;
 
         /// <summary>
-        /// Who tells the colony's story and how hard (design 59). Carried into the session's
-        /// <see cref="StoryDirector"/>; nothing in the simulation reads it until the storyteller is
-        /// built.
+        /// Who tells the colony's story and how hard (design 59). Handed to the session's
+        /// <see cref="StoryDirector"/>, which submits it as the colony's first two intents.
         /// </summary>
         public readonly StoryChoice Story;
 

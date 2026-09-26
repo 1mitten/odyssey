@@ -953,6 +953,7 @@ namespace Odyssey.Hud
             { "ui.terrain.tree.meadow", "Meadow tree" },
             { "ui.terrain.water.deep", "Deep Water" },
             { "ui.terrain.water.shallow", "Shallow Water" },
+            { "ui.toast.nostoryteller", "No storyteller: choose one in Settings" },
             { "ui.toast.skillup", "{name} has reached {skill} {level}" },
             { "ui.weather.ashfall", "Ashfall" },
             { "ui.weather.clear", "Clear" },

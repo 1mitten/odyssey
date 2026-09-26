@@ -8,11 +8,13 @@ namespace Odyssey.Hud
     /// The storytellers and difficulty rungs the interface offers (design 59, Claude Design's
     /// mockups 25a–25h).
     ///
-    /// <para><b>Interface content, until the storyteller is built.</b> The names, blurbs and
-    /// portraits are the registry's (<c>ui.storyteller.*</c>, <c>ui.difficulty.*</c>); the
-    /// emblems and the rhythm strips are here because they are drawings, not words. The rung
-    /// values are design 59 §6's, and nothing in the simulation reads them yet: when ST1–ST4 land
-    /// they become the Defs' and this table becomes a read of them.</para>
+    /// <para><b>Interface content.</b> The names, blurbs and portraits are the registry's
+    /// (<c>ui.storyteller.*</c>, <c>ui.difficulty.*</c>); the emblems and the rhythm strips are
+    /// here because they are drawings, not words. The rung values are design 59 §6's and are
+    /// written <b>only here</b>: a press sends the four lever values themselves
+    /// (<see cref="StoryDirector.DifficultyIntent"/>), so the simulation stores numbers and never
+    /// needs a copy of the ladder. The storytellers' pacing is the simulation's Defs
+    /// (<c>Storytellers.xml</c>), in <c>StorytellerHandle</c>'s order.</para>
     ///
     /// <para>Unity-free (ADR 0003), so all of it runs in the fast tier.</para>
     /// </summary>
