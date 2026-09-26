@@ -183,7 +183,7 @@ The five bands, with placeholder names the owner will replace, are keys under `u
 |---|---|
 | Reeling | under 600 |
 | Easing | 600–849 |
-| Steady | 850–1,099 |
+| Even | 850–1,099 |
 | Building | 1,100–1,299 |
 | Peak | 1,300 and over |
 

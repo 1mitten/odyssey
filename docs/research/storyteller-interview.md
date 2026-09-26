@@ -113,7 +113,7 @@ Three more were asked after the plan agent read the code, because the code force
 - **The storytellers' names, portraits and blurbs**, and the difficulty rungs' names. Placeholder
   keys go in the registry; the owner names them later, and "inviting our own storytellers" is
   writing a Def and a registry row.
-- **The five band names** (placeholders: reeling, easing, steady, building, peak).
+- **The five band names** (placeholders: reeling, easing, even, building, peak; "steady" was renamed so it cannot be read as the storyteller of that name).
 - **Every number in design 58** is invented until the Long-tier soak has run.
 - **Conditions** (a timed, map-wide event with no entities: cold snap, eclipse), **quests**, the
   **History screen** (F9) and a **reactive director** are recorded, not planned here.

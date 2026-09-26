@@ -112,8 +112,9 @@ branch, with a PR per two or three units.
   - `ui.settings.storyteller`, `.difficulty` and `.threatpause`.
   - Add `ui.storyteller.*` and `ui.difficulty.*` to the `RegistryTests` literal lint: each is named
     on two surfaces.
-- **Optional before this unit:** a Claude Design brief for the picker and the gauge, if the owner
-  wants one.
+- **Before this unit:** the Claude Design brief, `docs/reference/mockups/storyteller-brief.md`
+  (2026-09-26), covers the picker, the Settings rows, the gauge and the placeholder portraits. What
+  comes back sets ST5's and ST6's constants.
 
 ## ST6 — the gauge and the pause
 
