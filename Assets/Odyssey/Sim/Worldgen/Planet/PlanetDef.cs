@@ -28,6 +28,28 @@ namespace Odyssey.Sim.Worldgen.Planet
         public int elevationPeriod = 32;
         public int elevationOctaves = 3;
 
+        /// <summary>
+        /// The sea's share swings by up to this much either way with the seed (design 59 §4e), so one
+        /// world is an archipelago and the next nearly one continent. 0 holds every world to
+        /// <see cref="oceanPerMille"/> exactly.
+        /// </summary>
+        public int oceanSpreadPerMille;
+
+        /// <summary>
+        /// Domain warp on the elevation (design 59 §4e): the point the elevation is read at is pushed
+        /// by up to this many half-hexes by a second noise of period <see cref="warpPeriod"/>, which
+        /// bends the value noise's lattice out of the coastlines. 0 is off.
+        /// </summary>
+        public int warpHalfHexes;
+        public int warpPeriod = 32;
+
+        /// <summary>
+        /// Multiplies the fixed periods of the temperature, rain, ridge and ruin noise and the coast's
+        /// reach, so a finer grid keeps the same climate features rather than shrinking them. 1 is the
+        /// 64-wide planet's scale; 2 is a 128-wide planet's.
+        /// </summary>
+        public int featureScale = 1;
+
         /// <summary>Mean temperature at the equator and at the pole, before height and noise.</summary>
         public int equatorC = 2700;
         public int poleC = -2500;

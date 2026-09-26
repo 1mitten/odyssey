@@ -1,25 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The planet (design 59 §4c): a flat hex grid, 64 x 32, wrapping east to west. Every number is a
+  The planet (design 59 §4c, §4e): a flat hex grid, 128 x 64, wrapping east to west. Every number is a
   proposal to tune. Temperatures are centi-degrees, like the thermal model's.
 
   What the defaults give, before height and noise: 27 °C at the equator, falling with the square of
   the latitude to −25 °C at the pole, so a Meadow (3–17 °C) sits between about 39° and 61° at sea
-  level, and Ice (below −10 °C) takes the last three rows or so. Height costs 6.5 °C per 1,000 m.
+  level, and Ice (below −10 °C) takes the last six rows or so. Height costs 6.5 °C per 1,000 m.
 
-  The sea and the hill bands are cut by rank, so every world has exactly this much of each.
+  The hill bands are cut by rank, so every world has exactly this much of each. The sea is cut by
+  rank too, at a share the seed moves by up to oceanSpreadPerMille either way (§4e).
 -->
 <Defs>
 
   <PlanetDef>
     <defName>Planet_Carrow</defName>
-    <width>64</width>
-    <height>32</height>
+    <width>128</width>
+    <height>64</height>
     <oceanPerMille>450</oceanPerMille>
+    <oceanSpreadPerMille>100</oceanSpreadPerMille>
     <peakM>3000</peakM>
     <seaDepthM>4000</seaDepthM>
-    <elevationPeriod>32</elevationPeriod>
-    <elevationOctaves>3</elevationOctaves>
+    <elevationPeriod>64</elevationPeriod>
+    <elevationOctaves>5</elevationOctaves>
+    <warpHalfHexes>14</warpHalfHexes>
+    <warpPeriod>32</warpPeriod>
+    <featureScale>2</featureScale>
     <equatorC>2700</equatorC>
     <poleC>-2500</poleC>
     <lapseCPer1000m>650</lapseCPer1000m>

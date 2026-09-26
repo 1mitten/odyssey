@@ -63,7 +63,7 @@ today's board, climate and weather.**
 ### 4a. The grid
 
 - **Hexes in offset rows (odd rows shifted half a hex right), pointy-top.**
-- **64 wide by 32 tall, 2,048 tiles**, from `PlanetDef`.
+- **128 wide by 64 tall, 8,192 tiles**, from `PlanetDef` (64 × 32 until the first look; §4e).
 - **The width must be even**, so the offset pattern survives the wrap.
 - **Wraps east–west**: column −1 is column 63. North and south are edges, and the poles are the top
   and bottom rows.
@@ -118,6 +118,47 @@ The colony needs only its own tile, which the save carries whole (§8).
 
 Every default is a proposal. Tuning them is a content change, and a fingerprint test pins them as
 it pins the rest of the content.
+
+### 4e. Four times the planet (owner, first look, 2026-09-26)
+
+> *"Could the map be larger and more random but 4 times the size with a bit more interesting and a
+> feeling of a much larger game — it needs to increase at least 4x."*
+
+- **128 × 64, 8,192 tiles.** The same planet at twice the resolution each way, not a planet with
+  twice the features: `featureScale` 2 doubles the fixed periods of the temperature, rain, ridge and
+  ruin noise and the coast's reach, so a climate belt is as wide in degrees as it was.
+- **More interesting coasts.** Elevation is period 64 over five octaves (down to 4 half-hexes), so
+  the coarse continents keep their scale and gain finer coasts and islands; and a **domain warp**
+  (`warpHalfHexes` 14, `warpPeriod` 32) pushes each sample point by two wrapped noises, bending the
+  value noise's square lattice out of the coastlines. Both wrap, so the date line stays seamless.
+- **More random.** The sea's share is no longer the same on every seed: `oceanSpreadPerMille` 100
+  moves it between 35 % and 55 % (`PlanetGenerator.OceanPerMille`, drawn from the typed seed so a
+  retry keeps the world's character). One world is an archipelago, the next nearly one continent.
+  The hill bands are still cut by rank, so every world still has its flat ground and its mountains.
+- **The screen:** zoom to **8×** (a hex at 8× is the size it was at 4×), up to twelve land names of
+  40 tiles or more and eight sea names 380 map-pixels apart, and no sea name within eight rows of a
+  pole. The texture is painted at **1.5×** rather than 2× and is **mipmapped** (trilinear): at the
+  fit it is drawn at about a third of its size, where a bilinear read without mips shimmers.
+- **Nothing is kept once a colony is up** (owner: *"make sure it doesn't leak"*). `ReleaseWorldMap`
+  destroys the texture, drops the paint buffer, the names and the planet (`WorldChoice.Release`) and
+  pauses the ease timer whenever a session goes live, and on the shell's destruction. Coming back to
+  the World screen regenerates the same planet from the seed in the box (12 ms) and repaints it.
+- **Content fingerprint moved** deliberately (`PlanetTests.PlanetFingerprint`); the new fields
+  default to off, so a 64-wide def still makes exactly the planet it made.
+
+### 4f. The site panel on the first look (owner, 2026-09-26)
+
+- **Temperatures are a traffic light** (`HudTheme.SiteTemperature`): green 10–30 °C, amber 0–10
+  and 30–35, red below freezing or above 35 — the same edges as `HudTheme.Temperature`, so a site
+  judged green is one a colonist's pane would not tint. The mean is one colour; the seasons are
+  coloured end by end, so a mild mean with a killing winter reads as both. Drawn as runs
+  (`WorldStatSpan`), never a rich-text tag.
+- **The header's name sits on the swatch's foot.** A label left to size itself is about twice its
+  point size tall, so the caption (14 px) and the name (24 px) were a 55 px column centred on a
+  44 px swatch; they are fixed boxes now, spaced across exactly the swatch's height, the caption's
+  text pinned to its top and the name's to its bottom.
+- **"World" is 30 px** (`WorldLayout.TitleSize`), the one label on the page above the scale's Name
+  step.
 
 ## 5. Hilliness, and what it does to the board
 
@@ -386,7 +427,9 @@ Taken as each unit lands, with the machine and date.
 | What | Number |
 |---|---|
 | planet generation (64 × 32) | **2.1 ms median, 2.45 worst**, over 20 seeds (fast tier, CoreCLR, the build container, 2026-09-26): a twenty-fifth of the 50 ms budget. Two sample planets hold 13–17 % Meadow, 19–21 % Ice and 37 % Ocean, with a dry-scrub belt round the equator, since the six biomes have no tropical forest. |
-| map paint at 2× (2,374 × 1,031) | **31 ms median in a Release build, 87 ms in Debug** (fast tier, CoreCLR, the build container, 2026-09-26), into a reused buffer. The first version cost **447 ms**, a per-pixel cube-rounding pick through a float buffer. Three changes brought it down, measured each time: a scanline nearest-centre fill (447 → 215 Debug); fill and finish in one pass, with the finish as one affine map per pixel, marks stamped from a mask, and the buffer reused (→ 115 Debug / 58 Release); and the sheen and vignette tabulated, with no square root per pixel (→ 87 / 31). A player build compiles Release. The editor defaults to Debug, so a reroll there hitches for about a tenth of a second. **The Unity (Mono) figure is owed** from the owner's machine; if it is over 60 ms in a player build, `WorldLayout.PaintScale` drops to 1.5. |
+| planet generation (128 × 64, §4e) | **12.2 ms median, 15.0 worst** over 20 seeds (fast tier, CoreCLR, Debug, the Windows dev machine, 2026-09-26). |
+| map paint, 128 × 64 (§4e) | **203 ms at 1.5× (3,547 × 1,538) against 332 ms at 2× (4,729 × 2,051)**, Debug, same run, where the 64 × 32 planet at 2× read 92 ms. Hence 1.5×. The Release and Unity figures are owed; the mip build in Apply is on top and unmeasured. |
+| map paint at 2× (2,374 × 1,031), 64 × 32 | **31 ms median in a Release build, 87 ms in Debug** (fast tier, CoreCLR, the build container, 2026-09-26), into a reused buffer. The first version cost **447 ms**, a per-pixel cube-rounding pick through a float buffer. Three changes brought it down, measured each time: a scanline nearest-centre fill (447 → 215 Debug); fill and finish in one pass, with the finish as one affine map per pixel, marks stamped from a mask, and the buffer reused (→ 115 Debug / 58 Release); and the sheen and vignette tabulated, with no square root per pixel (→ 87 / 31). A player build compiles Release. The editor defaults to Debug, so a reroll there hitches for about a tenth of a second. **The Unity (Mono) figure is owed** from the owner's machine; if it is over 60 ms in a player build, `WorldLayout.PaintScale` drops to 1.5. |
 | board memory per hill band | **Rolling 16 layers: Standard 18.8 MiB, Huge 74.5 MiB; Mountainous 24 layers: Standard 27.8 MiB, Huge 109.8 MiB**, about 84 bytes a cell either way, so the depth costs its cells and nothing else (+48 %). A Huge mountainous board builds in 0.72 s against 0.53 s. Headless simulation only, without the render mirror; fast tier, CoreCLR, the build container, 2026-09-26, each arm taken twice in alternating order after two warm-up builds. **The first reading said the deeper board was smaller** (8.8 MiB against 18.9): the first arm had paid for the content load, the statics and the JIT, which is why the arms are warmed now. **Whether 110 MiB for a Huge mountainous board is too much is the owner's call** (design 59 §5); capping it at 20 layers would be about 91 MiB. |
 
 ## 10. Seams recorded, not built

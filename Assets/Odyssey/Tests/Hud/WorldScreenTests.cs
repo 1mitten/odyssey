@@ -22,9 +22,9 @@ namespace Odyssey.Tests.Hud
         /// pole to pole; the rest is land, Meadow west of column 20 and Scrub east of it. A land tile's
         /// hills are its column mod 5, so every band is present.
         /// </summary>
-        public static PlanetView Make(uint seed = 1u)
+        public static PlanetView Make(uint seed = 1u, int w = 64, int h = 32)
         {
-            const int w = 64, h = 32, n = w * h;
+            int n = w * h;
             var biomes = new[]
             {
                 new BiomeView("Biome_Ice", "ui.biome.ice", false, false, 0xb9c9d2, 0xf4f8fa, MapRamp.Ice),
@@ -45,7 +45,7 @@ namespace Odyssey.Tests.Hud
             for (int i = 0; i < n; i++)
             {
                 int c = HexGrid.Column(i, w), r = HexGrid.Row(i, w);
-                water[i] = r < 3 || r > 28 || (c >= 40 && c < 48);
+                water[i] = r < 3 || r > h - 4 || (c >= 40 && c < 48);
                 biome[i] = (byte)(water[i] ? (r == 0 ? Ice : Ocean) : c < 20 ? Meadow : Scrub);
                 elevation[i] = water[i] ? 200 : 600 + c * 5;
                 hills[i] = (byte)(water[i] ? 0 : c % 5);
@@ -177,13 +177,13 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void ZoomStepsByOneAndAHalfBetweenOneAndFour()
+        public void ZoomStepsByOneAndAHalfBetweenOneAndEight()
         {
             WorldMapView view = View();
             var seen = new List<float>();
-            for (int i = 0; i < 6; i++) { view.ZoomIn(); seen.Add(view.TargetZoom); }
-            Assert.That(seen, Is.EqualTo(new[] { 1.5f, 2.25f, 3.375f, 4f, 4f, 4f }).Within(0.001f));
-            for (int i = 0; i < 6; i++) view.ZoomOut();
+            for (int i = 0; i < 7; i++) { view.ZoomIn(); seen.Add(view.TargetZoom); }
+            Assert.That(seen, Is.EqualTo(new[] { 1.5f, 2.25f, 3.375f, 5.0625f, 7.59375f, 8f, 8f }).Within(0.001f));
+            for (int i = 0; i < 7; i++) view.ZoomOut();
             Assert.That(view.TargetZoom, Is.EqualTo(1f));
             Assert.That(view.ZoomLabel, Is.EqualTo("1x"));
         }
@@ -285,6 +285,27 @@ namespace Odyssey.Tests.Hud
             Assert.That(choice.Site!.Value.BiomeDefName, Is.EqualTo("Biome_Meadow"));
         }
 
+        /// <summary>A colony going live lets the planet go; the World screen's next refresh makes the same one again.</summary>
+        [Test]
+        public void AReleasedPlanetIsMadeAgainFromTheSameSeed()
+        {
+            int count = 0;
+            var seed = new SeedField(Deals(11u, 12u));
+            var choice = new WorldChoice(seed, s => { count++; return TestPlanet.Make(s); });
+            seed.Draw();
+            uint made = choice.Planet!.WorldSeed;
+
+            choice.Release();
+            Assert.That(choice.Planet, Is.Null, "nothing holds the planet while a colony is up");
+            Assert.That(choice.CanGoNext, Is.False);
+            Assert.That(choice.Site, Is.Null);
+
+            choice.Refresh();
+            Assert.That(count, Is.EqualTo(2));
+            Assert.That(choice.Planet!.WorldSeed, Is.EqualTo(made), "the seed in the box, not a new one");
+            Assert.That(choice.Selected, Is.EqualTo(choice.Planet.SuggestedTile));
+        }
+
         [Test]
         public void ThePlanetIsMadeOncePerSeed()
         {
@@ -351,6 +372,29 @@ namespace Odyssey.Tests.Hud
             choice.Select(TestPlanet.Tile(5, 0));
             choice.Move(1);
             Assert.That(choice.Selected, Is.EqualTo(TestPlanet.Tile(5, 0)), "nothing north of the pole");
+        }
+
+        /// <summary>
+        /// The temperatures in the traffic light (owner, 2026-09-26), each end of the seasons apart.
+        /// Tile (6, 10) is 9.6 °C mean, and the test curve runs it from −7.4 to 27.6.
+        /// </summary>
+        [Test]
+        public void TheTemperaturesAreColouredRedAmberGreen()
+        {
+            List<WorldStat> rows = WorldChoice.Stats(TestPlanet.Make(), TestPlanet.Tile(6, 10));
+            WorldStat mean = rows.Find(r => r.LabelKey == "ui.world.temperature");
+            WorldStat seasons = rows.Find(r => r.LabelKey == "ui.world.seasons");
+            Assert.That(mean.Spans![0].Tint, Is.EqualTo(HudTheme.Warn), "9.6 °C: cool, amber");
+            Assert.That(seasons.Spans!.Count, Is.EqualTo(3));
+            Assert.That(seasons.Spans[0].Tint, Is.EqualTo(HudTheme.Bad), "a winter below freezing is red");
+            Assert.That(seasons.Spans[1].Tint, Is.Null, "the joining word is not a temperature");
+            Assert.That(seasons.Spans[2].Tint, Is.EqualTo(HudTheme.Good), "a summer of 27.6 °C is green");
+            Assert.That(seasons.Spans[0].Text + " " + seasons.Spans[1].Text + " " + seasons.Spans[2].Text,
+                Is.EqualTo(seasons.Value), "the runs say what the value says");
+
+            Assert.That(HudTheme.SiteTemperature(2_000), Is.EqualTo(HudTheme.Good));
+            Assert.That(HudTheme.SiteTemperature(3_200), Is.EqualTo(HudTheme.Warn));
+            Assert.That(HudTheme.SiteTemperature(3_600), Is.EqualTo(HudTheme.Bad));
         }
 
         [Test]
@@ -507,8 +551,25 @@ namespace Odyssey.Tests.Hud
                 times.Add(watch.Elapsed.TotalMilliseconds);
             }
             times.Sort();
-            TestContext.Progress.WriteLine($"map paint at {WorldLayout.PaintScale}x: median {times[2]:F1} ms, worst {times[4]:F1} ms");
+            TestContext.Progress.WriteLine($"map paint 64 x 32 at {WorldLayout.PaintScale}x: median {times[2]:F1} ms, worst {times[4]:F1} ms");
             Assert.That(times[2], Is.LessThan(1000));
+
+            // The planet the page paints (design 59 §4e): 128 x 64 since 2026-09-26.
+            PlanetView played = TestPlanet.Make(1u, WorldLayout.MapColumns, WorldLayout.MapRows);
+            foreach (float scale in new[] { 1.5f, WorldLayout.PaintScale })
+            {
+                byte[] into = WorldMapPainter.Paint(played, scale, out int pw, out int ph, bottomUp: true);
+                var arm = new List<double>();
+                for (int i = 0; i < 5; i++)
+                {
+                    var watch = Stopwatch.StartNew();
+                    WorldMapPainter.Paint(played, scale, out _, out _, bottomUp: true, into: into);
+                    arm.Add(watch.Elapsed.TotalMilliseconds);
+                }
+                arm.Sort();
+                TestContext.Progress.WriteLine(
+                    $"map paint {WorldLayout.MapColumns} x {WorldLayout.MapRows} at {scale}x ({pw} x {ph}): median {arm[2]:F1} ms, worst {arm[4]:F1} ms");
+            }
         }
     }
 

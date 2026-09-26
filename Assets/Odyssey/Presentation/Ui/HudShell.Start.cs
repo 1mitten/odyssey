@@ -1056,6 +1056,8 @@ namespace Odyssey.Presentation.Ui
             // which read as the game being open behind a dialog it was not open behind.
             bool playing = live != null;
             _worldUi.style.display = playing ? DisplayStyle.Flex : DisplayStyle.None;
+            // The planet, its texture and its buffer belong to the menu and go with it (design 59 §4e).
+            if (playing) ReleaseWorldMap();
             // A ride belongs to the colony it was begun in (design 57 §5).
             ResetRideUi();
             _backdrop.style.display = playing ? DisplayStyle.None : DisplayStyle.Flex;

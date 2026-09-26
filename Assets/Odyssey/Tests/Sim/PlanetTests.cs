@@ -35,7 +35,7 @@ namespace Odyssey.Tests.Sim
         /// (<c>WorldContentDefTests</c>): a deliberate change to <c>Biomes.xml</c> or <c>Planet.xml</c>
         /// is one line here, and an accidental one fails.
         /// </summary>
-        const ulong PlanetFingerprint = 11131572715734754125UL;
+        const ulong PlanetFingerprint = 1655014109379609229UL;
 
         [Test]
         public void ThePlanetsContentIsStillWhatItWas()
@@ -124,8 +124,23 @@ namespace Odyssey.Tests.Sim
                 PlanetView p = Generate(seed);
                 int sea = 0;
                 for (int i = 0; i < p.TileCount; i++) if (p.Water[i]) sea++;
-                Assert.That(sea, Is.EqualTo(p.TileCount * WorldContent.Planet.oceanPerMille / 1000), $"seed {seed}");
+                Assert.That(sea, Is.EqualTo(p.TileCount * PlanetGenerator.OceanPerMille(seed, WorldContent.Planet) / 1000), $"seed {seed}");
             }
+        }
+
+        /// <summary>The seed moves the sea's share inside its spread, and does move it (design 59 §4e).</summary>
+        [Test]
+        public void TheSeaShareVariesWithTheSeedInsideItsSpread()
+        {
+            PlanetDef def = WorldContent.Planet;
+            var shares = new HashSet<int>();
+            for (uint seed = 1; seed <= 200; seed++)
+            {
+                int share = PlanetGenerator.OceanPerMille(seed, def);
+                Assert.That(share, Is.InRange(def.oceanPerMille - def.oceanSpreadPerMille, def.oceanPerMille + def.oceanSpreadPerMille));
+                shares.Add(share);
+            }
+            Assert.That(shares.Count, Is.GreaterThan(50), "two hundred seeds should deal many different seas");
         }
 
         [Test]
@@ -277,7 +292,7 @@ namespace Odyssey.Tests.Sim
             }
             times.Sort();
             double median = times[times.Count / 2];
-            TestContext.Progress.WriteLine($"planet 64 x 32: median {median:F2} ms, worst {times[times.Count - 1]:F2} ms over {times.Count} seeds");
+            TestContext.Progress.WriteLine($"planet {WorldContent.Planet.width} x {WorldContent.Planet.height}: median {median:F2} ms, worst {times[times.Count - 1]:F2} ms over {times.Count} seeds");
             Assert.That(median, Is.LessThan(250), "a planet is a menu's wait, not a frame's; 50 ms is the budget design 59 quotes");
         }
     }

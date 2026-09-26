@@ -14323,3 +14323,21 @@ the Assign tab's column holds it for every colonist at once.
 
 The owner played it the same day: *"it's great - happy to get this resolved and get it ready for a
 merge"*. Nothing moved, so Z for First Person and the 40 px tile stand.
+
+## 2026-09-26 — the World screen's first look: four times the planet
+
+The owner's first look at the World screen asked for four things: the site name level with the foot of
+its swatch, temperatures in red, amber and green, a planet "at least 4x" and "more random", and a bigger
+"World". Then, mid-change: *"make sure it's disposed and garbage collected once off the screen"*.
+
+- **The planet is 128 x 64** (design 59 §4e). Same features at twice the resolution (`featureScale`),
+  finer coasts from five elevation octaves, a domain warp to break the value noise's lattice, and a sea
+  share that moves 35–55 % with the seed. Generation went 2 → 12 ms.
+- **The paint was the cost that mattered**: measured on the real size in one run, 332 ms at 2x against
+  203 at 1.5x (Debug), once per seed. 1.5x, mipmapped, because at the fit the texture is drawn at a third
+  of its size.
+- **The misalignment was the line box again**: a self-sized label is about twice its point size tall,
+  so caption plus name was 55 px centred on a 44 px swatch. Fixed boxes now (§4f).
+- **Nothing outlives the menu**: `ReleaseWorldMap` destroys the texture, drops the buffer, the names and
+  the planet and pauses the ease timer when a colony goes live. Before this the texture and its buffer
+  sat in memory for the whole game, and the ease timer fired every 16 ms under it.

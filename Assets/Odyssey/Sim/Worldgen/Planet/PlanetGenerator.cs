@@ -23,6 +23,9 @@ namespace Odyssey.Sim.Worldgen.Planet
         const uint TemperatureStream = 0x7E3B_C0DEu;
         const uint RainStream = 0x5A1F_0A11u;
         const uint RuinStream = 0x4B11_7EDu;
+        const uint WarpXStream = 0x3A2B_1C0Du;
+        const uint WarpZStream = 0x6D5E_4F3Bu;
+        const uint OceanStream = 0x0CEA_2A11u;
         const int RetryLimit = 8;
 
         /// <summary>
@@ -54,14 +57,28 @@ namespace Odyssey.Sim.Worldgen.Planet
             var elevation = new int[n];
             // Sampled in half-hex units: an odd row sits half a hex east, so x = 2·column + parity.
             int circumference = 2 * w;
+            int grain = Math.Max(1, def.featureScale);
             for (int i = 0; i < n; i++)
             {
                 int c = HexGrid.Column(i, w), r = HexGrid.Row(i, w);
-                elevation[i] = WrappedFractal(streamSeed ^ ElevationStream, 2 * c + (r & 1), 2 * r,
+                int x = 2 * c + (r & 1), z = 2 * r;
+                if (def.warpHalfHexes > 0)
+                {
+                    // Two wrapped fields push the sample point, so the coasts bend off the lattice. The
+                    // x push wraps with the planet; z is never wrapped, so it needs nothing.
+                    int half = ValueNoise.Scale / 2;
+                    int dx = (ValueNoise.Value2DWrapped(streamSeed ^ WarpXStream, x, z, def.warpPeriod, circumference) - half)
+                             * def.warpHalfHexes / half;
+                    int dz = (ValueNoise.Value2DWrapped(streamSeed ^ WarpZStream, x, z, def.warpPeriod, circumference) - half)
+                             * def.warpHalfHexes / half;
+                    x += dx;
+                    z += dz;
+                }
+                elevation[i] = WrappedFractal(streamSeed ^ ElevationStream, x, z,
                     def.elevationPeriod, def.elevationOctaves, circumference);
             }
 
-            int oceanCount = n * def.oceanPerMille / 1000;
+            int oceanCount = n * OceanPerMille(seed, def) / 1000;
             int[] byElevation = RankOrder(elevation);
             var water = new bool[n];
             for (int k = 0; k < oceanCount; k++) water[byElevation[k]] = true;
@@ -84,7 +101,7 @@ namespace Odyssey.Sim.Worldgen.Planet
                 long lat = HexGrid.LatitudePerMille(r, h);
                 int byLatitude = def.equatorC - (int)((def.equatorC - def.poleC) * lat * lat / 1_000_000L);
                 int lapse = def.lapseCPer1000m * Math.Max(0, elevationM[i]) / 1000;
-                int noise = (WrappedFractal(streamSeed ^ TemperatureStream, 2 * c + (r & 1), 2 * r, 8, 2, circumference)
+                int noise = (WrappedFractal(streamSeed ^ TemperatureStream, 2 * c + (r & 1), 2 * r, 8 * grain, 2, circumference)
                              - ValueNoise.Scale / 2) * def.tempNoiseC / (ValueNoise.Scale / 2);
                 meanTemp[i] = byLatitude - lapse + noise;
             }
@@ -95,10 +112,11 @@ namespace Odyssey.Sim.Worldgen.Planet
             for (int i = 0; i < n; i++)
             {
                 int c = HexGrid.Column(i, w), r = HexGrid.Row(i, w);
-                int noise = WrappedFractal(streamSeed ^ RainStream, 2 * c + (r & 1), 2 * r, 16, 2, circumference)
+                int noise = WrappedFractal(streamSeed ^ RainStream, 2 * c + (r & 1), 2 * r, 16 * grain, 2, circumference)
                             * def.rainMaxMm / ValueNoise.Scale;
                 int belt = Belt(def, Math.Abs(HexGrid.LatitudePerMille(r, h)));
-                int coast = !water[i] && toSea[i] <= 3 ? def.coastRainMm * (4 - toSea[i]) / 3 : 0;
+                int reach = 3 * grain;
+                int coast = !water[i] && toSea[i] <= reach ? def.coastRainMm * (reach + 1 - toSea[i]) / reach : 0;
                 rain[i] = Math.Max(0, noise + belt + coast);
             }
 
@@ -111,7 +129,7 @@ namespace Odyssey.Sim.Worldgen.Planet
                 if (water[i]) continue;
                 int c = HexGrid.Column(i, w), r = HexGrid.Row(i, w);
                 int height = (elevation[i] - seaLevel) * ValueNoise.Scale / Math.Max(1, landTop - seaLevel);
-                int ridgeNoise = WrappedFractal(streamSeed ^ RidgeStream, 2 * c + (r & 1), 2 * r, 8, 2, circumference);
+                int ridgeNoise = WrappedFractal(streamSeed ^ RidgeStream, 2 * c + (r & 1), 2 * r, 8 * grain, 2, circumference);
                 int ridge = ValueNoise.Scale - Math.Abs(2 * ridgeNoise - ValueNoise.Scale);
                 hilliness[i] = (height * 6 + ridge * 4) / 10;
                 land.Add(i);
@@ -142,7 +160,7 @@ namespace Odyssey.Sim.Worldgen.Planet
             for (int i = 0; i < n; i++)
             {
                 int c = HexGrid.Column(i, w), r = HexGrid.Row(i, w);
-                ruin[i] = WrappedFractal(streamSeed ^ RuinStream, 2 * c + (r & 1), 2 * r, 16, 2, circumference)
+                ruin[i] = WrappedFractal(streamSeed ^ RuinStream, 2 * c + (r & 1), 2 * r, 16 * grain, 2, circumference)
                           * 1000 / ValueNoise.Scale;
                 if (water[i]) continue;
                 for (int d = 0; d < HexGrid.Directions; d++)
@@ -165,6 +183,21 @@ namespace Odyssey.Sim.Worldgen.Planet
             int suggested = Suggest(planet);
             return new PlanetView(seed, w, h, seaLevel, views, biome, elevation, hills, meanTemp, rain,
                 elevationM, ruin, water, coastal, suggested, curve);
+        }
+
+        /// <summary>
+        /// The sea's share of a world, per mille: the def's share moved by up to its spread either way
+        /// (design 59 §4e). Drawn from the seed the player typed, not a retry's, so a retry keeps the
+        /// world's character.
+        /// </summary>
+        public static int OceanPerMille(uint seed, PlanetDef def)
+        {
+            if (def.oceanSpreadPerMille <= 0) return def.oceanPerMille;
+            uint mix = unchecked(seed * 0x9E37_79B9u) ^ OceanStream;
+            mix ^= mix >> 15;
+            mix = unchecked(mix * 0x2C1B_3C6Du);
+            mix ^= mix >> 12;
+            return def.oceanPerMille + (int)(mix % (uint)(2 * def.oceanSpreadPerMille + 1)) - def.oceanSpreadPerMille;
         }
 
         /// <summary>
@@ -279,8 +312,14 @@ namespace Odyssey.Sim.Worldgen.Planet
             for (int p = def.elevationPeriod, o = 0; o < def.elevationOctaves; o++, p = Math.Max(1, p >> 1))
                 if ((2 * def.width) % p != 0)
                     throw new InvalidOperationException($"{def.defName}: elevation period {p} does not divide the circumference {2 * def.width}, so the noise would not wrap");
-            if ((2 * def.width) % 16 != 0)
-                throw new InvalidOperationException($"{def.defName}: the rain and ruin noise need a circumference divisible by 16");
+            int grain = Math.Max(1, def.featureScale);
+            if ((2 * def.width) % (16 * grain) != 0)
+                throw new InvalidOperationException($"{def.defName}: the rain and ruin noise need a circumference divisible by {16 * grain}");
+            if (def.warpHalfHexes > 0 && (def.warpPeriod < 1 || (2 * def.width) % def.warpPeriod != 0))
+                throw new InvalidOperationException($"{def.defName}: warp period {def.warpPeriod} does not divide the circumference {2 * def.width}");
+            if (def.oceanSpreadPerMille < 0 || def.oceanPerMille - def.oceanSpreadPerMille < 0
+                || def.oceanPerMille + def.oceanSpreadPerMille >= 1000)
+                throw new InvalidOperationException($"{def.defName}: the sea's share and its spread must stay inside 0 to 999 per mille");
             int water = 0;
             for (int b = 0; b < biomes.Count; b++)
             {

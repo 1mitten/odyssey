@@ -13,6 +13,10 @@ namespace Odyssey.Hud
     {
         // ---- the frame -------------------------------------------------------------------------
 
+        /// <summary>The page title, "World": 30 px, bigger than the setup page's 19 (owner, 2026-09-26).</summary>
+        public const int TitleSize = 30;
+        public const int TitleHeight = 38;
+
         /// <summary>The page's inset from every screen edge.</summary>
         public const int Inset = 24;
 
@@ -27,8 +31,9 @@ namespace Odyssey.Hud
 
         // ---- the map ---------------------------------------------------------------------------
 
-        public const int MapColumns = 64;
-        public const int MapRows = 32;
+        /// <summary>128 x 64, four times the first planet (owner, 2026-09-26: "it needs to increase at least 4x"; design 59 §4e).</summary>
+        public const int MapColumns = 128;
+        public const int MapRows = 64;
 
         /// <summary>A hex, flat side to flat side, at 1×.</summary>
         public const float HexWidth = 18.4f;
@@ -37,10 +42,11 @@ namespace Odyssey.Hud
         public const float HexRowStep = 0.75f;
 
         /// <summary>
-        /// The texture is painted at this multiple of its 1× size (design 59 §9a), so a 4× zoom is not
-        /// a blur. The painter's cost is measured in design 59 §9d; 1.5 is the fall-back.
+        /// The texture is painted at this multiple of its 1× size (design 59 §9a), so a deep zoom is not
+        /// a blur. 1.5 since the planet went to 128 x 64 (§4e): at 2x the paint was 332 ms in a Debug
+        /// build against 203 at 1.5, once per seed; measured in §9d.
         /// </summary>
-        public const float PaintScale = 2f;
+        public const float PaintScale = 1.5f;
 
         /// <summary>The selection: a 4 px dark underline under a 2.2 px accent line, 1.5 px outside the hex.</summary>
         public const float SelectUnderline = 4f;
@@ -59,7 +65,8 @@ namespace Odyssey.Hud
         // ---- zoom ------------------------------------------------------------------------------
 
         public const float ZoomMin = 1f;
-        public const float ZoomMax = 4f;
+        /// <summary>Twice the first planet's 4x, because its hexes are half the size at the fit: a hex at 8x is the size it was at 4x.</summary>
+        public const float ZoomMax = 8f;
         public const float ZoomStep = 1.5f;
 
         /// <summary>Each change of zoom or pan eases out over this long.</summary>
@@ -73,15 +80,15 @@ namespace Odyssey.Hud
 
         // ---- labels ----------------------------------------------------------------------------
 
-        public const int LandLabelsMax = 7;
-        public const int LandLabelMinTiles = 14;
-        public const int SeaLabelsMax = 5;
+        public const int LandLabelsMax = 12;
+        public const int LandLabelMinTiles = 40;
+        public const int SeaLabelsMax = 8;
 
         /// <summary>Sea labels keep at least this far apart, in 1× map pixels.</summary>
-        public const float SeaLabelSpacing = 230f;
+        public const float SeaLabelSpacing = 380f;
 
         /// <summary>No sea label within this many rows of either pole.</summary>
-        public const int SeaLabelPolarRows = 4;
+        public const int SeaLabelPolarRows = 8;
 
         // ---- legend and stats ------------------------------------------------------------------
 

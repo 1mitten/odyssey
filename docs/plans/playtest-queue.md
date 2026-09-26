@@ -24,7 +24,9 @@ the next session learns to ignore.
 ## Open
 
 - **Does the World screen read as a planet, and does the site change the colony?** (`claude/busy-meitner-zkrhtu`,
-  the reviewed `claude/sharp-euler-a6xtci`; design 59.) New game now opens on a **World** screen: a hex planet with ice caps, a dry-scrub belt round
+  the reviewed `claude/sharp-euler-a6xtci`; design 59.) **Second look after the first (2026-09-26, §4e–§4f):** the planet is
+  128 x 64 with warped coasts and a sea share that varies by seed, zoom goes to 8x, temperatures in the site panel are
+  red/amber/green, the site name sits on the swatch's foot, and "World" is bigger. New game now opens on a **World** screen: a hex planet with ice caps, a dry-scrub belt round
   the equator and Meadow at mid-latitudes, region and sea names, a legend, and a site already picked.
   Look for:
   - whether Meadow can be found at a glance, and whether the other biomes reading *Not yet available* is

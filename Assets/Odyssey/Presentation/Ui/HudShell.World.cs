@@ -68,6 +68,7 @@ namespace Odyssey.Presentation.Ui
         Label _setupSiteLine = null!;
         Texture2D? _mapTexture;
         byte[]? _mapBuffer;
+        IVisualElementScheduledItem? _mapEase;
 
         // What the site panel was last built for, so a hover that moves nothing it shows costs nothing.
         PlanetView? _panelPlanet;
@@ -101,7 +102,12 @@ namespace Odyssey.Presentation.Ui
             // ---- the title ---------------------------------------------------------------
             var title = new VisualElement();
             title.AddToClassList("world__titlerow");
-            title.Add(HudText.Make(Registry.Label("ui.world.title"), HudTextRole.Name, ussClass: "setup__title"));
+            // The one label on the page larger than the scale's Name step (owner, 2026-09-26: "make
+            // the label World bigger"): the page's heading, read from across the room.
+            var worldTitle = HudText.Make(Registry.Label("ui.world.title"), HudTextRole.Name, ussClass: "setup__title");
+            worldTitle.style.fontSize = WorldLayout.TitleSize;
+            worldTitle.style.height = WorldLayout.TitleHeight;
+            title.Add(worldTitle);
             var subtitle = HudText.Make(Registry.Label("ui.world.subtitle"), HudTextRole.Meta, ussClass: "world__subtitle");
             subtitle.style.color = HudTokens.TextMeta;
             title.Add(subtitle);
@@ -176,8 +182,9 @@ namespace Odyssey.Presentation.Ui
 
             page.RegisterCallback<KeyDownEvent>(OnWorldKey);
 
-            // The zoom's ease, stepped on real seconds while it runs.
-            page.schedule.Execute(() =>
+            // The zoom's ease, stepped on real seconds while it runs. Paused while a colony is up
+            // (ReleaseWorldMap): a display:none element's scheduler still fires.
+            _mapEase = page.schedule.Execute(() =>
             {
                 if (_mapView.Moving) _mapView.Tick(Time.unscaledDeltaTime);
             }).Every(16);
@@ -292,7 +299,8 @@ namespace Odyssey.Presentation.Ui
             header.Add(_statsSwatch);
             var heading = new VisualElement();
             heading.AddToClassList("world__statsheading");
-            var caption = HudText.Make(Registry.Label("ui.world.selectedsite"), HudTextRole.PanelLabel);
+            var caption = HudText.Make(Registry.Label("ui.world.selectedsite"), HudTextRole.PanelLabel,
+                ussClass: "world__statscaption");
             caption.style.color = HudTokens.TextDim;
             heading.Add(caption);
             _statsName = HudText.Make(string.Empty, HudTextRole.Name, ussClass: "world__statsname");
@@ -340,16 +348,19 @@ namespace Odyssey.Presentation.Ui
             if (_mapTexture == null || _mapTexture.width != width || _mapTexture.height != height)
             {
                 if (_mapTexture != null) Object.Destroy(_mapTexture);
-                _mapTexture = new Texture2D(width, height, TextureFormat.RGBA32, false, false)
+                // Mipmapped (design 59 §4e): at the fit the 128-wide planet's texture is drawn at
+                // about a third of its size, and without mips a bilinear read of it shimmers.
+                _mapTexture = new Texture2D(width, height, TextureFormat.RGBA32, true, false)
                 {
-                    filterMode = FilterMode.Bilinear,
+                    filterMode = FilterMode.Trilinear,
                     wrapMode = TextureWrapMode.Clamp,
                     hideFlags = HideFlags.HideAndDontSave,
                     name = "WorldMap",
                 };
             }
-            _mapTexture.LoadRawTextureData(_mapBuffer);
-            _mapTexture.Apply(false, false);
+            // Mip 0 only; Apply builds the rest. LoadRawTextureData would want every level in the buffer.
+            _mapTexture.SetPixelData(_mapBuffer, 0);
+            _mapTexture.Apply(true, false);
             foreach (Image copy in _mapCopies) copy.image = _mapTexture;
 
             BuildLegend(planet);
@@ -524,9 +535,27 @@ namespace Odyssey.Presentation.Ui
                 var label = HudText.Make(Registry.Label(stat.LabelKey), HudTextRole.Body);
                 label.style.color = HudTokens.TextMeta;
                 row.Add(label);
-                var value = HudText.Make(stat.Value, HudTextRole.Row, numeric: stat.Numeric, ussClass: "world__statvalue");
-                value.style.color = HudTokens.TextPrimary;
-                row.Add(value);
+                if (stat.Spans == null)
+                {
+                    var value = HudText.Make(stat.Value, HudTextRole.Row, numeric: stat.Numeric, ussClass: "world__statvalue");
+                    value.style.color = HudTokens.TextPrimary;
+                    row.Add(value);
+                }
+                else
+                {
+                    // Coloured runs side by side, right-aligned as one value, a word space apart:
+                    // the gap is a margin, because a label's own edge spaces are not reliably kept.
+                    var runs = new VisualElement();
+                    runs.AddToClassList("world__statruns");
+                    foreach (WorldStatSpan span in stat.Spans)
+                    {
+                        var run = HudText.Make(span.Text, HudTextRole.Row, numeric: stat.Numeric, ussClass: "world__statvalue");
+                        run.style.color = span.Tint.HasValue ? HudTokens.Convert(span.Tint.Value) : HudTokens.TextMeta;
+                        if (runs.childCount > 0) run.style.marginLeft = 5f;
+                        runs.Add(run);
+                    }
+                    row.Add(runs);
+                }
                 _statsRows.Add(row);
             }
 
@@ -557,8 +586,35 @@ namespace Odyssey.Presentation.Ui
             HudText.Set(_setupSiteLine, line, HudTextRole.Row);
         }
 
+        /// <summary>
+        /// Let go of everything the World screen holds (owner, 2026-09-26: "make sure it doesn't
+        /// leak"): the texture (about 22 MB with its mips) and the paint buffer (about the same), the
+        /// planet and its names, and the ease timer. Called whenever a colony goes live and when the
+        /// shell is destroyed. Coming back to the World screen regenerates the planet from the seed,
+        /// 12 ms, and repaints it, so nothing here needs to survive a game.
+        /// </summary>
+        void ReleaseWorldMap(bool immediate = false)
+        {
+            if (_mapTexture != null)
+            {
+                foreach (Image copy in _mapCopies)
+                    if (copy != null) copy.image = null;
+                if (immediate) Object.DestroyImmediate(_mapTexture);
+                else Object.Destroy(_mapTexture);
+                _mapTexture = null;
+            }
+            _mapBuffer = null;
+            _labelLayer?.Clear();
+            _placeLabels.Clear();
+            _panelPlanet = null;
+            _panelTile = -1;
+            _menu?.World?.Release();
+            _mapEase?.Pause();
+        }
+
         void RefreshWorldPage()
         {
+            _mapEase?.Resume();
             _menu.World?.Refresh();
             if (_worldSeedBox.value != _menu.Seed.Text) _worldSeedBox.SetValueWithoutNotify(_menu.Seed.Text);
             RefreshWorldSelection();

@@ -6,21 +6,44 @@ using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
 {
+    /// <summary>A run of a stat's value in one colour; a null tint is the value's ordinary ink.</summary>
+    public readonly struct WorldStatSpan
+    {
+        public WorldStatSpan(string text, HudColour? tint)
+        {
+            Text = text;
+            Tint = tint;
+        }
+
+        public readonly string Text;
+        public readonly HudColour? Tint;
+    }
+
     /// <summary>One row of the World screen's site panel: a label key, and the value as drawn.</summary>
     public readonly struct WorldStat
     {
-        public WorldStat(string labelKey, string value, bool numeric)
+        public WorldStat(string labelKey, string value, bool numeric, IReadOnlyList<WorldStatSpan>? spans = null)
         {
             LabelKey = labelKey;
             Value = value;
             Numeric = numeric;
+            Spans = spans;
         }
 
         public readonly string LabelKey;
+
+        /// <summary>The whole value as one string, whatever its colours.</summary>
         public readonly string Value;
 
         /// <summary>A value with a figure in it, drawn in the mono face.</summary>
         public readonly bool Numeric;
+
+        /// <summary>
+        /// The value in coloured runs, or null to draw <see cref="Value"/> in the ordinary ink. Runs
+        /// rather than a rich-text tag, because a tag that stopped being interpreted would put markup
+        /// on screen and neither tier can see that (design 15 §8j).
+        /// </summary>
+        public readonly IReadOnlyList<WorldStatSpan>? Spans;
     }
 
     /// <summary>
@@ -93,6 +116,18 @@ namespace Odyssey.Hud
             Hovered = -1;
             PlanetChanged?.Invoke();
             Changed?.Invoke();
+        }
+
+        /// <summary>
+        /// Drop the planet (a colony is up and the World screen is gone). The next
+        /// <see cref="Refresh"/> makes it again from the seed in the box, so nothing is lost but the
+        /// pick, which returns to the suggested site.
+        /// </summary>
+        public void Release()
+        {
+            Planet = null;
+            Selected = -1;
+            Hovered = -1;
         }
 
         public void Select(int tile)
@@ -173,13 +208,23 @@ namespace Odyssey.Hud
             HillBand hills = planet.HillsAt(tile);
             rows.Add(new WorldStat("ui.world.biome", Registry.Label(planet.BiomeAt(tile).LabelKey), false));
             rows.Add(new WorldStat("ui.world.hills", Registry.Label(HillKeys[(int)hills]), false));
-            rows.Add(new WorldStat("ui.world.temperature", TemperatureLabels.Describe(planet.MeanTempC[tile]), true));
+            // Temperatures in the traffic light (HudTheme.SiteTemperature): the mean, and each end
+            // of the seasons coloured apart, so a mild mean with a killing winter reads as both.
+            string mean = TemperatureLabels.Describe(planet.MeanTempC[tile]);
+            rows.Add(new WorldStat("ui.world.temperature", mean, true,
+                new[] { new WorldStatSpan(mean, HudTheme.SiteTemperature(planet.MeanTempC[tile])) }));
 
             if (planet.SeasonCurveC.Length > 0)
             {
                 planet.SeasonRange(tile, out int coldest, out int warmest);
-                rows.Add(new WorldStat("ui.world.seasons",
-                    TemperatureLabels.Number(coldest) + " " + Registry.Label("ui.world.to") + " " + TemperatureLabels.Describe(warmest), true));
+                string low = TemperatureLabels.Number(coldest), to = Registry.Label("ui.world.to"),
+                    high = TemperatureLabels.Describe(warmest);
+                rows.Add(new WorldStat("ui.world.seasons", low + " " + to + " " + high, true, new[]
+                {
+                    new WorldStatSpan(low, HudTheme.SiteTemperature(coldest)),
+                    new WorldStatSpan(to, null),
+                    new WorldStatSpan(high, HudTheme.SiteTemperature(warmest)),
+                }));
             }
 
             rows.Add(new WorldStat("ui.world.rainfall",

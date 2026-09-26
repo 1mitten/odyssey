@@ -260,6 +260,23 @@ namespace Odyssey.Hud
             _ => null,                                    // comfortable, and the work band
         };
 
+        /// <summary>
+        /// How livable a site's temperature is, on the World screen (owner, 2026-09-26: "indicate
+        /// temperatures with colouring red, amber and green"): a traffic light, not a reading.
+        /// Green is the band <see cref="Temperature"/> leaves alone as comfortable, 10–30 °C;
+        /// amber is its cold and hot bands short of freezing and sweltering; red is below freezing
+        /// or above 35 °C. The same thresholds as <see cref="Temperature"/>, so a site judged green
+        /// is one a colonist's pane would not tint, and one question with two answers is avoided.
+        /// </summary>
+        public static HudColour SiteTemperature(int centiC) => centiC switch
+        {
+            > 3_500 => Bad,
+            > 3_000 => Warn,
+            < 0 => Bad,
+            < 1_000 => Warn,
+            _ => Good,
+        };
+
         /// <summary>The tint laid over a stores row whose stock is falling.</summary>
         public static readonly HudColour FallingRow = Warn.WithAlpha(0.09f);
 
