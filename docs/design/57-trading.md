@@ -162,6 +162,9 @@ one `TradeLine(trader, def, signedQty)` per row, then `TradeCommit(trader, expec
 simulation re-validates everything at the commit and applies the deal atomically or rejects it
 whole. All three intents apply while paused.
 
+**The look** is being drawn by Claude Design to `docs/reference/mockups/trade-window-brief.md`:
+five states, the right-click row, the trader's pane and the arrival row. T6 builds what comes back.
+
 **The pause** is a `ModalHeld` gate ORed with `OdysseyBootstrap.ClockHeld`. The wake assigns
 `ClockHeld` outright, so trade must not share that flag.
 
