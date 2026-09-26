@@ -109,6 +109,26 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
+        public void AFrameAsLongAsAWorldBuildTakesOnlyOneStepOffTheFade()
+        {
+            using var bed = Make();
+            Assume.That(bed.HasVoice, "no voice was built for a catalogue that has a menu row");
+            Advance(bed, Arrival + 0.5f, wanted: true);
+            Assume.That(bed.Level, Is.EqualTo(1f).Within(1e-4f), "the bed never arrived");
+
+            // The frame after a world is built: one delta the length of the build itself.
+            bed.Sync(1.2f, wanted: false);
+            Assert.That(bed.Level, Is.EqualTo(1f - MenuAmbience.MaxStepSeconds / Leaving).Within(1e-4f),
+                "a one-second frame took more than one clamped step off the leaving fade");
+
+            // And a nonsense delta takes nothing at all.
+            float before = bed.Level;
+            bed.Sync(float.NaN, wanted: false);
+            bed.Sync(-1f, wanted: false);
+            Assert.That(bed.Level, Is.EqualTo(before).Within(1e-6f));
+        }
+
+        [Test]
         public void ACloneWithNoMenuRowIsSilentRatherThanBroken()
         {
             // The bargain every other piece of presentation makes about assets that are not

@@ -5,7 +5,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// Riding along with one colonist (design 56): whether the view is locked to somebody, who,
+    /// Riding along with one colonist (design 57): whether the view is locked to somebody, who,
     /// how far back the camera stands, and where the player has turned it to look.
     ///
     /// <para><b>A spectator, never a driver</b> (owner, 2026-09-26: "watch only"). Nothing here
@@ -29,7 +29,7 @@ namespace Odyssey.Hud
         /// <summary>Where a ride starts: the fourth stop, 3.2 m behind her shoulder.</summary>
         public const int DefaultStop = 3;
 
-        /// <summary>How long the camera holds on the place she was after she is gone, in seconds (design 56 §5).</summary>
+        /// <summary>How long the camera holds on the place she was after she is gone, in seconds (design 57 §5).</summary>
         public const float LostHoldSeconds = 2f;
 
         /// <summary>How long after the mouse last moved the view starts to settle back behind her.</summary>
@@ -81,7 +81,7 @@ namespace Odyssey.Hud
         public int Serial { get; private set; }
 
         /// <summary>
-        /// Her card for the strip along the bottom of the screen (design 56 §6): her name, what
+        /// Her card for the strip along the bottom of the screen (design 57 §6): her name, what
         /// she is doing and her health, read by the same model that fills the inspect pane, so the
         /// two can never word the same colonist differently.
         /// </summary>

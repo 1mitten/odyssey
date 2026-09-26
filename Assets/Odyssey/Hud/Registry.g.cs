@@ -805,6 +805,7 @@ namespace Odyssey.Hud
             { "ui.settings.volume.master", "Master volume" },
             { "ui.settings.volume.music", "Music volume" },
             { "ui.settings.vsync", "VSync" },
+            { "ui.settings.wake", "Wake-up" },
             { "ui.settings.wallsdown", "Walls down" },
             { "ui.skill.animals", "Animals" },
             { "ui.skill.construction", "Construction" },

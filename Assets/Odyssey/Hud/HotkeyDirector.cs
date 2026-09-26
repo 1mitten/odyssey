@@ -311,15 +311,28 @@ namespace Odyssey.Hud
         /// binding, and while a field has the keyboard it belongs to the field, which is where
         /// that rule lives.</para>
         /// </summary>
-        public bool GameKeysLive => Listening == null && Typist == null && !Suspended;
+        public bool GameKeysLive => Listening == null && Typist == null && !Suspended && !HeldByRide;
 
         /// <summary>
-        /// The game's keys are held for a reason that is not a text field: riding along with a
-        /// colonist (design 56 §5), when the view is not the colony view and a tool key, a tab
-        /// key or the slice would act on a board the player cannot see. The ride reads the few
-        /// keys it keeps — time, and Escape — itself. Set and cleared by <see cref="HudDirectors"/>.
+        /// Whether something that is not a text field has taken the keys for a while — the wake
+        /// into a world (design 56), during which a press is a skip and nothing else. Its own flag
+        /// rather than a pretend typist, because a focus change must never clear it. While it is set
+        /// the shell reads <c>anyKey</c> by name — the one unbindable read besides Escape, the
+        /// capture and Shift, and harmless because it names no key (<c>HotkeyClashTests</c>).
         /// </summary>
         public bool Suspended { get; set; }
+
+        /// <summary>
+        /// The game's keys are held by First Person (design 57 §5): the view is not the colony view,
+        /// so a tool key, a tab key or the slice would act on a board the player cannot see. The
+        /// ride reads the few keys it keeps — time, and Escape — itself. Set and cleared by
+        /// <see cref="HudDirectors"/>.
+        ///
+        /// <para><b>Its own flag, not <see cref="Suspended"/>.</b> The wake holds that one across the
+        /// build of a new session, and a new <see cref="HudDirectors"/> clears a ride's hold; with one
+        /// flag for both, every wake handed the player live keys under its curtain half way through.</para>
+        /// </summary>
+        public bool HeldByRide { get; set; }
 
         /// <summary>
         /// Take the keyboard for a text field. Idempotent, and a second field taking it from the

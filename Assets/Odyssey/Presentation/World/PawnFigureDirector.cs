@@ -1270,7 +1270,7 @@ namespace Odyssey.Presentation.World
 
         /// <summary>
         /// The colonist whose head is taken out of the picture, or none: set by a ride whose camera
-        /// is at, or pushed up against, her eyes (design 56 §4).
+        /// is at, or pushed up against, her eyes (design 57 §4).
         ///
         /// <para><b>Why the head goes rather than being looked past.</b> The face is part of the one
         /// skinned body and its ink hull is drawn with front faces culled, so a camera inside the

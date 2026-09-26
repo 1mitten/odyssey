@@ -48,6 +48,9 @@ namespace Odyssey.Tests.PlayMode
             }
 
             shell = bootObject.AddComponent<HudShell>();
+            // Every clock of the wake at nought (design 56): a test that presses Start still sees
+            // the black frames and the cover, which are frames, but not five seconds of dream.
+            shell.WakeTiming = Odyssey.Hud.WakeTiming.Instant;
 #if UNITY_EDITOR
             shell.hudStyles = UnityEditor.AssetDatabase.LoadAssetAtPath<StyleSheet>(StylesPath);
 #endif

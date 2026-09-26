@@ -7,7 +7,7 @@ with a melee, walking etc and a more close up way to see action. Please explore 
 me questions."*
 
 The questions and the owner's answers are at the end (§5). The design document
-(`docs/design/56-ride-along.md`, name provisional) is written from them.
+(`docs/design/57-ride-along.md`, name provisional) is written from them.
 
 ## 1. Does it already exist?
 
@@ -168,4 +168,4 @@ Still open: **the name** (Q5). The §4 assumptions stand unless the owner overtu
 - **The rebindable key was deferred**, to keep the settings layout untouched without a Unity run.
 - **The card's dead Prioritise placeholder was removed** to make room for the button.
 
-Design: `docs/design/56-ride-along.md`.
+Design: `docs/design/57-ride-along.md`.

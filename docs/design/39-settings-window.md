@@ -106,6 +106,10 @@ is left alone: its choices are the machine's. Keys keeps the hotkey director's o
   "..." in the accent. **Backspace clears the slot that is listening** (`HotkeyDirector.ClearListening`)
   — new, because the footer's hint promises it and nothing did it.
 
+- **Wake-up** (2026-09-26, design 56 §9): Interface → Camera, a two-segment On / Off under the
+  camera speed. A segmented control rather than a switch because every row on the Interface tab is
+  one.
+
 ## 7. The keyboard
 
 Tab walks the window; Up and Down step between rows; Left and Right move along a segmented control

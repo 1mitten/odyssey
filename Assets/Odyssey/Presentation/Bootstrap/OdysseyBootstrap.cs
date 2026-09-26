@@ -594,6 +594,18 @@ namespace Odyssey.Presentation.Bootstrap
 
         /// <summary>The key bindings, for the life of the game rather than of a colony.</summary>
         public HotkeyDirector Keys { get; } = new HotkeyDirector();
+
+        /// <summary>
+        /// Whether the colony's clock is held — the wake into a world, which keeps it paused until
+        /// the player's eyes are open (design 56 §7). A gate on the tick loop, deliberately not a
+        /// speed: the world's own speed is untouched, so a loaded colony resumes at the speed it was
+        /// saved at and nothing about the hold reaches a save.
+        /// </summary>
+        public bool ClockHeld { get; set; }
+
+        /// <summary>Whether the player has pressed Start and the menu is on its way out, so its bed
+        /// should leave now rather than when the world exists (design 56 §5).</summary>
+        public bool MenuLeaving { get; set; }
         public WorldRenderModel? Model => _model;
         public ChunkRenderer? Renderer => _renderer;
 
@@ -1287,7 +1299,10 @@ namespace Odyssey.Presentation.Bootstrap
 
             if (_world == null) return;
 
-            int speed = _world.GameSpeed;
+            // The wake holds the colony until the player's eyes are open (design 56 §7): a gate on
+            // the clock, never a written speed, so nothing about it can be saved, remembered by
+            // the speed control or undone by the pause toggle.
+            int speed = ClockHeld ? 0 : _world.GameSpeed;
             _tickMs = 0d;
             if (speed > 0)
             {
@@ -1519,12 +1534,14 @@ namespace Odyssey.Presentation.Bootstrap
             // on: no world, nothing rendered, and a title screen that still wants a bed under it.
             // Unscaled, because a fade that is part of the interface must not care that the game
             // behind it is paused or running at six times speed.
-            _menuBed?.Sync(Time.unscaledDeltaTime, wanted: _world == null);
+            // MenuLeaving: the bed goes when Start is pressed, with the menu, not when the world
+            // it hands over to exists a second later (design 56 §5).
+            _menuBed?.Sync(Time.unscaledDeltaTime, wanted: _world == null && !MenuLeaving);
 
             if (_renderer == null || _model == null || _world == null) return;
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;
             SliceSettings slice = cameraRig != null ? cameraRig.slice : new SliceSettings();
-            // Riding along with a colonist (design 56 §4) draws the building as it is: walls up
+            // Riding along with a colonist (design 57 §4) draws the building as it is: walls up
             // whatever the player chose for the colony view, which comes back when the ride ends.
             bool riding = cameraRig != null && cameraRig.Riding;
             slice.wallsLowered = !riding && WallsLoweredNow();
@@ -1536,7 +1553,7 @@ namespace Odyssey.Presentation.Bootstrap
             _sectionTimer.Restart();
 
             // A ride's camera is stood here, first, because everything below reads the camera: the
-            // viewer position, the frustum and the sight lines (design 56 §3).
+            // viewer position, the frustum and the sight lines (design 57 §3).
             PlaceRide(_world.Views.Current);
 
             // The rig sits on the camera, so its position is the viewer's.
@@ -2946,7 +2963,7 @@ namespace Odyssey.Presentation.Bootstrap
         static readonly Color CutColour = new Color(0.86f, 0.87f, 0.90f, 0.30f);
 
         /// <summary>
-        /// Stand a ride's camera (design 56 §3) from where her figure was last drawn, and take her
+        /// Stand a ride's camera (design 57 §3) from where her figure was last drawn, and take her
         /// head away while the camera is against it (§4). Nothing, and the head given back, when no
         /// ride is running.
         ///
@@ -3042,7 +3059,7 @@ namespace Odyssey.Presentation.Bootstrap
             // Lines past this point fade only trees and bushes (SightLines.Primary).
             _sight.Primary = _sight.Count;
 
-            // The colonist a ride is watching (design 56 §4): trees and bushes between the camera
+            // The colonist a ride is watching (design 57 §4): trees and bushes between the camera
             // and her fade, as they do for the selection. Past the primaries, because a wall beside
             // her must not fade — the ride's camera is kept out of walls rather than seeing through
             // them — and a ride clears the selection, so she is never both.

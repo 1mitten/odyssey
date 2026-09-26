@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 namespace Odyssey.Presentation.Ui
 {
     /// <summary>
-    /// Riding along with a colonist (design 56 §6): while a ride runs the whole in-game interface
+    /// Riding along with a colonist (design 57 §6): while a ride runs the whole in-game interface
     /// is put away and one strip along the bottom says who is being watched, what she is doing,
     /// how hurt she is, how fast time is running and how to leave. The owner, 2026-09-26: a minimal
     /// strip.

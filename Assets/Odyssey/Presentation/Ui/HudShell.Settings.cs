@@ -53,6 +53,7 @@ namespace Odyssey.Presentation.Ui
         readonly Dictionary<int, Label> _cameraRungs = new();
         readonly Dictionary<BuildPaletteLayout, Label> _layoutRungs = new();
         readonly Dictionary<SelectionStyle, Label> _selectionRungs = new();
+        readonly Dictionary<bool, Label> _wakeRungs = new();
         readonly Dictionary<GraphicsOption, SwitchView> _settingRows = new();
 
         /// <summary>One rank of segments per number ladder, so a value that moves lights its own
@@ -497,7 +498,8 @@ namespace Odyssey.Presentation.Ui
                     percent => _directors?.Settings.SetUiScale(percent),
                     _scaleRungs, numeric: true));
 
-            Row(Section(cols[0], SettingsTab.Interface, SettingsLayout.CameraGroupKey), SettingsDirector.CamSpeedKey,
+            VisualElement cameraGroup = Section(cols[0], SettingsTab.Interface, SettingsLayout.CameraGroupKey);
+            Row(cameraGroup, SettingsDirector.CamSpeedKey,
                 Segmented(SettingsDirector.CameraSpeeds,
                     // "x" rather than the multiplication sign: the window is ASCII (design 39 §2).
                     percent => (percent / 100f).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "x",
@@ -508,6 +510,17 @@ namespace Odyssey.Presentation.Ui
                             : "Faster, for crossing the map",
                     percent => _directors?.Settings.SetCameraSpeed(percent),
                     _cameraRungs, numeric: true));
+
+            // How a colony is entered (design 56 §9): waking into it, or a plain fade. Under the
+            // camera because the camera settling is half of what it is.
+            Row(cameraGroup, SettingsDirector.WakeUpKey,
+                Segmented(SettingsDirector.WakeUpRungs,
+                    on => on ? "On" : "Off",
+                    on => on
+                        ? "Blurred, warm and muffled, clearing over five seconds. Any key wakes you. The default"
+                        : "A plain fade from black",
+                    on => _directors?.Settings.SetWakeUp(on),
+                    _wakeRungs, numeric: false));
 
             // The same control exists inside the palette's own header, and both write the one
             // preference on SettingsDirector: a switcher in a panel header is findable only by
@@ -1280,6 +1293,8 @@ namespace Odyssey.Presentation.Ui
         void OnBuildLayoutChanged(BuildPaletteLayout layout) => LightRung(_layoutRungs, layout);
 
         void OnSelectionStyleChanged(SelectionStyle style) => LightRung(_selectionRungs, style);
+
+        void OnWakeUpChanged(bool on) => LightRung(_wakeRungs, on);
 
         /// <summary>A number ladder moved: light its segment, and re-answer the two questions one
         /// ladder asks of another — the frame cap behind VSync, the resolution behind the mode.</summary>

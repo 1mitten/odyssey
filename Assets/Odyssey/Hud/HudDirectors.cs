@@ -40,7 +40,7 @@ namespace Odyssey.Hud
         public AlmanacDirector Almanac { get; } = new AlmanacDirector();
 
         /// <summary>
-        /// Riding along with one colonist (design 56). Session state, likewise: a ride belongs to
+        /// Riding along with one colonist (design 57). Session state, likewise: a ride belongs to
         /// the colony it was begun in and a new session starts with none.
         /// </summary>
         public RideDirector Ride { get; } = new RideDirector();
@@ -101,14 +101,14 @@ namespace Odyssey.Hud
             Slice.Bind(layerCount, startLayer);
             Slice.LayerChanged += _ => Selection.OnLayerChanged();
 
-            // The keys are held while a ride runs (design 56 §5), and the preferences they live in
+            // The keys are held while a ride runs (design 57 §5), and the preferences they live in
             // outlive a session: a colony left mid-ride must not hand the next one a keyboard that
             // answers nothing.
-            Hotkeys.Suspended = false;
+            Hotkeys.HeldByRide = false;
         }
 
         /// <summary>
-        /// Ride along with a colonist (design 56): the First Person button on her card. The ride
+        /// Ride along with a colonist (design 57): the First Person button on her card. The ride
         /// takes the view, so what stood in it is put aside — the selection (her own outline and
         /// brackets would be drawn over the shot, and a selected colonist's sight line fades walls
         /// beside her), any armed tool, and the game's keys other than time and Escape — and the
@@ -124,7 +124,7 @@ namespace Odyssey.Hud
             Designate.Tool = DesignateTool.None;
             Camera.Cancel();
             Selection.Clear();
-            Hotkeys.Suspended = true;
+            Hotkeys.HeldByRide = true;
             if (snapshot.TryGetPawn(id, out PawnView view)) Slice.SetLayer(view.Cell.Y);
             return true;
         }
@@ -157,7 +157,7 @@ namespace Odyssey.Hud
             if (!Ride.Riding) return;
             PawnId id = Ride.Pawn;
             Ride.End();
-            Hotkeys.Suspended = false;
+            Hotkeys.HeldByRide = false;
             Slice.SetLayer(_rideReturnLayer);
             if (snapshot.TryGetPawn(id, out _)) Selection.Choose(id);
         }

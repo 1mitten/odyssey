@@ -184,6 +184,10 @@ namespace Odyssey.Tests.PlayMode
                 yield return Settle();
 
                 Assert.That(shell.Menu.Start(), Is.True);
+                // Not on the press: the menu fades to black first and the build waits for the
+                // black to have been drawn (design 56 §3), so the long frame freezes on black.
+                Assert.That(boot.HasSession, Is.False, "the world was built on the press frame, over the menu");
+                for (int frame = 0; frame < 10 && !boot.HasSession; frame++) yield return null;
                 Assert.That(boot.HasSession, Is.True, "Start built no world");
                 var built = boot.World;
                 Assert.That(shell.CurtainUp, Is.True, "the new world was shown at once, with no frames behind a cover");
@@ -194,7 +198,7 @@ namespace Odyssey.Tests.PlayMode
                 shell.Menu.Start();
                 Assert.That(boot.World, Is.SameAs(built), "a second press built a second world");
 
-                for (int frame = 0; frame < HudShell.CurtainFrames + 1; frame++) yield return null;
+                for (int frame = 0; frame < HudShell.CurtainFrames + 2; frame++) yield return null;
 
                 Assert.That(shell.CurtainUp, Is.False, "the curtain never lifted");
                 Assert.That(Shown(doc.rootVisualElement.Q("curtain")), Is.False, "the curtain is still up over the colony");
@@ -203,6 +207,52 @@ namespace Odyssey.Tests.PlayMode
             }
             finally
             {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// <b>A loaded world is covered exactly like a new one.</b> A load raises
+        /// <c>SessionChanged</c> twice in one frame — the build, then the save read into it — and
+        /// the second raise used to lift the curtain on the build frame, because the first had
+        /// already hidden the backdrop it decided by (docs/bug-patterns.md, "An event raised
+        /// twice in one frame"). The test above presses New game, which raises once, and so could
+        /// never see it.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ALoadedWorldIsCoveredLikeANewOne()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell shell);
+            string folder = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(), "odyssey-load-curtain-" + System.Guid.NewGuid());
+            try
+            {
+                yield return Settle();
+                Assert.That(boot.HasSession, Is.True);
+                System.IO.Directory.CreateDirectory(folder);
+                string path = System.IO.Path.Combine(folder, "cover" + SaveCatalogue.Extension);
+                boot.SaveSession(path);
+
+                boot.TeardownSession();
+                yield return Settle();
+                var doc = boot.GetComponent<UIDocument>();
+                Assume.That(Shown(doc.rootVisualElement.Q("backdrop")), Is.True, "the title screen is not up");
+
+                boot.LoadSession(path);
+                Assert.That(boot.HasSession, Is.True, "the load built no world");
+                Assert.That(shell.CurtainUp, Is.True,
+                    "the loaded world was shown on its build frame: the second SessionChanged lifted the cover");
+                Assert.That(Shown(doc.rootVisualElement.Q("curtain")), Is.True, "the curtain is not on screen");
+
+                for (int frame = 0; frame < HudShell.CurtainFrames + 1; frame++) yield return null;
+                Assert.That(shell.CurtainUp, Is.False, "the curtain never lifted over a loaded colony");
+                Assert.That(Shown(doc.rootVisualElement.Q("curtain")), Is.False);
+            }
+            finally
+            {
+                if (System.IO.Directory.Exists(folder))
+                    System.IO.Directory.Delete(folder, recursive: true);
                 Object.Destroy(root);
             }
         }

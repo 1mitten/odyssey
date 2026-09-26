@@ -4,7 +4,7 @@ using System;
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// Where the camera stands while it rides with a colonist (design 56 §3): what the camera
+    /// Where the camera stands while it rides with a colonist (design 57 §3): what the camera
     /// must know about her this frame.
     /// </summary>
     public readonly struct RideFrame
@@ -73,7 +73,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// How far the camera came out from her eyes, in metres. What the presentation reads to
-        /// decide whether her head is in the way (design 56 §4): at the eye stop, and wherever a
+        /// decide whether her head is in the way (design 57 §4): at the eye stop, and wherever a
         /// wall has pushed the camera up against her.
         /// </summary>
         public readonly float FromEyes;
@@ -81,7 +81,7 @@ namespace Odyssey.Hud
 
     /// <summary>
     /// The chase camera's geometry, engine-free so every rule in it is a fast-tier test
-    /// (design 56 §3).
+    /// (design 57 §3).
     ///
     /// <para><b>Behind the shoulder, not behind the head.</b> A camera straight behind a colonist
     /// puts her body over the middle of the screen, which is exactly where whatever she is
@@ -114,7 +114,7 @@ namespace Odyssey.Hud
         public const float ShoulderRight = 0.6f;
 
         /// <summary>
-        /// How far in front of her eyes the eye stop is. Her head is taken away there (design 56
+        /// How far in front of her eyes the eye stop is. Her head is taken away there (design 57
         /// §4), and this keeps the neck, which is not, out of the near plane.
         /// </summary>
         public const float EyeForward = 0.18f;

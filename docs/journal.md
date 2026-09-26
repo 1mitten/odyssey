@@ -13922,6 +13922,42 @@ and saved nowhere, so a loaded world stood in its build's sky until the next bou
 `main` for every save, and was fixed here because the raid test cannot pass without it. The lesson
 is in `docs/bug-patterns.md`: a value one system writes into another is derived state no section owns.
 
+## 2026-09-26 — Waking into the world
+
+The owner asked for the jump from the menu into a colony to stop feeling like loading: fade the menu
+out, then open on the world as waking from sleep — blurred, the sound closed and distant — coming
+into focus. Asked four things and answered: five seconds, the camera settles, the colony holds until
+the eyes are open, New game and Load alike, soft and warm. Design 56.
+
+**Reading the code first found two faults that were there already**, and they went in as their own
+PR before the feature (`claude/load-curtain`). A load was never covered: `LoadSession` raises
+`SessionChanged` twice in one frame and the second raise asked a question — is the title screen
+showing? — that the first had just answered no to, so it lifted the cover on the build frame. And the
+menu's bed faded on the unclamped real-time delta, so the frame after a one-second build took a
+quarter of its fade in one step. The first is now a bug-patterns row.
+
+**The move that makes it seamless is small**: the world is still built in one frame and still handed
+over in that frame, behind an opaque cover — the order design 38 §25b measured to be the only cheap
+one — but the *request* for the build now waits until the screen has been drawn black twice. The
+freeze is still there; it is black.
+
+**The plan's blur was wrong, and the source said so before any probe.** It proposed URP's Bokeh
+depth of field with a 4K shot against Gaussian as the tie-breaker. URP's own constants settle it:
+Bokeh's radius is capped at twenty pixels of the screen's height and Gaussian's at 1.5, so at 4K both
+are a soft picture rather than sleep, and depth of field has never been used here, so a player build
+would have stripped it. The blur is a small dual-filter pass of our own, injected from
+`beginCameraRendering` for the five seconds and gone after, its depth chosen from the screen height.
+
+**Two decisions to keep.** The hold is a gate on the tick loop and never a speed, so it cannot be
+saved, remembered as the player's pause, or reorder against a load's own speed restore. And the
+dream's volume overrides only the numbers it moves: `Add<T>(overrides: true)`, which the storm's
+volume uses, would have swapped the golden hour's un-blendable bloom and vignette settings for URP's
+defaults the moment the weight left nought.
+
+Written in a container with no Unity: the model and its setting are proven in the fast tier; the
+engine half is uncompiled and owes both Unity tiers, a player build and the hitch tour's mid-wake
+picture before it merges (design 56 §11).
+
 ## 2026-09-26 — Riding along with a colonist
 
 The owner asked for a first-person mode opened from the colonist card, *"locked until esc"*, to see
@@ -13931,7 +13967,7 @@ the one skinned body whose ink hull goes solid black from inside. So from her ey
 end of her own swing at most, and only a camera outside her shows her fighting. The owner took all
 four recommendations: behind the shoulder with the wheel in to the eyes, watch only, a minimal
 strip, time untouched. "Implement" came without a name, so it is **Ride along** until they say
-otherwise (design 56 §1).
+otherwise (design 57 §1).
 
 Three decisions are worth keeping:
 
@@ -13952,13 +13988,29 @@ shipped. A fourth labelled button would have run her unwrapping name under the b
 **Built in a container with no .NET SDK and no Unity.** The Microsoft download host is refused by
 the network policy. So neither the fast tier nor the Presentation compile has run here, and the
 first compile of this branch is its CI run. The frame at a level view is unmeasured and owed
-(design 56 §7).
+(design 57 §7).
 
 ### 2026-09-26 — the mode is called First Person
 
 The owner, before the first play: *"call this Mode 'First Person' Not go along with the ride"*. The
 label of `ui.command.ride` is **First Person**, in their casing, although the registry is otherwise
-sentence case. Design 56 had argued against the name because the default view is over her shoulder
+sentence case. Design 57 had argued against the name because the default view is over her shoulder
 rather than from her eyes; the owner has decided, and the wheel's eye stop is still one scroll away.
 Only the label moved: the key, `RideDirector`, `RideCamera` and the design's file name keep *ride*,
 because a key is stable and renaming the internals is churn with no player-facing effect.
+
+### 2026-09-26 — merging the wake: one flag with two owners, and design 57
+
+`main` gained the wake into a world (#240, #241) while First Person waited, and both had reached for
+`HotkeyDirector.Suspended` to hold the game's keys. Git saw only two doc comments disagreeing. The
+fault under them was real: the wake sets the flag at the press of Start and holds it while the
+world is built, and building the world constructs a new `HudDirectors`, whose constructor cleared
+the flag so a colony left mid-ride would not hand the next one a dead keyboard. Merged as one flag,
+**every wake would have handed the player live keys under its curtain half way through**. The ride
+now holds its own, `HotkeyDirector.HeldByRide`, which `GameKeysLive` reads beside `Suspended`, and
+`RideTests.ANewSessionDoesNotReleaseTheWakesHold` is the assertion. It is the register's first
+pattern again: one rule with two owners, found only because the two owners met in a merge.
+
+The wake also reached `main` as design 56 first, so the ride is **design 57**
+(`docs/design/57-ride-along.md`), by the precedent cover set when the birds took 50. Only the
+lines this branch wrote were renumbered; the wake's references to 56 are its own.

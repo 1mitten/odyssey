@@ -1728,7 +1728,7 @@ namespace Odyssey.Hud
         public const string DraftKey = "ui.command.draft", UndraftKey = "ui.command.undraft";
 
         /// <summary>
-        /// First Person (design 56): the view locked behind her shoulder until Escape. Public for the
+        /// First Person (design 57): the view locked behind her shoulder until Escape. Public for the
         /// same reason as the draft's keys: the shell that draws the button has to know it is live.
         /// </summary>
         public const string RideKey = "ui.command.ride";
@@ -1754,7 +1754,7 @@ namespace Odyssey.Hud
             });
             // Prioritise stood here, dimmed, promising "job priorities arrive with the work grid
             // (M7)". The work grid has arrived and holds the priorities; a forced "do this next" is
-            // the right-click menu's. Taken out when First Person needed its room (design 56 §6), on
+            // the right-click menu's. Taken out when First Person needed its room (design 57 §6), on
             // the rule the store's dead Rename went by: an affordance for something that does not
             // exist is worse than a gap.
             // Live since the draft (design 33 §2f). One button with two faces, as the reference
@@ -1776,7 +1776,7 @@ namespace Odyssey.Hud
                 Enabled = !Tombstoned,
                 Reason = ResponseModel.Describe(response),
             });
-            // First Person (design 56), after the two that command her: this one only watches. Last,
+            // First Person (design 57), after the two that command her: this one only watches. Last,
             // so the response keeps its place beside Draft.
             Commands.Add(new InspectCommand
             {

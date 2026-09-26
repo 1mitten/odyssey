@@ -2834,6 +2834,15 @@
     background-color: #05070a;
 }
 
+/* The veil (design 56): the dark the menu fades into and the colony wakes out of. Warm black, the
+   dark behind closed eyes rather than a second copy of the menu's picture. Its opacity is set from
+   code by the wake; the older three-frame cover shows it opaque. */
+.curtain {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgb(6, 5, 4);
+}
+
 /* Everything that only means anything with a colony running. One container so it can be put away
    as one thing: half these regions set display in code, and an inline style beats a rule here. */
 .worldui {
@@ -3818,7 +3827,7 @@
     background-color: rgba(12, 16, 20, 0.96);
 }
 
-/* ---------------------------------------------------------------- riding along (design 56 §6)
+/* ---------------------------------------------------------------- riding along (design 57 §6)
 
    The whole interface while the view rides with a colonist: one strip, bottom centre, over the
    picture rather than framing it. Who, what she is doing, her health, the speed and the way out,

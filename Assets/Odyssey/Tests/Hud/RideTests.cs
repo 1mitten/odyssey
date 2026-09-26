@@ -6,7 +6,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// Riding along with a colonist (design 56): who can be ridden with, what a ride puts aside
+    /// Riding along with a colonist (design 57): who can be ridden with, what a ride puts aside
     /// and gives back, how it follows her and how it ends. The owner, 2026-09-26: <i>"This will lock
     /// the user into a fps mode until they push esc."</i>
     /// </summary>
@@ -185,6 +185,38 @@ namespace Odyssey.Tests.Hud
             Assert.That(hotkeys.GameKeysLive, Is.True);
         }
 
+        /// <summary>
+        /// The wake into a world holds the keys across the build of the new session, and that build
+        /// constructs a new <see cref="HudDirectors"/>, which gives back a ride's hold. The two holds
+        /// are separate flags, or every wake would hand the player live keys under its curtain.
+        /// </summary>
+        [Test]
+        public void ANewSessionDoesNotReleaseTheWakesHold()
+        {
+            var settings = new SettingsDirector();
+            var hotkeys = new HotkeyDirector { Suspended = true };
+            Assert.That(hotkeys.GameKeysLive, Is.False, "the control: the wake holds them");
+
+            _ = new HudDirectors(4, 1, settings, hotkeys);
+            Assert.That(hotkeys.GameKeysLive, Is.False, "building the session released the wake's hold");
+            Assert.That(hotkeys.Suspended, Is.True);
+        }
+
+        /// <summary>A ride's hold and the wake's are separate: ending one leaves the other alone.</summary>
+        [Test]
+        public void EndingARideLeavesTheWakesHoldAlone()
+        {
+            var settings = new SettingsDirector();
+            var hotkeys = new HotkeyDirector();
+            var directors = new HudDirectors(4, 1, settings, hotkeys);
+            Assert.That(directors.BeginRide(Ada, Frame()), Is.True);
+            hotkeys.Suspended = true;
+            directors.EndRide(Frame());
+            Assert.That(hotkeys.GameKeysLive, Is.False, "leaving the ride released a hold it did not take");
+            hotkeys.Suspended = false;
+            Assert.That(hotkeys.GameKeysLive, Is.True);
+        }
+
         /// <summary>Escape means leaving the ride and nothing else while one runs, whatever else is open.</summary>
         [Test]
         public void EscapeLeavesTheRideBeforeAnythingElse()
@@ -281,7 +313,7 @@ namespace Odyssey.Tests.Hud
         }
     }
 
-    /// <summary>The chase camera's geometry (design 56 §3), without a camera.</summary>
+    /// <summary>The chase camera's geometry (design 57 §3), without a camera.</summary>
     public class RideCameraTests
     {
         const float Eps = 1e-3f;

@@ -10,7 +10,7 @@ using UnityEngine.InputSystem;
 namespace Odyssey.Presentation.CameraRig
 {
     /// <summary>
-    /// Riding along with a colonist (design 56): the rig's half. What is decided — who, how far
+    /// Riding along with a colonist (design 57): the rig's half. What is decided — who, how far
     /// back, where the player has looked, when it ends — is <see cref="RideDirector"/>'s and is
     /// tested without a camera; where the camera stands for that is <see cref="RideCamera"/>'s,
     /// likewise. This half reads the mouse and the time keys, puts the colony view's drawing
@@ -62,7 +62,7 @@ namespace Odyssey.Presentation.CameraRig
         /// How far the camera stood from her eyes on the last frame it was placed, in metres
         /// (<see cref="RidePose.FromEyes"/>). The composition root takes her head away below
         /// <see cref="HeadClearMetres"/>, because a camera inside it sees the ink hull as solid
-        /// black (design 56 §4).
+        /// black (design 57 §4).
         /// </summary>
         public float RideFromEyes { get; private set; } = float.MaxValue;
 
@@ -135,7 +135,7 @@ namespace Odyssey.Presentation.CameraRig
             ResolvePointer();
             _hasPointerCell = false;
 
-            // The building as it is (design 56 §4): the colony view cuts rooms open to be read from
+            // The building as it is (design 57 §4): the colony view cuts rooms open to be read from
             // above, and from beside her that is a house with no ceiling and a ghost for the rock
             // over a mine. Walls down is the composition root's to hold off, since it writes it
             // every frame.
@@ -237,7 +237,7 @@ namespace Odyssey.Presentation.CameraRig
         ///
         /// <para><paramref name="known"/> is false while the colonist has no position to give —
         /// before her figure exists, or once she has gone — and then the camera holds where it is,
-        /// which is the "holds on where she was" of design 56 §5.</para>
+        /// which is the "holds on where she was" of design 57 §5.</para>
         /// </summary>
         /// <param name="feet">Where she is drawn standing.</param>
         /// <param name="facingYaw">Which way she is drawn facing, in degrees.</param>
@@ -312,7 +312,7 @@ namespace Odyssey.Presentation.CameraRig
         /// <para><b>A door is not solid here</b>, although the picker counts it: she walks through
         /// doors, and a camera that treated the doorway she stands in as rock would collapse into
         /// her head on every threshold. Trees and bushes are not solid either; the sight lines fade
-        /// them instead (design 56 §4).</para>
+        /// them instead (design 57 §4).</para>
         /// </summary>
         bool RideBlocks(float x, float y, float z)
         {
