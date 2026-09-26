@@ -314,7 +314,7 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         static float BodyLength(PawnId who, WorldSnapshot snapshot, PawnFigureDirector? figures)
         {
-            if (who.IsValid && snapshot.TryGetPawn(who, out PawnView pawn) && pawn.IsAnimal
+            if (who.IsValid && snapshot.TryGetPawn(who, out PawnView pawn) && PawnFigureDirector.HasOwnBox(pawn)
                 && figures != null && figures.TryGetAnimalBox(who, out _, out Vector3 box))
                 return Mathf.Max(box.x, box.z);
             return BloodSpray.PersonLength;
@@ -325,8 +325,9 @@ namespace Odyssey.Presentation.Bootstrap
         {
             if (!who.IsValid || !snapshot.TryGetPawn(who, out PawnView pawn)) return PersonWoundHeight;
             if (pawn.IsDowned) return DownedWoundHeight;
-            if (pawn.IsAnimal)
-                return figures != null && figures.TryGetAnimalBox(who, out _, out Vector3 box) ? box.y * 0.6f : 0.4f;
+            if (PawnFigureDirector.HasOwnBox(pawn))
+                return figures != null && figures.TryGetAnimalBox(who, out _, out Vector3 box) ? box.y * 0.6f
+                    : pawn.IsAnimal ? 0.4f : PersonWoundHeight;
             return PersonWoundHeight;
         }
 
@@ -376,10 +377,10 @@ namespace Odyssey.Presentation.Bootstrap
             if (who.IsValid && snapshot.TryGetPawn(who, out PawnView pawn))
             {
                 layer = pawn.Cell.Y;
-                if (pawn.IsAnimal)
+                if (PawnFigureDirector.HasOwnBox(pawn))
                     height = figures != null && figures.TryGetAnimalBox(who, out _, out Vector3 box)
                         ? box.y + 0.4f
-                        : 1.0f;
+                        : pawn.IsAnimal ? 1.0f : WordLift;
                 if (pawn.IsDowned) height = 1.0f;
                 if (figures != null && figures.TryGetFeet(who, out Vector3 feet)) return feet;
                 return GroundRelief.Lift(CellMetrics.FloorCentre(pawn.Cell));

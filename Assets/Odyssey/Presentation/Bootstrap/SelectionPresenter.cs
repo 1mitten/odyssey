@@ -313,7 +313,7 @@ namespace Odyssey.Presentation.Bootstrap
                 // reach the wood, so the pose and the screen disagree by most of a stride exactly
                 // while a colonist is chopping — which is when the player is trying to click them.
                 Bounds bounds;
-                if (pawn.IsAnimal && _bootstrap?.Figures != null
+                if (global::Odyssey.Presentation.World.PawnFigureDirector.HasOwnBox(pawn) && _bootstrap?.Figures != null
                     && _bootstrap.Figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 place, out Vector3 animal))
                 {
                     // An animal is clicked through its own drawn box, the one the cursor draws

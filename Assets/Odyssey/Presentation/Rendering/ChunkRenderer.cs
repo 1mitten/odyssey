@@ -2234,6 +2234,9 @@ namespace Odyssey.Presentation.Rendering
                 // colonist's face, and a hog past the figure cap wearing one would be worse than
                 // a hog not drawn. A baked animal pose is a recorded gap, not an oversight.
                 if (pawns[i].IsAnimal) continue;
+                // Nor a hostile drawn as itself (design 62 §8): a butcher with a colonist's face
+                // would be worse than a butcher not drawn. The same recorded gap.
+                if (ModuleIds.Hostile(pawns[i].Kind).Length > 0) continue;
 
                 // Glide between cells rather than snapping. The simulation is discrete and
                 // integer, which determinism requires; this is a presentation facade over it,

@@ -186,6 +186,7 @@ namespace Odyssey.Hud
             { "ui.combat.shot.nosight", "No line of sight" },
             { "ui.combat.shot.outofrange", "Out of range" },
             { "ui.combat.shot.tohit", "to hit" },
+            { "ui.combat.slam", "Slam" },
             { "ui.combat.stunned", "Stunned" },
             { "ui.combat.unhurt", "Unhurt" },
             { "ui.combat.weapon", "Weapon" },

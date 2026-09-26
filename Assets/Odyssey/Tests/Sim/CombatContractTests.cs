@@ -518,6 +518,8 @@ namespace Odyssey.Tests.Sim
             // which reads this constant itself.
             Assert.That(CombatAspects.ResponseName, Is.EqualTo("odyssey.pawn.response"));
             Assert.That(CombatAspects.RescuePatientName, Is.EqualTo("odyssey.pawn.rescue.patient"));
+            // Design 62 §8: the butcher's telegraph.
+            Assert.That(CombatAspects.SweepFacingName, Is.EqualTo("odyssey.pawn.sweep.facing"));
         }
 
         /// <summary>

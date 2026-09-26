@@ -144,6 +144,7 @@ ui.combat.shot.above,from above,ui.combat,CB,"How much a shot coming down leaves
 ui.combat.shot.outofrange,Out of range,ui.combat,CB,"Too far for this gun"
 ui.combat.shot.nosight,No line of sight,ui.combat,CB,"Something solid is in the way"
 ui.combat.stunned,Stunned,ui.combat,CB,"Knocked senseless by a blunt blow, for a moment"
+ui.combat.slam,Slam,ui.combat,PB,"Flung into a wall or somebody standing there, and hurt by it"
 ui.combat.health,Health,ui.combat,CB,"Hit points left, out of the whole"
 ui.combat.dead,Dead,ui.combat,CB,"Gone. Lies where it fell"
 ui.combat.unhurt,Unhurt,ui.combat,CB,Not a mark on them

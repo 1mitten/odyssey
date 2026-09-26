@@ -14833,6 +14833,134 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+  - moduleId: odyssey.module.pawn.hostile.butcher
+    shape: 4
+    prefab: {fileID: 1024577810811178, guid: a744caf4676601646ab2385371d1d140, type: 3}
+    prefabName: SM_Chr_BR_PigButcher_01
+    prefabUnder: Assets/Synty/PolygonFantasyRivals
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 2, y: 2, z: 2}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.hostile.butcher.weapon
+    shape: 4
+    prefab: {fileID: 1574553127320600, guid: 77b19eccec82c1b4686ead7ab56da65b, type: 3}
+    prefabName: SM_Wep_PigButcher_01
+    prefabUnder: Assets/Synty/PolygonFantasyRivals
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    hopGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.animal.hog
     shape: 4
     prefab: {fileID: 919132149155446097, guid: 4a05467d051682c4788592b32f244768, type: 3}

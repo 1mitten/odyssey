@@ -24,6 +24,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(CombatAspectNames.OrderTarget, Is.EqualTo("odyssey.pawn.order.target"));
             Assert.That(CombatAspectNames.RescueNoBed, Is.EqualTo("odyssey.pawn.rescue.nobed"));
             Assert.That(CombatAspectNames.Response, Is.EqualTo("odyssey.pawn.response"));
+            Assert.That(CombatAspectNames.SweepFacing, Is.EqualTo("odyssey.pawn.sweep.facing"));
             Assert.That(CombatAspectNames.HpKey, Is.EqualTo(AspectKey.Of("odyssey.pawn.hp")));
         }
 

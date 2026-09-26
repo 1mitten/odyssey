@@ -99,5 +99,14 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const string CoverCrouchName = "odyssey.pawn.cover.crouch";
         public static readonly AspectKey CoverCrouch = AspectKey.Of(CoverCrouchName);
+
+        /// <summary>
+        /// A sweep winding up (design 62 §8): the facing it was wound up in, 1–8 (<see cref="SweepArc"/>),
+        /// while the swing is in the air; absent otherwise. What the telegraph draws the arc of three
+        /// from. Derived at publish from the swing already saved and hashed on the pawn, and never
+        /// kept itself; only a sweeping species ever has one, so no other pawn's rows moved.
+        /// </summary>
+        public const string SweepFacingName = "odyssey.pawn.sweep.facing";
+        public static readonly AspectKey SweepFacing = AspectKey.Of(SweepFacingName);
     }
 }

@@ -364,6 +364,35 @@ namespace Odyssey.Hud
             y = fromY * (fromY > 0f ? 1f - Down(seconds) : along);
         }
 
+        // ---- the fling (design 62 §8) ------------------------------------------------------
+
+        /// <summary>
+        /// How long a butcher's fling takes to draw, in seconds of game time: two cells, or a drop
+        /// of several layers, at the one-tile slide's quarter second would read as a teleport.
+        /// INVENTED; the first play says whether it reads as thrown.
+        /// </summary>
+        public const float FlingSeconds = 0.45f;
+
+        /// <summary>How high a fling lifts the body at its midpoint, in metres: a throw, not a shove. INVENTED.</summary>
+        public const float FlingArcMetres = 0.6f;
+
+        /// <summary>Is the slide of this length a fling — further than the one-tile knockback can go?</summary>
+        public static bool IsFling(float horizontal, float vertical, float cell, float layer) =>
+            horizontal > cell * 1.5f || (vertical < 0f ? -vertical : vertical) > layer * 1.5f;
+
+        /// <summary>
+        /// The slide over <paramref name="duration"/> with a lift of <paramref name="arc"/> metres at
+        /// its middle — <see cref="Seconds"/> and nought give exactly <see cref="Offset(float, float, float, float, out float, out float, out float)"/>.
+        /// </summary>
+        public static void Offset(float fromX, float fromY, float fromZ, float seconds, float duration, float arc,
+            out float x, out float y, out float z)
+        {
+            float scaled = duration > 0f ? seconds * Seconds / duration : Seconds;
+            Offset(fromX, fromY, fromZ, scaled, out x, out y, out z);
+            float t = Clamp01(scaled / Seconds);
+            y += arc * 4f * t * (1f - t);
+        }
+
         static float Clamp01(float v) => v < 0f ? 0f : v > 1f ? 1f : v;
     }
 }

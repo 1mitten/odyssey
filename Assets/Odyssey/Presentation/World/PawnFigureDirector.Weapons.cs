@@ -37,6 +37,12 @@ namespace Odyssey.Presentation.World
         /// <summary>Where a weapon is held, from its butt, as a fraction of its length. INVENTED.</summary>
         public const float WeaponGripFraction = 0.1f;
 
+        /// <summary>
+        /// The weapon "def" of a body's own weapon (<c>Look.HandProp</c>, design 62 §5): not an item,
+        /// so below every item index and apart from −1, bare hands.
+        /// </summary>
+        const int NaturalWeaponDef = -2;
+
         /// <summary>Live figures with a weapon prop showing, at the hip or in the hand. For tests.</summary>
         public int ArmedFigures
         {
@@ -67,7 +73,19 @@ namespace Odyssey.Presentation.World
                 && _frame.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponKey, out int held))
                 def = held;
 
+            // A body with a weapon of its own holds it whenever it holds no item (design 62 §5).
+            Look? own = LookAt(figure.Look);
+            bool natural = def < 0 && own != null && own.HandProp != null;
+            if (natural) def = NaturalWeaponDef;
+
             if (def != figure.WeaponDef) SwapWeapon(figure, def);
+            if (natural && figure.Weapon != null)
+            {
+                // Always in the fist: it is never sheathed, and on the ground it is not drawn.
+                bool inHand = figure.SleepWeight <= 0.001f && !pawn.IsDowned;
+                if (figure.Weapon.activeSelf != inHand) figure.Weapon.SetActive(inHand);
+                return;
+            }
             if (figure.Weapon == null)
             {
                 // Still stepped, so a weapon taken up mid-fight is drawn from the state it finds.
@@ -108,9 +126,17 @@ namespace Odyssey.Presentation.World
             figure.GunSlide = null;
             if (def < 0 || figure.RightHand == null) return;
 
-            string? module = ModuleIds.Item(def);
-            ModuleEntry? row = module != null && _catalogue != null ? _catalogue.Find(module) : null;
-            GameObject? prefab = row != null ? row.prefab : null;
+            GameObject? prefab;
+            if (def == NaturalWeaponDef)
+            {
+                prefab = LookAt(figure.Look)?.HandProp;
+            }
+            else
+            {
+                string? module = ModuleIds.Item(def);
+                ModuleEntry? row = module != null && _catalogue != null ? _catalogue.Find(module) : null;
+                prefab = row != null ? row.prefab : null;
+            }
             if (prefab == null) return;
 
             GameObject prop = Object.Instantiate(prefab, figure.RightHand);
