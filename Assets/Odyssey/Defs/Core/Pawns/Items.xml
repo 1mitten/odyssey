@@ -320,4 +320,38 @@
     </weapon>
   </ItemDef>
 
+  <!--
+    Deep mining's finds (design 62 §5c), appended after the pistol: handles 18 to 21. They stack
+    to 75 like the other ores, so a worked deposit comes up in a few hauls. Nothing consumes any
+    of them in this build - copper waits for the smelter (DM8), gold, gems and Emberquartz are
+    stored with their uses recorded (Q13).
+  -->
+  <ItemDef>
+    <defName>Item_CopperOre</defName>
+    <label>copper ore</label>
+    <stackLimit>75</stackLimit>
+    <category>Materials</category>
+  </ItemDef>
+
+  <ItemDef>
+    <defName>Item_GoldOre</defName>
+    <label>gold ore</label>
+    <stackLimit>75</stackLimit>
+    <category>Materials</category>
+  </ItemDef>
+
+  <ItemDef>
+    <defName>Item_Gems</defName>
+    <label>gems</label>
+    <stackLimit>75</stackLimit>
+    <category>Materials</category>
+  </ItemDef>
+
+  <ItemDef>
+    <defName>Item_Emberquartz</defName>
+    <label>Emberquartz</label>
+    <stackLimit>75</stackLimit>
+    <category>Materials</category>
+  </ItemDef>
+
 </Defs>

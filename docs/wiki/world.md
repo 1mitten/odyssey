@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006. The planet's biomes and terrain are proposals for veto (design 59): only Meadow can be settled until more art arrives.
 
-187 entries, 161 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+188 entries, 162 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -18,6 +18,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Rock** | `ui.terrain.rock` | Natural stone. Mined, not cleared <br>**Needs:** a face of natural stone | no art | M1 |
 | **Subsoil** | `ui.terrain.subsoil` | The band between soil and rock. Cheap to dig <br>**Needs:** a tile of dug earth | no art | M1 |
 | **Bedrock** | `ui.terrain.bedrock` | The floor of the world. Deliberately punitive to mine <br>**Needs:** a tile of dark, banded stone | no art | M1 |
+| **Deep stone** | `ui.terrain.deepstone` | The rock from about fourteen layers down. Twice the work of rock to cut, and it yields stone <br>**Needs:** a face of dense blue-grey stone | no art | M3 |
 | **Packed Gravel** | `ui.terrain.packedgravel` | Stony ground, packed hard. Firm footing, poor soil | no art | M3 |
 | **Birch** | `ui.terrain.tree.birch` | A slim white-barked tree. Quick to chop, not much wood in it <br>**Needs:** a slim pale-trunked tree | no art | M3 |
 | **Meadow tree** | `ui.terrain.tree.meadow` | A broad round-crowned tree of the open meadow. Chopped for wood <br>**Needs:** a round-crowned tree | no art | M3 |

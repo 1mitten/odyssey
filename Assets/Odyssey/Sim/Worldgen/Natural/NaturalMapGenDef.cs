@@ -97,7 +97,7 @@ namespace Odyssey.Sim.Worldgen.Natural
             looseRockNearPerMille = 0;
             looseRockOpenPerMille = 0;
             outcropsPer10000Columns = 0;
-            oreDepositsPer10000Columns = 0;
+            oreAbundancePerMille = 0;
             cavernsPer10000Columns = 0;     // the strata stay solid: a hole in them is a bug here
 
             // The cover pass keeps grass when `cover >= barePatchThreshold`, so zero keeps grass
@@ -183,6 +183,14 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// <summary>Layers of bedrock at the very bottom of the map.</summary>
         public int bedrockLayers = 2;
 
+        /// <summary>
+        /// Layers below the local surface at which deep stone begins (design 62 §5b): everything
+        /// from this depth down to the bedrock is deep stone rather than rock. Clamped into the
+        /// rock band, so a column too shallow to reach it keeps all its rock — every column of a
+        /// 16-layer board.
+        /// </summary>
+        public int deepStoneDepth = 14;
+
         // ---- pass 3, surface cover -----------------------------------------------------------
 
         /// <summary>
@@ -260,11 +268,14 @@ namespace Odyssey.Sim.Worldgen.Natural
         public int minOutcropHeight = 1;
         public int maxOutcropHeight = 3;
 
-        // ---- pass 7, ore ---------------------------------------------------------------------
+        // ---- pass 9, ore ---------------------------------------------------------------------
 
-        public int oreDepositsPer10000Columns = 70;
-        public int minOreBlob = 5;
-        public int maxOreBlob = 20;
+        /// <summary>
+        /// How much of each ore kind's own frequency this board carries, per mille (design 62
+        /// §5c). The frequencies, bands, shapes and sizes are the ore table's, in <c>Ores.xml</c>;
+        /// this is the board's one dial on them, and zero is no ore at all — the bare board.
+        /// </summary>
+        public int oreAbundancePerMille = 1000;
 
         // ---- pass 2, water -------------------------------------------------------------------
 
@@ -352,17 +363,34 @@ namespace Odyssey.Sim.Worldgen.Natural
         // ---- pass 8, caverns -------------------------------------------------------------------
 
         /// <summary>
-        /// Sealed voids in the rock, per ten thousand columns. Three puts four of them on the
-        /// played 120 x 120 board.
+        /// Sealed chambers in the rock, per ten thousand columns (design 62 §5d). Three puts four
+        /// of them on a 120 x 120 board.
         ///
         /// A cavern has **no mouth**: it is found by mining into it, which is the whole point of
         /// it (<c>docs/research/mining-interview.md</c>, answer 7). It is carved strictly inside
-        /// the rock band, so it never undermines the surface and never breaks into the bedrock.
+        /// the rock band, so it never undermines the surface and never breaks into the bedrock,
+        /// and every ceiling cell is left within <see cref="World.RockSpan.Cells"/> of a column
+        /// of rock standing to the floor, with pillars where the chamber is wider than that.
         /// </summary>
         public int cavernsPer10000Columns = 3;
 
-        public int minCavernCells = 6;
-        public int maxCavernCells = 20;
+        /// <summary>The cells a chamber aims for. A shallow board's thin rock band carves fewer.</summary>
+        public int minCavernCells = 300;
+        public int maxCavernCells = 1500;
+
+        /// <summary>Layers a chamber stands, floor to highest ceiling, before the rock band clips it.</summary>
+        public int minCavernHeight = 2;
+        public int maxCavernHeight = 4;
+
+        /// <summary>
+        /// The two depth bands a chamber's floor is drawn in, in layers below the local surface:
+        /// even-numbered chambers the upper, odd the lower. Clamped into the rock band where a
+        /// column does not reach, so a 16-layer board's chambers sit at the bottom of its rock.
+        /// </summary>
+        public int upperCavernMinDepth = 11;
+        public int upperCavernMaxDepth = 12;
+        public int lowerCavernMinDepth = 17;
+        public int lowerCavernMaxDepth = 18;
 
         // ---- pass 10, start -------------------------------------------------------------------
 
@@ -469,10 +497,16 @@ namespace Odyssey.Sim.Worldgen.Natural
                 throw new ArgumentOutOfRangeException(nameof(minOutcropRadius));
             if (minOutcropHeight < 1 || maxOutcropHeight < minOutcropHeight)
                 throw new ArgumentOutOfRangeException(nameof(minOutcropHeight));
-            if (minOreBlob < 1 || maxOreBlob < minOreBlob)
-                throw new ArgumentOutOfRangeException(nameof(minOreBlob));
+            if (oreAbundancePerMille < 0) throw new ArgumentOutOfRangeException(nameof(oreAbundancePerMille));
+            if (deepStoneDepth < 1) throw new ArgumentOutOfRangeException(nameof(deepStoneDepth));
             if (minCavernCells < 1 || maxCavernCells < minCavernCells)
                 throw new ArgumentOutOfRangeException(nameof(minCavernCells));
+            if (minCavernHeight < 1 || maxCavernHeight < minCavernHeight)
+                throw new ArgumentOutOfRangeException(nameof(minCavernHeight));
+            if (upperCavernMinDepth < 1 || upperCavernMaxDepth < upperCavernMinDepth)
+                throw new ArgumentOutOfRangeException(nameof(upperCavernMinDepth));
+            if (lowerCavernMinDepth < 1 || lowerCavernMaxDepth < lowerCavernMinDepth)
+                throw new ArgumentOutOfRangeException(nameof(lowerCavernMinDepth));
             if (startClearingRadius < 0) throw new ArgumentOutOfRangeException(nameof(startClearingRadius));
 
             if (pondsPer10000Columns < 0) throw new ArgumentOutOfRangeException(nameof(pondsPer10000Columns));

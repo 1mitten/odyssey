@@ -329,7 +329,10 @@ namespace Odyssey.Tests.Sim
         // The frog merged with cover, 2026-09-26: re-taken from the merged pack.
         // The frog merged with raids, 2026-09-26: the gunman keeps kind 4 and the frog moves to 5;
         // re-taken from the merged pack.
-        const ulong ContentFingerprint = 11744128507824195914UL;
+        // Deep mining (design 62 §5c, DM3): four items appended at 18 to 21 (copper ore, gold ore,
+        // gems, Emberquartz), and orePerCell left the tuning — what a seam yields is its own row
+        // in Ores.xml now, not one number for every ore. Taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 10466712034139107795UL;
 
 
         [Test]

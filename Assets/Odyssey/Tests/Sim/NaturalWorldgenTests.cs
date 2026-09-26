@@ -164,6 +164,12 @@ namespace Odyssey.Tests.Sim
                         Assert.That(terrain, Is.EqualTo(NaturalContent.TerrainBedrock));
                         bedrock++;
                     }
+                    else if (y < ctx.DeepStoneTopY[column])
+                    {
+                        // Deep stone, from deepStoneDepth below the surface (design 62 §5b).
+                        Assert.That(terrain, Is.EqualTo(NaturalContent.TerrainDeepStone));
+                        Assert.That(surface - y, Is.GreaterThanOrEqualTo(ctx.Gen.deepStoneDepth));
+                    }
                     else
                     {
                         Assert.That(terrain, Is.EqualTo(NaturalContent.TerrainRock));
@@ -410,7 +416,9 @@ namespace Odyssey.Tests.Sim
 
             // Most of the attempted deposits should land, even on a map shallower than the
             // deepest ore band: the band is clamped into the rock rather than abandoned.
-            int attempted = ctx.Columns * ctx.Gen.oreDepositsPer10000Columns / 10000;
+            int attempted = 0;
+            foreach (var ore in NaturalContent.Ores)
+                attempted += (ctx.Columns * ore.DepositsPer10000Columns + 5000) / 10000;
             Assert.That(result.OreDeposits.Count, Is.GreaterThan(attempted * 3 / 4),
                 $"only {result.OreDeposits.Count} of {attempted} deposits landed");
 
@@ -452,7 +460,7 @@ namespace Odyssey.Tests.Sim
                 var cell = ctx.Size.FromIndex(deposit.CellIndex);
                 int depth = ctx.SurfaceY[ctx.Column(cell.X, cell.Z)] - cell.Y;
                 if (deposit.Kind == 0) { ironDepth += depth; ironCount++; }
-                else { coalDepth += depth; coalCount++; }
+                else if (deposit.Kind == 1) { coalDepth += depth; coalCount++; }
             }
 
             Assert.That(ironCount, Is.GreaterThan(0));
@@ -601,7 +609,8 @@ namespace Odyssey.Tests.Sim
                 Assert.That(seen.Add(id), Is.True, $"duplicate module id {id}");
             }
 
-            Assert.That(NaturalContent.ModuleIds.Count, Is.EqualTo(14));
+            // Fourteen, and deep mining's five terrains (design 62 §5).
+            Assert.That(NaturalContent.ModuleIds.Count, Is.EqualTo(19));
         }
 
         [Test]

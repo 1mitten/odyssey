@@ -33,6 +33,9 @@ namespace Odyssey.Hud
             "ui.terrain.grass", "ui.terrain.bareearth", "ui.terrain.packedgravel", "ui.terrain.sand",
             "ui.terrain.subsoil", "ui.terrain.bedrock", "ui.res.ironore", "ui.res.coal",
             "ui.terrain.water.shallow", "ui.terrain.water.deep", "ui.terrain.marsh",
+            // Deep mining (design 62 §5), TerrainHandle 21 to 25. An ore terrain is named by its
+            // item's key, as iron and coal always were: one name for the seam and what it gives.
+            "ui.terrain.deepstone", "ui.res.copperore", "ui.res.goldore", "ui.res.gems", "ui.res.emberquartz",
         };
 
         public static string IconKey(int terrain) =>

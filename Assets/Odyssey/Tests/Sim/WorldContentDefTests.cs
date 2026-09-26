@@ -24,7 +24,7 @@ namespace Odyssey.Tests.Sim
     /// order moved would not merely retune the game: it would make every existing save read as a
     /// different world, silently, with grass where the water was. That is why
     /// <see cref="TheIndexOrderIsTheOneTheConstantsSay"/> exists and why it checks all
-    /// twenty-one names against the constants rather than spot-checking a few.</para>
+    /// twenty-six names against the constants rather than spot-checking a few.</para>
     ///
     /// <para><b>The fingerprint is not decoration, and it was measured rather than assumed.</b>
     /// The moment the generators started reading the XML, the old oracle became a comparison of
@@ -44,7 +44,9 @@ namespace Odyssey.Tests.Sim
         // U29 gave Rubble two flags: `buildable` false, so a collapse leaves a mess that has to be
         // cleared before anything is built where it fell, and `clearable` true, so a Mine order
         // can clear it although it is not solid. Rubble is the only terrain that sets either.
-        const ulong TerrainFingerprint = 7436477142659073776UL;
+        // DM3 (design 62 §5) appended five after Marsh: DeepStone (workToClear 1400, twice rock's),
+        // CopperOre 820, GoldOre 1100, Gems 1200 and Emberquartz 1600. No existing row moved.
+        const ulong TerrainFingerprint = 8771646294617608521UL;
 
         [Test]
         public void TheTerrainIsStillWhatItWas()
@@ -135,6 +137,11 @@ namespace Odyssey.Tests.Sim
                 (NaturalContent.TerrainShallowWater, "ShallowWater"),
                 (NaturalContent.TerrainDeepWater, "DeepWater"),
                 (NaturalContent.TerrainMarsh, "Marsh"),
+                (NaturalContent.TerrainDeepStone, "DeepStone"),
+                (NaturalContent.TerrainCopperOre, "CopperOre"),
+                (NaturalContent.TerrainGoldOre, "GoldOre"),
+                (NaturalContent.TerrainGems, "Gems"),
+                (NaturalContent.TerrainEmberquartz, "Emberquartz"),
             };
 
             Assert.That(WorldContent.TerrainOrder.Length, Is.EqualTo(NaturalContent.TerrainCount),
@@ -166,21 +173,84 @@ namespace Odyssey.Tests.Sim
                     $"terrain {i} loaded as '{table[i].defName}' but the order list says '{WorldContent.TerrainOrder[i]}'");
         }
 
+        /// <summary>
+        /// The ore table as it stands (design 62 §5c). It had two owners until DM3 — a table in
+        /// <c>NaturalContent</c> and this XML, with a test comparing them — and now has one, so it
+        /// is pinned the way the terrain is. Every number in it reshuffles every seeded map.
+        /// </summary>
+        // DM3: the table moved into Ores.xml whole — band, shape, size, frequency, yield and item —
+        // and copper, gold, gems and Emberquartz joined iron and coal.
+        const ulong OreFingerprint = 2994934247155920581UL;
+
+        static OreKindDef[] OreDefs(DefDatabase defs)
+        {
+            var table = new OreKindDef[WorldContent.OreOrder.Length];
+            for (int i = 0; i < table.Length; i++)
+            {
+                Assert.That(defs.Table<OreKindDef>().TryGetHandle(WorldContent.OreOrder[i], out var handle), Is.True,
+                    $"no ore named {WorldContent.OreOrder[i]}");
+                table[i] = defs.Table<OreKindDef>()[handle];
+            }
+            return table;
+        }
+
         [Test]
-        public void TheOreKindsAreTheSameInBothPlaces()
+        public void TheOresAreStillWhatTheyWere()
+        {
+            ulong actual = DefComparison.Fingerprint(OreDefs(LoadCore()), "Ore");
+
+            Assert.That(actual, Is.EqualTo(OreFingerprint),
+                "the ore table has moved. If that was deliberate, set OreFingerprint to " +
+                $"{actual}UL and say what changed. If it was not, " +
+                "`git diff Assets/Odyssey/Defs/Core/World/Ores.xml` is what moved.");
+        }
+
+        /// <summary>The control: one changed yield must move the ore fingerprint.</summary>
+        [Test]
+        public void TheOreFingerprintNoticesAChangedYield()
+        {
+            OreKindDef[] ores = OreDefs(LoadCore());
+            ulong before = DefComparison.Fingerprint(ores, "Ore");
+            ores[0].yieldPerCell += 1;
+            Assert.That(DefComparison.Fingerprint(ores, "Ore"), Is.Not.EqualTo(before));
+        }
+
+        /// <summary>
+        /// The ore table is the one owner of what an ore is: <see cref="NaturalContent.IsOre"/> and
+        /// <see cref="NaturalContent.OreKindOf"/> answer from it, and the running game reads the
+        /// same rows a fresh load does.
+        /// </summary>
+        [Test]
+        public void IsOreIsTheOreTable()
         {
             NaturalContent.OreKind[] fromXml = WorldContent.OresFromDefs(LoadCore());
-
             Assert.That(fromXml.Length, Is.EqualTo(NaturalContent.OreKindCount));
-            for (int i = 0; i < fromXml.Length; i++)
+            Assert.That(fromXml.Length, Is.EqualTo(6), "iron, coal, copper, gold, gems and Emberquartz");
+
+            var ores = new HashSet<ushort>();
+            for (int k = 0; k < fromXml.Length; k++)
             {
-                NaturalContent.OreKind expected = NaturalContent.OreAt(i);
-                Assert.That(fromXml[i].Terrain, Is.EqualTo(expected.Terrain), $"ore {i} is made of the wrong terrain");
-                Assert.That(fromXml[i].Weight, Is.EqualTo(expected.Weight), $"ore {i} weight");
-                Assert.That(fromXml[i].MinDepth, Is.EqualTo(expected.MinDepth), $"ore {i} minimum depth");
-                Assert.That(fromXml[i].MaxDepth, Is.EqualTo(expected.MaxDepth), $"ore {i} maximum depth");
-                Assert.That(fromXml[i].ModuleId, Is.EqualTo(expected.ModuleId), $"ore {i} module id");
+                ores.Add(fromXml[k].Terrain);
+                Assert.That(NaturalContent.OreKindOf(fromXml[k].Terrain), Is.EqualTo(k));
+                Assert.That(NaturalContent.OreAt(k).Terrain, Is.EqualTo(fromXml[k].Terrain));
             }
+
+            for (ushort t = 0; t < NaturalContent.TerrainCount; t++)
+                Assert.That(NaturalContent.IsOre(t), Is.EqualTo(ores.Contains(t)), $"terrain {WorldContent.TerrainOrder[t]}");
+
+            // Every ore is rock-like, by the one owner of that rule (design 62 §4): a kind added to
+            // Ores.xml without a word in TerrainHandle.IsRockLike would read "Dig" and host nothing.
+            for (int k = 0; k < fromXml.Length; k++)
+                Assert.That(TerrainHandle.IsRockLike(fromXml[k].Terrain), Is.True,
+                    $"{WorldContent.OreOrder[k]} is not rock-like");
+
+            // Host rock is rock-like with what cannot host a deposit taken out.
+            Assert.That(NaturalContent.IsHostRock(NaturalContent.TerrainDeepStone), Is.True);
+            Assert.That(NaturalContent.IsHostRock(CoreContent.TerrainRock), Is.True);
+            Assert.That(NaturalContent.IsHostRock(NaturalContent.TerrainBedrock), Is.False);
+            Assert.That(NaturalContent.IsHostRock(CoreContent.TerrainRubble), Is.False);
+            Assert.That(NaturalContent.IsHostRock(NaturalContent.TerrainIronOre), Is.False, "ore never grows over ore");
+            Assert.That(TerrainHandle.IsRockLike(NaturalContent.TerrainDeepStone), Is.True);
         }
 
         /// <summary>

@@ -7,7 +7,7 @@
   index, and WorldContentDefTests checks it against the constants in CoreContent and
   NaturalContent. The order below is the same one only so that the file reads as the table does.
 
-  The first ten are the ruined city's, the last eleven the wilderness's. They were two tables in
+  The first ten are the ruined city's, the rest the wilderness's (eleven, then deep mining's five). They were two tables in
   code because the two generators grew separately; they are one here because they are one array
   at runtime, which is what the TODO in NaturalContent asked for.
 
@@ -231,6 +231,58 @@
     <solid>true</solid>
     <workToClear>70</workToClear>
     <fertility>40</fertility>
+    <salvageWeight>0</salvageWeight>
+  </TerrainDef>
+
+  <!--
+    Deep mining (design 62 §5b, §5c), appended after Marsh so no index moves. Deep stone is the
+    rock below about fourteen layers under the local surface: the same stone, twice the work to
+    cut, so depth is paid for and the mining skill's steep curve matters down there. It yields
+    stone as rock does. The four ores after it are what the deep bands hold; each is described
+    in Ores.xml, which is the one table of what an ore is, where it lies and what it gives.
+  -->
+  <TerrainDef>
+    <defName>DeepStone</defName>
+    <label>deep stone</label>
+    <solid>true</solid>
+    <workToClear>1400</workToClear>
+    <fertility>0</fertility>
+    <salvageWeight>0</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>CopperOre</defName>
+    <label>copper ore</label>
+    <solid>true</solid>
+    <workToClear>820</workToClear>
+    <fertility>0</fertility>
+    <salvageWeight>0</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>GoldOre</defName>
+    <label>gold ore</label>
+    <solid>true</solid>
+    <workToClear>1100</workToClear>
+    <fertility>0</fertility>
+    <salvageWeight>0</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>Gems</defName>
+    <label>gems</label>
+    <solid>true</solid>
+    <workToClear>1200</workToClear>
+    <fertility>0</fertility>
+    <salvageWeight>0</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>Emberquartz</defName>
+    <label>Emberquartz</label>
+    <solid>true</solid>
+    <workToClear>1600</workToClear>
+    <fertility>0</fertility>
     <salvageWeight>0</salvageWeight>
   </TerrainDef>
 

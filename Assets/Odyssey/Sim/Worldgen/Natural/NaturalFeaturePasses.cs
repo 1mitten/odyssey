@@ -107,7 +107,7 @@ namespace Odyssey.Sim.Worldgen.Natural
         static void Uncover(NaturalGenContext ctx, int index)
         {
             ushort was = ctx.Grid.Terrain[index];
-            if (was == NaturalContent.TerrainRock) return;
+            if (NaturalContent.IsHostRock(was)) return;
 
             if (was == NaturalContent.TerrainGrass) ctx.Report.GrassCells--;
             else if (was == NaturalContent.TerrainBareEarth) ctx.Report.BareEarthCells--;
@@ -122,24 +122,36 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// <summary>
     /// Pass 8 — caverns.
     ///
-    /// Sealed voids in the rock. There is no entrance: nothing connects a chamber to the surface,
-    /// and the only way in is to mine into one, which is what makes digging downward exploration
-    /// rather than bookkeeping (<c>docs/research/mining-interview.md</c>, answer 7).
+    /// Sealed chambers in the rock (design 62 §5d). There is no entrance: nothing connects a
+    /// chamber to the surface, and the only way in is to mine into one, which is what makes
+    /// digging downward exploration rather than bookkeeping (<c>docs/research/mining-interview.md</c>,
+    /// answer 7).
+    ///
+    /// <para><b>Round, not stringy.</b> A chamber is an ellipse in plan with a jittered edge, a
+    /// flat floor and a domed roof: full height in the middle, a layer lower towards the edge, two
+    /// lower at the rim. It replaced a bounded random walk, which at the 300-1,500 cells the deep
+    /// bands ask for came out as a tangle of one-cell corridors.</para>
+    ///
+    /// <para><b>Two depth bands.</b> Even-numbered chambers are drawn in the upper band, odd ones in
+    /// the lower (<see cref="NaturalMapGenDef.upperCavernMinDepth"/> and after), the floor's depth
+    /// drawn anywhere in the band rather than always mid-rock. Where a column's rock does not reach
+    /// the band the floor is clamped to the lowest layer it may hollow, so a 16-layer board's
+    /// chambers sit at the bottom of its rock, lower and smaller, and none is dropped for it.</para>
     ///
     /// <para><b>Every chamber keeps a rock shell.</b> A cell is carved only where the terrain is
-    /// already rock and where the cell sits strictly inside its own column's rock band, so a
-    /// chamber can neither undermine the subsoil holding the surface up nor breach the bedrock at
-    /// the bottom of the world. See <see cref="CanHollow"/> for why the band, and not the
-    /// neighbouring terrain, is what the rule reads.</para>
+    /// host rock and the cell sits strictly inside its own column's rock band, so a chamber can
+    /// neither undermine the subsoil holding the surface up nor breach the bedrock. See
+    /// <see cref="CanHollow"/> for why the band, and not the neighbouring terrain, is what it
+    /// reads.</para>
     ///
-    /// <para>The carve is the same bounded random walk the ore and salvage passes use, extended
-    /// to three dimensions so a chamber has some height to it. Bounded for the same reason: an
-    /// unbounded walk is the one worldgen construct that turns a fast pass slow on an unlucky
-    /// seed.</para>
+    /// <para><b>And every ceiling is held.</b> A chamber is planned whole, then pillars are left
+    /// standing — a whole column of it un-carved — until every column of it is within
+    /// <see cref="RockSpan.Cells"/> steps of a column with no hole in it from the bottom of the
+    /// world to above the chamber's top. That is stricter than <see cref="RockSpan"/>'s own check,
+    /// so the cave-in unit's first solve finds nothing to bring down.</para>
     ///
-    /// <para>This runs <em>before</em> the ore pass so that ore can be hung on chamber walls.
-    /// It runs after the outcrops, which only ever add rock above ground and so cannot disturb
-    /// a chamber below it.</para>
+    /// <para>This runs <em>before</em> the ore pass so that ore can be hung on chamber walls, and
+    /// after the outcrops, which only ever add rock above ground.</para>
     /// </summary>
     public sealed class CavernPass : INaturalGenPass
     {
@@ -154,29 +166,64 @@ namespace Odyssey.Sim.Worldgen.Natural
             // silently wipe the feature out; it is not a licence to overrule a map that asked
             // for no caverns at all.
             if (count < 1) count = gen.cavernsPer10000Columns > 0 ? 1 : 0;
+            if (count == 0) { ctx.Report.Caverns = 0; return; }
+
+            var plan = new Plan(ctx.Size);
+            uint edgeSeed = ctx.Seed ^ 0x6C1A7E29u;
 
             for (int i = 0; i < count; i++)
             {
                 var rng = ctx.Random(NaturalGenPurpose.Caverns, i);
                 int x = rng.NextInt(ctx.Size.SizeX);
                 int z = rng.NextInt(ctx.Size.SizeZ);
+                bool upper = i % 2 == 0;
+                int depth = upper
+                    ? rng.NextInt(gen.upperCavernMinDepth, gen.upperCavernMaxDepth + 1)
+                    : rng.NextInt(gen.lowerCavernMinDepth, gen.lowerCavernMaxDepth + 1);
+                int height = rng.NextInt(gen.minCavernHeight, gen.maxCavernHeight + 1);
                 int target = rng.NextInt(gen.minCavernCells, gen.maxCavernCells + 1);
+                int stretch = rng.NextInt(80, 126);   // per cent: the second axis against the first
+                bool alongX = rng.NextInt(2) == 0;
 
-                // Start in the middle of the column's rock band, which is the deepest a chamber
-                // can sit while still keeping rock over its head.
                 int column = ctx.Column(x, z);
-                int highest = ctx.SubsoilBaseY[column] - 2;
                 int lowest = ctx.BedrockTopY[column] + 1;
+                int highest = ctx.SubsoilBaseY[column] - 2;
                 if (highest < lowest) continue;         // no rock band thick enough to hollow out
-                int y = (highest + lowest) / 2;
 
-                int start = ctx.Index(x, z, y);
-                int carved = Hollow(ctx, ref rng, x, z, y, target);
-                if (carved <= 0) continue;
+                int floor = ctx.SurfaceY[column] - depth;
+                int ceilingRoom = Math.Max(lowest, highest - height + 1);
+                if (floor > ceilingRoom) floor = ceilingRoom;
+                if (floor < lowest) floor = lowest;
 
-                ctx.Caverns.Add(new CavernChamber(start, carved));
+                // The area that gives the target at about three fifths of the full height, since the
+                // dome is lower at its rim and the jittered edge and the pillars take their share:
+                // r^2 = target / (0.6 * pi * height), measured against the census.
+                int r2 = target * 100 / (188 * height);
+                int radius = 3;
+                while ((radius + 1) * (radius + 1) <= r2) radius++;
+                int rx = radius, rz = Math.Max(2, radius * stretch / 100);
+                if (!alongX) { int t = rx; rx = rz; rz = t; }
+
+                plan.Begin();
+                Lay(ctx, plan, edgeSeed + (uint)i * 7919u, x, z, floor, height, rx, rz);
+                if (plan.Count == 0) continue;
+                ctx.Report.CavernPillars += Prop(ctx, plan, floor + height);
+
+                int carved = 0;
+                for (int c = 0; c < plan.Count; c++)
+                {
+                    int cell = plan.CellAt(c);
+                    if (!plan.Holds(cell)) continue;    // un-planned for a pillar
+                    CellRef at = ctx.Size.FromIndex(cell);
+                    if (at.Y < ctx.DeepStoneTopY[ctx.Column(at.X, at.Z)]) ctx.Report.DeepStoneCells--;
+                    else ctx.Report.RockCells--;
+                    ctx.Carve(cell);
+                    carved++;
+                }
+                if (carved == 0) continue;
+
+                ctx.Caverns.Add(new CavernChamber(ctx.Index(x, z, floor), carved));
                 ctx.Report.CavernCells += carved;
-                ctx.Report.RockCells -= carved;
                 ctx.Report.SolidCells -= carved;
                 ctx.Report.AirCells += carved;
             }
@@ -184,48 +231,160 @@ namespace Odyssey.Sim.Worldgen.Natural
             ctx.Report.Caverns = ctx.Caverns.Count;
         }
 
-        static int Hollow(NaturalGenContext ctx, ref DeterministicRandom rng, int x, int z, int y, int target)
+        /// <summary>
+        /// Plan the chamber's cells: an ellipse in plan with a jittered edge, flat-floored, its
+        /// roof a dome of up to <paramref name="height"/> layers.
+        /// </summary>
+        static void Lay(NaturalGenContext ctx, Plan plan, uint edgeSeed, int cx, int cz, int floor,
+                        int height, int rx, int rz)
         {
-            int carved = 0;
-            int steps = target * 4;
-            for (int s = 0; s < steps && carved < target; s++)
+            int reachX = rx + rx * 3 / 10 + 1, reachZ = rz + rz * 3 / 10 + 1;
+            long rx2 = (long)rx * rx, rz2 = (long)rz * rz;
+
+            for (int z = cz - reachZ; z <= cz + reachZ; z++)
+            for (int x = cx - reachX; x <= cx + reachX; x++)
             {
-                if (ctx.Size.Contains(x, z, y) && CanHollow(ctx, x, z, y))
-                {
-                    ctx.Carve(ctx.Index(x, z, y));
-                    carved++;
-                }
+                if ((uint)x >= (uint)ctx.Size.SizeX || (uint)z >= (uint)ctx.Size.SizeZ) continue;
+                int dx = x - cx, dz = z - cz;
 
-                // Six directions, with the two vertical ones drawn half as often as the four
-                // horizontal: a chamber should be wider than it is tall, because a one-cell shaft
-                // of a chamber is indistinguishable from a mining accident.
-                switch (rng.NextInt(6))
-                {
-                    case 0: x++; break;
-                    case 1: x--; break;
-                    case 2: z++; break;
-                    case 3: z--; break;
-                    case 4: y++; break;
-                    default: y--; break;
-                }
-                if (x < 0) x = 0; else if (x >= ctx.Size.SizeX) x = ctx.Size.SizeX - 1;
-                if (z < 0) z = 0; else if (z >= ctx.Size.SizeZ) z = ctx.Size.SizeZ - 1;
-                if (y < 0) y = 0; else if (y >= ctx.Size.SizeY) y = ctx.Size.SizeY - 1;
+                // Per mille of the way to the rim, against an edge that wanders ±30 % by a value
+                // noise, so the rim is a cave's and not a compass's.
+                long q = dx * dx * 1000L / rx2 + dz * dz * 1000L / rz2;
+                int edge = 1000 + (ValueNoise.Value2D(edgeSeed, x, z, 5) - ValueNoise.Scale / 2) * 600 / ValueNoise.Scale;
+                if (q > edge) continue;
+
+                int tall = q * 100 <= edge * 40L ? height
+                         : q * 100 <= edge * 75L ? height - 1
+                         : height - 2;
+                if (tall < 1) tall = 1;
+
+                for (int y = floor; y < floor + tall; y++)
+                    if (ctx.Size.Contains(x, z, y) && CanHollow(ctx, x, z, y))
+                        plan.Add(ctx.Index(x, z, y));
             }
-
-            return carved;
         }
 
         /// <summary>
-        /// Rock here, and strictly inside this column's rock band so that a layer of rock is left
-        /// under the subsoil and over the bedrock.
+        /// Leave pillars until every planned column — and every column of an earlier chamber near
+        /// enough for this one to have taken its support — is within <see cref="RockSpan.Cells"/>
+        /// steps of a supporting column: one with no hole planned or carved in it, solid from layer
+        /// 0 to above the highest ceiling in the box. A multi-source breadth-first search over the
+        /// box's columns; then the farthest planned column stands (or, where the farthest is an
+        /// earlier chamber's, the planned column nearest it), and again, until none is too far.
+        /// Every round un-plans a column, so it ends. Returns the pillars left.
+        ///
+        /// <para>The earlier chambers are the case that needs care: a second chamber carved beside
+        /// a first can hollow the very columns the first was propped by. Only an earlier column
+        /// within the span of this plan can have lost a support to it, and that column's own
+        /// supports lie within the span of it, so the box reaches twice the span past the plan.</para>
+        /// </summary>
+        static int Prop(NaturalGenContext ctx, Plan plan, int top)
+        {
+            var size = ctx.Size;
+            int span = RockSpan.Cells;
+            int margin = 2 * span + 1;
+            int x0 = Math.Max(0, plan.MinX - margin), x1 = Math.Min(size.SizeX - 1, plan.MaxX + margin);
+            int z0 = Math.Max(0, plan.MinZ - margin), z1 = Math.Min(size.SizeZ - 1, plan.MaxZ + margin);
+            int w = x1 - x0 + 1, h = z1 - z0 + 1, n = w * h;
+
+            var planned = new bool[n];
+            for (int c = 0; c < plan.Count; c++)
+            {
+                int cell = plan.CellAt(c);
+                if (!plan.Holds(cell)) continue;
+                CellRef at = size.FromIndex(cell);
+                planned[(at.Z - z0) * w + (at.X - x0)] = true;
+            }
+
+            var distance = new int[n];
+            var queue = new int[n];
+
+            // Earlier chambers' columns within the span of this plan, and how high they reach.
+            Spread(planned, distance, queue, w, h);
+            var earlier = new bool[n];
+            if (ctx.CavernCells.Count > 0)
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    if (distance[i] > span) continue;
+                    int x = x0 + i % w, z = z0 + i / w;
+                    for (int y = 0; y < size.SizeY; y++)
+                    {
+                        if (!ctx.IsCavern(size.Index(x, z, y))) continue;
+                        earlier[i] = true;
+                        if (y + 1 > top) top = y + 1;
+                    }
+                }
+            }
+            if (top >= size.SizeY) top = size.SizeY - 1;
+
+            var support = new bool[n];
+            for (int i = 0; i < n; i++)
+                support[i] = !planned[i] && !earlier[i] &&
+                    RockSpan.SupportsTo(size, ctx.Grid.IsSolidTerrain, x0 + i % w, z0 + i / w, top);
+
+            int pillars = 0;
+            while (true)
+            {
+                Spread(support, distance, queue, w, h);
+
+                int worst = -1, worstDistance = span;
+                for (int i = 0; i < n; i++)
+                    if ((planned[i] || earlier[i]) && distance[i] > worstDistance) { worst = i; worstDistance = distance[i]; }
+                if (worst < 0) return pillars;
+
+                int stand = worst;
+                if (!planned[worst])
+                {
+                    // An earlier chamber's column: stand the planned column nearest it.
+                    stand = -1;
+                    int best = int.MaxValue, wx = worst % w, wz = worst / w;
+                    for (int i = 0; i < n; i++)
+                    {
+                        if (!planned[i]) continue;
+                        int d = Math.Abs(i % w - wx) + Math.Abs(i / w - wz);
+                        if (d < best) { best = d; stand = i; }
+                    }
+                    if (stand < 0) return pillars;   // nothing of this plan left to take back
+                }
+
+                int px = x0 + stand % w, pz = z0 + stand / w;
+                plan.RemoveColumn(px, pz);
+                planned[stand] = false;
+                support[stand] = !earlier[stand] && RockSpan.SupportsTo(size, ctx.Grid.IsSolidTerrain, px, pz, top);
+                pillars++;
+            }
+        }
+
+        /// <summary>Four-neighbour steps from the nearest set column of <paramref name="from"/>, over a w x h box.</summary>
+        static void Spread(bool[] from, int[] distance, int[] queue, int w, int h)
+        {
+            int head = 0, tail = 0;
+            for (int i = 0; i < distance.Length; i++)
+            {
+                if (from[i]) { distance[i] = 0; queue[tail++] = i; }
+                else distance[i] = int.MaxValue;
+            }
+            while (head < tail)
+            {
+                int i = queue[head++];
+                int bx = i % w, bz = i / w, next = distance[i] + 1;
+                if (bx > 0 && distance[i - 1] > next) { distance[i - 1] = next; queue[tail++] = i - 1; }
+                if (bx < w - 1 && distance[i + 1] > next) { distance[i + 1] = next; queue[tail++] = i + 1; }
+                if (bz > 0 && distance[i - w] > next) { distance[i - w] = next; queue[tail++] = i - w; }
+                if (bz < h - 1 && distance[i + w] > next) { distance[i + w] = next; queue[tail++] = i + w; }
+            }
+        }
+
+        /// <summary>
+        /// Host rock here (rock or deep stone), and strictly inside this column's rock band so that a layer of rock is
+        /// left under the subsoil and over the bedrock.
         ///
         /// <para>The band is read from the column's own stratum boundaries rather than from the
         /// terrain above and below, and that distinction is the whole method: asking "is the cell
         /// above still rock?" makes a chamber one cell tall for ever, because the cell above the
         /// one just carved is now air and refuses its own carve. The boundaries are what the
-        /// strata pass laid down and they do not move, so a shell measured against them survives
-        /// the carve that is measuring it.</para>
+        /// strata pass laid down and they do not move.</para>
         ///
         /// <para>It is asked per cell, because the rock band is a different thickness under every
         /// terrace: a chamber comfortably buried at its centre can be one step from the subsoil at
@@ -236,22 +395,73 @@ namespace Odyssey.Sim.Worldgen.Natural
             int column = ctx.Column(x, z);
             if (y < ctx.BedrockTopY[column] + 1) return false;
             if (y > ctx.SubsoilBaseY[column] - 2) return false;
-            return ctx.Grid.Terrain[ctx.Index(x, z, y)] == NaturalContent.TerrainRock;
+            return NaturalContent.IsHostRock(ctx.Grid.Terrain[ctx.Index(x, z, y)]);
+        }
+
+        /// <summary>
+        /// One chamber's planned cells, in the order they were laid, with a board-sized flag so a
+        /// pillar can take a column back. The flag array is allocated once per pass and cleared
+        /// cell by cell, never whole.
+        /// </summary>
+        sealed class Plan
+        {
+            readonly GridSize _size;
+            readonly bool[] _planned;
+            readonly System.Collections.Generic.List<int> _cells = new System.Collections.Generic.List<int>();
+
+            public Plan(GridSize size) { _size = size; _planned = new bool[size.CellCount]; }
+
+            public int Count => _cells.Count;
+            public int MinX, MaxX, MinZ, MaxZ;
+
+            public void Begin()
+            {
+                for (int i = 0; i < _cells.Count; i++) _planned[_cells[i]] = false;
+                _cells.Clear();
+                MinX = MinZ = int.MaxValue;
+                MaxX = MaxZ = int.MinValue;
+            }
+
+            public void Add(int cell)
+            {
+                if (_planned[cell]) return;
+                _planned[cell] = true;
+                _cells.Add(cell);
+                CellRef at = _size.FromIndex(cell);
+                if (at.X < MinX) MinX = at.X;
+                if (at.X > MaxX) MaxX = at.X;
+                if (at.Z < MinZ) MinZ = at.Z;
+                if (at.Z > MaxZ) MaxZ = at.Z;
+            }
+
+            public int CellAt(int i) => _cells[i];
+            public bool Holds(int cell) => _planned[cell];
+
+            public void RemoveColumn(int x, int z)
+            {
+                for (int y = 0; y < _size.SizeY; y++) _planned[_size.Index(x, z, y)] = false;
+            }
         }
     }
 
     /// <summary>
-    /// Pass 9 — ore deposits.
+    /// Pass 9 — ore deposits (design 62 §5c).
     ///
-    /// Lumps grown by a bounded random walk, the same shape the city generator scatters salvage
-    /// with, and bounded for the same reason: an unbounded walk is the one worldgen construct that
-    /// can turn a fast pass into a slow one on an unlucky seed.
+    /// <para>Every kind in <c>Ores.xml</c> is placed on its own: so many deposits per ten thousand
+    /// columns, each in the kind's band of depths below the local surface, in the kind's shape,
+    /// of the kind's size. The band is clamped into the column's rock where the column does not
+    /// reach it, so a shallow board still has every kind, squeezed to the bottom of its rock.
+    /// A share of deposits is drawn anywhere in the rock instead, and a share of gold and gems is
+    /// hung on a cavern wall inside the band, so opening a cave pays.</para>
     ///
-    /// Two differences from salvage. The first is that a lump only ever replaces **rock**, so ore
-    /// is never found in soil, in subsoil, in bedrock or in the open — mining it always means
-    /// digging into stone. The second is depth weighting: each kind in
-    /// <see cref="NaturalContent.Ores"/> carries its own band of depths below the local surface,
-    /// so iron is the shallow find and coal is the reason to keep going down.
+    /// <para><b>A deposit only ever replaces rock-like cells</b> (<see cref="NaturalContent.IsHostRock"/>),
+    /// so ore is never found in soil, subsoil, bedrock or the open, and never over another ore —
+    /// mining it always means digging into stone.</para>
+    ///
+    /// <para><b>Each deposit draws its whole stream first</b> — column, band roll, size, wall roll
+    /// and the rest — from its own stream keyed on (kind, deposit), before it looks at the map.
+    /// So switching caverns off moves no deposit's draw, and appending a kind moves nothing that
+    /// was there before it.</para>
     /// </summary>
     public sealed class OrePass : INaturalGenPass
     {
@@ -262,81 +472,135 @@ namespace Odyssey.Sim.Worldgen.Natural
         public void Run(NaturalGenContext ctx)
         {
             var gen = ctx.Gen;
-            int count = ctx.Columns * gen.oreDepositsPer10000Columns / 10000;
-            // A rate of zero means zero. The floor below exists so that rounding on a small map
-            // cannot silently wipe the feature out; it is not a licence to overrule a map that
-            // asked for no ore at all.
-            if (count < 1) count = gen.oreDepositsPer10000Columns > 0 ? 1 : 0;
+            var ores = NaturalContent.Ores;
+            var placed = new System.Collections.Generic.List<int>(64);
+            var candidates = new System.Collections.Generic.List<(long, int)>();
 
-            int totalWeight = NaturalContent.TotalOreWeight();
-
-            for (int i = 0; i < count; i++)
+            for (int kind = 0; kind < ores.Count; kind++)
             {
-                var rng = ctx.Random(NaturalGenPurpose.Ore, i);
+                var ore = ores[kind];
+                long wanted = (long)ctx.Columns * ore.DepositsPer10000Columns * gen.oreAbundancePerMille;
+                int count = (int)((wanted + 5_000_000L) / 10_000_000L);
+                // A rate of zero means zero, and so does a board with no ore; otherwise rounding
+                // on a small map does not wipe a kind out.
+                if (count < 1) count = ore.DepositsPer10000Columns > 0 && gen.oreAbundancePerMille > 0 ? 1 : 0;
 
-                int kind = 0;
-                int roll = rng.NextInt(totalWeight);
-                for (int k = 0; k < NaturalContent.OreKindCount; k++)
+                for (int j = 0; j < count; j++)
                 {
-                    roll -= NaturalContent.OreAt(k).Weight;
-                    if (roll < 0) { kind = k; break; }
-                }
+                    var rng = ctx.Random(NaturalGenPurpose.Ore, (kind << 16) | j);
+                    int x = rng.NextInt(ctx.Size.SizeX);
+                    int z = rng.NextInt(ctx.Size.SizeZ);
+                    bool offBand = rng.NextInt(1000) < ore.OffBandPerMille;
+                    int depthRoll = rng.NextInt(1 << 20);
+                    int target = rng.NextInt(ore.MinCells, ore.MaxCells + 1);
+                    bool toWall = rng.NextInt(1000) < ore.CaveWallPerMille;
+                    int wallRoll = rng.NextInt(1 << 30);
 
-                var ore = NaturalContent.OreAt(kind);
-                int x = rng.NextInt(ctx.Size.SizeX);
-                int z = rng.NextInt(ctx.Size.SizeZ);
-                int depth = rng.NextInt(ore.MinDepth, ore.MaxDepth + 1);
-                int target = rng.NextInt(gen.minOreBlob, gen.maxOreBlob + 1);
-                int wall = rng.NextInt(ctx.CavernCells.Count + 1);
-
-                // Every third deposit is hung on a cavern wall, so breaking into a chamber is
-                // worth more than the space it opens. The draw above is made unconditionally,
-                // whether or not this deposit uses it and whether or not the map has caverns at
-                // all, so that switching caverns off shifts no ore: a stream whose length depends
-                // on the map is a stream that reshuffles everything downstream of it.
-                if (i % 3 == 0 && ctx.CavernCells.Count > 0)
-                {
-                    CellRef at = ctx.Size.FromIndex(ctx.CavernCells[wall % ctx.CavernCells.Count]);
-                    if (RockBeside(ctx, at, out int wx, out int wz))
+                    int y;
+                    if (toWall && WallAnchor(ctx, ore, wallRoll, out int wx, out int wz, out int wy))
                     {
                         x = wx;
                         z = wz;
-                        depth = ctx.SurfaceY[ctx.Column(x, z)] - at.Y;
+                        y = wy;
+                    }
+                    else
+                    {
+                        int column = ctx.Column(x, z);
+                        if (!DepthIn(ctx, ore, column, offBand, depthRoll, out y)) continue;
+                    }
+
+                    placed.Clear();
+                    Grow(ctx, ref rng, ore, ref x, ref z, ref y, target, placed, candidates);
+                    if (placed.Count == 0) continue;
+
+                    bool wall = false;
+                    for (int c = 0; c < placed.Count && !wall; c++) wall = TouchesCavern(ctx, placed[c]);
+
+                    ctx.OreDeposits.Add(new OreDeposit(ctx.Index(x, z, y), placed.Count, kind, offBand, wall));
+                    ctx.Report.OreCells += placed.Count;
+                    ctx.Report.OreCellsByKind[kind] += placed.Count;
+                    for (int c = 0; c < placed.Count; c++)
+                    {
+                        CellRef at = ctx.Size.FromIndex(placed[c]);
+                        if (at.Y < ctx.DeepStoneTopY[ctx.Column(at.X, at.Z)]) ctx.Report.DeepStoneCells--;
+                        else ctx.Report.RockCells--;
                     }
                 }
-
-                // The kind's depth band is a preference, not a promise: on a map too shallow to
-                // hold it the lump is pulled into the rock that exists rather than dropped. Skip
-                // only where there is no rock at all in the column — a map compressed until the
-                // subsoil sits straight on the bedrock.
-                int column = ctx.Column(x, z);
-                int highest = ctx.SubsoilBaseY[column] - 1;
-                int lowest = ctx.BedrockTopY[column];
-                if (highest < lowest) continue;
-
-                int y = ctx.SurfaceY[column] - depth;
-                if (y > highest) y = highest;
-                if (y < lowest) y = lowest;
-
-                int placed = GrowBlob(ctx, ref rng, x, z, y, target, ore.Terrain);
-                if (placed <= 0) continue;
-
-                ctx.OreDeposits.Add(new OreDeposit(ctx.Index(x, z, y), placed, kind));
-                ctx.Report.OreCells += placed;
-                ctx.Report.OreCellsByKind[kind] += placed;
-                ctx.Report.RockCells -= placed;
             }
 
             ctx.Report.OreDeposits = ctx.OreDeposits.Count;
         }
 
         /// <summary>
-        /// The first rock cell beside a cavern cell on its own layer, in a fixed compass order.
-        ///
-        /// Starting the blob on the wall rather than inside the chamber matters for more than
-        /// tidiness: <see cref="GrowBlob"/> only ever replaces rock, so a walk that begins in the
-        /// chamber's own air spends its step budget wandering the void and can place nothing at
-        /// all before it runs out.
+        /// The layer a deposit starts at in a column: its band, clamped into the column's rock;
+        /// or, off-band, anywhere in that rock; and for a kind that favours deep stone, inside the
+        /// deep stone where the band reaches it. False where the column has no rock at all.
+        /// </summary>
+        static bool DepthIn(NaturalGenContext ctx, NaturalContent.OreKind ore, int column, bool offBand,
+                            int roll, out int y)
+        {
+            int surface = ctx.SurfaceY[column];
+            int highest = ctx.SubsoilBaseY[column] - 1;
+            int lowest = ctx.BedrockTopY[column];
+            y = lowest;
+            if (highest < lowest) return false;
+
+            int dMin = ore.MinDepth, dMax = ore.MaxDepth;
+            if (offBand) { dMin = surface - highest; dMax = surface - lowest; }
+            else if (ore.FavoursDeepStone && ctx.DeepStoneTopY[column] > lowest)
+            {
+                // Deep stone is the layers below DeepStoneTopY: depths from surface - (top - 1).
+                int deepMin = surface - (ctx.DeepStoneTopY[column] - 1);
+                int lo = Math.Max(dMin, deepMin), hi = Math.Min(dMax, surface - lowest);
+                if (lo <= hi) { dMin = lo; dMax = hi; }
+            }
+
+            int depth = dMin + roll % (dMax - dMin + 1);
+            y = surface - depth;
+            if (y > highest) y = highest;
+            if (y < lowest) y = lowest;
+            return true;
+        }
+
+        /// <summary>
+        /// A rock-like cell beside a cavern, at a depth the kind's band (clamped into that column's
+        /// rock) allows, found by a fixed number of probes into the carved cells. The probes are
+        /// derived from one roll already drawn, so how many caverns there are changes nothing about
+        /// the stream.
+        /// </summary>
+        static bool WallAnchor(NaturalGenContext ctx, NaturalContent.OreKind ore, int roll,
+                               out int x, out int z, out int y)
+        {
+            x = z = y = 0;
+            int count = ctx.CavernCells.Count;
+            if (count == 0) return false;
+
+            for (int probe = 0; probe < 16; probe++)
+            {
+                uint mixed = (uint)roll * 2654435761u + (uint)probe * 2246822519u;
+                mixed ^= mixed >> 15;
+                CellRef at = ctx.Size.FromIndex(ctx.CavernCells[(int)(mixed % (uint)count)]);
+                int column = ctx.Column(at.X, at.Z);
+
+                int surface = ctx.SurfaceY[column];
+                int highest = ctx.SubsoilBaseY[column] - 1, lowest = ctx.BedrockTopY[column];
+                int top = Math.Min(highest, Math.Max(lowest, surface - ore.MinDepth));
+                int bottom = Math.Min(highest, Math.Max(lowest, surface - ore.MaxDepth));
+                // A band wholly beneath this column's rock is clamped to its bottom, and a chamber
+                // there has its floor a layer above the bedrock's shell: the bottom few layers are
+                // the band, or a shallow board could never hang a find on a cave wall.
+                if (surface - ore.MinDepth < lowest) top = Math.Min(highest, lowest + 2);
+                if (at.Y < bottom || at.Y > top) continue;
+
+                if (RockBeside(ctx, at, out x, out z)) { y = at.Y; return true; }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// The first rock-like cell beside a cavern cell on its own layer, in a fixed compass
+        /// order. Starting on the wall rather than in the chamber matters: a deposit only replaces
+        /// rock-like cells, so a growth seeded in the chamber's air would place nothing at all.
         /// </summary>
         static bool RockBeside(NaturalGenContext ctx, CellRef at, out int x, out int z)
         {
@@ -348,7 +612,7 @@ namespace Odyssey.Sim.Worldgen.Natural
                 x = at.X + dx[i];
                 z = at.Z + dz[i];
                 if (!ctx.Size.Contains(x, z, at.Y)) continue;
-                if (ctx.Grid.Terrain[ctx.Index(x, z, at.Y)] == NaturalContent.TerrainRock) return true;
+                if (NaturalContent.IsHostRock(ctx.Grid.Terrain[ctx.Index(x, z, at.Y)])) return true;
             }
 
             x = at.X;
@@ -356,34 +620,187 @@ namespace Odyssey.Sim.Worldgen.Natural
             return false;
         }
 
-        static int GrowBlob(NaturalGenContext ctx, ref DeterministicRandom rng, int x, int z, int y,
-                            int target, ushort material)
+        static bool TouchesCavern(NaturalGenContext ctx, int cell)
         {
-            int placed = 0;
-            int steps = target * 4;
-            for (int s = 0; s < steps && placed < target; s++)
+            CellRef at = ctx.Size.FromIndex(cell);
+            return Carved(ctx, at.X + 1, at.Z, at.Y) || Carved(ctx, at.X - 1, at.Z, at.Y) ||
+                   Carved(ctx, at.X, at.Z + 1, at.Y) || Carved(ctx, at.X, at.Z - 1, at.Y) ||
+                   Carved(ctx, at.X, at.Z, at.Y + 1) || Carved(ctx, at.X, at.Z, at.Y - 1);
+        }
+
+        static bool Carved(NaturalGenContext ctx, int x, int z, int y) =>
+            ctx.Size.Contains(x, z, y) && ctx.IsCavern(ctx.Index(x, z, y));
+
+        /// <summary>
+        /// Put ore in one cell, if it is rock-like and inside its column's rock band. The band
+        /// check matters for the shapes that move between layers: an outcrop is rock-like too, and
+        /// stands above the surface where no ore belongs.
+        /// </summary>
+        static bool Place(NaturalGenContext ctx, int x, int z, int y, ushort material,
+                          System.Collections.Generic.List<int> placed)
+        {
+            if (!ctx.Size.Contains(x, z, y)) return false;
+            int column = ctx.Column(x, z);
+            if (y < ctx.BedrockTopY[column] || y >= ctx.SubsoilBaseY[column]) return false;
+            int index = ctx.Index(x, z, y);
+            if (!NaturalContent.IsHostRock(ctx.Grid.Terrain[index])) return false;
+            ctx.SetTerrain(index, material);
+            placed.Add(index);
+            return true;
+        }
+
+        static void Grow(NaturalGenContext ctx, ref DeterministicRandom rng, NaturalContent.OreKind ore,
+                         ref int x, ref int z, ref int y, int target, System.Collections.Generic.List<int> placed,
+                         System.Collections.Generic.List<(long, int)> candidates)
+        {
+            // Start on rock. A seed can land in a cavern's air or on an ore already grown there,
+            // and a deposit that places nothing is a deposit whose presence depends on the caverns,
+            // which is the entanglement the draw-everything-first rule exists to prevent.
+            if (!SeedNear(ctx, ref x, ref z, ref y)) return;
+
+            switch (ore.Shape)
             {
-                if (ctx.Size.Contains(x, z, y))
+                case OreShape.Vein: Vein(ctx, ref rng, ore.Terrain, x, z, y, target, placed); break;
+                case OreShape.Oval: Oval(ctx, ref rng, ore.Terrain, x, z, y, target, placed, candidates); break;
+                case OreShape.Seam: Accrete(ctx, ref rng, ore.Terrain, x, z, y, target, placed, 0, 0, rng.NextInt(2) == 0 ? 1 : 2); break;
+                case OreShape.Blob: Accrete(ctx, ref rng, ore.Terrain, x, z, y, target, placed, 0, 1, 0); break;
+                default: Accrete(ctx, ref rng, ore.Terrain, x, z, y, target, placed, -1, 1, 0); break;   // cluster, pocket
+            }
+        }
+
+        /// <summary>
+        /// The nearest cell a deposit may start in — rock-like, inside its column's rock band — to
+        /// (x, z, y): rings outward on the layer, the layer above and the layer below at each
+        /// distance, in a fixed order. False when there is none within twelve cells, which only a
+        /// board with no rock could produce.
+        /// </summary>
+        static bool SeedNear(NaturalGenContext ctx, ref int x, ref int z, ref int y)
+        {
+            for (int r = 0; r <= 12; r++)
+            for (int layer = 0; layer < 3; layer++)
+            {
+                int ny = y + (layer == 0 ? 0 : layer == 1 ? 1 : -1);
+                for (int dz = -r; dz <= r; dz++)
+                for (int dx = -r; dx <= r; dx++)
                 {
-                    int index = ctx.Index(x, z, y);
-                    if (ctx.Grid.Terrain[index] == NaturalContent.TerrainRock)
-                    {
-                        ctx.SetTerrain(index, material);
-                        placed++;
-                    }
+                    if (Math.Max(Math.Abs(dx), Math.Abs(dz)) != r) continue;
+                    int nx = x + dx, nz = z + dz;
+                    if (!ctx.Size.Contains(nx, nz, ny)) continue;
+                    int column = ctx.Column(nx, nz);
+                    if (ny < ctx.BedrockTopY[column] || ny >= ctx.SubsoilBaseY[column]) continue;
+                    if (!NaturalContent.IsHostRock(ctx.Grid.Terrain[ctx.Index(nx, nz, ny)])) continue;
+                    x = nx; z = nz; y = ny;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Grow outward from a seed by adding a random neighbour of a random placed cell — round
+        /// and compact, where a random walk strings out. Vertical steps are allowed within
+        /// [y + <paramref name="below"/>, y + <paramref name="above"/>] (a seam passes 0 and 0, a
+        /// blob 0 and 1, a cluster -1 and 1), and a seam stretched along one axis weights that
+        /// axis three to one (<paramref name="axis"/> 1 for x, 2 for z, 0 for none).
+        /// </summary>
+        static void Accrete(NaturalGenContext ctx, ref DeterministicRandom rng, ushort material,
+                            int x, int z, int y, int target, System.Collections.Generic.List<int> placed,
+                            int below, int above, int axis)
+        {
+            if (!Place(ctx, x, z, y, material, placed)) return;   // SeedNear found it rock-like
+
+            bool vertical = above > below;
+            int steps = target * 8;
+            for (int s = 0; s < steps && placed.Count < target; s++)
+            {
+                CellRef from = ctx.Size.FromIndex(placed[rng.NextInt(placed.Count)]);
+                int nx = from.X, nz = from.Z, ny = from.Y;
+                int pick = rng.NextInt(vertical ? 10 : 8);
+                if (pick >= 8) ny += pick == 8 ? 1 : -1;
+                else
+                {
+                    // Eight horizontal slots: two a direction, or three along the stretch axis and
+                    // one across it.
+                    bool alongX = axis == 1 ? pick < 6 : axis == 2 ? pick >= 6 : pick < 4;
+                    bool positive = (pick & 1) == 0;
+                    if (alongX) nx += positive ? 1 : -1; else nz += positive ? 1 : -1;
+                }
+                if (ny < y + below || ny > y + above) continue;
+                Place(ctx, nx, nz, ny, material, placed);
+            }
+        }
+
+        /// <summary>
+        /// A winding vein: a walker holding a heading, turning a quarter now and then, drifting a
+        /// layer rarely, and every so often laying a cell beside itself so the vein is one or two
+        /// wide.
+        /// </summary>
+        static void Vein(NaturalGenContext ctx, ref DeterministicRandom rng, ushort material,
+                         int x, int z, int y, int target, System.Collections.Generic.List<int> placed)
+        {
+            ReadOnlySpan<int> hx = stackalloc int[] { 1, 0, -1, 0 };
+            ReadOnlySpan<int> hz = stackalloc int[] { 0, 1, 0, -1 };
+            int heading = rng.NextInt(4);
+            int steps = target * 4;
+            for (int s = 0; s < steps && placed.Count < target; s++)
+            {
+                Place(ctx, x, z, y, material, placed);
+                if (placed.Count < target && rng.NextInt(3) == 0)
+                {
+                    int side = (heading + (rng.NextInt(2) == 0 ? 1 : 3)) & 3;
+                    Place(ctx, x + hx[side], z + hz[side], y, material, placed);
                 }
 
-                switch (rng.NextInt(4))
-                {
-                    case 0: x++; break;
-                    case 1: x--; break;
-                    case 2: z++; break;
-                    default: z--; break;
-                }
-                if (x < 0) x = 0; else if (x >= ctx.Size.SizeX) x = ctx.Size.SizeX - 1;
-                if (z < 0) z = 0; else if (z >= ctx.Size.SizeZ) z = ctx.Size.SizeZ - 1;
+                int turn = rng.NextInt(10);
+                if (turn == 0) heading = (heading + 1) & 3;
+                else if (turn == 1) heading = (heading + 3) & 3;
+
+                int drift = rng.NextInt(12);
+                int ny = drift == 0 ? y + 1 : drift == 1 ? y - 1 : y;
+                int column = ctx.Column(Math.Clamp(x, 0, ctx.Size.SizeX - 1), Math.Clamp(z, 0, ctx.Size.SizeZ - 1));
+                if (ny >= ctx.BedrockTopY[column] && ny < ctx.SubsoilBaseY[column]) y = ny;
+
+                x = Math.Clamp(x + hx[heading], 0, ctx.Size.SizeX - 1);
+                z = Math.Clamp(z + hz[heading], 0, ctx.Size.SizeZ - 1);
             }
-            return placed;
+        }
+
+        /// <summary>
+        /// One oval cluster: an ellipse two to three times as long as it is wide, one or two
+        /// layers thick, filled from the middle outward until it holds the target — so it is an
+        /// oval at any size rather than a clipped rectangle.
+        /// </summary>
+        static void Oval(NaturalGenContext ctx, ref DeterministicRandom rng, ushort material,
+                         int cx, int cz, int cy, int target, System.Collections.Generic.List<int> placed,
+                         System.Collections.Generic.List<(long, int)> candidates)
+        {
+            int layers = rng.NextInt(1, 3);
+            bool alongX = rng.NextInt(2) == 0;
+            int per = (target + layers - 1) / layers;
+            // a * b * pi = per, with a = 2.5 b: b^2 = per / 7.85.
+            int b = 1;
+            while ((b + 1) * (b + 1) * 785 <= per * 100) b++;
+            int a = b * 5 / 2 + 1;
+            int ax = alongX ? a : b, az = alongX ? b : a;
+
+            candidates.Clear();
+            for (int y = cy; y < cy + layers; y++)
+            for (int dz = -az - 1; dz <= az + 1; dz++)
+            for (int dx = -ax - 1; dx <= ax + 1; dx++)
+            {
+                int x = cx + dx, z = cz + dz;
+                if (!ctx.Size.Contains(x, z, y)) continue;
+                long q = dx * dx * 1000L / ((long)ax * ax) + dz * dz * 1000L / ((long)az * az);
+                if (q > 1300) continue;
+                candidates.Add((q * 64 + (y - cy), ctx.Index(x, z, y)));
+            }
+            candidates.Sort((p, o) => p.Item1 != o.Item1 ? p.Item1.CompareTo(o.Item1) : p.Item2.CompareTo(o.Item2));
+
+            for (int i = 0; i < candidates.Count && placed.Count < target; i++)
+            {
+                CellRef at = ctx.Size.FromIndex(candidates[i].Item2);
+                Place(ctx, at.X, at.Z, at.Y, material, placed);
+            }
         }
     }
 

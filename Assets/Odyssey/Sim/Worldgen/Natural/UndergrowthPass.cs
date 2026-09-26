@@ -168,7 +168,7 @@ namespace Odyssey.Sim.Worldgen.Natural
                 if ((uint)nx >= (uint)ctx.Size.SizeX || (uint)nz >= (uint)ctx.Size.SizeZ) continue;
                 int column = ctx.Column(nx, nz);
                 if (ctx.TopSolidY[column] > ctx.SurfaceY[column]) return true;
-                if (ctx.Grid.Terrain[ctx.Index(nx, nz, ctx.TopSolidY[column])] == NaturalContent.TerrainRock) return true;
+                if (Contracts.TerrainHandle.IsRockLike(ctx.Grid.Terrain[ctx.Index(nx, nz, ctx.TopSolidY[column])])) return true;
             }
             return false;
         }

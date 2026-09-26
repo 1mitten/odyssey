@@ -33,6 +33,10 @@ ui.res.wood,-,,,"a short stack of logs, cut ends showing",-,gap
 ui.res.stone,-,,,"a few angular grey rocks with fresh broken faces",-,gap
 ui.res.ironore,-,,,"dark rock flecked with rust-orange",-,gap
 ui.res.coal,-,,,"glossy black lumps",-,gap
+ui.res.copperore,-,,,"rock flecked with green and a coppery sheen",-,gap
+ui.res.goldore,-,,,"pale rock threaded with gold",-,gap
+ui.res.gems,-,,,"two or three rough coloured stones",-,gap
+ui.res.emberquartz,-,,,"a warm orange crystal glowing from within. Our own concept",-,gap
 ui.res.grain,01,,,wheat sheaf,med,mapped
 ui.res.fungus,01,,,cluster of mushrooms,high,mapped
 ui.res.stimulant,02,,,coffee cup,med,mapped
@@ -428,6 +432,7 @@ ui.terrain.water.deep,-,,,"flat dark water, no bed visible",-,gap
 ui.terrain.rock,-,,,"a face of natural stone",-,gap
 ui.terrain.subsoil,-,,,"a tile of dug earth",-,gap
 ui.terrain.bedrock,-,,,"a tile of dark, banded stone",-,gap
+ui.terrain.deepstone,-,,,"a face of dense blue-grey stone",-,gap
 ui.terrain.tree.birch,-,,,"a slim pale-trunked tree",-,gap
 ui.terrain.tree.meadow,-,,,"a round-crowned tree",-,gap
 ui.terrain.tree.fruit,-,,,"a low tree with a spreading crown",-,gap

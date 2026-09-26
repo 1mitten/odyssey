@@ -599,8 +599,16 @@ namespace Odyssey.Tests.Sim
             // items 177 and 178, pawns 22, generated and simulated), and every other number — items
             // by def, needs, mood, progress, experience, passions, jobs started, done and failed —
             // is identical to the digit. The bare meadow and the city are fixed sizes and did not move.
-            Generated = 8380090605371818778UL,
-            Simulated = 17421262954474116166UL,
+            // 2026-09-26, deep mining DM3 (design 62 §5): the rock under the board changed — deep
+            // stone from 14 layers down, six ore kinds placed by band and shape where there were
+            // two, and caverns of hundreds of cells with pillars where there were pockets of
+            // twenty — so both values moved. GoldenColonyProbe on the merged branch (2a8ec334) and
+            // on DM3 merged with it is identical on all three boards, generated and simulated, to
+            // the digit: the colony stands on grass, digs nothing in ten thousand ticks and never
+            // meets the rock, so only the hash of what is under it moved. The bare meadow and the
+            // city did not move: neither has ore, caverns or a column deep enough for deep stone.
+            Generated = 9420666644581579923UL,
+            Simulated = 5494399407163632571UL,
         };
 
         /// <summary>

@@ -33,6 +33,10 @@ ui.res.wood,Wood,ui.res,M3,"Felled timber. The first thing the colony builds wit
 ui.res.stone,Stone,ui.res,M3,"Broken rock from a mined face. Heavy, and there is always more"
 ui.res.ironore,Iron ore,ui.res,M3,Raw ore. Worthless until something smelts it
 ui.res.coal,Coal,ui.res,M3,"Burns hot. Found deeper than iron, and for that reason"
+ui.res.copperore,Copper ore,ui.res,M3,"Raw ore. The commonest find in the first few layers down"
+ui.res.goldore,Gold ore,ui.res,M3,"Small clusters deep down, most often in deep stone or on a cave wall. Stored; nothing uses it yet"
+ui.res.gems,Gems,ui.res,M3,"A few stones at a time, often on a cave wall. Stored; nothing uses them yet"
+ui.res.emberquartz,Emberquartz,ui.res,M3,"The deepest find, and it glows once a face exposes it. Stored; nothing uses it yet"
 ui.res.carrots,Carrots,ui.res,M3,"The first field crop. Eaten straight, no cooking and no spoilage"
 ui.res.berries,Berries,ui.res,M3,"Picked from a wild berry bush. Eaten straight; the bush grows more"
 ui.res.mushrooms,Mushrooms,ui.res,M3,"Found under the trees. Eaten straight; more come up somewhere else"
@@ -517,6 +521,7 @@ ui.terrain.water.deep,Deep Water,ui.terrain,M1,"Out of your depth. Colonists wil
 ui.terrain.rock,Rock,ui.terrain,M1,"Natural stone. Mined, not cleared"
 ui.terrain.subsoil,Subsoil,ui.terrain,M1,"The band between soil and rock. Cheap to dig"
 ui.terrain.bedrock,Bedrock,ui.terrain,M1,"The floor of the world. Deliberately punitive to mine"
+ui.terrain.deepstone,Deep stone,ui.terrain,M3,"The rock from about fourteen layers down. Twice the work of rock to cut, and it yields stone"
 ui.terrain.packedgravel,Packed Gravel,ui.terrain,M3,"Stony ground, packed hard. Firm footing, poor soil"
 ui.terrain.tree.birch,Birch,ui.terrain,M3,"A slim white-barked tree. Quick to chop, not much wood in it"
 ui.terrain.tree.meadow,Meadow tree,ui.terrain,M3,"A broad round-crowned tree of the open meadow. Chopped for wood"

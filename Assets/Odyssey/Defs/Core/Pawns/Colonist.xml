@@ -167,11 +167,11 @@
       the roll is a pure function of world seed and cell index, so a partial yield can be
       reintroduced the day something wants one, without reopening how it is decided.
 
-      Ore is never rolled: a seam cell always yields.
+      Ore is never rolled: a seam cell always yields, and what it yields is the ore's own row in
+      World/Ores.xml (design 62 §5c), not a number here.
     -->
     <stonePerRock>8</stonePerRock>
     <stoneChanceOneIn>1</stoneChanceOneIn>
-    <orePerCell>15</orePerCell>
 
     <!--
       How long a colonist takes to pick something up off the ground, and how far into that the

@@ -1059,7 +1059,26 @@ namespace Odyssey.Presentation.Rendering
             return !Stone.Contains(terrain);
         }
 
-        static readonly HashSet<string> Stone = new HashSet<string> { "rock", "bedrock", "ironore", "coalseam" };
+        /// <summary>
+        /// The terrain names drawn as stone, lower-cased as the module ids spell them: every terrain
+        /// <see cref="RockLook.IsStone"/> says is stone, read off the terrain table once, so a new
+        /// ore or deep stone keeps the pack's shader without being listed here by hand (design 62).
+        ///
+        /// <para>Lazy rather than a static initialiser: the terrain table is the content pack, and a
+        /// built player only knows where its pack is once the composition root has said.</para>
+        /// </summary>
+        static HashSet<string> Stone => _stone ??= StoneNames();
+
+        static HashSet<string>? _stone;
+
+        static HashSet<string> StoneNames()
+        {
+            var names = new HashSet<string>();
+            for (int i = 0; i < Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainCount; i++)
+                if (RockLook.IsStone((ushort)i))
+                    names.Add(Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainAt((ushort)i).defName.ToLowerInvariant());
+            return names;
+        }
 
         /// <summary>The albedo a pack material draws with, by the names the packs use.</summary>
         static Texture? MainTextureOf(Material material)

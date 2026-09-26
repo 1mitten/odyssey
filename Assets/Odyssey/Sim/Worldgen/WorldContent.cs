@@ -6,24 +6,63 @@ using Odyssey.Sim.Worldgen.Natural;
 
 namespace Odyssey.Sim.Worldgen
 {
+    /// <summary>How a deposit grows (design 62 §5c). Named in <c>Ores.xml</c>.</summary>
+    public enum OreShape
+    {
+        /// <summary>Round, grown outward from a seed; may cross into the layer above.</summary>
+        Blob = 0,
+        /// <summary>A winding line one or two cells wide, drifting a layer now and then.</summary>
+        Vein = 1,
+        /// <summary>A flat patch on one layer, stretched along one axis.</summary>
+        Seam = 2,
+        /// <summary>A small round clump in three dimensions.</summary>
+        Cluster = 3,
+        /// <summary>A few cells together.</summary>
+        Pocket = 4,
+        /// <summary>One filled ellipse, one or two layers thick.</summary>
+        Oval = 5,
+    }
+
     /// <summary>
-    /// One minable deposit kind: what it is made of, how often it is chosen, and the band of
-    /// depths below the local surface it is found in.
+    /// One minable deposit kind: what it is made of, what a cut cell gives up, the band of depths
+    /// below the local surface it is found in, the shape it grows in and how often (design 62
+    /// §5c). <b>The one owner of the ore table</b>: the generator, the mining yield and the
+    /// renderer's "is this ore" all read it, and there is no copy in code.
     ///
-    /// <para>Depth weighting is the whole point — coal sits below iron, so digging deeper is
-    /// worth doing and the two are not interchangeable. The terrain is named rather than
-    /// numbered, so <c>[DefReference]</c> proves at load that the ore is made of something that
-    /// exists; a typo here would otherwise surface as a stratum of nothing, seeds later.</para>
+    /// <para>The terrain and the item are named rather than numbered, so <c>[DefReference]</c>
+    /// proves at load that the ore is made of something that exists and gives up something that
+    /// exists; a typo would otherwise surface as a stratum of nothing, seeds later.</para>
     /// </summary>
     public class OreKindDef : Def
     {
         [DefReference(typeof(TerrainDef))] public string terrain = string.Empty;
 
-        public int weight = 100;
+        [DefReference(typeof(Pawns.ItemDef))] public string item = string.Empty;
+
+        public OreShape shape = OreShape.Blob;
 
         public int minDepth;
 
         public int maxDepth;
+
+        public int minCells = 1;
+
+        public int maxCells = 1;
+
+        /// <summary>Deposits per ten thousand surface columns, rounded, before the board's abundance.</summary>
+        public int depositsPer10000Columns;
+
+        /// <summary>What one cut cell leaves. Always, never rolled.</summary>
+        public int yieldPerCell;
+
+        /// <summary>Per mille of deposits placed anywhere in the column's rock rather than in the band.</summary>
+        public int offBandPerMille;
+
+        /// <summary>Per mille of deposits hung on a cavern wall inside the band, where a cavern offers one.</summary>
+        public int caveWallPerMille;
+
+        /// <summary>Draw the depth inside the column's deep stone where the band reaches it.</summary>
+        public bool favoursDeepStone;
 
         public string moduleId = string.Empty;
     }
@@ -54,7 +93,7 @@ namespace Odyssey.Sim.Worldgen
     public static class WorldContent
     {
         /// <summary>
-        /// Every terrain kind in index order: ten from the city's table, eleven from the
+        /// Every terrain kind in index order: ten from the city's table, sixteen from the
         /// wilderness's, exactly as the constants number them.
         /// </summary>
         public static readonly string[] TerrainOrder =
@@ -71,7 +110,7 @@ namespace Odyssey.Sim.Worldgen
             "BuriedSeam",
             "Salvage",
 
-            // NaturalContent, 10..20.
+            // NaturalContent, 10..25.
             "Grass",
             "BareEarth",
             "PackedGravel",
@@ -83,14 +122,34 @@ namespace Odyssey.Sim.Worldgen
             "ShallowWater",
             "DeepWater",
             "Marsh",
+
+            // Deep mining (design 62 §5), 21..25, appended so no index moved.
+            "DeepStone",
+            "CopperOre",
+            "GoldOre",
+            "Gems",
+            "Emberquartz",
         };
 
-        /// <summary>The ore kinds in the order the deposit draw indexes them.</summary>
+        /// <summary>
+        /// The ore kinds in the order the deposit draw indexes them. A deposit's random stream is
+        /// keyed on this index, so a kind is appended, never inserted.
+        /// </summary>
         public static readonly string[] OreOrder =
         {
             "Ore_Iron",
             "Ore_Coal",
+            // Deep mining (design 62 §5c).
+            "Ore_Copper",
+            "Ore_Gold",
+            "Ore_Gems",
+            "Ore_Emberquartz",
         };
+
+        static NaturalContent.OreKind[]? _ores;
+
+        /// <summary>The ore table the running game reads, loaded from the core pack once.</summary>
+        public static NaturalContent.OreKind[] Ores => _ores ??= OresFromDefs(ContentPack.Core);
 
         /// <summary>
         /// The crops in the order the zones and crops channels carry them, for the same reason
@@ -172,6 +231,8 @@ namespace Odyssey.Sim.Worldgen
         internal static void Forget()
         {
             _table = null;
+            _ores = null;
+            NaturalContent.ForgetOres();
             _wildPlants = null;
             _climate = null;
             _weathers = null;
@@ -225,7 +286,7 @@ namespace Odyssey.Sim.Worldgen
         /// </summary>
         public static ClimateDef Climate => _climate ??= One<ClimateDef>(ContentPack.Core, "Climate_Temperate");
 
-        /// <summary>The ore kinds, resolved into the same struct the generator already draws from.</summary>
+        /// <summary>The ore kinds, resolved into the struct the generator and the yield read.</summary>
         public static NaturalContent.OreKind[] OresFromDefs(DefDatabase defs)
         {
             var index = TerrainIndexByName();
@@ -235,7 +296,13 @@ namespace Odyssey.Sim.Worldgen
                 OreKindDef def = One<OreKindDef>(defs, OreOrder[i]);
                 if (!index.TryGetValue(def.terrain, out ushort terrain))
                     throw new DefLoadException($"{def.Origin}: ore '{def.defName}' is made of unknown terrain '{def.terrain}'.");
-                ores[i] = new NaturalContent.OreKind(terrain, def.weight, def.minDepth, def.maxDepth, def.moduleId);
+                if (def.minDepth < 0 || def.maxDepth < def.minDepth)
+                    throw new DefLoadException($"{def.Origin}: ore '{def.defName}' has the band {def.minDepth}..{def.maxDepth}.");
+                if (def.minCells < 1 || def.maxCells < def.minCells)
+                    throw new DefLoadException($"{def.Origin}: ore '{def.defName}' has the size {def.minCells}..{def.maxCells}.");
+                ores[i] = new NaturalContent.OreKind(terrain, def.item, def.shape, def.minDepth, def.maxDepth,
+                    def.minCells, def.maxCells, def.depositsPer10000Columns, def.yieldPerCell,
+                    def.offBandPerMille, def.caveWallPerMille, def.favoursDeepStone, def.moduleId);
             }
             return ores;
         }

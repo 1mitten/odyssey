@@ -150,12 +150,47 @@ namespace Odyssey.Tests.Sim
                 Assert.That(MineJobDriver.Yield(ctx, cell, NaturalContent.TerrainIronOre, out int ore, out int oreCount),
                     Is.True, "an iron seam gave up nothing");
                 Assert.That(ore, Is.EqualTo(ItemIndex.IronOre));
-                Assert.That(oreCount, Is.EqualTo(ctx.Content.OrePerCell));
+                Assert.That(oreCount, Is.EqualTo(15), "iron's yield is Ores.xml's 15 a cell");
                 iron++;
             }
 
             Assert.That(stone, Is.EqualTo(20));
             Assert.That(iron, Is.EqualTo(20), "a seam is never empty-handed");
+        }
+
+        /// <summary>
+        /// What each kind of seam gives up is its row in <c>Ores.xml</c> (design 62 §5c), read by a
+        /// table lookup rather than a branch per kind — and deep stone yields stone as rock does.
+        /// The numbers are written out here on purpose: a changed yield should fail a test that
+        /// names it, not only move a fingerprint.
+        /// </summary>
+        [TestCase((ushort)(NaturalContent.FirstTerrain + 6), ItemIndex.IronOre, 15)]
+        [TestCase((ushort)(NaturalContent.FirstTerrain + 7), ItemIndex.Coal, 12)]
+        [TestCase((ushort)(NaturalContent.FirstTerrain + 12), ItemIndex.CopperOre, 15)]
+        [TestCase((ushort)(NaturalContent.FirstTerrain + 13), ItemIndex.GoldOre, 6)]
+        [TestCase((ushort)(NaturalContent.FirstTerrain + 14), ItemIndex.Gems, 2)]
+        [TestCase((ushort)(NaturalContent.FirstTerrain + 15), ItemIndex.Emberquartz, 20)]
+        public void EachOreGivesUpItsOwnYield(ushort terrain, int expectedItem, int expectedCount)
+        {
+            ColonyWorld colony = Board();
+            Assert.That(NaturalContent.IsOre(terrain), Is.True, $"terrain {terrain} is not in the ore table");
+            Assert.That(MineJobDriver.Yield(colony.Pawns, Size.Index(10, 10, 4), terrain, out int item, out int count),
+                Is.True, "a seam gave up nothing");
+            Assert.That(item, Is.EqualTo(expectedItem));
+            Assert.That(count, Is.EqualTo(expectedCount));
+        }
+
+        [Test]
+        public void DeepStoneYieldsStoneLikeRock()
+        {
+            ColonyWorld colony = Board();
+            Assert.That(MineJobDriver.Yield(colony.Pawns, Size.Index(10, 10, 4), NaturalContent.TerrainDeepStone,
+                out int item, out int count), Is.True);
+            Assert.That(item, Is.EqualTo(ItemIndex.Stone));
+            Assert.That(count, Is.EqualTo(colony.Pawns.Content.StonePerRock));
+            Assert.That(NaturalContent.TerrainAt(NaturalContent.TerrainDeepStone).workToClear,
+                Is.EqualTo(2 * NaturalContent.TerrainAt(NaturalContent.TerrainRock).workToClear),
+                "deep stone is twice rock's work (design 62 §5b)");
         }
 
         [Test]

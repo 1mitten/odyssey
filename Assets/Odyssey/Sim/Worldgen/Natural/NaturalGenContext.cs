@@ -46,13 +46,19 @@ namespace Odyssey.Sim.Worldgen.Natural
         public CavernChamber(int cellIndex, int cells) { CellIndex = cellIndex; Cells = cells; }
     }
 
-    /// <summary>A lump of ore grown inside the rock strata. Kind indexes <see cref="NaturalContent.Ores"/>.</summary>
+    /// <summary>
+    /// A lump of ore grown inside the rock strata. Kind indexes <see cref="NaturalContent.Ores"/>.
+    /// <see cref="CellIndex"/> is the seed cell; <see cref="OffBand"/> says the deposit was drawn
+    /// outside its band on purpose, <see cref="OnCaveWall"/> that one of its cells touches a
+    /// cavern.
+    /// </summary>
     public readonly struct OreDeposit
     {
         public readonly int CellIndex, Cells, Kind;
-        public OreDeposit(int cellIndex, int cells, int kind)
+        public readonly bool OffBand, OnCaveWall;
+        public OreDeposit(int cellIndex, int cells, int kind, bool offBand = false, bool onCaveWall = false)
         {
-            CellIndex = cellIndex; Cells = cells; Kind = kind;
+            CellIndex = cellIndex; Cells = cells; Kind = kind; OffBand = offBand; OnCaveWall = onCaveWall;
         }
     }
 
@@ -69,6 +75,8 @@ namespace Odyssey.Sim.Worldgen.Natural
         public int SandCells;
         public int SubsoilCells;
         public int RockCells;
+        /// <summary>Deep stone the strata pass laid (design 62 §5b), before ore took any of it.</summary>
+        public int DeepStoneCells;
         public int BedrockCells;
         public int Trees;
         /// <summary>Birches (design 45 §3). The name is the tree pass's first one, kept for its readers.</summary>
@@ -95,6 +103,8 @@ namespace Odyssey.Sim.Worldgen.Natural
         public int OutcropCells;
         public int Caverns;
         public int CavernCells;
+        /// <summary>Columns left standing inside caverns to keep every ceiling within <see cref="World.RockSpan"/>.</summary>
+        public int CavernPillars;
         public int OreDeposits;
         public int OreCells;
 
@@ -172,6 +182,7 @@ namespace Odyssey.Sim.Worldgen.Natural
             TopSolidY = new int[Columns];
             SubsoilBaseY = new int[Columns];
             BedrockTopY = new int[Columns];
+            DeepStoneTopY = new int[Columns];
             HasTree = new bool[Columns];
             Water = new byte[Columns];
             ShoreDistance = new byte[Columns];
@@ -210,6 +221,49 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// Per column rather than one global depth because a shallow map has to compress the stack.
         /// </summary>
         public int[] BedrockTopY { get; }
+
+        /// <summary>
+        /// The first layer above the deep stone in each column, so deep stone is
+        /// <c>BedrockTopY &lt;= y &lt; DeepStoneTopY</c> and plain rock runs from here up to the
+        /// subsoil (design 62 §5b). Equal to <see cref="BedrockTopY"/> where a column is too
+        /// shallow to reach <see cref="NaturalMapGenDef.deepStoneDepth"/>, which is every column
+        /// of a 16-layer board: it keeps all its rock.
+        /// </summary>
+        public int[] DeepStoneTopY { get; }
+
+        /// <summary>
+        /// Derive a column's stratum boundaries from its surface: subsoil, bedrock and deep stone.
+        /// The one owner of the rule, asked by the heightfield pass and again by the water plan
+        /// whenever a valley moves a column's ground. Deep stone runs from
+        /// <see cref="NaturalMapGenDef.deepStoneDepth"/> below the surface down to the bedrock,
+        /// clamped into the rock band so a shallow column keeps all its rock (design 62 §5b).
+        /// </summary>
+        public void DeriveStrata(int column)
+        {
+            int surface = SurfaceY[column];
+            int subsoilBase = surface - Gen.subsoilDepth;
+            if (subsoilBase < 0) subsoilBase = 0;
+            SubsoilBaseY[column] = subsoilBase;
+            int bedrockTop = Math.Min(Gen.bedrockLayers, subsoilBase);
+            BedrockTopY[column] = bedrockTop;
+
+            int deepTop = surface - Gen.deepStoneDepth + 1;
+            if (deepTop > subsoilBase) deepTop = subsoilBase;
+            if (deepTop < bedrockTop) deepTop = bedrockTop;
+            DeepStoneTopY[column] = deepTop;
+        }
+
+        /// <summary>
+        /// What the strata pass laid at a layer of a column, below the surface: bedrock, deep
+        /// stone, rock or subsoil. What a pillar left standing in a cavern is made of.
+        /// </summary>
+        public ushort StratumAt(int column, int y)
+        {
+            if (y < BedrockTopY[column]) return NaturalContent.TerrainBedrock;
+            if (y < DeepStoneTopY[column]) return NaturalContent.TerrainDeepStone;
+            if (y < SubsoilBaseY[column]) return NaturalContent.TerrainRock;
+            return NaturalContent.TerrainSubsoil;
+        }
 
         /// <summary>Set where a tree stands, so the start pass can find a clearing without a scan.</summary>
         public bool[] HasTree { get; }

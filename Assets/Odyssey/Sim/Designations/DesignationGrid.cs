@@ -349,9 +349,9 @@ namespace Odyssey.Sim.Designations
         /// <summary>Rock or ore that can be dug out — what a scenario means by "an outcrop".</summary>
         public bool IsMinableStone(int index)
         {
-            ushort terrain = _grid.Terrain[index];
-            bool stone = terrain == NaturalContent.TerrainRock || NaturalContent.IsOre(terrain);
-            return stone && CanMine(index);
+            // Rock-like and solid: rock, deep stone or any ore. Not rubble (a heap, not a face);
+            // bedrock is refused by CanMine.
+            return TerrainHandle.IsRockLike(_grid.Terrain[index]) && _grid.IsSolidTerrain(index) && CanMine(index);
         }
 
         /// <summary>
