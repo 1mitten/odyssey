@@ -203,7 +203,7 @@ namespace Odyssey.Sim.Pawns
 
             // Up when whole, for a colonist (design 33 §11c), and only once the body lets her too:
             // blood still past its worst stage keeps her down at a full pool (design 43 §3).
-            int recoverAt = pawn.IsColonist ? 1_000 : _ctx.Content.Combat.downedRecoverAtPerMille;
+            int recoverAt = pawn.HealsAsAColonist ? 1_000 : _ctx.Content.Combat.downedRecoverAtPerMille;
             if ((long)pawn.HpMilli * 1_000 >= (long)pawn.HpMaxMilli * recoverAt && !pawn.CurrentVitals().Incapacitated)
                 Recover(pawn, tick);
         }

@@ -1,5 +1,7 @@
 #nullable enable
+using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.World;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -7,11 +9,21 @@ namespace Odyssey.Sim.Pawns
     /// The minds of a pawn the colony holds (design 58 §6), chosen by custody ahead of the hostile
     /// tree: an escapee is hostile, but she is not a raider and must not ask a band what to do.
     /// Shared arrays; the nodes hold no state.
+    ///
+    /// <para><b>What holds her is the door, not the mind.</b> A prisoner walks in
+    /// <see cref="Pathing.TraverseMode.Bandit"/>, which cannot open one, so every reachability
+    /// question below is already bounded by her cell. The nodes add what the door cannot: food
+    /// and beds are chosen from her own room even when a door happens to be held open, and the
+    /// wander never picks a door cell, so she only ever goes through one when she means to leave.</para>
     /// </summary>
     public static class PrisonerTrees
     {
-        /// <summary>A held prisoner: down, else stay put.</summary>
-        static readonly ThinkNode[] Held = { new DownedThinkNode(), new PrisonerWaitThinkNode() };
+        /// <summary>A held prisoner: down, else her needs, else her shackles, else the cell, else wait.</summary>
+        static readonly ThinkNode[] Held =
+        {
+            new DownedThinkNode(), new PrisonerNeedsThinkNode(), new ShackledThinkNode(),
+            new CellWanderThinkNode(), new PrisonerWaitThinkNode(),
+        };
 
         /// <summary>A prisoner breaking out. Until the escape is written she stays put like a held one.</summary>
         static readonly ThinkNode[] Escaping = { new DownedThinkNode(), new PrisonerWaitThinkNode() };
@@ -28,7 +40,189 @@ namespace Odyssey.Sim.Pawns
         };
 
         /// <summary>The held prisoner's tree, in traversal order, so a test can assert it.</summary>
-        public static System.Collections.Generic.IReadOnlyList<ThinkNode> HeldTree => Held;
+        public static IReadOnlyList<ThinkNode> HeldTree => Held;
+
+        // ---- where she is kept ------------------------------------------------------------------
+
+        /// <summary>The prison bed she owns, or -1.</summary>
+        public static int OwnBed(Pawn pawn, PawnContext ctx)
+        {
+            var beds = ctx.Items.Beds;
+            int me = pawn.Id.Value;
+            for (int i = 0; i < beds.Count; i++)
+                if (BedRules.OwnerAt(ctx, beds[i]) == me && BedRules.PurposeAt(ctx, beds[i]) == BedPurpose.Prison)
+                    return beds[i];
+            return -1;
+        }
+
+        /// <summary>Whether her own bed is a shackle bed: a prison bed with no room around it.</summary>
+        public static bool IsShackled(Pawn pawn, PawnContext ctx)
+        {
+            int bed = OwnBed(pawn, ctx);
+            return bed >= 0 && ctx.BedPurposes != null && ctx.BedPurposes.IsShackled(bed);
+        }
+
+        /// <summary>The cell she stands in, if it is a cell — a room with a prison bed in it — or 0.</summary>
+        public static int CellRoom(Pawn pawn, PawnContext ctx)
+        {
+            if (ctx.Enclosure == null || ctx.BedPurposes == null) return 0;
+            int room = ctx.Enclosure.RoomAt(pawn.Cell);
+            return ctx.BedPurposes.IsCell(room) ? room : 0;
+        }
+
+        /// <summary>The enclosure's room record for a key, found on its own layer.</summary>
+        public static ThermalRoom? Room(PawnContext ctx, int key)
+        {
+            if (key == 0 || ctx.Enclosure == null) return null;
+            var rooms = ctx.Enclosure.RoomsOn(ctx.Size.FromIndex(key).Y);
+            for (int i = 0; i < rooms.Count; i++) if (rooms[i].Key == key) return rooms[i];
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// A held prisoner's own needs (design 58 §6): eat what is in her cell, sleep in her prison bed.
+    /// Never food or a bed outside the room she is kept in; a shackled prisoner, or one in no cell,
+    /// eats only what a warden brings her and sleeps where she is kept.
+    /// </summary>
+    public sealed class PrisonerNeedsThinkNode : ThinkNode
+    {
+        public override string Name => "PrisonerNeeds";
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            if (pawn.Asleep) return false;
+            int room = PrisonerTrees.CellRoom(pawn, ctx);
+
+            if (pawn.Needs[NeedIndex.Food] < ctx.Content.Needs[NeedIndex.Food].seekThreshold
+                && room != 0 && TryEatInCell(pawn, ctx, job, room))
+                return true;
+
+            return pawn.Needs[NeedIndex.Rest] < ctx.Content.Needs[NeedIndex.Rest].seekThreshold
+                   && TrySleepInCell(pawn, ctx, job, room);
+        }
+
+        /// <summary>The best food lying in her own room, then the nearest of it.</summary>
+        static bool TryEatInCell(Pawn pawn, PawnContext ctx, Job job, int room)
+        {
+            var items = ctx.Items.Items;
+            int best = -1, bestCell = -1, bestTier = int.MaxValue, bestDistance = int.MaxValue;
+            for (int i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                if (item.Despawned || item.Forbidden) continue;
+                ItemDef food = ctx.Content.Items[item.DefIndex];
+                if (food.nutrition <= 0 || food.foodTier > bestTier) continue;
+                int at = ctx.WhereIs(item);
+                if (at < 0 || ctx.Enclosure!.RoomAt(at) != room) continue;
+                int distance = ctx.Distance(pawn.Cell, at);
+                if (food.foodTier == bestTier && distance >= bestDistance) continue;
+                long key = ReservationManager.Key(ReservationTargetKind.Item, item.Id.Value);
+                if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
+                if (!ctx.CanTravel(pawn, at)) continue;
+                bestTier = food.foodTier;
+                bestDistance = distance;
+                best = i;
+                bestCell = at;
+            }
+            if (best < 0) return false;
+            job.Reset(JobIndex.Eat);
+            job.TargetItem = items[best].Id;
+            job.TargetCell = bestCell;
+            return true;
+        }
+
+        /// <summary>
+        /// Her own prison bed, else the nearest prison bed nobody owns in her room, else the
+        /// ground where she stands. Never a fireside: the nearest fire is outside the cell.
+        /// </summary>
+        static bool TrySleepInCell(Pawn pawn, PawnContext ctx, Job job, int room)
+        {
+            int own = PrisonerTrees.OwnBed(pawn, ctx);
+            int bed = own >= 0 && ctx.CanTravel(pawn, own) && Free(pawn, ctx, own) ? own : -1;
+            if (bed < 0 && room != 0)
+            {
+                var beds = ctx.Items.Beds;
+                int bestDistance = int.MaxValue;
+                for (int i = 0; i < beds.Count; i++)
+                {
+                    int cell = beds[i];
+                    if (!BedRules.CanUse(pawn, cell, ctx) || ctx.Enclosure!.RoomAt(cell) != room) continue;
+                    if (!Free(pawn, ctx, cell) || !ctx.CanTravel(pawn, cell)) continue;
+                    int distance = ctx.Distance(pawn.Cell, cell);
+                    if (distance >= bestDistance) continue;
+                    bestDistance = distance;
+                    bed = cell;
+                }
+            }
+            job.Reset(JobIndex.Sleep);
+            job.TargetCell = bed;
+            return true;
+        }
+
+        static bool Free(Pawn pawn, PawnContext ctx, int cell) =>
+            ctx.Reservations.CanReserve(pawn.Id, ReservationManager.Key(ReservationTargetKind.Cell, cell));
+    }
+
+    /// <summary>
+    /// A shackled prisoner (design 58 §5b, §6) stays on her bed: walks to it if she is not on it,
+    /// and waits there. Declines for anybody whose own bed is not a shackle bed.
+    /// </summary>
+    public sealed class ShackledThinkNode : ThinkNode
+    {
+        public override string Name => "Shackled";
+
+        /// <summary>How long one wait on the bed lasts before she thinks again.</summary>
+        public const int WaitTicks = 500;
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            if (!PrisonerTrees.IsShackled(pawn, ctx)) return false;
+            int bed = PrisonerTrees.OwnBed(pawn, ctx);
+            if (pawn.Cell != bed && ctx.CanTravel(pawn, bed))
+            {
+                job.Reset(JobIndex.Goto);
+                job.TargetCell = bed;
+                job.Mode = pawn.OwnMode;
+                return true;
+            }
+            job.Reset(JobIndex.Wait);
+            job.WorkTicks = WaitTicks;
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// A prisoner walks her cell by day (design 58 §6): a cell of her room chosen by a draw of her
+    /// own, never a door — doors are the room's boundary, so they are not in its cells at all.
+    /// Declines for a prisoner who is not standing in a cell.
+    /// </summary>
+    public sealed class CellWanderThinkNode : ThinkNode
+    {
+        public override string Name => "CellWander";
+
+        /// <summary>How often, per mille, a think in a cell is a walk rather than a wait.</summary>
+        public const int WalkPerMille = 400;
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            ThermalRoom? room = PrisonerTrees.Room(ctx, PrisonerTrees.CellRoom(pawn, ctx));
+            if (room == null || room.Cells.Count == 0) return false;
+
+            var rng = DeterministicRandom.ForTick(ctx.Seed, ctx.CurrentTick, PrisonPurpose.CellWander ^ (uint)pawn.Id.Value);
+            if (rng.NextInt(1000) >= WalkPerMille) return false;
+
+            for (int attempt = 0; attempt < 4; attempt++)
+            {
+                int cell = room.Cells[rng.NextInt(room.Cells.Count)];
+                if (cell == pawn.Cell || !ctx.Cells.IsWalkable(cell) || !ctx.CanTravel(pawn, cell)) continue;
+                job.Reset(JobIndex.Wander);
+                job.TargetCell = cell;
+                job.Mode = pawn.OwnMode;
+                return true;
+            }
+            return false;
+        }
     }
 
     /// <summary>A prisoner with nothing else to do stands where she is for a while, then thinks again.</summary>

@@ -166,7 +166,8 @@ namespace Odyssey.Sim.Pawns
             if (!pawn.IsPerson) perDay = combat.animalHealPerDay;
             // A colonist in a bed (design 33 §1), plus a tended injury's own heal wherever she is
             // (design 43 §6, a-02:41): a tended colonist still at work heals too.
-            else if (pawn.IsColonist) perDay = (InBed(pawn) ? combat.bedHealPerDay : 0) + TendHealPerDay(pawn);
+            // A held prisoner as a colonist (design 58 §4b): the colony is keeping her alive.
+            else if (pawn.HealsAsAColonist) perDay = (InBed(pawn) ? combat.bedHealPerDay : 0) + TendHealPerDay(pawn);
             else return;
 
             int day = _ctx.Content.DayTicks;
@@ -188,7 +189,7 @@ namespace Odyssey.Sim.Pawns
             // Up when whole, for a colonist (design 33 §11c, owner): she heals only in a bed, and a
             // rescued colonist stays in it until she is. The content's threshold is the animals',
             // which heal where they lie. And only once the body lets her (design 43 §3).
-            int recoverAt = pawn.IsColonist ? 1_000 : combat.downedRecoverAtPerMille;
+            int recoverAt = pawn.HealsAsAColonist ? 1_000 : combat.downedRecoverAtPerMille;
             if (pawn.Downed && (long)pawn.HpMilli * 1_000 >= (long)pawn.HpMaxMilli * recoverAt
                 && !pawn.CurrentVitals().Incapacitated)
                 Recover(pawn, tick);

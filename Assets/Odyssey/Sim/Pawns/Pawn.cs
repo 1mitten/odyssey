@@ -252,8 +252,18 @@ namespace Odyssey.Sim.Pawns
         /// hunt until it is killed, and one that went looking for the colony's meals would be a
         /// raider with a pantry (design 33 §5); and <b>a downed pawn's needs pause</b>, the C2
         /// default the owner did not object to.
+        ///
+        /// <para>A held prisoner's do too (design 58 §4b, §6): she gets hungry and tired in her
+        /// cell like anyone. An escapee's and a pawn walking off do not — they are leaving.</para>
         /// </summary>
-        public virtual bool NeedsTick => IsColonist && !Downed;
+        public virtual bool NeedsTick => (IsColonist || Custody == PawnCustody.Prisoner) && !Downed;
+
+        /// <summary>
+        /// Heals and gets up as a colonist does — in a bed, and only when whole — rather than as a
+        /// hostile, which never heals (design 58 §4b). A held prisoner is somebody the colony is
+        /// keeping alive; a bandit who could not heal would lie on her prison bed for ever.
+        /// </summary>
+        public bool HealsAsAColonist => IsColonist || Custody == PawnCustody.Prisoner;
 
         // ---- combat state (design 33 §3, §5) ---------------------------------------------------
         //
@@ -694,7 +704,9 @@ namespace Odyssey.Sim.Pawns
             rising ? Content.Mood.risePerInterval : Content.Mood.fallPerInterval;
 
         /// <summary>Is the pawn eligible to break at all? A sleeping pawn never is.</summary>
-        public virtual bool CanMentalBreak() => !Asleep && !IsBroken && Mood < Content.Mood.breakThreshold;
+        public virtual bool CanMentalBreak() =>
+            // Never a prisoner (design 58, ruling 12): her low mood is the escape risk's.
+            Custody == PawnCustody.Free && !Asleep && !IsBroken && Mood < Content.Mood.breakThreshold;
 
         /// <summary>
         /// The rate this pawn pays work at, in thousandths of a tick-at-standard-rate: 1,000 is
