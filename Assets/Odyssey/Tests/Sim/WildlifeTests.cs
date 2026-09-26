@@ -97,7 +97,7 @@ namespace Odyssey.Tests.Sim
             Assume.That(census.Rock, Is.Not.Empty, "and rock");
             var woodland = new HashSet<int>(census.Woodland);
             var rock = new HashSet<int>(census.Rock);
-            int hogs = 0, rats = 0;
+            int hogs = 0, rats = 0, frogs = 0;
             foreach (Pawn animal in Animals(colony))
             {
                 if (animal.Kind == PawnKindIndex.MiddenHog)
@@ -114,8 +114,16 @@ namespace Odyssey.Tests.Sim
                     Assert.That(NearAny(colony, animal.Cell, rock, WildlifeSeeder.GroupRadius), Is.True,
                         $"rat {animal.Id.Value} landed at {Size.FromIndex(animal.Cell)}, nowhere near rock");
                 }
+                else if (animal.Kind == PawnKindIndex.CulvertFrog)
+                {
+                    frogs++;
+                    // Scattered on the bank as well as centred on it (design 30 §8): every frog,
+                    // not only the centre, lands within the seed radius of water.
+                    Assert.That(census.IsBank(animal.Cell), Is.True,
+                        $"frog {animal.Id.Value} landed at {Size.FromIndex(animal.Cell)}, off the bank");
+                }
             }
-            Assert.That(hogs + rats, Is.EqualTo(Animals(colony).Count), "every animal is one of the two kinds");
+            Assert.That(hogs + rats + frogs, Is.EqualTo(Animals(colony).Count), "every animal is one of the three kinds");
         }
 
         static bool NearAny(ColonyWorld colony, int cell, HashSet<int> set, int radius)

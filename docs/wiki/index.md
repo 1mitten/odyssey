@@ -11,12 +11,12 @@ Every named thing in the game, generated from the design data. **Do not edit the
 | [Buildings and orders](buildings.md) | 83 | 24 |
 | [Commands](commands.md) | 55 | 35 |
 | [Work and skills](work.md) | 57 | 22 |
-| [Colonists](colonists.md) | 62 | 44 |
+| [Colonists](colonists.md) | 63 | 45 |
 | [Health and anatomy](health.md) | 39 | 21 |
 | [Events](events.md) | 51 | 26 |
 | [Research](research.md) | 26 | 26 |
 | [World and interface](world.md) | 136 | 110 |
-| [Proper nouns](proper-nouns.md) | 30 | — |
+| [Proper nouns](proper-nouns.md) | 31 | — |
 | [Colonist names](colonist-names.md) | 240 | — |
 
 The single-page searchable version is `index.html`. `README.md` explains how to host it.
