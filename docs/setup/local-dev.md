@@ -102,6 +102,40 @@ What differs from the Linux instructions above (verified on Windows 11, 2026-09-
   No `-quit` — the method exits the editor itself. `AssetDatabase.ImportPackage` merely queues imports under `-executeMethod` (a run can "succeed" having imported nothing), so `SyntyImport.cs` calls the editor's synchronous internal import; see the comment in that file.
 - **Keep the project path free of spaces** here too (`D:\code\odyssey` is fine) — same Unity-MCP constraint.
 
+### 8a. A second Windows machine from nothing (2026-09-26, `D:\dev\odyssey`)
+
+About ninety minutes, most of it the editor download. What differed from the first machine, in order:
+
+1. **Put the editor on a drive with room.** The Unity installer unpacks into `%TEMP%` on C: before
+   it installs anywhere, and needs several GB there *as well as* the 7.9 GB it installs; on a C:
+   with 3 GB free it fails with *"Extract: error writing to file C:\Users\…"*. Set Hub's location
+   first (`"Unity Hub.exe" -- --headless install-path --set D:\Unity\Hub\Editor`) and point
+   `unity.sh` at it with a user variable: `setx UNITY_HUB_EDITORS D:\Unity\Hub\Editor`.
+2. **Hub's headless install stops silently at the UAC prompt.** The log says *"Install … started"*
+   and nothing follows. The downloaded installer is in `%TEMP%\unityhub-<id>\`; run it by hand and
+   give it `D:\Unity\Hub\Editor\<version>` as the destination. Exit code 2 from a silent `/S` run
+   means the UAC prompt was declined.
+3. **Licence before anything.** Sign in to Hub and add a Personal licence; every batch run fails
+   without one.
+4. **Unpack the packs, do not import them.** `tools/synty/unpack.py` writes the assets with their
+   GUIDs and no editor open. The set, with what to take from each:
+
+   | Pack file (`.unitypackage`) | Take |
+   |---|---|
+   | `POLYGON_SciFi_City_Unity_2022_3_v1_3_x` | all — **PolygonGeneric and SyntyPackageHelper come from here** |
+   | `POLYGON_Farm_…_v1_7_3`, `POLYGON_Western_Frontier_…_v1_7_2`, `POLYGON_Particle_FX_…_v1_4_1` | own folder only |
+   | `POLYGON_NatureBiomes_MeadowForest_…_v1_10_5` | `PolygonNatureBiomes` and `PNB_Core` |
+   | `POLYGON_BattleRoyale_…_v1_9_2`, `POLYGON_Shops_…_v1_6_6` | own folder only (both ship PolygonGeneric under the same GUIDs) |
+   | `ANIMATION_Base_Locomotion_…_v1_1_3` | all |
+   | `ANIMATION_Sword_Combat_…_v1_2_0` | `AnimationSwordCombat` minus `Samples`; not `Tools` (C# that would compile into the project) |
+
+   The five PolygonGeneric copies were compared file by file: 1,267 of 1,268 identical, the odd one
+   newer in Sci-Fi City 1.3.4. **The Unity build of Shops**, not the Unreal `.zip` the same store
+   page offers. POLYGON *City* (not Sci-Fi City), Dungeon, Goblin War Camp and Starter are not used.
+5. **First open headless:** `scripts/unity.sh exec Odyssey.EditorTools.SyntyImport.UpgradeBuiltInMaterials`
+   — ten minutes on an RTX 2080 machine — then `git status`, which must show nothing under
+   `Assets/Synty` and nothing else modified.
+
 ## 9. Unity gotchas that cost real debugging time
 
 Collected rather than rediscovered. The first two land on the Burst grid job, the third lands on the material-tint strategy in `docs/design/06-rendering-and-camera.md`. (Contributed by another Claude Code session on this machine working on an unrelated Unity project; each cost it a debugging cycle.)
@@ -170,3 +204,11 @@ experiments, in `docs/research/g-02-unity-ui-framework.md`.
 
 Gate results on the target machine, a 2022 mid-range laptop, not on the dev boxes. Where only a dev
 box is available, hold results to 1.4× stricter.
+6. **As a CI runner.** Registered as `UPSTAIRS` beside `GWAR`; the Unity job's
+   `[self-hosted, windows, unity]` sends work to whichever is free once both carry `unity`.
+   `unity.sh` reads Hub's install location (`%APPDATA%\UnityHub\secondaryInstallPath.json`), so the
+   runner needs no environment variable to find an editor on D:. The one timing test that runs on
+   every PR, `HudStressTests`, takes its headroom from a table of known CPUs, because this i7-9700F
+   is 1.8 times slower per label than the 9800X3D and the same commit would otherwise pass on one
+   runner and fail on the other. **A new runner machine adds its row there**, measured from the
+   test's own `[R1]` per-label line, or it gets the strict default.
