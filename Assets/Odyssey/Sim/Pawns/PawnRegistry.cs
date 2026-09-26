@@ -484,6 +484,15 @@ namespace Odyssey.Sim.Pawns
             new Cooking.CookJobDriver(),
             // The ranged attack (design 47 §2d), JobHandle 27, after the kitchen's.
             new AttackRangedJobDriver(),
+            // The prisoner line (design 58 §7), JobHandle 28 to 35.
+            new CaptureJobDriver(),
+            new FeedPrisonerJobDriver(),
+            new ChatJobDriver(),
+            new EscortJobDriver(),
+            new GoToCellJobDriver(),
+            new EscapeJobDriver(),
+            new LeaveFreeJobDriver(),
+            new ArrestJobDriver(),
         };
 
         /// <summary>
@@ -500,7 +509,10 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public void BackfillSkills(int formatVersion)
         {
-            if (formatVersion >= 10) return;
+            // Format 11 (design 58 §8) dealt Social the same way. One guard serves both: the deal
+            // skips every skill already holding experience, so a file at 10 gets only Social and a
+            // file below it Shooting and Social, each from the stream a new colonist would use.
+            if (formatVersion >= 11) return;
             for (int i = 0; i < _pawns.Count; i++)
                 if (_pawns[i].IsPerson) _pawns[i].RollStartingSkills();
         }

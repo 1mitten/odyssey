@@ -320,7 +320,10 @@ namespace Odyssey.Tests.Sim
         // armed from a table of one, Item_Pistol, with the bandit's traverse mode and motive. No
         // golden moved: no golden spawns a hostile.
         // Raids merged onto cover, 2026-09-26: re-taken from the merged pack.
-        const ulong ContentFingerprint = 11695732358924543688UL;
+        // 2026-09-26, prisoners (design 58 P3, the contracts step): Skill_Social, Work_Warden
+        // (order 8), Job_Capture to Job_Arrest (drivers 28 to 35) and Thought_Imprisoned,
+        // Thought_ColonistArrested and Thought_WasArrested appended.
+        const ulong ContentFingerprint = 1100361368154067690UL;
 
 
         [Test]

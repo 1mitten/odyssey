@@ -134,6 +134,14 @@ ui.stat.pace.drafted,Drafted,ui.stat,WE,"A drafted colonist runs"
 ui.stat.pace.running,Running,ui.stat,WE,"Running to a fight or away from one"
 ui.stat.pace.standard,The standard walk,ui.stat,WE,"The pace tooltip when nothing is making her faster or slower"
 ui.status.shooting,Shooting,ui.status,RC,"Standing where the line is open and firing at a target"
+ui.status.capturing,Capturing,ui.status,PS,Carrying a downed enemy to a prison bed
+ui.status.feedingprisoner,Feeding a prisoner,ui.status,PS,"Carrying a meal to a prisoner, in her cell or on her bed"
+ui.status.chatting,Talking to a prisoner,ui.status,PS,"A warden talking a prisoner round, which fills her willingness"
+ui.status.escorting,Escorting,ui.status,PS,Walking a released prisoner out
+ui.status.goingtocell,Going to a cell,ui.status,PS,A raider who has given up walking herself to a prison bed
+ui.status.escaping,Escaping,ui.status,PS,"A prisoner breaking out: through the door, then for the edge"
+ui.status.leaving,Leaving,ui.status,PS,Let go and walking off the board
+ui.status.arresting,Arresting,ui.status,PS,Walking to a colonist to take her into custody
 ui.combat.miss,Miss,ui.combat,CB,A swing that did not land
 ui.combat.dodge,Dodge,ui.combat,CB,A swing the target stepped out of
 ui.combat.cover,Cover,ui.combat,CB,"A bullet the cover in its way took instead"

@@ -120,7 +120,9 @@ namespace Odyssey.Hud
             // Live with medical supplies (design 37): Work_Doctor's emergency giver treats the hurt,
             // and Medicine buys speed at it.
             new Entry("ui.work.doctor",       "doctor",       "medicine",     "", WorkHandle.Doctor),
-            new Entry("ui.work.warden",       NotSimulated, NoSkill, "prisoners arrive with factions (M7)"),
+            // Live from the prisoner line's contracts step (design 58 §7): Work_Warden, whose givers
+            // bring in the downed, feed the held and talk to them. Social is what a warden trains.
+            new Entry("ui.work.warden",       "warden",       "social",       "", WorkHandle.Warden),
             new Entry("ui.work.handling",     NotSimulated, NoSkill, "animals arrive with M5"),
             // Live with the kitchen (design 48 §5): the Cook giver works the bills at a galley or a
             // campfire, and Cooking buys speed at it.

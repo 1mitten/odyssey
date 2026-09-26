@@ -137,8 +137,9 @@ namespace Odyssey.Tests.Hud
             // Work_Rescue, whose giver answers no until C4 fills it.
             // Seven since medical supplies (design 37): Doctor's column went live with Work_Doctor.
             // Eight since the kitchen (design 48): Cooking's column went live with Work_Cooking.
-            Assert.That(WorkCatalogue.LiveCount, Is.EqualTo(8),
-                "Construction, Chopping, Mining, Hauling, Growing, Rescue, Doctor and Cooking are what WorkTypes.xml runs.");
+            // Nine since the prisoner line (design 58 §7): Warden's went live with Work_Warden.
+            Assert.That(WorkCatalogue.LiveCount, Is.EqualTo(9),
+                "Construction, Chopping, Mining, Hauling, Growing, Rescue, Doctor, Cooking and Warden are what WorkTypes.xml runs.");
 
             // And every one the simulation runs has a column: the two counts are the same list
             // seen from two sides, so a fifth work type with no column is this test failing.

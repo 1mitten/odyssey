@@ -124,4 +124,34 @@
     <durationTicks>15000</durationTicks>
   </ThoughtDef>
 
+  <!--
+    The prisoner line (design 58 sections 6 and 10), appended: a thought index rides every saved
+    memory. All three numbers are proposals the owner confirms at the first play.
+
+    Thought_Imprisoned is felt by a held prisoner and renewed while she is held, so it lasts as
+    long as the cell and a quarter-day after. It is what makes a bare cell a slow recruitment and
+    a restless prisoner: a held prisoner sits at 470 before anything else is said of her.
+    Thought_ColonistArrested is every free colonist's, a day long, stacking to three.
+    Thought_WasArrested is the arrested colonist's own, when she is let back out: three days.
+  -->
+  <ThoughtDef>
+    <defName>Thought_Imprisoned</defName>
+    <moodOffset>-30</moodOffset>
+    <durationTicks>15000</durationTicks>
+    <renewsOnRepeat>true</renewsOnRepeat>
+  </ThoughtDef>
+
+  <ThoughtDef>
+    <defName>Thought_ColonistArrested</defName>
+    <moodOffset>-40</moodOffset>
+    <durationTicks>60000</durationTicks>
+    <stackLimit>3</stackLimit>
+  </ThoughtDef>
+
+  <ThoughtDef>
+    <defName>Thought_WasArrested</defName>
+    <moodOffset>-80</moodOffset>
+    <durationTicks>180000</durationTicks>
+  </ThoughtDef>
+
 </Defs>

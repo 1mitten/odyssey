@@ -494,6 +494,14 @@ namespace Odyssey.Tests.Sim
         /// Cooking took the eighth skill, so Shooting is the ninth, <c>Job_AttackRanged</c> the
         /// twenty-eighth job and the pistol the eighteenth item. <b>Measured</b> the same way; the
         /// merge commit says what the probe found.</para>
+        ///
+        /// <para><b>All six moved on 2026-09-26, by the prisoner line's contracts step (design 58
+        /// P3): the hash seeing more, and no colony doing anything different.</b> Every person
+        /// carries a tenth skill, passion and daily-gain slot (Social, dealt after the other nine
+        /// from the same stream) and a ninth work priority (<c>Work_Warden</c>), and the job system
+        /// eight more counter pairs, which are hashed only once counted. <b>Measured</b>:
+        /// <c>GoldenColonyProbe</c> on the branch before the step (P2, which moved no golden) and
+        /// after it is identical on all three boards, all nine census lines.</para>
         /// </remarks>
 
         public static readonly Case Meadow = new Case
@@ -508,8 +516,8 @@ namespace Odyssey.Tests.Sim
             // (ODYSSEY_REGOLDEN=1), on top of the weather's own re-bake: the combined job, item,
             // skill and incident tables moved the hash the same way any content append does.
             // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
-            Generated = 14881731598722590511UL,
-            Simulated = 5300718913518332604UL,
+            Generated = 2577811091769003886UL,
+            Simulated = 6499962345614335276UL,
         };
 
         /// <summary>
@@ -575,8 +583,8 @@ namespace Odyssey.Tests.Sim
             // to, so people and animals take different legs. GoldenColonyProbe against the branch's
             // base: items, food, rest, mood, experience, passions and failed jobs identical; only
             // where they stand, the progress into their steps and the wanders (99 -> 100) differ.
-            Generated = 13308657285820379759UL,
-            Simulated = 15943907892212187783UL,
+            Generated = 15749010853226102691UL,
+            Simulated = 7847500519175945995UL,
         };
 
         /// <summary>
@@ -621,8 +629,8 @@ namespace Odyssey.Tests.Sim
             // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
             // 2026-09-25, nobody over anybody (design 31 §20): Simulated only, the wander legs
             // (74 -> 75) and where everybody stands; every other census number identical.
-            Generated = 14180088319569370523UL,
-            Simulated = 6894148259867231222UL,
+            Generated = 17867901875132255217UL,
+            Simulated = 14890213303710549720UL,
         };
     }
 }

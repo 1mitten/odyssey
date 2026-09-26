@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-62 entries, 44 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+70 entries, 52 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -78,6 +78,14 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Sheltering** | `ui.status.sheltering` | An animal waiting out the rain under a roof or a tree, or walking to one | no art | WE |
 | **In the rain** | `ui.status.inrain` | A colonist under open sky while it rains, and walking slower for it. Said beside her pace | no art | WE |
 | **Shooting** | `ui.status.shooting` | Standing where the line is open and firing at a target | no art | RC |
+| **Capturing** | `ui.status.capturing` | Carrying a downed enemy to a prison bed | no art | PS |
+| **Feeding a prisoner** | `ui.status.feedingprisoner` | Carrying a meal to a prisoner, in her cell or on her bed | no art | PS |
+| **Talking to a prisoner** | `ui.status.chatting` | A warden talking a prisoner round, which fills her willingness | no art | PS |
+| **Escorting** | `ui.status.escorting` | Walking a released prisoner out | no art | PS |
+| **Going to a cell** | `ui.status.goingtocell` | A raider who has given up walking herself to a prison bed | no art | PS |
+| **Escaping** | `ui.status.escaping` | A prisoner breaking out: through the door, then for the edge | no art | PS |
+| **Leaving** | `ui.status.leaving` | Let go and walking off the board | no art | PS |
+| **Arresting** | `ui.status.arresting` | Walking to a colonist to take her into custody | no art | PS |
 
 ## Pace and what it is made of
 
