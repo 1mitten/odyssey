@@ -23,6 +23,19 @@ the next session learns to ignore.
 
 ## Open
 
+- **Can you keep medical supplies on a colonist and use them?** (`claude/gear-kit`, design 54,
+  stacked on the Gear tab — merge #231 first.) Debug → *Give medical supplies*, let them be hauled
+  to a stockpile. Select a colonist, open **Gear**, press an empty belt tile: *Pick from stores*
+  lists them; choose it and she walks over and takes **five**, one slot's worth. Right-click a
+  loose pile with her selected: *Take into kit · medical supplies*. Press the filled tile: **Use**
+  reads *Not hurt* and is grey until she is hurt (Debug → *Hurt a colonist*), then she treats herself on the
+  spot and the count drops by one. Hurt somebody else and watch a doctor with a kit treat without
+  walking to the shelf. **Remove** lays the stack at her feet for the haulers; **Drop** leaves it
+  forbidden. Rations: take three, and she eats one from her kit only when there is no other food she
+  can reach. A wrong answer is a tile that does not update when a count changes, a Use that greys
+  when she is plainly hurt, a doctor still walking to the shelf with supplies on her belt, or one
+  take filling both slots.
+
 - **Does the Gear tab read at a glance?** (`claude/vigilant-bardeen-8idplc`, design 47.) Select a
   colonist, open **Gear**: she should show the issued jumpsuit, empty slots and two empty belt slots
   with four locked. Arm her (Debug → Spawn a weapon, right-click *Equip*), then press the weapon tile

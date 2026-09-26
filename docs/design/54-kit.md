@@ -72,9 +72,10 @@ gear is reached only by **Strip**, G7). All three apply while paused, as Equip a
   exactly as the weapon's list does; choosing one sends *Take into kit*. A filled tile opens its
   popover with **Use**, **Remove** and **Drop**.
 
-The job is a new job def appended at the end of the job table (`Job_TakeIntoKit`), so **every golden
-moves** on the counter a new job adds (`content-lives-in-defs`); the re-bake is measured with
-`GoldenColonyProbe` against the parent.
+The job is a new job def appended at the end of the job table (`Job_TakeIntoKit`, handle 28). **No
+golden moved**, measured on all of them: a job above `JobSystem.HashedAlways` reaches the hash only
+once one has run, and nothing in a golden run orders one. This document first said every golden
+would move; the tiers said otherwise, and the tiers were right.
 
 ## 4. Spending it on her own
 
@@ -120,6 +121,19 @@ moves** on the counter a new job adds (`content-lives-in-defs`); the re-bake is 
   a contract test holds the two copies together, as it does for the weapon.
 
 ## 7. The Gear tab
+
+**As built (2026-09-26):**
+
+- `KitOrders` (Hud) is the one builder for the three orders, the mirror of the aspect names, and
+  the mirror of the caps (`Cap`, `TakeRoom`).
+- **Use is published, not derived.** `Kit.UseOf` is the rule, and both the order and the snapshot
+  ask it (`odyssey.pawn.kit.<slot>.use`, a `KitUseHandle`). So the button reads what the order will
+  answer, and no second copy of "is she hurt" lives in the interface.
+- A greyed Use shows **its reason as the button's words** ("Not hurt") rather than a line above the
+  buttons, so the popover is one height whatever the reason.
+- Pick from stores for the kit lists **stored** stacks only, with the count where a weapon's quality
+  goes ("× 8"). A loose stack is reached by the right-click menu, as a loose weapon is.
+
 
 - The kit row reads **the real kit** while the preview is off. *Preview full kit* still replaces
   the whole row with the made-up one, as it replaces the worn slots, so the tab can be judged either
