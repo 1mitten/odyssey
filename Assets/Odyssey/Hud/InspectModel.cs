@@ -1727,6 +1727,12 @@ namespace Odyssey.Hud
         /// </summary>
         public const string DraftKey = "ui.command.draft", UndraftKey = "ui.command.undraft";
 
+        /// <summary>
+        /// Ride along (design 56): the view locked behind her shoulder until Escape. Public for the
+        /// same reason as the draft's keys: the shell that draws the button has to know it is live.
+        /// </summary>
+        public const string RideKey = "ui.command.ride";
+
         /// <summary>Whether the colonist on the pane is drafted: which face the Draft button shows.</summary>
         public bool Drafted { get; private set; }
 
@@ -1746,11 +1752,11 @@ namespace Odyssey.Hud
                 IconKey = "ui.command.inspect", Label = "Inspect",
                 Enabled = false, Reason = "the record view arrives with the log (M6)",
             });
-            Commands.Add(new InspectCommand
-            {
-                IconKey = "ui.command.prioritise", Label = "Prioritise",
-                Enabled = false, Reason = "job priorities arrive with the work grid (M7)",
-            });
+            // Prioritise stood here, dimmed, promising "job priorities arrive with the work grid
+            // (M7)". The work grid has arrived and holds the priorities; a forced "do this next" is
+            // the right-click menu's. Taken out when Ride along needed its room (design 56 §6), on
+            // the rule the store's dead Rename went by: an affordance for something that does not
+            // exist is worse than a gap.
             // Live since the draft (design 33 §2f). One button with two faces, as the reference
             // has it: it says what pressing it will do, and a tombstoned colonist has nothing to
             // command.
@@ -1769,6 +1775,14 @@ namespace Odyssey.Hud
                 IconKey = respond, Label = Registry.Label(respond),
                 Enabled = !Tombstoned,
                 Reason = ResponseModel.Describe(response),
+            });
+            // Ride along (design 56), after the two that command her: this one only watches. Last,
+            // so the response keeps its place beside Draft.
+            Commands.Add(new InspectCommand
+            {
+                IconKey = RideKey, Label = Registry.Label(RideKey),
+                Enabled = !Tombstoned,
+                Reason = "watch from behind her shoulder; the wheel goes in to her eyes, Esc leaves",
             });
         }
     }

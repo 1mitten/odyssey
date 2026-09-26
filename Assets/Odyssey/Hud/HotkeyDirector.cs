@@ -311,7 +311,15 @@ namespace Odyssey.Hud
         /// binding, and while a field has the keyboard it belongs to the field, which is where
         /// that rule lives.</para>
         /// </summary>
-        public bool GameKeysLive => Listening == null && Typist == null;
+        public bool GameKeysLive => Listening == null && Typist == null && !Suspended;
+
+        /// <summary>
+        /// The game's keys are held for a reason that is not a text field: riding along with a
+        /// colonist (design 56 §5), when the view is not the colony view and a tool key, a tab
+        /// key or the slice would act on a board the player cannot see. The ride reads the few
+        /// keys it keeps — time, and Escape — itself. Set and cleared by <see cref="HudDirectors"/>.
+        /// </summary>
+        public bool Suspended { get; set; }
 
         /// <summary>
         /// Take the keyboard for a text field. Idempotent, and a second field taking it from the
