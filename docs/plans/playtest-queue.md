@@ -23,6 +23,16 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do the numbers read at a glance by colour?** (`claude/vigilant-bardeen-8idplc`, design 59.)
+  Every judged number now blends red, amber, green from one table (`StatInks`). Open **Gear** on a
+  bare colonist: 0% armour red, warmth green in mild weather, rain and the kit plain white. Debug →
+  Cheats → *Preview full kit*: armour turns amber-green. Skip a month or two into Rime: the clock and
+  the warmth figure go red together, and the coat's warmth line stays greener than the jumpsuit's.
+  Hurt someone (Debug): the need and health bars fade through amber rather than jumping. Hover an
+  enemy with a gunman drafted: the chance to hit is coloured. A wrong answer is a colour that tells
+  you less than the number beside it, a blend you would rather see as three plain bands (one switch,
+  `StatInks.Blend`), or losing the blue for cold.
+
 - **Can you keep medical supplies on a colonist and use them?** (`claude/gear-kit`, design 54, now
   merged into the Gear tab, #231.) Debug → *Give medical supplies*, let them be hauled
   to a stockpile. Select a colonist, open **Gear**, press an empty belt tile: *Pick from stores*

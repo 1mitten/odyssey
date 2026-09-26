@@ -262,6 +262,7 @@ this file.
 | **The ambient birds: the flock, perches, the zoom scale, the flap** | `docs/design/50-ambient-birds.md` |
 | **The settings window, its frame, rail, controls and keyboard** | `docs/design/39-settings-window.md` |
 | **The title screen, its dock, logo and buttons** | `docs/design/40-title-screen.md` |
+| **What colour a number is drawn in: needs, health, pain, armour, temperature, fuel, pace, hit chance** | `docs/design/59-stat-colours.md` (`Odyssey.Hud.StatInks`, the one place) |
 | The debug menu | `docs/design/18-debug-menu.md` |
 | The start screen, saving, loading | `docs/design/17-start-flow.md` |
 | Colonist select | `docs/design/18-colonist-select.md` |

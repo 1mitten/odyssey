@@ -14246,3 +14246,23 @@ had never imported the Base Locomotion jump clips, so the catalogue's correct GU
 nothing. A forced reimport of `Assets/Synty/AnimationBaseLocomotion` fixed it. The same test
 passes in a worktree that imported the pack. Any worktree made before that pack arrived owes the
 same reimport, or the jump plays the walk.
+
+## 2026-09-26 — One table for how good a number is (design 59)
+
+The owner asked for the Gear tab's figures to be coloured, 0 % armour red, temperature green to
+amber to red, rain white, and then, mid-build, for the same thing **everywhere and from one
+place**. Five surfaces already coloured a number by its goodness, each with its own thresholds:
+the need bars stepped at 40/60 in Presentation, the health bar at the same steps in another
+assembly, the Health tab's pain and blood loss at two more pairs, generator fuel at half, and
+temperature as a hue (blue cold, red hot), not a verdict. That is the one-rule-several-owners
+shape again (`docs/bug-patterns.md` P1), and it is why a request for "consistency" had something
+to fix.
+
+`Odyssey.Hud.StatInks` now owns every scale (three anchors in the figure's own units, running
+either way), the ramp, the two palettes (the panel's tokens and the world bar's deeper inks,
+which moved here from `CombatFeedbackModel`), and one switch between a blend and three bands.
+**Temperature is judged against a comfortable range**, and the Gear tab's warmth is the same
+judgement with her worn range against the outdoor reading, so the bare colonist's warmth and the
+clock always agree. The blend is the default because the owner's words were "more towards red if
+not good"; the bands are one switch away if it reads worse. Tests that asserted a band now ask the
+table for the ink, so retuning a scale moves only `StatInksTests`.

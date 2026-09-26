@@ -41,6 +41,10 @@ Every number is in `Odyssey.Hud.GearLayout`; Presentation writes none of its own
 | Footer | Top rule. Four effects 18 apart, each a meta label then a 12 mono value; **a default value is drawn dim, never dropped**, so the line never reflows. Then LOADOUT and a 22-high cell with a drawn down chevron. |
 | Popovers | Open **outside the pane on its right**, at the pane's edge + 9 (569 when the pane is at 0), level with the tile. They never cover the doll. Item popover 260 wide; Pick from stores 340 wide, 34 header, 40 rows, at most 8 a page with a pager, and never a scrollbar. |
 
+**Colour (2026-09-26, design 59).** Every figure on the effects line and in an item's popover is
+drawn in `GearModel.Ink`: armour on `StatInks.Armour` (0 % red), warmth as her worn range against
+the outdoor reading, rain and the kit plain white. The bare values are no longer drawn dim.
+
 ## 3. What the buttons do
 
 - **Unequip** and **Drop**, on the weapon, send the new `IntentKind.OrderUnequip`. Its A is the
