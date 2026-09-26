@@ -59,8 +59,18 @@ namespace Odyssey.Sim.Weather
         int _blendStart, _blendTicks = BlendTicks;
         int _spellEnd;
 
-        public WeatherSystem(PawnContext ctx, WeatherDef[] defs)
+        /// <summary>
+        /// How much more often it rains here than the table says, per mille (design 57 §7): a
+        /// planet site's rainfall over the reference's 1,000 mm. Applied to every kind that rains;
+        /// the draw is by the season's weight sum, so the dry kinds need no adjustment. 1000 — no
+        /// site — is today's table exactly. Not saved: it is a pure function of the header's site.
+        /// </summary>
+        public int WetPerMille { get; }
+
+        public WeatherSystem(PawnContext ctx, WeatherDef[] defs, int wetPerMille = 1000)
         {
+            if (wetPerMille <= 0) throw new ArgumentOutOfRangeException(nameof(wetPerMille));
+            WetPerMille = wetPerMille;
             if (defs.Length == 0) throw new ArgumentException("the weather table is empty", nameof(defs));
             for (int i = 0; i < defs.Length; i++)
             {
@@ -136,7 +146,7 @@ namespace Odyssey.Sim.Weather
         {
             var rng = DeterministicRandom.ForTick(_ctx.Seed, tick, WeatherPurpose.Roll);
             int season = Calendar.SeasonOfYear(tick);
-            int kind = PickKind(_defs, season, rng.NextInt(TotalWeight(_defs, season)));
+            int kind = PickKind(_defs, season, rng.NextInt(TotalWeight(_defs, season, WetPerMille)), WetPerMille);
             Start(tick, kind, 0, quick, ref rng);
         }
 
@@ -157,20 +167,30 @@ namespace Odyssey.Sim.Weather
             _blendTicks = quick ? QuickBlendTicks : BlendTicks;
         }
 
+        /// <summary>
+        /// One kind's weight in a season at a site's wetness: the table's own, scaled for a kind
+        /// that rains. The one owner of that rule, so the total and the pick cannot disagree.
+        /// </summary>
+        public static int Weight(WeatherDef def, int season, int wetPerMille = 1000)
+        {
+            int w = Math.Max(0, def.seasonWeights[season]);
+            return def.rainPerMille > 0 && wetPerMille != 1000 ? w * wetPerMille / 1000 : w;
+        }
+
         /// <summary>The season's total weight, per 10,000. A season that rolls nothing rolls clear.</summary>
-        public static int TotalWeight(WeatherDef[] defs, int season)
+        public static int TotalWeight(WeatherDef[] defs, int season, int wetPerMille = 1000)
         {
             int total = 0;
-            for (int i = 0; i < defs.Length; i++) total += Math.Max(0, defs[i].seasonWeights[season]);
+            for (int i = 0; i < defs.Length; i++) total += Weight(defs[i], season, wetPerMille);
             return Math.Max(1, total);
         }
 
         /// <summary>Which kind a roll of <paramref name="draw"/> (0 up to the total) lands on. Pure, so it can be tested alone.</summary>
-        public static int PickKind(WeatherDef[] defs, int season, int draw)
+        public static int PickKind(WeatherDef[] defs, int season, int draw, int wetPerMille = 1000)
         {
             for (int i = 0; i < defs.Length; i++)
             {
-                int w = Math.Max(0, defs[i].seasonWeights[season]);
+                int w = Weight(defs[i], season, wetPerMille);
                 if (draw < w) return i;
                 draw -= w;
             }
