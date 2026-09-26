@@ -211,7 +211,7 @@ because the Orc Army already fills "hostile to all, no diplomacy".
 |---|---|---|
 | **Fires** | Incident `Incident_Collector`, worker `Collector`. Gates: the Bandits are not an Ally; the colony's stored value is at least a floor; `minRefireDays` | earliest day 5; refire ≥ 10 days; floor 500 value |
 | **Arrives** | A collector and an escort walk in along one edge (the raid's edge choice, design 55 §4) under **parley**, and stop at a **tribute spot** a few cells inside the edge, on a surface they can reach | escort 2–4, scaled by the demand's weight |
-| **Demands** | A **prompt**: *"The Bandits have come for their tithe"*, the goods listed, **Pay** / **Refuse**. The game pauses on it (the reference's choice letters do) | — |
+| **Demands** | A **prompt**: *"The Bandits have come for their tithe"*, the goods listed, **Pay** / **Refuse**. The game pauses on it (the reference's choice letters do). Its look is piece 2 of `factions-tab-brief.md` | — |
 | **The demand** | A **share of the stores' value**. The collector picks goods by highest value per unit, ties by def index then item id, so the demand is deterministic from the stores | **15 %** of stored value |
 | **Pay** | The tribute spot becomes a **storage zone that accepts exactly the demanded goods, at the top priority rung** (design 26's filter and rungs, reused whole). Haulers carry the goods there, the party picks them up (`StealJobDriver` with a load) and leaves by its edge, and the zone is removed | up to 6 game hours to deliver |
 | **Paid** | `tithe-paid`, pro rata to the value delivered. A payment of **under half** counts as a refusal | a full payment sets goodwill to **max(goodwill, 0) + 20**, so a full payment always ends a Hostile relation |
@@ -332,8 +332,9 @@ The owner's ruling is an **abstract list**, not a map.
 
 ## 8. The Factions tab (F1)
 
-Panel B9 (`10-ui-panel-catalogue.md`) on **F6**, the next free function key (F1–F5 and F9 are
-taken). **One row per faction:**
+Panel B9 (`10-ui-panel-catalogue.md`) on **F8**: the command bar has carried a dead *Factions F8*
+item since it was written (`HudCommands.cs:136`), and it goes live. (A first draft of this section
+said F6, having missed it.) **One row per faction:**
 - name;
 - a livery swatch;
 - the relation word;
@@ -345,7 +346,10 @@ taken). **One row per faction:**
 
 **No diplomatic actions in the slice.** Gift and Declare hostility are M7, with the comms console.
 
-**Brief Claude Design for its look** when F1 is reached, as the Assign and Animals tabs were.
+**Its look is briefed to Claude Design** in `docs/reference/mockups/factions-tab-brief.md`, as the
+Assign and Animals tabs were. The brief also covers the tithe prompt and alert (§4a) and the four
+faction glyphs. It leaves Claude Design to choose how the thresholds are drawn and where the detail
+sits; the answer becomes constants in F1.
 
 **Registry keys (wiki content, added with F1):**
 - `ui.tab.factions` (exists);

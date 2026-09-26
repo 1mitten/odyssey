@@ -14000,3 +14000,18 @@ uses.
   - which Synty pack has the orcs;
   - what "maybe something else" meant (the Sump, arriving from below, is proposed);
   - whether *the Tithe* survives as a name or becomes the word for the demand.
+
+**Later the same day: the Claude Design brief, and a key corrected.** The owner asked for the design
+prompt, and none existed. Design 61 had only promised one.
+- **`docs/reference/mockups/factions-tab-brief.md`** follows the Assign, Animals and Health briefs'
+  shape and covers three pieces: the Factions tab, the tithe prompt with its alert, and four faction
+  glyphs.
+- It leaves Claude Design two real choices, each to be argued rather than picked:
+  - **how to draw the hysteresis on the goodwill bar.** The same −40 can be Hostile or Neutral, so
+    the bar has to show the distance to the *next* change, not a position alone.
+  - **where the detail sits.**
+- Writing it caught a mistake. Design 61 put the tab on **F6** as "the next free key", but the
+  shipped command bar has carried a dead **Factions F8** since it was written (`HudCommands.cs:136`).
+  Design 61 and the plan say F8 now.
+- The lesson is the CLAUDE.md one: **check the code before trusting a status line**, including one's
+  own from that morning.
