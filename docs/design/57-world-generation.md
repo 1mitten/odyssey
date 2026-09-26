@@ -311,6 +311,9 @@ constants live in `Odyssey.Hud.WorldLayout`. **Departures:**
 | texture about 1187 × 515 | **painted at 2× (2374 × 1030)**, with the geometry in 1× units | at 4× zoom a 1× texture is a blur; the hex outlines, marks and labels are drawn at 1× units either way. Paint time is §9d's number. |
 | the sea labels in italic | **upright** | neither shipped face has an italic cut; the tracking and ink are kept, as the specification itself allows |
 | the land labels' 3 px white halo | a **1 px outline** (UI Toolkit's `-unity-text-outline`) | the specification's own fallback, since UI Toolkit has no text shadow blur |
+| land labels 12/600 tracked .22em, sea labels 14/500 tracked .06em | land at the **panel-label step (11/600, upper case, its own .14em)**, sea at the **row step (14/500)** | the type scale has six steps and no seventh, and the stylesheet may set no type at all (`HudStyleSheetTests.TheSheetSetsNoTypeAtAll`): a role is the only way a label gets a face, a size and a tracking |
+| Next "Accent ink at 600" | the **list-heading step (14/600)** | the one existing 600 step at 14 |
+| the cursor is `grab` when zoomed | the arrow, unchanged | keyword cursors are Editor-only in UI Toolkit and inert at runtime (design 28-pointer-cursor); the game draws its own cursor, and a grab hand is not one of its shapes yet |
 | "drawn with `SvgPath`" (selection and hover) | drawn with `Painter2D` in the map overlay's `generateVisualContent`, from `WorldMapGeometry.Outline` | the outline is a hexagon computed per tile, not a fixed path string; the dashed ring uses `DashedOutline`'s hand-dashed loop, since `SvgPath` has no dashes |
 
 ## 9b. The map colours

@@ -148,6 +148,7 @@ namespace Odyssey.Tests.PlayMode
                 GiveItACatalogue(boot);
 
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 57 §9)
                 for (int i = 0; i < 8; i++) yield return null;
 
                 var doc = boot.GetComponent<UIDocument>();

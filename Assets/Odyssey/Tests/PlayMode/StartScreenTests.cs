@@ -181,6 +181,7 @@ namespace Odyssey.Tests.PlayMode
                 var doc = boot.GetComponent<UIDocument>();
                 Assert.That(Shown(doc.rootVisualElement.Q("curtain")), Is.False, "the curtain is up over the title screen");
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 57 §9)
                 yield return Settle();
 
                 Assert.That(shell.Menu.Start(), Is.True);
@@ -297,6 +298,7 @@ namespace Odyssey.Tests.PlayMode
 
                 // Start a colony: the interface comes back and the backdrop goes.
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 57 §9)
                 yield return Settle();
                 Assert.That(shell.Menu.Start(), Is.True);
                 yield return Settle();
@@ -379,6 +381,7 @@ namespace Odyssey.Tests.PlayMode
                 // is what commits. Driven through the director rather than by synthesising a
                 // click, as the note above says.
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 57 §9)
                 yield return Settle();
 
                 Assert.That(boot.HasSession, Is.False,
@@ -436,6 +439,7 @@ namespace Odyssey.Tests.PlayMode
                 var doc = boot.GetComponent<UIDocument>();
 
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 57 §9)
                 yield return Settle();
 
                 var box = doc.rootVisualElement.Q<TextField>("seed");
@@ -491,6 +495,7 @@ namespace Odyssey.Tests.PlayMode
                 var doc = boot.GetComponent<UIDocument>();
 
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 57 §9)
                 yield return Settle();
 
                 var box = doc.rootVisualElement.Q<TextField>("seed");
@@ -749,6 +754,7 @@ namespace Odyssey.Tests.PlayMode
                 // there being nothing in it to change size for.
                 shell.Menu.Back();
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 57 §9)
                 yield return Settle();
                 Assert.That(shell.Menu.Screen, Is.EqualTo(MenuScreen.NewGame));
 
@@ -758,7 +764,9 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(Shown(page), Is.True, "the setup page is not on screen");
 
                 // Back, and the box is exactly where it was — which is the half that would strand
-                // a player if the page did not put the panel back.
+                // a player if the page did not put the panel back. Twice since design 57: the setup
+                // page backs out to the planet, and the planet to the root.
+                shell.Menu.Back();
                 shell.Menu.Back();
                 yield return Settle();
 
@@ -872,6 +880,7 @@ namespace Odyssey.Tests.PlayMode
                 var doc = boot.GetComponent<UIDocument>();
 
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 57 §9)
                 yield return Settle();
                 Assert.That(shell.Menu.Screen, Is.EqualTo(MenuScreen.NewGame));
 
@@ -937,6 +946,7 @@ namespace Odyssey.Tests.PlayMode
                 var doc = boot.GetComponent<UIDocument>();
 
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 57 §9)
                 yield return Settle();
 
                 var cards = doc.rootVisualElement.Query(className: "colonist").ToList();
