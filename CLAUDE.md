@@ -334,10 +334,13 @@ cell out: that is a decision, not a side effect. `docs/design/22-terrace-steps.m
 audio, a day/night cycle and golden-hour grading. No pack contains a work animation, so the axe,
 pick and hammer strokes are **computed** (`WorkSwing`, `WorkStyle`).
 
-**Colonists are 61 Synty characters, recoloured — not dressed.** No modular body exists in any pack,
-so clothing, hair and skin are repainted by rewriting atlas swatch rectangles. Appearance derives
-from the pawn's own `RollSeed`, so the person on the setup card is the person who walks around. A
-portrait is the actual character rendered once at 128 px and cached on the appearance, not the pawn.
+**Colonists are drawn from a 29-strong pool (PolygonGeneric + Battle Royale, gendered), dressed.**
+Hair and beards are rigid props on the head bone, dealt by gender with greying and baldness by age,
+and every colonist wears an issued jumpsuit applied after the rolls — so identity is carried by
+face, hair and beard, and clothing is progression rather than the only variation (`MC`,
+`docs/design/29-modular-colonists.md`). Appearance derives from the pawn's own `RollSeed`, so the
+person on the setup card is the person who walks around. A portrait is the actual character
+rendered once at 128 px and cached on the appearance, not the pawn.
 
 **What the player sees is decided by how deep they are.** At or above the surface every layer above
 is drawn solid; below it, one layer above is x-rayed and every layer below is drawn. Anything drawn
