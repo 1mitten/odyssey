@@ -93,3 +93,58 @@ owning design document updated in the same commit, the ratchet re-baked, one lin
 status (or `docs/status.md` after R0) and the reasoning in `docs/journal.md`. The plan is done when
 `OdysseyBootstrap`, `ChunkRenderer`, `HudShell` (the root partial) and `PawnFigureDirector` are each
 under 2,000 lines and the ratchet's list is under twenty files.
+
+## 6. The sequence, and when each unit is ready (owner and reviewer, 2026-09-26)
+
+The owner asked whether to sort the open pull requests out first and then do this. **Mostly, and
+per file rather than all at once**: a unit opens the moment the PRs on *its* files are merged or
+closed, and nothing waits for the whole queue, because two of the open PRs (#143, #193) have been
+open a week and may linger — waiting on the whole queue is how HT5 never ran. This section is the
+order, written so a session can start the right thing without re-deriving it.
+
+### 6a. Drain the queue in collision order, not age order
+
+| Step | Pull requests | Why this order |
+|---|---|---|
+| 1 | **This branch** (`claude/epic-clarke-uzx4y8`): the review, the code map, this plan, the ratchet | Documents plus one Python gate, no C#. From then on every rebase meets the ratchet, so growth in the four large PRs becomes a visible number, and the sessions fixing those PRs have the code map. Its only conflicts are a status row and a journal append. |
+| 2 | **The small, independent five**, any order: #236 (weapon aspect guard, 3 files), #221 (aspect allocation flake, 2), #211 (HT1, 10), #192 (stair gait, 10), #149 (terrace-bank sleep, 10 — the oldest, and it touches `JobSystem`, `NeedsSystem` and `ConstructionGrid`, which the large ones touch too, so it goes in before them) | Each is a day or less of review and frees files the large ones will otherwise conflict on. |
+| 3 | **The pawn spine, one at a time**: #215 (traits, 82 files), #231 (gear, 81), #249 (prisoners, 73), #248 (pig butcher, 76), #247 (faces, 28) — in whatever order they are played and approved, **never two at once**, and the next rebased the moment the last merges | All five edit `Pawn`, `PawnRegistry`, `PawnContent` and `InspectModel`; they conflict with each other far more than with anything else. |
+| 4 | **Whenever ready, blocking nothing**: #143 (roofing, pillar, stair; 48 files, open since 09-19) and #193 (the draw; a draft, 59 files) | No unit waits for these two. R0 and R1 proceed and these rebase, which the R0 row below prices. |
+
+### 6b. When each unit is ready
+
+A unit is ready when every PR in its *waits for* list is merged or closed — checked against the
+live list, not this table, because this table is a snapshot of 2026-09-26. The check, cold:
+list the open PRs, list each one's changed files (`gh pr view <n> --json files`, or the GitHub
+tool in a remote session), and intersect with the unit's files in §2. Ten minutes; do it before
+opening the branch, not after.
+
+| Unit | Ready when | The decision taken on 2026-09-26 |
+|---|---|---|
+| **R8** hygiene, **R9** design index | now | Touch no contested file. Either can open today. |
+| **R3** the sixteen untouched panels | now, one panel per PR | `HudShell.cs` (the root partial) is in three PRs, so each panel PR keeps its edit to the root to the one registration line, which merges cleanly. Inspect and Start wait for step 3. |
+| **R0** the status table out of `CLAUDE.md` | after step 2, **not** after all eight PRs that edit the table | The three that remain (#143, #193 and whichever of step 3 is still open) each rebase by moving their own row to `docs/status.md`: a two-minute job the R0 PR description spells out. Waiting for #143 and #193 could be weeks, and every session reads the 149 KB file meanwhile. |
+| **R5** the job pipeline's bases, **R6** the context sealed | after #149, #215, #231, #249 | Same files; R6 rides in R5's gap. |
+| **R2** the thing renderer | after #248 | One PR to wait for. |
+| **R1** the frame passes | after #143, #193, #231, #248 | Four to wait for, and the one with the most reach; if #143 or #193 stalls past step 3, open R1 anyway and let them rebase — the root's `Draw*` methods are the last thing either touches. |
+| **R4** the pose stages | after #192, #247, #248, #249 | Last of the large cuts: the figure sheets are the slowest proof. |
+| **R7** the `Hud` folder | after every open PR that touches `Hud` (52 files on 09-26) | A pure move; any open Hud edit conflicts with it, so it is the one unit that does wait for the whole queue. |
+
+### 6c. Two alternatives, and why not
+
+**A refactor freeze** — stop features and do every cut in one go — makes all twelve PRs rebase
+onto moved code at once, the maximum conflict work, and costs the owner a week of playtests,
+which `docs/process.md` §4 names as the project's real constraint. **Cutting now on a side branch
+and rebasing it until the queue drains** is worse: the cut would be rebased across five large PRs'
+edits to the same files. The rule of one cut per gap, with the ratchet holding the line between
+gaps, is the cheapest path that actually runs.
+
+**What would change the order.** If #215, #231 and #249 are all days from merging, take step 3
+before R0 and let R0 wait for them too. If any is more than a week out, do not wait for it.
+
+### 6d. From today, whatever the queue
+
+A feature on a file at its ceiling adds a class and a row, not a method; the ratchet says so on
+the PR. The cut for a file is the next thing that opens on it after its batch merges, before the
+next feature. Every cut re-runs `tools/ci/size_ratchet.py --bake` so the ceiling tightens to the
+new size, and updates `docs/code-map.md` in the same commit.
