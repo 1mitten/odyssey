@@ -14430,3 +14430,78 @@ needed no new number.
 Proved by listening through the code: the fight test now tallies `AudioDirector.Played` and hears
 all four moments.
 
+## 2026-09-26 — Clouds: the Meadow demo's rings, re-lit for a whole day
+
+The owner, looking at a clear sky: it *"at least looks bare"*; were there clouds in the packs,
+*"happy to use what synty has if effective … keep it performant."* A census of all eleven packs
+found flat cloud props in six, skydomes in four, and in the Meadow biome a proper answer: a toon
+`Clouds` shader graph and two cloud rings, the pair the Meadow demo scene hangs round itself. The
+owner chose the rings over the props, cover following the weather, a slow drift, and the birds'
+budget. `docs/design/63-clouds.md`.
+
+**Where the sky is seen decided the geometry.** The colony camera at its usual 48° sees none (its
+highest ray is 24° down), and at its lowest pitch the top edge only touches the horizon. The sky is
+First Person's (design 57): 60° of lens at eye height. So the rings are centred on the camera every
+frame at the world's height, and **nothing is submitted when the highest ray in the view is below
+the ring's lowest point** — normal play costs the clouds nothing at all, not even a depth pass.
+
+**Cover is height.** The shader is opaque and its "Cloud Strength" is a vertical wobble, not a
+density, so a clear sky squashes the rings to a low band and full cover stands them up to the demo's
+banks. Nothing in the shader changed; the licensed material is copied and never written.
+
+**Two of the pack's features were off by the second sheet, both measured from pixels.** Its
+scattering weights a lerp by the sun's direction *per channel*, so a high noon sun made the clouds
+lilac (202, 187, 202). Its fog lerps by 0.18 plus the distance fog, which in our haze is about 1 at
+a ring's range, so it overshot past the fog colour, inverted the shading and put the night clouds
+at pure blue (0, 0, 29). The haze is a constant blend in `CloudColours` now — exact for a ring at
+one range — and the night clouds sample at (113, 120, 140). The colours come from the graded
+`DaylightState`, so Overcast's grey reaches the clouds with no weather code of their own;
+`DaylightDirector` gained `State` and a `Version` so they are rewritten only when the light moved.
+
+**One thing unexplained**: the first frame the pack's shader drew in a fresh editor came out black
+on the shadowed faces and never again — not the colours, not the fog, not the scattering, each
+ruled out by a probe. The sheet throws a picture away first. Whether an editor session shows one
+black frame of cloud is unknown; a player compiles its shaders ahead.
+
+**The plan's keep-alive was not needed.** The material reaches a player as a reference from
+`MeadowLook.asset`, so its shader goes with it, and the rings are not instanced, so there is no
+`INSTANCING_ON` variant to keep.
+
+**Cost**: `FrameSection.Clouds` 0.002 ms with nothing seen, 0.010 ms drawing both rings at 4K. The
+frame difference is inside the noise at every arm, and at 4K the noise was ±4 ms — six editor
+windows and two batch runs from other worktrees were on the machine, and the colony view "gained"
+3 ms while submitting nothing. So the GPU was measured in a development player instead, where
+`PlayerBench` reads the GPU's own clock (a new `-odyssey-bench-clouds` arm): **5.92 ms with the
+clouds, 5.88 without, 5.91 again** at 3840 × 2160 with an eye at the horizon — about 0.03 ms.
+
+**The player build was refused first, for a reason that was `main`'s**: the cracks' two shaders
+(design 58) are found at runtime and had never been added to the always-included list, so no
+player could be built from `main` that day. `ShaderInclusion.Apply` added them; the EditMode tier
+had been green throughout, which is `lessons.md`'s point about two green tiers again.
+
+## 2026-09-26 — Clouds: gone by night, heavier in rain, slate in a storm
+
+The owner, after the first build: *"make the clouds faded or not there at night as we want to darken
+things up and also stormy/rainy need moodier clouds."* Asked for the balance, they chose: **gone at
+night**, fading **after** the golden hour (19:30–21:00) and back before dawn's (05:00–06:30); rain
+**heavier with its colour kept**, so the rule of 2026-09-25 stands; and a storm as **dark slate,
+darker than the sky**. `docs/design/63-clouds.md` §4c–§4d.
+
+An opaque shader cannot fade, so fading is two things at once: the rings sink to a quarter of their
+height and every colour converges on the sky behind them, taken where the gradient sky puts it at the
+band's middle. At nought nothing is submitted, so the night sky now costs nothing at all.
+
+**The storm needed a second go, found from logged colours rather than pictures.** The first darkened
+the undersides to slate, (95, 99, 109) against a sky of (143, 155, 171), and the deck still read
+light, because with the sun behind a player the faces in view are the lit tops, which were
+(186, 191, 197). The tops now go to 85% of the sky's own brightness too; the sheet logs every
+picture's colours beside the sky's so the next retune can be read instead of guessed.
+
+## 2026-09-26 — Clouds: the snap at the end of the night fade
+
+The owner: *"I see the clouds snap in from night to evening."* The fade kept a quarter of the rings'
+height to its last frame, and a band coloured like the sky is still a band against a gradient, so it
+vanished at 21:00 and reappeared at 05:00 in one frame each. The rings now sink to the eye line and
+flatten, which puts them edge-on — nothing left to see — and a jump in the hour is eased over four
+real seconds instead of taken. A pixel diff against clouds-off at 2% presence found nothing looking
+away from the sun and 39 pixels in 1.44 million looking up. Design 63 §4e.

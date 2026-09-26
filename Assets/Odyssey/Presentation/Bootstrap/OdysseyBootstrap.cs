@@ -246,6 +246,12 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>The butterflies, for the tests, the settings and the overlay. Null between sessions.</summary>
         public ButterflyDirector? Butterflies => _butterflies;
 
+        /// <summary>The Meadow cloud rings round the camera (design 63): drawn, never simulated.</summary>
+        CloudDirector? _clouds;
+
+        /// <summary>The clouds, for the tests and the player bench. Null between sessions.</summary>
+        public CloudDirector? Clouds => _clouds;
+
         /// <summary>The key light the day moves, kept so the renderer's shadow margin can sweep
         /// towards it (design 38 §18).</summary>
         Light? _keyLight;
@@ -417,6 +423,11 @@ namespace Odyssey.Presentation.Bootstrap
             /// overlay and the trace, which is what decides the presets' rungs (§9).
             /// </summary>
             Butterflies,
+            /// <summary>
+            /// The cloud rings (design 63): two calls when the camera can see the sky and none when
+            /// it cannot, which is the colony camera at every pitch but its lowest.
+            /// </summary>
+            Clouds,
             Count,
         }
 
@@ -1165,6 +1176,8 @@ namespace Odyssey.Presentation.Bootstrap
                 {
                     Capacity = Preferences.Value(GraphicsLadder.Butterflies),
                 };
+                // The clouds (design 63): the Meadow demo's two rings, where the packs are present.
+                _clouds = new CloudDirector(_model, MeadowLook.Loaded);
             }
 
             // Which family each weapon swings in (design 33 §5j), read once off the content, so a
@@ -1815,6 +1828,17 @@ namespace Odyssey.Presentation.Bootstrap
                     bloodLowest, bloodHighest, slice.BelowSurface(activeLayer));
             }
             MarkSection(FrameSection.Butterflies);
+            // The clouds after the weather, which has eased the cover, the gloom and the wind they
+            // read, and after the daylight, whose graded light colours them. Game seconds, so a
+            // paused world holds the sky (design 63 §5).
+            _clouds?.Sync(cameraRig != null ? cameraRig.GetComponent<Camera>() : null,
+                Time.deltaTime * _world.GameSpeed, Time.unscaledDeltaTime,
+                _weather?.Cloud ?? _world.Views.Current.Weather.CloudPerMille / 1000f,
+                _weather?.Gloom ?? 0f,
+                _weather?.Rain ?? _world.Views.Current.Weather.RainPerMille / 1000f,
+                _weather?.Wind ?? 1f,
+                _daylight, slice.BelowSurface(activeLayer));
+            MarkSection(FrameSection.Clouds);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
 
@@ -4605,6 +4629,7 @@ namespace Odyssey.Presentation.Bootstrap
             _weather?.Dispose();
             _birds?.Dispose();
             _butterflies?.Dispose();
+            _clouds?.Dispose();
             _floaterView?.Dispose();
             _hearthMark?.Dispose();
             _hearthMark = null;
@@ -4645,6 +4670,7 @@ namespace Odyssey.Presentation.Bootstrap
             _weather = null;
             _birds = null;
             _butterflies = null;
+            _clouds = null;
             _corpses = null;
             _floaterView = null;
             _colonistMaterials = null;

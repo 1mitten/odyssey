@@ -70,6 +70,21 @@ the next session learns to ignore.
   - Read the strip at the bottom. Wrong: a missing fact you wanted, or it covers the action.
   - Check the card's buttons now Prioritise is gone. Wrong: her name runs under them.
 
+- **Do the clouds make the sky look lived in, and do they follow the weather?** (`claude/clouds`,
+  design 63.) Select a colonist and press **First Person**; look along the horizon.
+  - A clear noon. Wrong: the sky still reads bare, or the band of cloud looks like a painted strip
+    rather than cloud.
+  - Debug → Weather: Rain, then Storm. Rain should look heavier but keep the meadow's colour; a
+    storm should be a slate deck darker than the sky. Wrong: rain that looks like a clear day, a
+    storm that still reads light, or one so dark it looks like night at noon.
+  - Watch dusk into night and night into dawn. They should keep their gold at sunset, dissolve
+    into the sky between 19:30 and 21:00, be gone all night, and return 05:00–06:30. Wrong: the
+    night still too light, a cloud that pops rather than fades, or dawn arriving without them.
+  - Run at speed 3 and pause. Wrong: the drift is too quick to feel like weather, or the clouds keep
+    moving on a pause.
+  - Look straight up. Wrong: you wanted clouds overhead too; the rings are a horizon band by
+    design (63 §9), and overhead cloud is a second technique.
+
 - **Do the frogs read as frogs, and are they where the water is?** (`claude/frog`, design 30 §8.)
   New game on the meadow and look along a stream or a pond: there should be groups of three to five
   bright emerald, red-eyed frogs on the banks (about 0.9 m long since the owner's first ask), and none
