@@ -218,6 +218,9 @@ namespace Odyssey.Sim.Worldgen.Natural
                     if (at.Y < ctx.DeepStoneTopY[ctx.Column(at.X, at.Z)]) ctx.Report.DeepStoneCells--;
                     else ctx.Report.RockCells--;
                     ctx.Carve(cell);
+                    // Nobody has seen inside (design 62 §6): drawn and described as rock until a
+                    // cut breaks in. The simulation's truth is the air Carve just wrote.
+                    ctx.Grid.Unseen.Add(cell);
                     carved++;
                 }
                 if (carved == 0) continue;

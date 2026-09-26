@@ -216,6 +216,10 @@ namespace Odyssey.Sim.Pawns
                 // no format bump. A save from before has no section and loads with none kept —
                 // which is what a cancel then left.
                 designations.PartMined,
+                // The chambers nobody has opened (design 62 §6): appended, no format bump. A save
+                // from before has no section, so the board keeps the chambers its seed carved —
+                // and RebuildDerived opens again any of them that save had already broken into.
+                pawns.Cells.Unseen,
             };
         }
 
@@ -300,6 +304,12 @@ namespace Odyssey.Sim.Pawns
         public void RebuildDerived()
         {
             _solver.SolveFull();
+
+            // A chamber the grid says is open to the colony's air is not unseen, whatever the
+            // bitset says (design 62 §6). Nothing on a save this build wrote, nor on a fresh
+            // board, whose chambers are sealed by the cavern pass; a save from before the bitset
+            // existed has every generated chamber back, and this is what reveals the broken ones.
+            CavernBreach.RevealBreached(Pawns);
 
             // The home (design 43 §3c) is derived from everything that just came back, and nothing
             // it read before the load is still true.
