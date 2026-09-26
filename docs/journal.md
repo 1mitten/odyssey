@@ -14014,3 +14014,36 @@ pattern again: one rule with two owners, found only because the two owners met i
 The wake also reached `main` as design 56 first, so the ride is **design 57**
 (`docs/design/57-ride-along.md`), by the precedent cover set when the birds took 50. Only the
 lines this branch wrote were renumbered; the wake's references to 56 are its own.
+
+## 2026-09-26 — The storyteller, designed
+
+The owner asked to explore the storytelling layer on the reference's AI storytellers, with names left
+for later, and to be interviewed for every detail. Twenty-two questions in five rounds. Every
+recommendation was taken. The result is design 58 (57 went to First Person the same day), a plan
+of seven units, and an interview record. **Nothing is built**; the plan waits for approval.
+
+The decision that shapes everything is **strength, not wealth**. The reference budgets a threat from
+colony wealth. That is its most criticised mechanic: it punishes building nice things, and players
+install mods to show combat readiness because the budget does not. We had no value measure to total
+anyway. So the budget is what the colony can fight with: standing colonists' health, skill, weapon
+and quality. Fortifications and animals **never** count, because counting sandbags would mean
+building a defence summons a bigger raid, the wealth meta in a new form.
+
+Two things came out of reading the code rather than the reference:
+
+- **`IncidentParms.Points` is a raid size**, not a budget. Design 55 gave it to the debug slider. So
+  the budget lives inside `RaidBudget` and the storyteller always sends 0 (*Auto*). A storyteller's
+  raid and a debug Auto raid are the same raid, which is design 23 §3's rule.
+- **Settings is machine-wide, and a storyteller belongs to a colony.** So the choice is colony state,
+  changed by intent, and the Settings rows only read it. The one machine preference is pausing on a
+  big threat.
+
+The exploit a strength budget invites (stow the guns before a raid) is answered by reading a
+**remembered peak** that decays over days, not the value at the instant of firing (design 58 §4c).
+And a category with nothing that can fire **loses its roll** rather than passing it on, so adding a
+small threat later cannot change how often raids come.
+
+The research subagent could not reach the wiki: every page was refused by the proxy. Its numbers are
+from extracts and recall, and it marks each one. Nothing in design 58 depends on a reference number
+the soak cannot re-derive. Every number there is marked invented, and the tuning harness plus the
+72-day soak are the instrument.
