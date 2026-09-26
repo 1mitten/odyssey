@@ -484,12 +484,16 @@ namespace Odyssey.Sim.Pawns
             // appear in the region graph.
             ConnectorRegistrar.Register(nav, grid, outcome.Connectors);
             nav.Rebuild();
-            var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns())
+            var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)),
+                request.Content ?? ContentPack.Pawns())
             {
                 Chunks = chunks,
                 // What a raid makes for with no hearth (design 55 §5). Derived, so a load has it too.
                 ColonyStart = outcome.StartCell,
             };
+            // A campaign's shared counter before anybody is spawned (design 64 §4c): the colonists
+            // and animals placed below would otherwise count from one on every board.
+            if (request.PawnIds != null) pawns.Pawns.Ids = request.PawnIds;
             var solver = new SupportSolver(grid);
             var support = new SupportSystem(grid, solver, chunks);
             var designations = new DesignationGrid(grid, outcome.Edifices);

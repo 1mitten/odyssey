@@ -137,5 +137,21 @@ namespace Odyssey.Sim.Pawns
         /// presentation into the save and the hash.</para>
         /// </summary>
         public Func<CellGrid, MapGenOutcome, ISnapshotContributor>? Mirror;
+
+        /// <summary>
+        /// The pawn content this board's colonists are made of, or null for a board of its own
+        /// (design 64 §4c). A campaign passes its home board's, because <c>Pawn.Content</c> is set
+        /// once when a pawn is made and a colonist who travels to this board must find the same
+        /// tables here as the ones she was made with.
+        /// </summary>
+        public PawnContent? Content;
+
+        /// <summary>
+        /// Where this board's pawn ids come from, or null for its own counter (design 64 §4c). Set
+        /// before a single pawn is placed — the scenario's colonists and the world's animals are
+        /// spawned while the board is built — so a board a campaign builds mid-game takes its
+        /// animals' ids from the one counter every board shares.
+        /// </summary>
+        public PawnIdSource? PawnIds;
     }
 }
