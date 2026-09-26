@@ -295,6 +295,7 @@ ui.command.rescue,Rescue,ui.command,M3,Carry to a bed
 ui.command.capture,Capture,ui.command,M3,Carry to a prisoner bed
 ui.command.arrest,Arrest,ui.command,M3,Take into custody
 ui.command.tend,Tend,ui.command,M3,Treat this patient
+ui.command.finishoff,Finish off,ui.command,PS,"Kill a downed enemy where she lies, rather than bring her in"
 ui.command.operate,Operate,ui.command,M3,Perform surgery
 ui.command.install,Install,ui.command,M3,Place this built thing
 ui.command.uninstall,Uninstall,ui.command,M3,Pick up intact for moving
@@ -338,6 +339,7 @@ ui.command.defend,Defend,ui.command,CB,"Joins a fight near her, then goes back t
 ui.command.flee,Flee,ui.command,CB,"Runs from danger near her, and fights only when cornered. Press to change"
 ui.command.sethearth,Make this the hearth,ui.command,M3,"Centre the colony's home on this campfire"
 ui.menu.cancel,Cancel,ui.menu,CB,"Close the menu a right-click opened, and order nothing"
+ui.menu.needsdraft,Draft someone first,ui.menu,PS,"Only a drafted colonist can be ordered to do this"
 ui.overlay.temperature,Temperature,ui.overlay,M1,Warm to cold across the slice
 ui.overlay.light,Light,ui.overlay,M1,How lit each cell is
 ui.overlay.beauty,Beauty,ui.overlay,M1,What the room looks like to a colonist
@@ -387,6 +389,7 @@ ui.alert.darkness,No light,ui.alert,M2,Work is slowed for want of a lamp
 ui.alert.trapped,Trapped,ui.alert,M2,Someone cannot reach the colony
 ui.alert.storagestuck,Store cannot be emptied,ui.alert,M3,"A shelf is marked for removal and there is nowhere to put what is in it"
 ui.alert.norescuebed,No bed for the wounded,ui.alert,M3,"A downed colonist has no free bed to be carried to, so nobody can rescue her"
+ui.alert.noprisonbed,No prison bed,ui.alert,PS,"Somebody the colony means to hold is down with no free prison bed to be carried to"
 ui.alert.nohearth,No hearth,ui.alert,M3,"Somebody is kept home, and there is no hearth: build or mark a campfire"
 ui.alert.hearthdown,Hearth marked to come down,ui.alert,M3,"When it comes down the colony has no home"
 ui.toast.skillup,{name} has reached {skill} {level},ui.toast,M2,A colonist's skill has gone up a level

@@ -667,6 +667,9 @@ namespace Odyssey.Sim.Pawns
                 // comes. Asked only of the downed, so a colony nobody has hurt pays one flag.
                 if (pawn.Downed && RescueRules.NeedsRescue(pawn, _ctx) && RescueRules.BedFor(pawn, pawn, _ctx) < 0)
                     writer.AddPawnAspect(pawn.Id, CombatAspects.RescueNoBed, 1);
+                // The prison's (design 58 §11): a capture mark, and a pawn waiting for a prison bed
+                // with none free. Nothing for a pawn nobody means to hold.
+                if (pawn.Prison != null || pawn.Downed) PrisonAspects.Publish(writer, pawn, _ctx);
                 // The body (design 43 §9), sparse: a pawn with nothing on its ledger publishes
                 // nothing new, so a healthy colony's rows did not move.
                 if (pawn.HasHealthState) HealthAspects.Publish(writer, pawn, _ctx.Content.DayTicks);

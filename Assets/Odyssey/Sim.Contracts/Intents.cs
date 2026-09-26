@@ -380,6 +380,20 @@ namespace Odyssey.Sim.Contracts
         /// Handler: <c>ConstructionGrid.HandleSetBedPurpose</c>. Appended.
         /// </summary>
         SetBedPurpose,
+
+        /// <summary>
+        /// Ask a warden to bring a person in (design 58 §7): <c>A</c> is her <c>PawnId</c> value,
+        /// <c>B</c> 1 to mark her for capture and 0 to clear it. The warden's emergency giver carries
+        /// her to a prison bed once she is down. Handler: <c>JobSystem.HandleSetCaptureMark</c>.
+        /// </summary>
+        SetCaptureMark,
+
+        /// <summary>
+        /// Send one colonist (<c>A</c>), drafted or not, to carry a downed person (<c>B</c>) to a prison
+        /// bed now, marking her for capture first (design 58 §7). The right-click menu's Capture.
+        /// Handler: <c>JobSystem.HandleOrderCapture</c>.
+        /// </summary>
+        OrderCapture,
     }
 
     /// <summary>What an <see cref="IntentKind.EditBill"/> does, as its <c>A</c> carries it.</summary>
@@ -513,6 +527,10 @@ namespace Odyssey.Sim.Contracts
             // while paused, and a row that read "yes" while no colonist had heard would be the slab
             // fault again.
             IntentKind.SetBedPurpose => true,
+            // Capture (design 58 §7): a setting and an order over a pawn, both given paused as the
+            // fight's orders are.
+            IntentKind.SetCaptureMark => true,
+            IntentKind.OrderCapture => true,
             _ => false,
         };
     }

@@ -2,7 +2,7 @@
 
 What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein. A right-click on a thing with more than one answer, a weapon today, opens a small menu at the pointer whose rows are these commands; the menu's own words are listed after them.
 
-53 entries, 33 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+55 entries, 35 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Commands
 
@@ -18,6 +18,7 @@ What the player can tell a selected thing to do. Many are conventional; the ones
 | **Capture** | `ui.command.capture` | Carry to a prisoner bed <br>**Needs:** taking someone prisoner | no art | M3 |
 | **Arrest** | `ui.command.arrest` | Take into custody <br>**Needs:** an arrest | no art | M3 |
 | **Tend** | `ui.command.tend` | Treat this patient | sheet 06 (action tiles), high | M3 |
+| **Finish off** | `ui.command.finishoff` | Kill a downed enemy where she lies, rather than bring her in | no art | PS |
 | **Operate** | `ui.command.operate` | Perform surgery | sheet 05 (tools and weapons), med | M3 |
 | **Install** | `ui.command.install` | Place this built thing <br>**Needs:** placing a built thing | no art | M3 |
 | **Uninstall** | `ui.command.uninstall` | Pick up intact for moving <br>**Needs:** picking a built thing up intact | no art | M3 |
@@ -66,6 +67,7 @@ What the player can tell a selected thing to do. Many are conventional; the ones
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
 | **Cancel** | `ui.menu.cancel` | Close the menu a right-click opened, and order nothing | no art | CB |
+| **Draft someone first** | `ui.menu.needsdraft` | Only a drafted colonist can be ordered to do this | no art | PS |
 
 ---
 

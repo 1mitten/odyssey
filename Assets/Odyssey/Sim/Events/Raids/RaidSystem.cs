@@ -375,7 +375,7 @@ namespace Odyssey.Sim.Events
             for (int m = window; m < group.Members.Count; m += StaggerTicks)
             {
                 Pawn? pawn = _ctx.Pawns.Get(new PawnId(group.Members[m].Pawn));
-                if (pawn == null || pawn.Downed || pawn.CurrentJob == null) continue;
+                if (pawn == null || pawn.Downed || pawn.Custody != PawnCustody.Free || pawn.CurrentJob == null) continue;
                 int job = pawn.CurrentJob.DefIndex;
                 if (job != JobIndex.Wander && job != JobIndex.Wait) continue;
                 Jobs.Interrupt(pawn, JobStatus.Failed);
@@ -395,7 +395,7 @@ namespace Odyssey.Sim.Events
                 RaidMember member = group.Members[m];
                 if (member.Left) { left++; continue; }
                 Pawn? pawn = _ctx.Pawns.Get(new PawnId(member.Pawn));
-                if (pawn == null || !Melee.IsStanding(pawn)) lost++;
+                if (pawn == null || !InTheFight(pawn)) lost++;
             }
             return lost > 0 && lost * 1000 >= group.RetreatPerMille * (group.StartingSize - left);
         }
@@ -415,7 +415,7 @@ namespace Odyssey.Sim.Events
                 Pawn? pawn = _ctx.Pawns.Get(new PawnId(group.Members[m].Pawn));
                 // Gone without leaving is dead: killed by one blow, which strikes no grudge.
                 if (pawn == null) { if (!group.Members[m].Left) return true; continue; }
-                if (pawn.Downed) return true;
+                if (pawn.Downed || pawn.Custody != PawnCustody.Free) return true;
                 if (pawn.RetaliateAgainst != 0 && tick < pawn.RetaliateUntilTick) return true;
                 CellRef at = size.FromIndex(pawn.Cell);
                 if (at.X < minX) minX = at.X;
@@ -445,6 +445,14 @@ namespace Odyssey.Sim.Events
         }
 
         /// <summary>Members on the board and not down.</summary>
+        /// <summary>
+        /// A member still fighting: standing and nobody's prisoner (design 58 §4b). A member the
+        /// colony has taken stays on the band's roll and counts as lost, which is what she already
+        /// was while she lay downed, so taking her changes neither when the band breaks nor when it
+        /// is done with.
+        /// </summary>
+        static bool InTheFight(Pawn pawn) => pawn.Custody == PawnCustody.Free && Melee.IsStanding(pawn);
+
         public int Standing(RaidGroup group)
         {
             int n = 0;
@@ -452,7 +460,7 @@ namespace Odyssey.Sim.Events
             {
                 if (group.Members[m].Left) continue;
                 Pawn? pawn = _ctx.Pawns.Get(new PawnId(group.Members[m].Pawn));
-                if (pawn != null && Melee.IsStanding(pawn)) n++;
+                if (pawn != null && InTheFight(pawn)) n++;
             }
             return n;
         }
@@ -512,7 +520,7 @@ namespace Odyssey.Sim.Events
                 {
                     if (group.Members[m].Left) continue;
                     Pawn? pawn = _ctx.Pawns.Get(new PawnId(group.Members[m].Pawn));
-                    if (pawn == null || !Melee.IsStanding(pawn)) continue;
+                    if (pawn == null || !InTheFight(pawn)) continue;
                     CellRef at = size.FromIndex(pawn.Cell);
                     sx += at.X;
                     sy += at.Y;

@@ -289,6 +289,8 @@ namespace Odyssey.Sim.Pawns
                 .AddIntentHandler(IntentKind.OrderTend, pipeline.HandleOrderTend)
                 // Custody (design 58 §4), on the pipeline because taking a pawn ends her job.
                 .AddIntentHandler(IntentKind.DebugImprison, pipeline.HandleDebugImprison)
+                .AddIntentHandler(IntentKind.SetCaptureMark, pipeline.HandleSetCaptureMark)
+                .AddIntentHandler(IntentKind.OrderCapture, pipeline.HandleOrderCapture)
                 // What a bed is for (design 58 §5b), on the grid that owns who owns a bed.
                 .AddIntentHandler(IntentKind.SetBedPurpose, construction.HandleSetBedPurpose)
                 // The Work tab's one command (design 27). It belongs to the registry because a
