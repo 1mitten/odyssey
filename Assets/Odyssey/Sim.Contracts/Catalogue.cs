@@ -111,7 +111,35 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int AttackRanged = 27;
 
-        public const int Count = 28;
+        // The prisoner line (design 58 §7), claimed together by its contracts step (P3) so every
+        // table a save depends on is extended once. Above JobSystem.HashedAlways, so their counters
+        // reach the hash only once one has run and their registration moved no golden.
+
+        /// <summary>Carry a downed pawn to a free prison bed, or a strayed prisoner back to one (design 58 §7).</summary>
+        public const int Capture = 28;
+
+        /// <summary>Carry a meal to a prisoner: into her cell, or to her bed if she is shackled (design 58 §7).</summary>
+        public const int FeedPrisoner = 29;
+
+        /// <summary>A warden talks to a prisoner in <c>Recruit</c> mode; the willingness bar fills (design 58 §8).</summary>
+        public const int Chat = 30;
+
+        /// <summary>A warden walks a released prisoner out of her cell (design 58 §7).</summary>
+        public const int Escort = 31;
+
+        /// <summary>A pawn walks herself to a prison bed: a raider who has surrendered (design 58 §10).</summary>
+        public const int GoToCell = 32;
+
+        /// <summary>A prisoner breaking out: bash the door, run for the edge (design 58 §9c).</summary>
+        public const int Escape = 33;
+
+        /// <summary>A pawn let go walks off the board (design 58 §6).</summary>
+        public const int LeaveFree = 34;
+
+        /// <summary>Walk to a standing colonist and take her into custody (design 58 §10).</summary>
+        public const int Arrest = 35;
+
+        public const int Count = 36;
     }
 
     /// <summary>
@@ -170,7 +198,13 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Working the bills at a galley or a campfire (design 48 §5): the ui.work.cooking column.</summary>
         public const int Cooking = 7;
 
-        public const int Count = 8;
+        /// <summary>
+        /// Feeding, talking to and bringing in prisoners (design 58 §7): the ui.work.warden column.
+        /// Claimed by the prisoner line's contracts step; scanned after the doctor.
+        /// </summary>
+        public const int Warden = 8;
+
+        public const int Count = 9;
 
         /// <summary>What a work type the simulation does not run answers to. Never sent.</summary>
         public const int None = -1;
@@ -387,7 +421,21 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A band of hostiles walks in from one edge, gathers, probes, and assaults (design 55).</summary>
         public const int Raid = 5;
 
-        public const int Count = 6;
+        // The prison's four (design 58), written down by the world and never fired, as theft is.
+
+        /// <summary>A prisoner was talked round and joined the colony (design 58 §8).</summary>
+        public const int Recruited = 6;
+
+        /// <summary>A prisoner broke out and got off the board (design 58 §9).</summary>
+        public const int PrisonerEscaped = 7;
+
+        /// <summary>A badly hurt raider gave up and walked to a cell (design 58 §10).</summary>
+        public const int Surrendered = 8;
+
+        /// <summary>A colonist was arrested (design 58 §10).</summary>
+        public const int Arrested = 9;
+
+        public const int Count = 10;
     }
 
     /// <summary>

@@ -2739,3 +2739,17 @@ session's file hit a sharing violation with the leaked session's). **Report from
 coroutine and assert in the outer method, and give a file that builds worlds a `[TearDown]` that
 destroys them by name.** The symptom is a failure in a *different* test that only appears once the
 new file is in the run.
+
+## An allocation test that fails only in the full run: find the phase before blaming the code (2026-09-26)
+
+`AspectScaleTests.RepeatedFramesStopAllocating` measures `GC.GetAllocatedBytesForCurrentThread`
+over twenty ticks and allows 4 KB. On the prisoner branch it failed about one full fast-tier run in
+two (4.9–8.2 KB) and **never** when run alone or with its own class, in a container on .NET 8.0.131
+(Ubuntu's package). It had passed three full runs before the branch's second unit, which was the
+trap: the change looked guilty. Turning tiered compilation off did not stop it. What settled it was
+temporary per-phase counters inside `SimWorld.Tick`: the stray allocation landed in the snapshot
+phase on one failing run, the pawn phase on another, and outside every phase on a third. **The
+simulation is deterministic; a real per-frame allocation lands in the same place every run.** One
+that wanders is the runtime's, on the test thread. The test now takes the least of three windows,
+which a structure that reallocates every frame still fails. The lesson is the method: instrument by
+phase before bisecting commits, because an intermittent failure bisects badly.

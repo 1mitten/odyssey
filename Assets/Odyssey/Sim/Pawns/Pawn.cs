@@ -215,14 +215,36 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public bool IsPerson => Species.person;
 
-        /// <summary>Whose side this pawn is on — its kind's (design 33 §3). Nothing is saved for it.</summary>
-        public Faction Faction => Content.KindOf(Kind).faction;
+        /// <summary>
+        /// Whose side this pawn is on (design 33 §3): its kind's, unless it has joined the colony
+        /// (design 58 §4). Asked of <see cref="Allegiance"/>, the one owner of sides.
+        /// </summary>
+        public Faction Faction => Allegiance.FactionOf(this);
 
-        /// <summary>Fights the colony on sight: a bandit (design 33 §1).</summary>
-        public bool IsHostile => Faction == Faction.Hostile;
+        /// <summary>Fights the colony on sight: a bandit at large, or a prisoner breaking out (design 58 §4b).</summary>
+        public bool IsHostile => Allegiance.IsHostile(this);
 
-        /// <summary>One of ours: a person of the colony's faction. The draft, the roster and the Work tab mean this.</summary>
-        public bool IsColonist => IsPerson && Faction == Faction.Colony;
+        /// <summary>
+        /// One of ours: a person of the colony's side whom nobody holds. The draft, the roster and
+        /// the Work tab mean this. A prisoner is not one, even an arrested colonist.
+        /// </summary>
+        public bool IsColonist => Allegiance.IsColonist(this);
+
+        /// <summary>Held by the colony, or breaking out of it (design 58 §4).</summary>
+        public bool IsPrisoner => Allegiance.IsPrisoner(this);
+
+        /// <summary>
+        /// Whether the colony holds this pawn (design 58 §4a). Saved in <c>PrisonSection</c> and
+        /// hashed in bits 28–29 of the pawn's word, nought while free, so a colony that never
+        /// takes a prisoner saves and hashes as it did before. Set by the prison's handlers only.
+        /// </summary>
+        public PawnCustody Custody { get; internal set; }
+
+        /// <summary>
+        /// What the colony remembers about this pawn as a prisoner, or null for nothing (design 58
+        /// §4a). Sparse; see <see cref="PrisonRecord"/>. Hashed with the pawn while it exists.
+        /// </summary>
+        public PrisonRecord? Prison { get; internal set; }
 
         /// <summary>
         /// Whether the needs system ticks this pawn's needs, mood and breaks. A colonist's do; an
@@ -230,8 +252,18 @@ namespace Odyssey.Sim.Pawns
         /// hunt until it is killed, and one that went looking for the colony's meals would be a
         /// raider with a pantry (design 33 §5); and <b>a downed pawn's needs pause</b>, the C2
         /// default the owner did not object to.
+        ///
+        /// <para>A held prisoner's do too (design 58 §4b, §6): she gets hungry and tired in her
+        /// cell like anyone. An escapee's and a pawn walking off do not — they are leaving.</para>
         /// </summary>
-        public virtual bool NeedsTick => IsColonist && !Downed;
+        public virtual bool NeedsTick => (IsColonist || Custody == PawnCustody.Prisoner) && !Downed;
+
+        /// <summary>
+        /// Heals and gets up as a colonist does — in a bed, and only when whole — rather than as a
+        /// hostile, which never heals (design 58 §4b). A held prisoner is somebody the colony is
+        /// keeping alive; a bandit who could not heal would lie on her prison bed for ever.
+        /// </summary>
+        public bool HealsAsAColonist => IsColonist || Custody == PawnCustody.Prisoner;
 
         // ---- combat state (design 33 §3, §5) ---------------------------------------------------
         //
@@ -672,7 +704,9 @@ namespace Odyssey.Sim.Pawns
             rising ? Content.Mood.risePerInterval : Content.Mood.fallPerInterval;
 
         /// <summary>Is the pawn eligible to break at all? A sleeping pawn never is.</summary>
-        public virtual bool CanMentalBreak() => !Asleep && !IsBroken && Mood < Content.Mood.breakThreshold;
+        public virtual bool CanMentalBreak() =>
+            // Never a prisoner (design 58, ruling 12): her low mood is the escape risk's.
+            Custody == PawnCustody.Free && !Asleep && !IsBroken && Mood < Content.Mood.breakThreshold;
 
         /// <summary>
         /// The rate this pawn pays work at, in thousandths of a tick-at-standard-rate: 1,000 is
@@ -861,13 +895,13 @@ namespace Odyssey.Sim.Pawns
         /// fall) moves in it. A colonist's work jobs name their own mode (the hauler's), and a
         /// player's order is a colonist's.
         /// </summary>
-        public TraverseMode OwnMode => Content.ModeOf(Kind);
+        public TraverseMode OwnMode => Allegiance.ModeOf(this);
 
         /// <summary>
         /// What this pawn came for, when there is nobody left to fight and nothing left to break
         /// (design 33 §17): its kind's. <see cref="Motive.None"/> for a colonist and an animal.
         /// </summary>
-        public Motive Motive => Content.MotiveOf(Kind);
+        public Motive Motive => Allegiance.MotiveOf(this);
 
         /// <summary>Whether the pawn will consider work at all this think.</summary>
         public virtual bool WillWork() => !IsBroken && !Asleep;
@@ -1156,6 +1190,8 @@ namespace Odyssey.Sim.Pawns
             // is bit 23, the second of the two left free: walked only while it has anything on it,
             // so a colony nobody has hurt hashes as before health.
             // The area (design 43 §4a) is bit 27, nought at the default, for the same reason.
+            // Custody (design 58 §4a) is bits 28 and 29, nought while free; the prison record is
+            // walked only while there is one. Bits 30 and 31 are left free.
             bool combat = HasCombatState;
             bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;
             bool health = HasHealthState;
@@ -1163,7 +1199,9 @@ namespace Odyssey.Sim.Pawns
                 | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0)
                 | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0)
                 | (TreatedUntilTick != 0 ? 1 << 22 : 0) | (health ? 1 << 23 : 0)
-                | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0) | ((int)Area << 27));
+                | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0) | ((int)Area << 27)
+                | ((int)Custody << 28));
+            if (Prison != null) Prison.ContributeTo(ref hash);
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
             if (JumpLanding >= 0) hash.Add(JumpLanding);

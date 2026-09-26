@@ -124,6 +124,11 @@ namespace Odyssey.Sim.Pawns
             pawns.Doors = doors;
             var enclosure = new World.EnclosureGrid(pawns.Cells, edifices);
             pawns.Enclosure = enclosure;
+            // What every bed is for (design 58 §5b): the prison bed and the cell it makes. Built
+            // here, where the rooms it reads and the grid whose owners it sweeps both are.
+            var purposes = new BedPurposes(pawns.Cells, edifices) { Enclosure = enclosure };
+            pawns.BedPurposes = purposes;
+            construction.Purposes = purposes;
             // The thermal pass, after the enclosure it reads rooms from and after the items and
             // construction it reads sources through. Built here for the same argument as every
             // other seam on the context: an optional one is how a caller forgets it, and a
@@ -189,6 +194,7 @@ namespace Odyssey.Sim.Pawns
                 .AddSystem(_ => new NeedsSystem(pawns))
                 .AddSystem(_ => raids)
                 .AddHashable(raids)
+                .AddHashable(purposes)
                 .AddSnapshotContributor(raids)
                 // Inside the lambda, not before it: the factory runs during Build(), so a giver
                 // registered after this call is still picked up. Outside it, AddColony would have
@@ -259,7 +265,7 @@ namespace Odyssey.Sim.Pawns
                 // build rather than the ones that remembered to attach the question.
                 .AddSnapshotContributor(new CellDetailContributor(
                     pawns.Cells, edifices, growing, enclosure, storage, units, pawns.Items,
-                    temperature))
+                    temperature, purposes))
                 .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden)
                 // The one command that names a colonist rather than only a cell. It belongs to the
                 // pipeline because starting and ending jobs is what the pipeline is, and because a
@@ -281,6 +287,14 @@ namespace Odyssey.Sim.Pawns
                 .AddIntentHandler(IntentKind.SetPawnArea, pipeline.HandleSetPawnArea)
                 .AddIntentHandler(IntentKind.DebugHealth, pawns.Pawns.HandleDebugHealth)
                 .AddIntentHandler(IntentKind.OrderTend, pipeline.HandleOrderTend)
+                // Custody (design 58 §4), on the pipeline because taking a pawn ends her job.
+                .AddIntentHandler(IntentKind.DebugImprison, pipeline.HandleDebugImprison)
+                .AddIntentHandler(IntentKind.SetCaptureMark, pipeline.HandleSetCaptureMark)
+                .AddIntentHandler(IntentKind.OrderCapture, pipeline.HandleOrderCapture)
+                .AddIntentHandler(IntentKind.SetPrisonMode, pipeline.HandleSetPrisonMode)
+                .AddIntentHandler(IntentKind.OrderArrest, pipeline.HandleOrderArrest)
+                // What a bed is for (design 58 §5b), on the grid that owns who owns a bed.
+                .AddIntentHandler(IntentKind.SetBedPurpose, construction.HandleSetBedPurpose)
                 // The Work tab's one command (design 27). It belongs to the registry because a
                 // priority is a field on a pawn and the registry is the one owner of those; the
                 // job pipeline only ever reads it.

@@ -190,6 +190,14 @@ namespace Odyssey.Hud
             uint seed, int pawnId, ColonistCastPools pools, char gender, int age, PawnOutfit outfit)
         {
             ColonistAppearance person = Of(seed, pawnId, pools, gender, age);
+
+            // The prison jumpsuit (design 58 §11d): the issued suit's cut in the prison's colours,
+            // the face, hair and beard the person was dealt. No headgear — a prisoner is known by
+            // her clothes and her face, not a helmet.
+            if (outfit == PawnOutfit.Prisoner)
+                return new ColonistAppearance(person.Look, person.Skin, person.Hair, PrisonCloth, PrisonTrim,
+                    person.HairPiece, person.BeardPiece, PawnOutfit.Prisoner, NoPiece);
+
             if (outfit != PawnOutfit.Bandit) return person;
 
             char sex = SexOf(gender, seed, pawnId);
@@ -396,6 +404,16 @@ namespace Odyssey.Hud
         /// garment rather than as two.</para>
         /// </summary>
         public static readonly Rgb24 UniformTrim = Rgb24.FromHex(0xA8B2C2);
+
+        /// <summary>
+        /// The prison jumpsuit (design 58 §11d): a burnt orange, a proposal the owner confirms at
+        /// the first look. Chosen to be told from the colony's white and the gang's red at a glance,
+        /// by every eye: it sits apart from both in lightness as well as hue.
+        /// </summary>
+        public static readonly Rgb24 PrisonCloth = Rgb24.FromHex(0xD9772E);
+
+        /// <summary>The jumpsuit's trim — collar, cuffs and boots — its orange carried down.</summary>
+        public static readonly Rgb24 PrisonTrim = Rgb24.FromHex(0x7A4524);
 
         /// <summary>
         /// Whether everybody drawn in body <paramref name="look"/> wears the same cloth, and which.

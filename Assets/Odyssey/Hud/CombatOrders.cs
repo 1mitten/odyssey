@@ -49,6 +49,10 @@ namespace Odyssey.Hud
         {
             if (under.IsValid && snapshot.TryGetPawn(under, out PawnView target))
             {
+                // A downed enemy is not an instant attack any more (design 58 §7, owner's ruling):
+                // the context menu offers Capture and Finish off, so nobody is killed by accident.
+                if (target.IsPerson && target.IsHostile && target.IsDowned) return false;
+
                 if (target.IsAnimal || target.IsHostile || (ctrl && target.IsColonist))
                     return Attack(selection, snapshot, target, into);
 
@@ -107,7 +111,7 @@ namespace Odyssey.Hud
             snapshot.TryGetPawn(pawn, out view) && view.IsColonist && !view.IsDowned
             && OrderModel.IsDrafted(snapshot, pawn);
 
-        static bool Attack(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot, in PawnView target,
+        internal static bool Attack(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot, in PawnView target,
             List<Intent> into)
         {
             bool any = false;

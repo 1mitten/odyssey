@@ -62,8 +62,8 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < beds.Count; i++)
             {
                 int cell = beds[i];
-                int owner = ctx.Construction?.BedOwnerAt(cell) ?? 0;
-                if (owner != 0 && owner != me) continue;
+                if (!BedRules.CanUse(patient, cell, ctx)) continue;
+                int owner = BedRules.OwnerAt(ctx, cell);
                 if (!ctx.Reservations.CanReserve(claimant.Id, BedKey(cell))) continue;
                 if (SomebodyLiesIn(ctx, cell, patient)) continue;
                 if (!ctx.CanTravel(patient, cell, Mode)) continue;

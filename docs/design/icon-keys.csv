@@ -89,6 +89,11 @@ ui.pawn.colonist,Colonist,ui.pawn,M2,One of ours
 ui.pawn.visitor,Visitor,ui.pawn,M2,"Here peacefully, and watching"
 ui.pawn.hostile,Hostile,ui.pawn,M2,Will attack
 ui.pawn.prisoner,Prisoner,ui.pawn,M2,"Held, and someone must feed them"
+ui.prisoner.hold,Hold,ui.prisoner,PS,"Kept in her cell, fed and tended, and nothing more asked of her"
+ui.prisoner.recruit,Recruit,ui.prisoner,PS,"A warden talks to her every six hours until she is willing to join"
+ui.prisoner.release,Release,ui.prisoner,PS,"Walked out of the cell and let go. A colonist under arrest goes back to work"
+ui.prisoner.exile,Exile,ui.prisoner,PS,"Walked to the edge of the map and sent away for good"
+ui.prisoner.ransom,Ransom,ui.prisoner,M7,"Sold back to her own people. Needs factions, so not yet"
 ui.pawn.animal,Animal,ui.pawn,M2,Tame or wild creature
 ui.pawn.synth,Synth,ui.pawn,M2,"Machine intelligence. Not alive, not harmless"
 ui.pawn.corpse,Corpse,ui.pawn,M2,"Rots, upsets people, can be buried or worse"
@@ -135,6 +140,14 @@ ui.stat.pace.drafted,Drafted,ui.stat,WE,"A drafted colonist runs"
 ui.stat.pace.running,Running,ui.stat,WE,"Running to a fight or away from one"
 ui.stat.pace.standard,The standard walk,ui.stat,WE,"The pace tooltip when nothing is making her faster or slower"
 ui.status.shooting,Shooting,ui.status,RC,"Standing where the line is open and firing at a target"
+ui.status.capturing,Capturing,ui.status,PS,Carrying a downed enemy to a prison bed
+ui.status.feedingprisoner,Feeding a prisoner,ui.status,PS,"Carrying a meal to a prisoner, in her cell or on her bed"
+ui.status.chatting,Talking to a prisoner,ui.status,PS,"A warden talking a prisoner round, which fills her willingness"
+ui.status.escorting,Escorting,ui.status,PS,Walking a released prisoner out
+ui.status.goingtocell,Going to a cell,ui.status,PS,A raider who has given up walking herself to a prison bed
+ui.status.escaping,Escaping,ui.status,PS,"A prisoner breaking out: through the door, then for the edge"
+ui.status.leaving,Leaving,ui.status,PS,Let go and walking off the board
+ui.status.arresting,Arresting,ui.status,PS,Walking to a colonist to take her into custody
 ui.combat.miss,Miss,ui.combat,CB,A swing that did not land
 ui.combat.dodge,Dodge,ui.combat,CB,A swing the target stepped out of
 ui.combat.cover,Cover,ui.combat,CB,"A bullet the cover in its way took instead"
@@ -288,6 +301,7 @@ ui.command.rescue,Rescue,ui.command,M3,Carry to a bed
 ui.command.capture,Capture,ui.command,M3,Carry to a prisoner bed
 ui.command.arrest,Arrest,ui.command,M3,Take into custody
 ui.command.tend,Tend,ui.command,M3,Treat this patient
+ui.command.finishoff,Finish off,ui.command,PS,"Kill a downed enemy where she lies, rather than bring her in"
 ui.command.operate,Operate,ui.command,M3,Perform surgery
 ui.command.install,Install,ui.command,M3,Place this built thing
 ui.command.uninstall,Uninstall,ui.command,M3,Pick up intact for moving
@@ -331,6 +345,7 @@ ui.command.defend,Defend,ui.command,CB,"Joins a fight near her, then goes back t
 ui.command.flee,Flee,ui.command,CB,"Runs from danger near her, and fights only when cornered. Press to change"
 ui.command.sethearth,Make this the hearth,ui.command,M3,"Centre the colony's home on this campfire"
 ui.menu.cancel,Cancel,ui.menu,CB,"Close the menu a right-click opened, and order nothing"
+ui.menu.needsdraft,Draft someone first,ui.menu,PS,"Only a drafted colonist can be ordered to do this"
 ui.overlay.temperature,Temperature,ui.overlay,M1,Warm to cold across the slice
 ui.overlay.light,Light,ui.overlay,M1,How lit each cell is
 ui.overlay.beauty,Beauty,ui.overlay,M1,What the room looks like to a colonist
@@ -380,6 +395,7 @@ ui.alert.darkness,No light,ui.alert,M2,Work is slowed for want of a lamp
 ui.alert.trapped,Trapped,ui.alert,M2,Someone cannot reach the colony
 ui.alert.storagestuck,Store cannot be emptied,ui.alert,M3,"A shelf is marked for removal and there is nowhere to put what is in it"
 ui.alert.norescuebed,No bed for the wounded,ui.alert,M3,"A downed colonist has no free bed to be carried to, so nobody can rescue her"
+ui.alert.noprisonbed,No prison bed,ui.alert,PS,"Somebody the colony means to hold is down with no free prison bed to be carried to"
 ui.alert.nohearth,No hearth,ui.alert,M3,"Somebody is kept home, and there is no hearth: build or mark a campfire"
 ui.alert.hearthdown,Hearth marked to come down,ui.alert,M3,"When it comes down the colony has no home"
 ui.toast.skillup,{name} has reached {skill} {level},ui.toast,M2,A colonist's skill has gone up a level
@@ -396,6 +412,9 @@ ui.raid.mix.mixed,Mixed,ui.raid,RD,"Mostly bandits, with about three in ten carr
 ui.bulletin.weather,Weather,ui.bulletin,M2,The conditions have turned
 ui.bulletin.death,Death,ui.bulletin,M2,We have lost someone
 ui.bulletin.recruited,Recruited,ui.bulletin,M2,A prisoner has joined us
+ui.bulletin.escaped,Prisoner escaped,ui.bulletin,PS,A prisoner broke out and got away
+ui.bulletin.surrendered,Surrendered,ui.bulletin,PS,A badly hurt raider gave up and walked to a cell
+ui.bulletin.arrested,Arrested,ui.bulletin,PS,A colonist was taken into custody
 ui.bulletin.research,Research complete,ui.bulletin,M2,A project has finished
 ui.bulletin.quest,Opportunity,ui.bulletin,M2,An offer with a deadline
 ui.bulletin.wanderer,Wanderer,ui.bulletin,M2,Someone wants to join
@@ -601,6 +620,9 @@ ui.debug.armcolonists,Arm every colonist,ui.debug,CB,"Every colonist standing wi
 ui.debug.hurt,Hurt a colonist,ui.debug,HE,"The colonist nearest the camera takes a 20-point cut, which bleeds until somebody tends it"
 ui.debug.heal,Heal a colonist,ui.debug,HE,The colonist nearest the camera is made whole and gets up
 ui.debug.kill,Kill a colonist,ui.debug,HE,"The colonist nearest the camera dies where she stands, and is mourned"
+ui.debug.imprison,Imprison nearest,ui.debug,PS,"The person nearest the camera who is not held becomes a prisoner, where she stands"
+ui.debug.freeprisoner,Free nearest prisoner,ui.debug,PS,"The prisoner nearest the camera is set free again, as if she had never been taken"
+ui.debug.breakout,Break out nearest prisoner,ui.debug,PS,"The prisoner nearest the camera breaks out now, rather than on the hourly roll"
 ui.debug.givemedkits,Give medical supplies,ui.debug,HE,Adds 10 medical supplies near the camera
 ui.debug.jumpsfail,Jumps always fail,ui.debug,JP,"Every jump over a stream falls short into the water, so a failed jump can be watched"
 ui.debug.group.colonists,Colonists,ui.debug,CB,"The Spawn tab heading over the colonist rows"

@@ -2972,6 +2972,7 @@ state with a writer that does not run on load. Ask of each: is it written in `Lo
 `RebuildDerived`? The existing save tests missed it because none of them fights under a changed sky
 for longer than one weather pass before saving.
 
+<<<<<<< HEAD
 ## An event raised twice in one frame, re-deriving state from UI the first raise changed (2026-09-26)
 
 **Symptom.** A world arriving from the title screen is covered for three frames
@@ -2994,3 +2995,29 @@ UI. PlayMode `StartScreenTests.ALoadedWorldIsCoveredLikeANewOne` is the regressi
 reading state its own previous call may have written. Ask of any event: can it fire twice in one
 frame, and does the second call ask a question the first one answered? Decide from a counter or the
 cause, not from the screen.
+=======
+## A flood fill cut short leaves its frontier behind as walls (2026-09-26)
+
+**Symptom.** A prisoner's cell door was demolished and her cell went on being a cell: her bed did
+not become a shackle bed, and her escape risk did not double (`EscapeTests.ABrokenDoorDoublesACellmatesRisk`).
+The door cell had joined the room; the open ground outside it had not.
+
+**Cause.** `EnclosureGrid.FillLayer` stopped a region's flood with `break` the moment it passed
+`MaxRoomCells`. Every cell the flood had already queued was marked visited and never processed.
+The fill for the next region skips visited cells, so one that reached the abandoned frontier took it
+for a wall. A room whose doorway gave on to that frontier was sealed by it and came out enclosed and
+roofed. Where the frontier falls depends on the board, which is why no temperature test had met it.
+
+**Measurement that found it.** The room's cell list printed after the demolition: the interior and
+the door cell, and nothing east of the door, although the cell east of it was neither a boundary nor
+roofed. Every rule in the fill was right; only its state (`_visited`) was not.
+
+**Fix.** Flag `exceededLimit` and carry on flooding. It costs nothing, since every cell of a layer is
+visited once either way. `RoomEnclosureTests.AGapOntoABigOutdoorRegionIsNeverEnclosed` sweeps a
+doorway across a 100 × 100 board. It fails at position 34 without the fix and passes with it. No
+golden moved.
+
+**The check for the next one.** A search that stops early must either leave no marks or treat its
+marks as its own, never as a verdict another search reads. Ask of any `break` inside a flood,
+Dijkstra or BFS that shares a visited array: what does the next search think of the cells I queued?
+>>>>>>> origin/claude/prisoner-bed-assignment-98afc0

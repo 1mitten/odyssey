@@ -2,7 +2,7 @@
 
 Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about. A raid's mix names who a band of hostiles is made of (design 55).
 
-51 entries, 26 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+55 entries, 30 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Alerts
 
@@ -33,6 +33,7 @@ Three channels, and the difference is not cosmetic. Alerts are conditions that p
 | **Trapped** | `ui.alert.trapped` | Someone cannot reach the colony <br>**Needs:** a colonist cut off from the colony | no art | M2 |
 | **Store cannot be emptied** | `ui.alert.storagestuck` | A shelf is marked for removal and there is nowhere to put what is in it | no art | M3 |
 | **No bed for the wounded** | `ui.alert.norescuebed` | A downed colonist has no free bed to be carried to, so nobody can rescue her | no art | M3 |
+| **No prison bed** | `ui.alert.noprisonbed` | Somebody the colony means to hold is down with no free prison bed to be carried to | no art | PS |
 | **No hearth** | `ui.alert.nohearth` | Somebody is kept home, and there is no hearth: build or mark a campfire <br>**Needs:** a campfire ring with no fire | no art | M3 |
 | **Hearth marked to come down** | `ui.alert.hearthdown` | When it comes down the colony has no home <br>**Needs:** a campfire under a deconstruct mark | no art | M3 |
 
@@ -50,6 +51,9 @@ Three channels, and the difference is not cosmetic. Alerts are conditions that p
 | **Weather** | `ui.bulletin.weather` | The conditions have turned | sheet 06 (action tiles), med | M2 |
 | **Death** | `ui.bulletin.death` | We have lost someone | sheet 07 (anatomy), high | M2 |
 | **Recruited** | `ui.bulletin.recruited` | A prisoner has joined us <br>**Needs:** a prisoner joining us | no art | M2 |
+| **Prisoner escaped** | `ui.bulletin.escaped` | A prisoner broke out and got away | no art | PS |
+| **Surrendered** | `ui.bulletin.surrendered` | A badly hurt raider gave up and walked to a cell | no art | PS |
+| **Arrested** | `ui.bulletin.arrested` | A colonist was taken into custody | no art | PS |
 | **Research complete** | `ui.bulletin.research` | A project has finished | sheet 06 (action tiles), high | M2 |
 | **Opportunity** | `ui.bulletin.quest` | An offer with a deadline | sheet 08 (salvage gear), low | M2 |
 | **Wanderer** | `ui.bulletin.wanderer` | Someone wants to join <br>**Needs:** someone asking to join | no art | M2 |

@@ -121,7 +121,18 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Ate food raw: carrots from the pile, or worse.</summary>
         public const int AteRaw = 10;
-        public const int Count = 11;
+
+        // The prisoner line (design 58 §10, §6), appended.
+
+        /// <summary>Held by the colony: felt by a prisoner, refreshed while she is held.</summary>
+        public const int Imprisoned = 11;
+
+        /// <summary>One of us was arrested: felt by every free colonist.</summary>
+        public const int ColonistArrested = 12;
+
+        /// <summary>I was arrested: felt by an arrested colonist when she is let back out.</summary>
+        public const int WasArrested = 13;
+        public const int Count = 14;
     }
 
     /// <summary>
@@ -189,6 +200,14 @@ namespace Odyssey.Sim.Pawns
         public const int Forage = JobHandle.Forage;
         public const int Cook = JobHandle.Cook;
         public const int AttackRanged = JobHandle.AttackRanged;
+        public const int Capture = JobHandle.Capture;
+        public const int FeedPrisoner = JobHandle.FeedPrisoner;
+        public const int Chat = JobHandle.Chat;
+        public const int Escort = JobHandle.Escort;
+        public const int GoToCell = JobHandle.GoToCell;
+        public const int Escape = JobHandle.Escape;
+        public const int LeaveFree = JobHandle.LeaveFree;
+        public const int Arrest = JobHandle.Arrest;
         public const int Count = JobHandle.Count;
     }
 
@@ -353,6 +372,9 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Working the bills at a galley or a campfire (design 48 §5).</summary>
         public const int Cooking = WorkHandle.Cooking;
 
+        /// <summary>Feeding, talking to and bringing in prisoners (design 58 §7).</summary>
+        public const int Warden = WorkHandle.Warden;
+
         public const int Count = WorkHandle.Count;
 
         /// <summary>
@@ -366,7 +388,7 @@ namespace Odyssey.Sim.Pawns
         /// than a missing aspect — which is why growing is in both or in neither.</para>
         /// </summary>
         public static readonly string[] Names =
-            { "haul", "cutting", "mining", "construction", "growing", "rescue", "doctor", "cooking" };
+            { "haul", "cutting", "mining", "construction", "growing", "rescue", "doctor", "cooking", "warden" };
     }
 
     /// <summary>
@@ -404,7 +426,15 @@ namespace Odyssey.Sim.Pawns
         /// format 10 is dealt it once on load (<see cref="PawnRegistry.BackfillSkills"/>).
         /// </summary>
         public const int Shooting = 8;
-        public const int Count = 9;
+
+        /// <summary>
+        /// Talking people round (design 58 §8): the warden's level is the recruitment gain's
+        /// <c>S</c>, and every chat trains it. Claimed by the prisoner line's contracts step; a
+        /// colonist from a save older than format 11 is dealt it once on load
+        /// (<see cref="PawnRegistry.BackfillSkills"/>).
+        /// </summary>
+        public const int Social = 9;
+        public const int Count = 10;
 
         /// <summary>
         /// The names skills are published under, parallel to the indices above.
@@ -414,7 +444,7 @@ namespace Odyssey.Sim.Pawns
         /// assembly or sharing an enum with it. The prefix is the project's, the middle is this
         /// feature's, and the leaf is the value — the same shape as an icon key.</para>
         /// </summary>
-        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee", "medicine", "cooking", "shooting" };
+        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee", "medicine", "cooking", "shooting", "social" };
     }
 
     /// <summary>
@@ -1550,7 +1580,9 @@ namespace Odyssey.Sim.Pawns
                 // Friendly fire (design 33 §12).
                 "Thought_AttackedByColonist", "Thought_ColonistDied",
                 // The kitchen (design 48 §4): what each food is thought of.
-                "Thought_AteRation", "Thought_AteBurnt", "Thought_AteRaw");
+                "Thought_AteRation", "Thought_AteBurnt", "Thought_AteRaw",
+                // The prisoner line (design 58 §6, §10).
+                "Thought_Imprisoned", "Thought_ColonistArrested", "Thought_WasArrested");
             content.Jobs = ByName<JobDef>(defs,
                 "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine",
                 "Job_Deliver", "Job_Build", "Job_Deconstruct",
@@ -1572,7 +1604,10 @@ namespace Odyssey.Sim.Pawns
                 // The kitchen (design 48 §5).
                 "Job_Cook",
                 // The ranged attack (design 47 §2d).
-                "Job_AttackRanged");
+                "Job_AttackRanged",
+                // The prisoner line (design 58 §7), claimed together by its contracts step.
+                "Job_Capture", "Job_FeedPrisoner", "Job_Chat", "Job_Escort", "Job_GoToCell",
+                "Job_Escape", "Job_LeaveFree", "Job_Arrest");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",
@@ -1582,7 +1617,9 @@ namespace Odyssey.Sim.Pawns
                 // Medical supplies (design 37).
                 "Work_Doctor",
                 // The kitchen (design 48 §5).
-                "Work_Cooking");
+                "Work_Cooking",
+                // The prisoner line (design 58 §7).
+                "Work_Warden");
             content.Skills = ByName<SkillDef>(defs,
                 "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction",
                 "Skill_Growing",
@@ -1593,7 +1630,9 @@ namespace Odyssey.Sim.Pawns
                 // The kitchen (design 48 §5).
                 "Skill_Cooking",
                 // Appended with the ranged line (design 47 §3a).
-                "Skill_Shooting");
+                "Skill_Shooting",
+                // Appended with the prisoner line (design 58 §8).
+                "Skill_Social");
             content.Items = ByName<ItemDef>(defs,
                 "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal",
                 // Appended, never inserted: an item handle is stored in every stack, every haul

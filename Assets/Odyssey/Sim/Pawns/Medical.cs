@@ -47,7 +47,9 @@ namespace Odyssey.Sim.Pawns
         /// she is below the doctor's cap and outside the cooldown.
         /// </summary>
         public static bool NeedsTreatment(Pawn pawn, PawnContext ctx) =>
-            pawn.IsColonist && pawn.CarriedBy == 0
+            // A held prisoner too (design 58 §4b): a captured raider is bleeding, and the colony
+            // that brought her in is the only one that can stop it.
+            pawn.HealsAsAColonist && pawn.CarriedBy == 0
             && (IsBleeding(pawn) || (Below(pawn, ctx.Content.Combat.treatCapPerMille) && Heals(pawn, ctx)));
 
         /// <summary>
@@ -67,7 +69,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public static bool WorthAnOrder(Pawn pawn, PawnContext ctx) =>
             NeedsTreatment(pawn, ctx)
-            || (pawn.IsColonist && pawn.CarriedBy == 0 && pawn.HasHealthState && pawn.Health!.UntendedCount > 0);
+            || (pawn.HealsAsAColonist && pawn.CarriedBy == 0 && pawn.HasHealthState && pawn.Health!.UntendedCount > 0);
 
         /// <summary>Lying still: down where she fell, or asleep — the only patients a doctor's round walks to.</summary>
         public static bool LyingStill(Pawn pawn) => pawn.Downed || pawn.Asleep;
@@ -272,8 +274,8 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < beds.Count; i++)
             {
                 int cell = beds[i];
-                int owner = ctx.Construction != null ? ctx.Construction.BedOwnerAt(cell) : 0;
-                if (owner != 0 && owner != me) continue;
+                if (!BedRules.CanUse(pawn, cell, ctx)) continue;
+                int owner = BedRules.OwnerAt(ctx, cell);
 
                 long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;

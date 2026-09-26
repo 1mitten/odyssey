@@ -270,8 +270,13 @@ namespace Odyssey.Sim.Saving
         /// experience, so the first six come out exactly as they were dealt and the re-deal is
         /// idempotent. <b>Do not tidy the guard away</b>: without the version it would re-deal
         /// Shooting on every load of a colonist who has never fired.</para>
+        ///
+        /// <para>11 (design 58, prisoners): <b>no layout changed</b>, for 10's reason — the tenth
+        /// skill, Social, reads from a nine-skill file as nought, and the same guard deals it once
+        /// to a colonist from a file below 11 (<c>BackfillSkills</c>). Custody and the prison's
+        /// records went into sections of their own, which needed no bump.</para>
         /// </remarks>
-        public const int CurrentFormatVersion = 10;
+        public const int CurrentFormatVersion = 11;
 
         public static void Save(SimWorld world, Stream stream, IReadOnlyList<ISaveable> components,
             SaveRecipe? recipe = null)

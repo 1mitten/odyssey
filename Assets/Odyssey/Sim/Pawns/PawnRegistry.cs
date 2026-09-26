@@ -484,6 +484,15 @@ namespace Odyssey.Sim.Pawns
             new Cooking.CookJobDriver(),
             // The ranged attack (design 47 §2d), JobHandle 27, after the kitchen's.
             new AttackRangedJobDriver(),
+            // The prisoner line (design 58 §7), JobHandle 28 to 35.
+            new CaptureJobDriver(),
+            new FeedPrisonerJobDriver(),
+            new ChatJobDriver(),
+            new EscortJobDriver(),
+            new GoToCellJobDriver(),
+            new EscapeJobDriver(),
+            new LeaveFreeJobDriver(),
+            new ArrestJobDriver(),
         };
 
         /// <summary>
@@ -500,7 +509,10 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public void BackfillSkills(int formatVersion)
         {
-            if (formatVersion >= 10) return;
+            // Format 11 (design 58 §8) dealt Social the same way. One guard serves both: the deal
+            // skips every skill already holding experience, so a file at 10 gets only Social and a
+            // file below it Shooting and Social, each from the stream a new colonist would use.
+            if (formatVersion >= 11) return;
             for (int i = 0; i < _pawns.Count; i++)
                 if (_pawns[i].IsPerson) _pawns[i].RollStartingSkills();
         }
@@ -618,7 +630,10 @@ namespace Odyssey.Sim.Pawns
                     flags,
                     seated,
                     // A jump falling short lands a layer below the bank it left (design 46 §6).
-                    pawn.JumpLanding >= 0 && pawn.JumpLanding / size.LayerStride != pawn.Cell / size.LayerStride));
+                    pawn.JumpLanding >= 0 && pawn.JumpLanding / size.LayerStride != pawn.Cell / size.LayerStride,
+                    // Held, and dressed for it (design 58 §4b, §11d): reports of saved state.
+                    pawn.Custody,
+                    pawn.Custody != PawnCustody.Free && pawn.Prison != null && pawn.Prison.Dressed));
 
                 // The fight (design 33 §5), sparse, and for animals as much as people: the health
                 // bar is drawn over the hurt, the downed and the drafted, and a hog can be all
@@ -652,6 +667,9 @@ namespace Odyssey.Sim.Pawns
                 // comes. Asked only of the downed, so a colony nobody has hurt pays one flag.
                 if (pawn.Downed && RescueRules.NeedsRescue(pawn, _ctx) && RescueRules.BedFor(pawn, pawn, _ctx) < 0)
                     writer.AddPawnAspect(pawn.Id, CombatAspects.RescueNoBed, 1);
+                // The prison's (design 58 §11): a capture mark, and a pawn waiting for a prison bed
+                // with none free. Nothing for a pawn nobody means to hold.
+                if (pawn.Prison != null || pawn.Downed) PrisonAspects.Publish(writer, pawn, _ctx);
                 // The body (design 43 §9), sparse: a pawn with nothing on its ledger publishes
                 // nothing new, so a healthy colony's rows did not move.
                 if (pawn.HasHealthState) HealthAspects.Publish(writer, pawn, _ctx.Content.DayTicks);

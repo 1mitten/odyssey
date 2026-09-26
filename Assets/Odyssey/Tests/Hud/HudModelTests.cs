@@ -441,11 +441,11 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.Tabs.Single(t => t.Name == "Health").Enabled, Is.True);
 
             Assert.That(pane.Commands, Is.Not.Empty);
-            // The draft and the response (design 33 §2f, §18e) are the commands wired; the rest may
-            // not pretend to be.
+            // The draft, the response (design 33 §2f, §18e) and the arrest (design 58 §10) are the
+            // commands wired; the rest may not pretend to be.
             Assert.That(pane.Commands.Where(c => c.Enabled).Select(c => c.IconKey),
-                Is.EqualTo(new[] { InspectModel.DraftKey, ResponseModel.FightBackKey }),
-                "only Draft and the response are wired, and none of the others may pretend to be");
+                Is.EqualTo(new[] { InspectModel.DraftKey, ResponseModel.FightBackKey, InspectModel.ArrestKey }),
+                "only Draft, the response and Arrest are wired, and none of the others may pretend to be");
         }
 
         /// <summary>
@@ -515,8 +515,8 @@ namespace Odyssey.Tests.Hud
             pane.Refresh(snapshot);
 
             Assert.That(pane.Skills.Count, Is.EqualTo(SkillCatalogue.All.Length));
-            Assert.That(pane.Skills.Count(s => s.Live), Is.EqualTo(8),
-                "mining, chopping, construction, growing, melee, medicine, cooking and shooting are the eight the " +
+            Assert.That(pane.Skills.Count(s => s.Live), Is.EqualTo(9),
+                "mining, chopping, construction, growing, melee, medicine, cooking, shooting and social are the nine the " +
                 "simulation backs; hauling is a work type and not a skill in the design's list");
 
             SkillRow mining = pane.Skills.Single(s => s.IconKey == "ui.skill.mining");
@@ -562,6 +562,8 @@ namespace Odyssey.Tests.Hud
                     "ui.skill.cooking",
                     // And since the ranged line's (design 47 §3a).
                     "ui.skill.shooting",
+                    // And since the prisoner line's (design 58 §8).
+                    "ui.skill.social",
                 }),
                 "the live rows are the simulation's own skills, each under its own name");
 

@@ -320,6 +320,7 @@ namespace Odyssey.Tests.Sim
         // armed from a table of one, Item_Pistol, with the bandit's traverse mode and motive. No
         // golden moved: no golden spawns a hostile.
         // Raids merged onto cover, 2026-09-26: re-taken from the merged pack.
+<<<<<<< HEAD
         // 2026-09-25, the culvert frog (design 30 §8): Species_CulvertFrog and PawnKind_CulvertFrog
         // appended (kind 4, species 3; kind 5 since the merge with raids), and SpeciesDef gained bankRadius and ignoresRain, both
         // nought/false on every other species. Taken from a freshly loaded pack.
@@ -330,6 +331,12 @@ namespace Odyssey.Tests.Sim
         // The frog merged with raids, 2026-09-26: the gunman keeps kind 4 and the frog moves to 5;
         // re-taken from the merged pack.
         const ulong ContentFingerprint = 11744128507824195914UL;
+=======
+        // 2026-09-26, prisoners (design 58 P3, the contracts step): Skill_Social, Work_Warden
+        // (order 8), Job_Capture to Job_Arrest (drivers 28 to 35) and Thought_Imprisoned,
+        // Thought_ColonistArrested and Thought_WasArrested appended.
+        const ulong ContentFingerprint = 1100361368154067690UL;
+>>>>>>> origin/claude/prisoner-bed-assignment-98afc0
 
 
         [Test]

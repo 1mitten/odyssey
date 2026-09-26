@@ -190,14 +190,15 @@ namespace Odyssey.Tests.Hud
             var pawn = new PawnId(1);
 
             var before = Frame();
-            Level(before, pawn, "social", 1);
+            Level(before, pawn, "intellect", 1);
             watch.Step(before);
 
             var after = Frame(tick: 1);
-            Level(after, pawn, "social", 5);
+            Level(after, pawn, "intellect", 5);
 
-            // Social, since cooking went live with the kitchen (design 48).
-            Assert.That(watch.Step(after), Is.Empty, "social is not simulated and cannot level");
+            // Intellect, since social went live with the prisoner line (design 58 §8); social
+            // since cooking went live with the kitchen (design 48).
+            Assert.That(watch.Step(after), Is.Empty, "intellect is not simulated and cannot level");
             Assert.That(watch.Tracking, Is.Zero, "nothing dead is being tracked");
         }
     }

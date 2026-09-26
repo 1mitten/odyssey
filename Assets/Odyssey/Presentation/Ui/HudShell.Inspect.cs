@@ -238,6 +238,8 @@ namespace Odyssey.Presentation.Ui
                     ? _inspect.Pawn.ToString() + (_inspect.Drafted ? ":drafted" : string.Empty)
                         + (_inspect.ShowsColonistBody ? string.Empty : ":bare")
                         + (_inspect.ShowsTabBox ? ":tabs" : string.Empty)
+                        // A prisoner's pane carries her rows (design 58 §11b): taking her is structure.
+                        + (_inspect.IsPrisoner ? ":held" : string.Empty)
                  : _inspect.Subject == InspectSubject.Item ? _inspect.Thing.ToString()
                  : _inspect.Subject == InspectSubject.Corpse ? _inspect.Corpse.ToString()
                  : _inspect.Position + ":" + _inspect.Layer
@@ -329,7 +331,8 @@ namespace Odyssey.Presentation.Ui
             _inspectPace.style.display = _inspect.ShowsColonistBody && _inspect.Pace.Length > 0
                 ? DisplayStyle.Flex : DisplayStyle.None;
 
-            if (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item)
+            if (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item
+                || (_inspect.Subject == InspectSubject.Colonist && _inspect.IsPrisoner))
             {
                 SyncCellRows();
                 // A cooking station's bills (design 48 §5), above the tile's facts.
@@ -931,6 +934,15 @@ namespace Odyssey.Presentation.Ui
                 _inspectBody.Add(_cellRowsGrid);
             }
 
+            if (_inspect.Subject == InspectSubject.Colonist && _inspect.IsPrisoner)
+            {
+                // A prisoner's facts (design 58 §11b) in the tile's rows: the same grid, the same
+                // reuse, and the mode row a control the way the bed's purpose row is.
+                _cellRowsGrid = new VisualElement();
+                _cellRowsGrid.AddToClassList("inspect__rows");
+                _inspectBody.Add(_cellRowsGrid);
+            }
+
             _tombReason = HudText.Make("no longer present — the pane keeps last-known values",
                 HudTextRole.Meta, ussClass: "inspect__reason");
             _tombReason.style.display = DisplayStyle.None;
@@ -997,6 +1009,8 @@ namespace Odyssey.Presentation.Ui
                     if (!captured.IsPick) return;
                     if (captured.IsSwitch) ThrowPowerSwitch();
                     else if (captured.IsOrderAction) ActOnOrder();
+                    else if (captured.IsBedPurpose) ToggleBedPurpose();
+                    else if (captured.IsPrisonMode) CyclePrisonMode();
                     else ToggleBedPicker(captured.Root);
                 });
 
@@ -1031,7 +1045,10 @@ namespace Odyssey.Presentation.Ui
                     ? DisplayStyle.None : DisplayStyle.Flex;
                 if (view.Root.style.display.value != shown) view.Root.style.display = shown;
                 bool linePick = row.Name == InspectModel.OrderActionRow && _inspect.OrderActionUnderPane;
-                bool pick = (row.Name == "owner" && _inspect.BedUnderPane) || switchPick || linePick;
+                bool purposePick = row.Name == InspectModel.BedPurposeRow && _inspect.BedUnderPane;
+                bool modePick = row.Name == InspectModel.PrisonModeRow && _inspect.Subject == InspectSubject.Colonist
+                    && _inspect.IsPrisoner && !_inspect.Tombstoned;
+                bool pick = (row.Name == "owner" && _inspect.BedUnderPane) || switchPick || linePick || purposePick || modePick;
                 // The pickable row's value is set in the heavier Row role, which is where weight
                 // lives: the stylesheet may not set type (TheSheetSetsNoTypeAtAll), so "make the
                 // assign button bolder" is a role here rather than a font-style there.
@@ -1067,17 +1084,22 @@ namespace Odyssey.Presentation.Ui
                 view.Root.EnableInClassList("inspect__row--danger", danger);
                 view.Root.EnableInClassList("inspect__row--warn", warn);
 
-                if (view.IsPick != pick || view.IsSwitch != switchPick || view.IsOrderAction != linePick)
+                if (view.IsPick != pick || view.IsSwitch != switchPick || view.IsOrderAction != linePick
+                    || view.IsBedPurpose != purposePick || view.IsPrisonMode != modePick)
                 {
                     view.IsPick = pick;
                     view.IsSwitch = switchPick;
                     view.IsOrderAction = linePick;
+                    view.IsBedPurpose = purposePick;
+                    view.IsPrisonMode = modePick;
                     view.Root.EnableInClassList("inspect__row--pick", pick);
                     view.Chevron.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
                     // The bed's glyph is a bed: the switch and line rows wear the chevron alone.
-                    view.Glyph.style.display = pick && !switchPick && !linePick ? DisplayStyle.Flex : DisplayStyle.None;
+                    view.Glyph.style.display = pick && !switchPick && !linePick && !modePick ? DisplayStyle.Flex : DisplayStyle.None;
                     view.Root.tooltip = switchPick ? "Switch it on or off — at once, nobody is sent"
                         : linePick ? row.Value + " — at once, nobody is sent"
+                        : purposePick ? "Mark this bed, and every bed in its room, for prisoners — or back for the colony"
+                        : modePick ? "What to do with her: hold, recruit, release or exile. Press for the next"
                         : pick ? "Choose whose bed this is" : null;
                 }
             }
@@ -1149,6 +1171,24 @@ namespace Odyssey.Presentation.Ui
         /// Throw the switch of the power building under the pane (design 32 §5): an intent, like
         /// every command, applied while paused and at once — no colonist walks over to do it.
         /// </summary>
+        /// <summary>
+        /// Mark the bed under the pane for prisoners, or back for the colony (design 58 §5b). An
+        /// intent, like the owner's pick: the simulation marks the whole room and takes the bed
+        /// from an owner of the wrong kind, paused or not.
+        /// </summary>
+        void ToggleBedPurpose()
+        {
+            _boot?.World?.Intents.Submit(new Intent(IntentKind.SetBedPurpose, _inspect.Cell,
+                _inspect.BedForPrisoners ? (int)BedPurpose.Colony : (int)BedPurpose.Prison));
+        }
+
+        /// <summary>The prisoner's mode moves on one (design 58 §11b): an intent, applied while paused.</summary>
+        void CyclePrisonMode()
+        {
+            _boot?.World?.Intents.Submit(new Intent(IntentKind.SetPrisonMode, default, _inspect.Pawn.Value,
+                (int)InspectModel.NextPrisonMode(_inspect.PrisonerMode)));
+        }
+
         void ThrowPowerSwitch()
         {
             _boot?.World?.Intents.Submit(new Intent(IntentKind.SetPowerSwitch, _inspect.Cell,
@@ -1212,9 +1252,14 @@ namespace Odyssey.Presentation.Ui
             // rather than a second tally being kept here and going stale.
             var sites = _boot?.Colony?.Construction;
             int here = sites != null ? sites.BedOwnerAt(_inspect.Cell) : 0;
+            BedPurpose purpose = sites != null ? sites.BedPurposeAt(_inspect.Cell) : BedPurpose.Colony;
 
             for (int i = 0; i < pawns.Length; i++)
             {
+                // Only those who sleep from this bed's pool: colonists for a colony bed. The picker
+                // listed every pawn on the board until 2026-09-26, hogs and bandits included, and
+                // the simulation would have taken the gift (design 58 §5a).
+                if (!BedRule.MayOwn(BedRule.UserOf(pawns[i]), purpose)) continue;
                 int id = pawns[i].Id.Value;
                 BedPickerMark mark =
                     id == here && here != 0 ? BedPickerMark.ThisBed
@@ -2188,6 +2233,10 @@ namespace Odyssey.Presentation.Ui
             // The response beside it (design 33 §18e): the model decides, this carries its intents.
             if (command.Enabled && ResponseModel.IsResponseKey(command.IconKey))
                 button.RegisterCallback<ClickEvent>(_ => CycleResponse());
+            // Arrest (design 58 §10): A of nought asks the simulation for the nearest able colonist.
+            if (command.Enabled && command.IconKey == InspectModel.ArrestKey)
+                button.RegisterCallback<ClickEvent>(_ =>
+                    _boot?.World?.Intents.Submit(new Intent(IntentKind.OrderArrest, default, 0, _inspect.Pawn.Value)));
             return button;
         }
 

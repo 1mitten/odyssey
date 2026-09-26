@@ -221,16 +221,27 @@ namespace Odyssey.Tests.Sim
                 colony.World.Views.Current.TryGetPawnAspect(new PawnId(1), SkillAspects.RollSeed, out _);
             }
 
-            long before = System.GC.GetAllocatedBytesForCurrentThread();
-            for (int i = 0; i < 20; i++)
+            // The least of three windows, not one (2026-09-26). In the fast tier's full run a
+            // stray ~5 KB turned up on this thread about one run in two, and instrumenting the tick
+            // put it in a different phase each time — the snapshot, the pawns, or outside every
+            // phase — and never when the test ran alone: the runtime's, not the simulation's,
+            // which is deterministic and would allocate in the same place every run. A structure
+            // that reallocates per frame allocates in every window, so the least still catches it.
+            long least = long.MaxValue;
+            for (int window = 0; window < 3; window++)
             {
-                colony.World.Tick();
-                colony.World.Views.Current.TryGetPawnAspect(new PawnId(1), SkillAspects.RollSeed, out _);
+                long before = System.GC.GetAllocatedBytesForCurrentThread();
+                for (int i = 0; i < 20; i++)
+                {
+                    colony.World.Tick();
+                    colony.World.Views.Current.TryGetPawnAspect(new PawnId(1), SkillAspects.RollSeed, out _);
+                }
+                long after = System.GC.GetAllocatedBytesForCurrentThread();
+                TestContext.WriteLine($"twenty indexed frames allocated {after - before} bytes");
+                least = System.Math.Min(least, after - before);
             }
-            long after = System.GC.GetAllocatedBytesForCurrentThread();
 
-            TestContext.WriteLine($"twenty indexed frames allocated {after - before} bytes");
-            Assert.That(after - before, Is.LessThan(4096),
+            Assert.That(least, Is.LessThan(4096),
                 "the aspect index is being reallocated every frame");
         }
 

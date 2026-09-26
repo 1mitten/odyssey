@@ -15,7 +15,7 @@ namespace Odyssey.Tests.Sim
     /// <c>Edifice[]</c> point at the same record, either half names the site, and taking the bed
     /// apart by clicking either half leaves neither half behind.
     /// </summary>
-    public class BedTests
+    public partial class BedTests
     {
         static readonly GridSize Size = new GridSize(60, 60, 16);
         const uint Seed = 20260917;

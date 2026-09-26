@@ -39,12 +39,16 @@ namespace Odyssey.Sim.World
 
         readonly int[] _costByClass = new int[256];
 
+        readonly Pawns.BedPurposes? _purposes;
+
         public CellDetailContributor(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices,
             Growing.GrowingZones? zones = null, EnclosureGrid? enclosure = null,
             Storage.StorageZones? storage = null, Storage.StorageUnits? units = null,
             Pawns.ColonyItems? items = null,
-            Temperature.TemperatureSystem? temperature = null)
+            Temperature.TemperatureSystem? temperature = null,
+            Pawns.BedPurposes? purposes = null)
         {
+            _purposes = purposes;
             _grid = grid;
             _edifices = edifices;
             _zones = zones;
@@ -229,7 +233,12 @@ namespace Odyssey.Sim.World
                 storageZone, storagePriority, storageCells, storageOrdinal,
                 storeKind, storedStacks, storeSlots, storedDef, storedUnits,
                 storeKind == CellDetail.StoreNone ? -1 : storeCell,
-                ambientTempC));
+                ambientTempC,
+                // What the bed is for (design 58 §5b), beside who owns it.
+                quality == 0 || _purposes == null ? CellDetail.BedForColony
+                : _purposes.PurposeAt(cell) != BedPurpose.Prison ? CellDetail.BedForColony
+                : _purposes.IsShackled(cell) ? CellDetail.BedShackles
+                : CellDetail.BedForPrisoners));
         }
     }
 }
