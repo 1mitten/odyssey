@@ -217,6 +217,19 @@ namespace Odyssey.Presentation.Bootstrap
             // at once from the shooter's feet - near or far by the listener's distance, and nothing
             // scheduled (CombatSoundTiming times blows, not shots). A bullet that goes into the
             // ground or a wall throws dust where it stopped, on a drawn layer only, as a word floats.
+            // A thrown rock (design 62 §7a): no muzzle, no tracer and no report — the heavy whoosh
+            // from the thrower and its grunt; the rock itself is drawn on its arc by the projectile
+            // director.
+            if (combatEvent.Kind == CombatEventKind.Shot && Hurl.IsHurl(combatEvent.Weapon))
+            {
+                int throwerKind = snapshot.TryGetPawn(combatEvent.Attacker, out PawnView throwing) ? throwing.Kind : -1;
+                Vector3 hand = WhereOf(combatEvent, snapshot, figures, out float tall, out _);
+                audio?.PlayOneShot(SoundIds.CombatSwingHeavy, hand + Vector3.up * (tall * 0.5f));
+                Voice(combatEvent, snapshot, figures, audio, throwerKind);
+                Handed?.Invoke(combatEvent);
+                return;
+            }
+
             if (combatEvent.Kind == CombatEventKind.Shot)
             {
                 Projectiles?.OnCombatEvent(combatEvent, snapshot, figures);
@@ -234,6 +247,10 @@ namespace Odyssey.Presentation.Bootstrap
             }
             bool bullet = (combatEvent.Kind == CombatEventKind.Hit || combatEvent.Kind == CombatEventKind.Miss)
                           && IsGun(combatEvent.Weapon);
+            // A thrown rock that misses kicks up dust where it comes down, as a bullet does.
+            if (combatEvent.Kind == CombatEventKind.Miss && Hurl.IsHurl(combatEvent.Weapon)
+                && combatEvent.Cell.Y >= lowestLayer && combatEvent.Cell.Y <= highestLayer)
+                ThrowDust(combatEvent, snapshot, figures);
             if (bullet)
             {
                 Projectiles?.OnCombatEvent(combatEvent, snapshot, figures);

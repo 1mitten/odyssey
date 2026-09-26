@@ -83,6 +83,9 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public const int DefaultWindupTicks = 20;
 
+        /// <summary>How many ticks of the heavy swing come before a thrown rock leaves the hand (design 62 §7a).</summary>
+        public const int ThrowLeadTicks = 18;
+
         /// <summary>How long the action layer takes to come in and go out, in seconds.</summary>
         public const float CombatEaseSeconds = 0.12f;
 
@@ -425,6 +428,14 @@ namespace Odyssey.Presentation.World
                 case CombatEventKind.KnockedBack:
                     if (_byPawn.TryGetValue(combatEvent.Target.Value, out Figure? knocked))
                         KnockBack(knocked, combatEvent);
+                    return;
+
+                // A thrown rock (design 62 §7a): the heavy swing, quick, released on the shot's tick,
+                // so the arm comes over as the rock leaves it.
+                case CombatEventKind.Shot:
+                    if (Odyssey.Sim.Pawns.Hurl.IsHurl(combatEvent.Weapon)
+                        && _byPawn.TryGetValue(combatEvent.Attacker.Value, out Figure? thrower))
+                        StartSwing(thrower, AttackStyle.Heavy, combatEvent.Tick - ThrowLeadTicks, ThrowLeadTicks);
                     return;
 
                 case CombatEventKind.Dodge:
