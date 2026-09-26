@@ -112,8 +112,8 @@ namespace Odyssey.Tests.Sim
             Assert.That(species.unstoppable, Is.True);
             Assert.That(species.sweep, Is.Not.Null);
             Assert.That(species.sweep!.distance, Is.EqualTo(2), "the owner's two cells");
-            Assert.That(content.ModeOf(PawnKindIndex.Butcher), Is.EqualTo(TraverseMode.Animal),
-                "bulky: no ladder, no door it opens (design 62 §3)");
+            Assert.That(content.ModeOf(PawnKindIndex.Butcher), Is.EqualTo(TraverseMode.Bandit),
+                "a bandit's reach: every rock and ledge a colonist can stand on, and no door it opens (design 62 §3a)");
             Assert.That(content.HealthOf(PawnKindIndex.Butcher)!.defName, Is.EqualTo("Health_Brute"));
             Assert.That(species.naturalAttack!.damageKind, Is.EqualTo(DamageKind.Sharp));
 
@@ -139,7 +139,7 @@ namespace Odyssey.Tests.Sim
             {
                 SpeciesDef s = content.SpeciesOf(kind);
                 Assert.That(content.KindOf(kind).faction, Is.EqualTo(Faction.Hostile), s.defName);
-                Assert.That(content.ModeOf(kind), Is.EqualTo(TraverseMode.Animal), s.defName);
+                Assert.That(content.ModeOf(kind), Is.EqualTo(TraverseMode.Bandit), s.defName);
                 Assert.That(s.person && s.unstoppable && s.sweep != null && s.naturalAttack != null, Is.True, s.defName);
                 HealthDef body = content.HealthOf(kind)!;
                 // Pain shock at about two-thirds of the pool, never at a colonist's 64.
@@ -520,6 +520,45 @@ namespace Odyssey.Tests.Sim
             for (int i = 0; i < 400 && !bandit.HasPendingSwing; i++) colony.World.Tick();
             Assume.That(bandit.HasPendingSwing, Is.True, "the bandit never swung");
             Assert.That(bandit.HeldFacing, Is.EqualTo(0));
+        }
+
+        // ---- no safe perch ------------------------------------------------------------------
+
+        /// <summary>
+        /// A colonist on a rock one layer up is not a safe place to shoot from (owner, 2026-09-26: "I
+        /// was able to get up onto a rock/one height and just shoot the pigs until they were dead";
+        /// "can we check that bandits don't do this as well"). The rock is a raised patch that is not
+        /// a terrace foot — the ground the animals may not scramble on to (NavGraph.HopMask). Every
+        /// hostile that fights hand to hand gets up there and at her: the bandit always could, the
+        /// butcher since it moves as a bandit does.
+        /// </summary>
+        [TestCase(PawnKindIndex.Bandit)]
+        [TestCase(PawnKindIndex.Butcher)]
+        [TestCase(PawnKindIndex.ButcherKing)]
+        public void NoHostileIsKeptOffARockOneLayerUp(int kind)
+        {
+            var colony = Board(colonists: 1, beds: 0);
+            colony.World.Tick();
+            // A rock outcrop: stone, not soil. A one-layer rise of soil is a terrace step, which a
+            // hog may climb; stone is sheer (TerraceFoot.IsStep), and is where she stood.
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+                Paint(colony, At(colony, dx, dz, 0), NaturalContent.TerrainRock);
+            colony.Pawns.Nav.Rebuild();
+            Pawn her = colony.Pawns.Pawns.All[0];
+            Assert.That(Draft(colony, her), Is.EqualTo(IntentRejection.None));
+            Stand(colony, her, At(colony, 0, 0, 1));
+            Assert.That(colony.Pawns.Cells.IsWalkable(her.Cell), Is.True, "the fixture: she is not on the rock");
+            Pawn foe = Spawn(colony, kind, At(colony, -5, 0));
+            Stand(colony, foe, At(colony, -5, 0));
+
+            bool reached = false;
+            for (int t = 0; t < 1_500 && !reached; t++)
+            {
+                colony.World.Tick();
+                reached = Melee.InReach(colony.Pawns, foe, her, foe.OwnMode) && foe.CombatTarget == her.Id.Value;
+            }
+            Assert.That(reached, Is.True, $"kind {kind} never got up the rock to her: a perch to shoot it from");
         }
 
         // ---- the real fight -----------------------------------------------------------------

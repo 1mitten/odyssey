@@ -269,8 +269,8 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// The butcher is bulky (design 62 §3): <c>TraverseMode.Animal</c>, which opens no door, so a
-        /// closed door is a wall to it as to the bandit, and it breaks it down the same way — the
+        /// The butcher moves as a bandit (design 62 §3a): <c>TraverseMode.Bandit</c>, which opens no
+        /// door, so a closed door is a wall to it too, and it breaks it down the same way — the
         /// hostile mind's own fallback, nothing of the butcher's. Never stands in the doorway of a
         /// door still standing, never opens it.
         /// </summary>
@@ -283,7 +283,7 @@ namespace Odyssey.Tests.Sim
             int door = ring[(1, 0)];
             int handle = colony.Grid.Edifice[door];
             Pawn butcher = Spawn(colony, PawnKindIndex.Butcher, East(colonist, 5));
-            Assert.That(butcher.OwnMode, Is.EqualTo(TraverseMode.Animal));
+            Assert.That(butcher.OwnMode, Is.EqualTo(TraverseMode.Bandit));
 
             TickUntil(colony, () => AttackingBuilding(butcher, handle), 60, "the butcher never went for the door");
             for (int t = 0; t < 20_000 && colony.Grid.Edifice[door] == handle; t++)

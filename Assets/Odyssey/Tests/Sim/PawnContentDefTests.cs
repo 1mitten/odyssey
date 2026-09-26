@@ -337,7 +337,9 @@ namespace Odyssey.Tests.Sim
         // abstract BruteBody. Taken from a freshly loaded pack.
         // And SpeciesDef gained voice and voicePitchPerMille, presentation's (design 62 §8d): the
         // butcher calls in "butcher", its levels at 1,000 / 940 / 880 / 820.
-        const ulong ContentFingerprint = 9489355952634959984UL;
+        // And ButcherBase's traverseMode Animal -> Bandit (design 62 §3a): the owner shot one dead
+        // from a rock it could not climb.
+        const ulong ContentFingerprint = 15773818850882015392UL;
 
 
         [Test]

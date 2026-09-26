@@ -175,8 +175,11 @@
     it IS: its pool, its body, its fixed melee level, its cleaver and its sweep. Every number is
     INVENTED and the first tuning (section 4).
 
-    It is one cell, drawn huge (section 3): its bulk is TraverseMode.Animal - no ladder, no door it
-    opens, no water - so a closed door is a wall it breaks and a ladder is a way to get away from it.
+    It is one cell, drawn huge (section 3), and it moves as a bandit does (TraverseMode.Bandit): a
+    closed door is a wall it breaks, and it climbs every rock, ledge and ladder a colonist can. It
+    was TraverseMode.Animal, the hog's, until the owner stood on a rock one layer up and shot it dead
+    while it wandered below (2026-09-26, design 62 section 3a): a hog may not scramble on to stone,
+    and a boss that cannot reach a perch is a target.
     A bigger body on a bullet's line than anything (800, the ceiling). Never stunned, never knocked
     back. The cleaver is its own, not an item: it does not drop, and nobody else swings it
     (section 5). The sweep (sections 5 and 7): the front arc of three, and a landed blow usually
@@ -184,7 +187,7 @@
   -->
   <SpeciesDef Name="ButcherBase" Abstract="true">
     <person>true</person>
-    <traverseMode>Animal</traverseMode>
+    <traverseMode>Bandit</traverseMode>
     <wanderRadius>6</wanderRadius>
     <restTicksMin>0</restTicksMin>
     <restTicksMax>0</restTicksMax>
