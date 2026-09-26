@@ -23,7 +23,13 @@ namespace Odyssey.Sim.Pawns
         readonly List<Pawn> _pawns = new List<Pawn>();
         readonly Dictionary<int, int> _byId = new Dictionary<int, int>();
         readonly PawnContext _ctx;
-        int _nextId = 1;
+
+        /// <summary>
+        /// Where this registry's ids come from (design 64 §4c). Its own counter unless a campaign
+        /// installs one shared by every board, so a colonist who travels keeps an id nobody else
+        /// holds. Set before the first spawn; the saved counter is still one int either way.
+        /// </summary>
+        public PawnIdSource Ids { get; set; } = new PawnIdSource();
 
         internal PawnRegistry(PawnContext ctx) { _ctx = ctx; }
 
@@ -107,7 +113,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public Pawn Spawn(int cell, int kind, int weaponDef)
         {
-            var pawn = new Pawn(new PawnId(_nextId++), cell, _ctx.Content, kind);
+            var pawn = new Pawn(new PawnId(Ids.Next()), cell, _ctx.Content, kind);
             // The world's seed unless a caller says otherwise (U40). This is what keeps every
             // colony nobody chose rolling exactly what it rolled before pawns had seeds of their
             // own, so no scenario, headless run or fixture had to change.
@@ -417,7 +423,16 @@ namespace Odyssey.Sim.Pawns
         /// animal, whatever comes next — releases the same things. One scan of the edifice list,
         /// on an event that happens a few times a day.</para>
         /// </summary>
-        public void Despawn(Pawn pawn)
+        public void Despawn(Pawn pawn) => Despawn(pawn, DespawnReason.Removed);
+
+        /// <summary>
+        /// Take a pawn off the board for a <paramref name="reason"/>. <see cref="DespawnReason.Departed"/>
+        /// is a colonist setting out on an expedition (design 64 §6b), and <b>a departure is not a
+        /// death</b>: she keeps her bed, because she is coming back to it, and her weapon is not put
+        /// down, because the caller has already packed it. Everything else is the same as any
+        /// other way off the board.
+        /// </summary>
+        public void Despawn(Pawn pawn, DespawnReason reason)
         {
             if (pawn == null) throw new System.ArgumentNullException(nameof(pawn));
             if (!_byId.TryGetValue(pawn.Id.Value, out int index) || !ReferenceEquals(_pawns[index], pawn)) return;
@@ -425,25 +440,35 @@ namespace Odyssey.Sim.Pawns
             // tick it dies or leaves the board, rather than on each attacker's next tick.
             _ctx.Combat?.EndAttacksOn(pawn);
             _ctx.Reservations.ReleaseAll(pawn);
-            _ctx.Construction?.ReleaseBedsOf(pawn.Id.Value);
+            if (reason != DespawnReason.Departed) _ctx.Construction?.ReleaseBedsOf(pawn.Id.Value);
             // A weapon in the hand goes down where the pawn stood, or it would stay carried by an
             // id that no longer exists, with no cell, for ever (design 33 §6D). A death has already
             // let go of it through the drop listener, so this is a no-op there; it is for every
             // other way off the board — a bandit that flees off the edge (integration, 2026-09-23).
-            if (pawn.EquippedItem != 0) WeaponHand.PutDown(pawn, _ctx, pawn.Cell);
+            if (pawn.EquippedItem != 0 && reason != DespawnReason.Departed) WeaponHand.PutDown(pawn, _ctx, pawn.Cell);
             _pawns.RemoveAt(index);
             _byId.Remove(pawn.Id.Value);
             for (int i = index; i < _pawns.Count; i++) _byId[_pawns[i].Id.Value] = i;
         }
 
-        /// <summary>Register a pawn subclass. The seam a mod would use to add a pawn kind.</summary>
+        /// <summary>
+        /// Register a pawn subclass. The seam a mod would use to add a pawn kind, and the way a
+        /// colonist arriving from another board comes in (design 64 §6e).
+        ///
+        /// <para><b>In id order</b>, not at the end. A spawn's id is always the highest, so for
+        /// every pawn made here the two are the same place; a colonist coming home from an
+        /// expedition can hold a lower id than a pawn born while she was away, and appending her
+        /// would break the ascending order every loop, the hash and the save depend on.</para>
+        /// </summary>
         public Pawn Adopt(Pawn pawn)
         {
             pawn.DriverPool = BuildDrivers();
             pawn.Context = _ctx;
-            _byId[pawn.Id.Value] = _pawns.Count;
-            _pawns.Add(pawn);
-            if (pawn.Id.Value >= _nextId) _nextId = pawn.Id.Value + 1;
+            int at = _pawns.Count;
+            while (at > 0 && _pawns[at - 1].Id.Value > pawn.Id.Value) at--;
+            _pawns.Insert(at, pawn);
+            for (int i = at; i < _pawns.Count; i++) _byId[_pawns[i].Id.Value] = i;
+            Ids.Observe(pawn.Id.Value);
             return pawn;
         }
 
@@ -911,7 +936,7 @@ namespace Odyssey.Sim.Pawns
 
         public void Save(SaveWriter writer)
         {
-            writer.Write(_nextId);
+            writer.Write(Ids.Peek);
             writer.Write(_pawns.Count);
 
             for (int i = 0; i < _pawns.Count; i++)
@@ -1007,7 +1032,7 @@ namespace Odyssey.Sim.Pawns
             _byId.Clear();
             _ctx.Reservations.Clear();
 
-            _nextId = reader.ReadInt();
+            Ids.Reset(reader.ReadInt());
             int count = reader.ReadInt();
 
             for (int i = 0; i < count; i++)
