@@ -431,6 +431,14 @@ namespace Odyssey.Sim.Worldgen
         public const ushort EdificeSandbags = 23;
 
         /// <summary>
+        /// A built stair (design 63): one record over two cells along its facing, the foot at the
+        /// head. 24, after the sandbags. Deliberately not <see cref="EdificeStairLower"/> with a
+        /// footprint of two: the city stamps its stairs as two records, and giving 5 a second cell
+        /// would change what every stamped stair means to the footprint, demolish and item rules.
+        /// </summary>
+        public const ushort EdificeStair = 24;
+
+        /// <summary>
         /// The city's ten, which are the first ten of the one table. Loaded from
         /// <c>Defs/Core/World/Terrain.xml</c> like everything else: this class used to build them
         /// in code and the XML mirrored it, which meant every terrain was written twice.

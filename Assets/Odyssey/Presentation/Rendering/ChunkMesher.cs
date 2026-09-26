@@ -1655,6 +1655,9 @@ namespace Odyssey.Presentation.Rendering
                 case CoreContent.EdificeStairUpper:
                     EmitStair(batch, module, tint, def, x, z, y);
                     return;
+                case CoreContent.EdificeStair:
+                    EmitBuiltStair(batch, module, tint, index, x, z, y);
+                    return;
                 case CoreContent.EdificeLadder:
                     EmitLadder(batch, module, tint, index, x, z, y);
                     return;
@@ -1888,11 +1891,22 @@ namespace Odyssey.Presentation.Rendering
 
             // The climb runs lower -> upper. Seen from the upper half, that is the way it came.
             int climb = def == CoreContent.EdificeStairLower ? dir : Directions.Opposite(dir);
-            float rise = def == CoreContent.EdificeStairLower ? 0f : CellMetrics.SizeY * 0.5f;
-
             AddBody(batch, module, tint,
-                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y) + Vector3.up * rise) *
-                Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[climb], 0f)));
+                StairShape.Half(x, z, y, climb, upper: def == CoreContent.EdificeStairUpper));
+        }
+
+        /// <summary>
+        /// A stair the colony built (design 63 §9): the city's flight, half a cell at a time, with
+        /// the climb read off the record rather than found by searching for a partner. One record
+        /// stands behind both cells; the head is the foot, so it draws the lower half, and the far
+        /// cell the upper. Each cell draws its own half, so a stair straddling a chunk edge needs
+        /// nothing said about it — both cells' chunks are marked by the edit that raised it.
+        /// </summary>
+        void EmitBuiltStair(ChunkBatch batch, int module, int tint, int index, int x, int z, int y)
+        {
+            int climb = _model.EdificeFacing(index) & 3;
+            AddBody(batch, module, tint,
+                StairShape.Half(x, z, y, climb, upper: !_model.EdificeHead(index)));
         }
 
         void EmitLadder(ChunkBatch batch, int module, int tint, int index, int x, int z, int y)

@@ -505,6 +505,8 @@ namespace Odyssey.Sim.Pathing
                     int idx = rowBase + (x - x0);
                     if (_cellRegion[idx] != NoRegion) continue;
 
+                    // Air, deep water and — since design 62 §2c — solid ground: no region. Rock
+                    // nobody has opened is skipped here and so costs no pass that walks regions.
                     RegionKind kind = Grid.KindOf(idx);
                     if (kind == RegionKind.None) continue;
 
@@ -1226,8 +1228,14 @@ namespace Odyssey.Sim.Pathing
         ///
         /// <para>Scoped to the block's own connector list rather than scanning them all, so the cost
         /// is the handful that could possibly be here (U43).</para>
+        ///
+        /// <para><b>Of one kind</b> (U44, design 63 §3). A built stair declares one cell at each
+        /// end too — its foot and its top — so "the one-cell connector here" stopped naming one
+        /// thing the day stairs were built: asked by the ladder's refresh at a stair's foot, it
+        /// would have found the stair's connector and torn it out. The ladder is the default
+        /// because it was the only caller.</para>
         /// </summary>
-        public int OneCellConnectorAt(int lowerCell)
+        public int OneCellConnectorAt(int lowerCell, ConnectorKind kind = ConnectorKind.Ladder)
         {
             if ((uint)lowerCell >= (uint)Size.CellCount) return -1;
             if (!_connectorsByBlock.TryGetValue(BlockIndexOfCell(lowerCell), out List<int>? ids)) return -1;
@@ -1235,7 +1243,7 @@ namespace Odyssey.Sim.Pathing
             for (int i = 0; i < ids.Count; i++)
             {
                 Connector? con = GetConnector(ids[i]);
-                if (con == null) continue;
+                if (con == null || con.Kind != kind) continue;
                 if (con.LowerCells.Length == 1 && con.LowerCells[0] == lowerCell) return con.Id;
             }
 

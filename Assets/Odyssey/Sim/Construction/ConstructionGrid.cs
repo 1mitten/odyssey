@@ -247,6 +247,10 @@ namespace Odyssey.Sim.Construction
                 // A site standing on the far cell is an order the bed would eat: refuse rather
                 // than refund somebody's half-delivered wall out from under them.
                 if (_building[second] != 0) return IntentRejection.NotPermitted;
+
+                // A stair's far half is half the flight, and answers the stair's own rule too:
+                // the stairwell over it open, and the cell clear (design 63 §4, §5).
+                if (!FarHalfAllows(second, building)) return IntentRejection.NotPermitted;
             }
 
             if (_building[index] == building && _stuff[index] == stuff)
@@ -480,6 +484,42 @@ namespace Odyssey.Sim.Construction
         public bool Allows(int index) => Allows(index, BuildingHandle.Wall);
 
         /// <summary>
+        /// Whether <em>this</em> thing, turned <em>this</em> way, may stand with its head here:
+        /// every cell it would claim, asked by the rule <see cref="Place"/> applies.
+        ///
+        /// <para>Public so the build cursor asks it rather than restating it (design 19 §6, P1).
+        /// Before the stair the cursor asked <see cref="Allows(int, int)"/> of the head and the
+        /// wall's rule of the far cell, which was the whole of the order's rule for a bed; a stair's
+        /// far half has a stairwell over it, and a ghost that asked only the wall's question would
+        /// stand in its own material over a floor the click will refuse (design 63 §5).</para>
+        ///
+        /// <para>Changes nothing, and asks nothing about sites already standing where it would go:
+        /// that is <see cref="Place"/>'s, which a cursor has no business pre-empting.</para>
+        /// </summary>
+        public bool AllowsFootprint(int index, int building, int facing)
+        {
+            if (!Allows(index, building)) return false;
+            if (!ConstructionContent.IsBuilding(building)) return false;
+
+            BuildingDef def = ConstructionContent.BuildingAt(building);
+            if (def.footprint <= 1) return true;
+            if (!def.rotates) facing = 0;
+
+            int second = EdificeFootprint.SecondCell(index, def.edifice, facing, _grid.Size);
+            return second >= 0 && Allows(second) && FarHalfAllows(second, building);
+        }
+
+        /// <summary>
+        /// What a two-cell thing's far cell must answer on top of the wall's rule, which is all a
+        /// bed's or a generator's far cell has ever been asked. A stair's is half the flight, so
+        /// it answers the stair's whole rule: its own stairwell open and nothing lying there.
+        /// Only the stair, deliberately: asking the bed's far cell about items as well would be
+        /// right, and would refuse orders that every golden colony has already given.
+        /// </summary>
+        bool FarHalfAllows(int second, int building) =>
+            building != BuildingHandle.Stair || Allows(second, building);
+
+        /// <summary>
         /// Whether <em>this</em> thing may be built in this cell. An edifice and a slab want
         /// opposite answers to the same question about the floor, so the building has to be named.
         /// </summary>
@@ -588,16 +628,41 @@ namespace Odyssey.Sim.Construction
         /// asked at the connector instead, where it can be answered again each time either end
         /// changes — which <see cref="RefreshLadder"/> already does in both directions.</para>
         /// </summary>
+        /// <remarks><b>A stair asks it too, two cells long</b> (U44, design 63 §4). Both cells over a
+        /// flight are its stairwell and must be open, built or ordered, from both sides: a stair is
+        /// refused under a floor and a floor over either half of a stair. Asked here per cell, so
+        /// the head answers through <see cref="Allows(int, int)"/> and the far half through
+        /// <see cref="FarHalfAllows"/> and <see cref="Raise"/>, which know the facing. The ladder's
+        /// second reach — no slab two cells over it — is deliberately not copied: the top of a
+        /// flight arrives under the upper storey's ceiling, which is where a room's ceiling is.</remarks>
         bool ShaftRulePermits(int index, BuildingDef def, int building)
         {
             if (def.slab || def.covering)
                 return !LadderHereOrOrdered(BelowOf(index))
-                    && !LadderHereOrOrdered(BelowOf(BelowOf(index)));
+                    && !LadderHereOrOrdered(BelowOf(BelowOf(index)))
+                    && !StairHereOrOrdered(BelowOf(index));
 
+            if (building == BuildingHandle.Stair) return AllowsLadder(index);
             return building != BuildingHandle.Ladder || AllowsLadder(index);
         }
 
-        /// <summary>Whether a ladder may go up from this cell: the cell above has to be open.</summary>
+        /// <summary>
+        /// A stair standing in this cell — either half, since both point at the one record — or
+        /// ordered into it, as the head of a stair site or as the far half one claims.
+        /// </summary>
+        bool StairHereOrOrdered(int cell)
+        {
+            if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
+            if (IsStair(cell) || _building[cell] == BuildingHandle.Stair) return true;
+
+            int head = HeadClaimingSite(cell);
+            return head >= 0 && _building[head] == BuildingHandle.Stair;
+        }
+
+        /// <summary>
+        /// Whether a ladder may go up from this cell: the cell above has to be open. The question a
+        /// stair asks of each of its two cells as well (design 63 §4) — one rule, one owner.
+        /// </summary>
         bool AllowsLadder(int index)
         {
             int above = index + _grid.Size.LayerStride;
@@ -1074,7 +1139,10 @@ namespace Odyssey.Sim.Construction
             // Deliberately this rule alone rather than the whole of `Allows`: a site with material
             // hauled to it fails `needsClearCell`, so re-asking everything would refuse every bed
             // whose own wood had been delivered.
-            if (!ShaftRulePermits(cell, def, building))
+            // A stair's stairwell is two cells, so its far half is asked as well (design 63 §4):
+            // a floor ordered over the upper half of the flight is the same race as one over the foot.
+            if (!ShaftRulePermits(cell, def, building)
+                || (second >= 0 && !ShaftRulePermits(second, def, building)))
             {
                 Refund(cell);
                 Clear(cell);
@@ -1196,6 +1264,149 @@ namespace Odyssey.Sim.Construction
             // 5. A ladder joins two layers, and a slab is what gives a ladder somewhere to arrive.
             //    Both are refreshed here because either can be the one that completes the pair.
             RefreshLaddersAround(ctx, cell);
+
+            // 6. And a stair, for the same reasons and a wider reach (design 63 §4).
+            RefreshStairsAround(ctx, cell);
+        }
+
+        // ---- stairs (U44, design 63) --------------------------------------------------------
+
+        /// <summary>
+        /// Every stair whose connector an edit at this cell could have changed, made to agree with
+        /// the world. <see cref="RefreshLaddersAround"/>'s twin, and wider because a stair is: its
+        /// connector depends on its foot's floor, both cells of its stairwell, its top, and every
+        /// landing beside the top — which is a stair with a half in this cell, in the cell above or
+        /// below it, or in a cell beside it on this layer or the one below.
+        ///
+        /// <para>Each candidate is refreshed <b>as a foot</b> as well as through any stair standing
+        /// in it, because a stair that has just been demolished is no longer anything to find: its
+        /// record is marked removed, and the only trace left is the connector at its foot, which
+        /// must go.</para>
+        /// </summary>
+        void RefreshStairsAround(PawnContext ctx, int cell)
+        {
+            GridSize size = _grid.Size;
+            RefreshStairsTouching(ctx, cell);
+            RefreshStairsTouching(ctx, cell - size.LayerStride);
+            RefreshStairsTouching(ctx, cell + size.LayerStride);
+
+            CellRef at = size.FromIndex(cell);
+            for (int dir = 0; dir < 4; dir++)
+            {
+                int nx = at.X + (dir == 1 ? 1 : dir == 3 ? -1 : 0);
+                int nz = at.Z + (dir == 0 ? 1 : dir == 2 ? -1 : 0);
+                if (!size.Contains(nx, nz, at.Y)) continue;
+                int beside = size.Index(nx, nz, at.Y);
+                RefreshStairsTouching(ctx, beside);
+                RefreshStairsTouching(ctx, beside - size.LayerStride);
+            }
+        }
+
+        void RefreshStairsTouching(PawnContext ctx, int cell)
+        {
+            if ((uint)cell >= (uint)_grid.Size.CellCount) return;
+            RefreshStair(ctx, cell);
+            int head = StairHeadAt(cell);
+            if (head >= 0 && head != cell) RefreshStair(ctx, head);
+        }
+
+        /// <summary>
+        /// Make the connector at this foot agree with what is standing there: one
+        /// <see cref="ConnectorKind.Stair"/> from the foot on this layer to the top on the next —
+        /// one cell across and one up (design 63 §3) — or none.
+        ///
+        /// <para>Idempotent, and called from everywhere either end can change, for the reason
+        /// <see cref="RefreshLadder"/> gives. A connector whose top no longer matches the stair (a
+        /// stair demolished and another raised at the same foot, turned the other way) is replaced
+        /// rather than kept.</para>
+        /// </summary>
+        void RefreshStair(PawnContext ctx, int foot)
+        {
+            if ((uint)foot >= (uint)_grid.Size.CellCount) return;
+
+            int top = StairTopFrom(foot);
+            bool wanted = top >= 0 && _grid.IsWalkable(foot) && StairArrivesAt(foot, top);
+
+            int existing = ctx.Nav.OneCellConnectorAt(foot, ConnectorKind.Stair);
+            if (existing >= 0)
+            {
+                Connector? con = ctx.Nav.GetConnector(existing);
+                if (wanted && con != null && con.UpperCells[0] == top) return;
+                ctx.Nav.RemoveConnector(existing);
+            }
+
+            if (wanted) ctx.Nav.AddConnector(ConnectorKind.Stair, new[] { foot }, new[] { top });
+        }
+
+        /// <summary>
+        /// Re-derive every built stair's connector, for a colony that has just been loaded — the
+        /// argument of <see cref="RebuildLadderConnectors"/>, and no save format for the same
+        /// reason: the edifice is saved, the connector is worked out from it.
+        /// </summary>
+        public void RebuildStairConnectors(PawnContext ctx)
+        {
+            for (int i = 0; i < _edifices.Count; i++)
+            {
+                PlacedEdifice placed = _edifices[i];
+                if (placed.Removed || placed.Def != CoreContent.EdificeStair) continue;
+                RefreshStair(ctx, placed.CellIndex);
+            }
+        }
+
+        /// <summary>
+        /// Where the climb from this foot arrives: the cell one layer above the stair's upper half,
+        /// or -1 where this cell is not the foot of a standing stair or the top is off the board.
+        /// </summary>
+        int StairTopFrom(int foot)
+        {
+            if (StairHeadAt(foot) != foot) return -1;
+
+            PlacedEdifice placed = _edifices[_grid.Edifice[foot]];
+            int upper = EdificeFootprint.SecondCell(foot, CoreContent.EdificeStair, placed.Facing, _grid.Size);
+            if (upper < 0) return -1;
+
+            int top = upper + _grid.Size.LayerStride;
+            return top < _grid.Size.CellCount ? top : -1;
+        }
+
+        /// <summary>
+        /// Is the top of this flight somewhere a colonist can arrive? The ladder's
+        /// <see cref="LadderArrivesAt"/>, asked of a two-cell stairwell: both cells over the flight
+        /// open (no floor, no rock — the second line of defence behind the shaft rule), the top not
+        /// filled or flooded, and a landing beside it. A stair does not arrive in a stair, so the
+        /// ladder's "another ladder in it" has no counterpart (design 63 §5).
+        /// </summary>
+        bool StairArrivesAt(int foot, int top)
+        {
+            int overFoot = foot + _grid.Size.LayerStride;
+            if ((uint)top >= (uint)_grid.Size.CellCount || overFoot >= _grid.Size.CellCount) return false;
+
+            if (!OpenOverhead(overFoot) || !OpenOverhead(top)) return false;
+            if (_grid.IsBlockedByEdifice(top)) return false;
+            if (NaturalContent.IsWater(_grid.Terrain[top])) return false;
+
+            return HasLandingBeside(top);
+        }
+
+        /// <summary>No rock and no laid floor at this cell's lower boundary: a stairwell cell.</summary>
+        bool OpenOverhead(int cell) =>
+            !_grid.IsSolidTerrain(cell) && _grid.Floor[cell] == CoreContent.SlabNone;
+
+        /// <summary>The head of the standing stair with a half in this cell, or -1.</summary>
+        int StairHeadAt(int cell)
+        {
+            if (!IsStair(cell)) return -1;
+            return _edifices[_grid.Edifice[cell]].CellIndex;
+        }
+
+        /// <summary>Is a stair of ours standing in this cell, either half?</summary>
+        bool IsStair(int cell)
+        {
+            if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
+            int handle = _grid.Edifice[cell];
+            if (handle < 0 || handle >= _edifices.Count) return false;
+            PlacedEdifice placed = _edifices[handle];
+            return !placed.Removed && placed.Def == CoreContent.EdificeStair;
         }
 
         /// <summary>
@@ -1518,8 +1729,10 @@ namespace Odyssey.Sim.Construction
             // come down, which is what the unit is for.
             ctx.MarkStructureChanged(cell);
 
-            // And a ladder below has just lost the landing it arrived at (U43).
+            // And a ladder below has just lost the landing it arrived at (U43) — and so, perhaps,
+            // has a stair, whose top steps off on to exactly such a slab (design 63 §4).
             RefreshLaddersAround(ctx, cell);
+            RefreshStairsAround(ctx, cell);
             return true;
         }
 

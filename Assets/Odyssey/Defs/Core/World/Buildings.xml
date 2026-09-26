@@ -145,8 +145,8 @@
     than a wall and quicker to put up than a floor, and like both of those neither number derives
     from anything. The owner's to tune.
 
-    Stairs are deliberately NOT here yet. A stair is two cells and rises 1.5 m per cell, so it
-    carries a placement rule of its own; a ladder needs none.
+    Stairs arrived with U44 (design 63): Building_Stair, at the end of the table. A ladder
+    still carries nobody with a load; a stair carries everybody.
   -->
   <BuildingDef>
     <defName>Building_Ladder</defName>
@@ -516,6 +516,40 @@
     <crossCost>150</crossCost>
     <wreckRefundPerMille>250</wreckRefundPerMille>
     <fixedStuff>5</fixedStuff>
+  </BuildingDef>
+
+  <!--
+    THE STAIR (U44, docs/design/63-stairs.md). edifice 24 is CoreContent.EdificeStair, after the
+    sandbags; NOT the ruined city's 5 and 6, which are two records found again by adjacency. This
+    is one record over two cells, as the bed is: footprint 2, the foot at the cell the order names
+    and the upper half along the facing, which is the direction of climb. rotates true, so R turns
+    the ghost.
+
+    The way up a HAULER can use: the connector it opens is ConnectorKind.Stair, whose mode mask
+    is every mode, where a ladder's leaves the hauler out. Its price is the connector's (StairUp
+    290, StairDown 230) and nobody else's.
+
+    blocking false: a stair is walked on. needsClearCell true, as furniture: a stack of logs
+    standing through the treads is the meals-through-the-mattress fault. Both cells above the
+    flight must be open, the ladder's shaft rule two cells long.
+
+    costCount 8 is the ladder's four a cell, workToBuild 180 its ninety a cell (and the bed's
+    two-cell joinery), maxHitPoints 160 its eighty a cell. Structure, so no quality. All INVENTED;
+    the owner's to tune.
+  -->
+  <BuildingDef>
+    <defName>Building_Stair</defName>
+    <label>stair</label>
+    <edifice>24</edifice>
+    <blocking>false</blocking>
+    <footprint>2</footprint>
+    <rotates>true</rotates>
+    <needsClearCell>true</needsClearCell>
+    <costCount>8</costCount>
+    <workToBuild>180</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.stair</iconKey>
+    <maxHitPoints>160</maxHitPoints>
   </BuildingDef>
 
 </Defs>

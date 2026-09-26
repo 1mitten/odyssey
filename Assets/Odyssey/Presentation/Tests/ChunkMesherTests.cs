@@ -807,7 +807,9 @@ namespace Odyssey.Tests.Presentation
 
         /// <summary>
         /// And the other half: underground the question reverses. One layer of ceiling for
-        /// context, and every layer below, because what is under you is the shape of the working.
+        /// context, and the layers below down to where the dimming stops telling them apart,
+        /// because what is under you is the shape of the working. A slice six down on this board
+        /// reaches layer 0 within that depth.
         /// </summary>
         [Test]
         public void UndergroundDrawsOneLayerAboveAndEveryLayerBelow()
@@ -818,6 +820,29 @@ namespace Odyssey.Tests.Presentation
             Assert.That(slice.HighestDrawnLayer(6, 20), Is.EqualTo(7), "more than one ceiling layer");
             Assert.That(slice.LowestDrawnLayer(6), Is.EqualTo(0), "the depth cap still applied below");
             Assert.That(slice.AboveAt(6), Is.EqualTo(AboveMode.XrayMin));
+        }
+
+        /// <summary>
+        /// On a deep board the underground band stops <see cref="SliceSettings.undergroundDepth"/>
+        /// layers down, not at bedrock (design 62 §2c): every director walks the band every frame,
+        /// and below the seventh layer the shading is floored, so the rest is rock nobody can tell
+        /// apart. What a click may reach follows it exactly.
+        /// </summary>
+        [Test]
+        public void DeepUndergroundTheBandStopsWhereTheShadeFloors()
+        {
+            var slice = new SliceSettings { surfaceLayer = 28 };
+
+            Assert.That(slice.BelowSurface(20), Is.True);
+            Assert.That(slice.undergroundDepth, Is.EqualTo(7));
+            Assert.That(slice.LowestDrawnLayer(20), Is.EqualTo(13), "the band reached past the shade's floor");
+            Assert.That(slice.LowestSelectableLayer(20), Is.EqualTo(13), "selectable drifted from drawn");
+
+            // The seventh layer down is still shaded above the floor and the eighth is on it,
+            // which is the arithmetic the number was chosen from. The renderer asks ShadeBelow for
+            // steps - 1, because the layer under the feet is lit as the active one.
+            Assert.That(slice.ShadeBelow(7 - 1), Is.GreaterThan(SliceSettings.MinShade));
+            Assert.That(slice.ShadeBelow(8 - 1), Is.EqualTo(SliceSettings.MinShade));
         }
 
         /// <summary>

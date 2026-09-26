@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using Odyssey.Hud;
+using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Tests.Hud
 {
@@ -29,9 +30,10 @@ namespace Odyssey.Tests.Hud
     {
         static readonly (int W, int H)[] Resolutions = { (1280, 720), (1920, 1080), (2560, 1440) };
 
-        /// <summary>A colony as the vertical slice ships it: three colonists, sixteen layers.</summary>
+        /// <summary>A colony as the game ships it: three colonists, and the offered board's depth
+        /// (sixteen layers until design 62's DM2, thirty-two since), which is the rail's length.</summary>
         const int Colonists = 3;
-        const int Layers = 16;
+        const int Layers = GridSize.OfferedLayers;
 
         /// <summary>Every commodity the ledger knows, which is the expanded stores panel — the
         /// tallest that region ever gets.</summary>

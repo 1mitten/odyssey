@@ -156,13 +156,24 @@ namespace Odyssey.Sim.Pathing
     /// </summary>
     public enum RegionKind : byte
     {
-        /// <summary>Not part of any region: open air with nothing to stand on.</summary>
+        /// <summary>
+        /// Not part of any region: open air with nothing to stand on, deep water, and — since
+        /// design 62 §2c (DM1) — solid natural ground, the rock nobody has opened.
+        /// </summary>
         None = 0,
         Walkable = 1,
         Door = 2,
         Connector = 3,
 
-        /// <summary>Kept so rooms and atmosphere have a substrate. Never carries a link.</summary>
+        /// <summary>
+        /// A blocking edifice: a wall, or a closed door's frame. Kept so rooms and atmosphere have
+        /// a substrate. Never carries a link.
+        ///
+        /// <para>Solid terrain was in this kind until 2026-09-26 and is not now (design 62 §2b):
+        /// every block of unopened rock was one of these regions, never linked and never a
+        /// district, yet carried through every O(regions) pass the rebuild runs on each edit —
+        /// so a deeper board cost the edit tick for rock nobody could reach.</para>
+        /// </summary>
         Impassable = 4,
         Hazard = 5,
 
@@ -503,6 +514,24 @@ namespace Odyssey.Sim.Pathing
                 : (byte)0;
         }
 
+        /// <summary>
+        /// The region a cell belongs to the kind of, or <see cref="RegionKind.None"/> for a cell
+        /// that belongs to no region at all.
+        ///
+        /// <para><b>Solid natural ground belongs to no region</b> (design 62 §2c, DM1): it is the
+        /// same answer open air has always had, and every consumer of a cell's region already
+        /// copes with it — the link builders test for no region first, <c>Reachable</c> and
+        /// <c>DistrictOfCell</c> answer false and −1, the path search refuses a negative, and
+        /// nothing in the simulation, the interface or the presentation reads the region of a
+        /// solid cell. What it buys is that the rebuild's passes over every region stop scaling
+        /// with the rock under the board. A blocking edifice keeps its
+        /// <see cref="RegionKind.Impassable"/> region; that is the conservative half of the
+        /// change and a room pass may yet want walls as a substrate.</para>
+        ///
+        /// <para>Decided here rather than in the flood so that the seed test and the grow test in
+        /// <c>NavGraph.FloodBlock</c> cannot disagree: a region seeded on a wall must not grow
+        /// into the rock beside it.</para>
+        /// </summary>
         public RegionKind KindOf(int index)
         {
             NavFlags f = Flags[index];
@@ -515,10 +544,20 @@ namespace Odyssey.Sim.Pathing
                 return RegionKind.Walkable;
             }
 
-            return (f & (NavFlags.Solid | NavFlags.Blocked)) != 0
-                ? RegionKind.Impassable
-                : RegionKind.None;
+            if ((f & NavFlags.Blocked) != 0) return RegionKind.Impassable;
+            if ((f & NavFlags.Solid) != 0 && SolidTerrainHasRegions) return RegionKind.Impassable;
+            return RegionKind.None;
         }
+
+        /// <summary>
+        /// <b>A measurement control, and nothing else sets it.</b> True restores the rule before
+        /// design 62 §2c — every block of solid ground carries an <see cref="RegionKind.Impassable"/>
+        /// region — so an arm can time the rebuild both ways on one board in one run
+        /// (<c>docs/process.md</c>: a number without its control in the same run is a rumour).
+        /// Per instance and read at flood time, so set it before the first
+        /// <c>NavGraph.Rebuild</c> and never between two.
+        /// </summary>
+        public bool SolidTerrainHasRegions { get; set; }
 
         /// <summary>Open air: nothing to stand on and nothing in the way. What you fall through.</summary>
         public bool IsAir(int index) =>

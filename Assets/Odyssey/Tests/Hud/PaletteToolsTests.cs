@@ -160,8 +160,12 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void AToolWhoseThingDoesNotExistYetArmsNothing()
         {
-            Assert.That(PaletteTools.TryGet("ui.arch.tool.stair", out _), Is.False,
-                "stairs cannot be built yet, so the stair chip must be drawn disabled");
+            // The stair was the first example here until U44 built it (design 63); Reclaim, its
+            // neighbour in Structure, is the dim chip that takes its place.
+            Assert.That(PaletteTools.TryGet("ui.arch.tool.reclaim", out _), Is.False,
+                "reclaiming cannot be done yet, so the reclaim chip must be drawn disabled");
+            Assert.That(PaletteTools.TryGet(PaletteTools.Stair, out _), Is.True,
+                "and the stair is live since U44");
             // The stockpile was the second example here until S1 built it. The dumping zone takes
             // its place: its key is still in the registry, deliberately, because a real dumping
             // zone — one that also takes rubble, never re-stows out and sits at Last — is a thing
@@ -377,6 +381,8 @@ namespace Odyssey.Tests.Hud
                 // The kitchen (design 48 §5): the galley is built of wood or stone like the heater.
                 PaletteTools.Galley,
                 // Cover (design 53 §4): sandbags are always stone and ask nothing.
+                // The stair (design 63): wood or stone, like the ladder.
+                PaletteTools.Stair,
             };
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(tool.WantsMaterial, Is.EqualTo(System.Array.IndexOf(built, tool.Key) >= 0),

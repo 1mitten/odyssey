@@ -512,8 +512,10 @@ namespace Odyssey.Sim.Construction
             "Building_Conduit", "Building_Generator", "Building_Heater",
             "Building_Galley",
             // Cover (design 53 §4), BuildingHandle 13. The barricade that followed it was taken
-            // out on the owner's first look (design 53 §13) and may come back as 14.
+            // out on the owner's first look (design 53 §13), which freed 14.
             "Building_Sandbags",
+            // The stair (design 63), BuildingHandle 14: the way up a hauler can use.
+            "Building_Stair",
         };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
@@ -715,6 +717,18 @@ namespace Odyssey.Sim.Construction
                     costCount = 5, fixedStuff = StuffHandle.Stone, workToBuild = 180, minSkill = 0,
                     iconKey = "ui.arch.tool.sandbag", maxHitPoints = 300, coverPerMille = 550,
                     wreckRefundPerMille = 250,
+                },
+
+                // The stair (design 63): two cells in a line, the foot at the head, climbing one
+                // layer along its facing. One record, as the bed is; walked on, so not blocking;
+                // a clear cell, as furniture is. Eight stuff is the ladder's four a cell, 180 work
+                // its 90 a cell, 160 hit points its 80 a cell. Structure, so no quality. INVENTED.
+                new BuildingDef
+                {
+                    defName = "Building_Stair", label = "stair", edifice = CoreContent.EdificeStair,
+                    blocking = false, footprint = 2, rotates = true, needsClearCell = true,
+                    costCount = 8, workToBuild = 180, minSkill = 0,
+                    iconKey = "ui.arch.tool.stair", maxHitPoints = 160,
                 },
             };
         }
