@@ -528,11 +528,12 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// A bandit's mind (design 33 §1, §5): down, else hunt — a colonist, else a building, else
         /// what it came for, which it carries off the board (§14b, §17) — else idle. No needs, no
-        /// work, no draft: it is debug-spawned to fight and is never one of ours.
+        /// work, no draft: it is never one of ours. A raid member asks its band first (design 55 §3):
+        /// the raid's node declines for a pawn in no raid, so a lone bandit thinks as it always did.
         /// </summary>
         static readonly ThinkNode[] HostileTree =
         {
-            new DownedThinkNode(), new HostileThinkNode(), new IdleThinkNode(),
+            new DownedThinkNode(), new Events.RaidThinkNode(), new HostileThinkNode(), new IdleThinkNode(),
         };
 
         /// <summary>The animal tree, in traversal order, so a test can assert it.</summary>
@@ -793,6 +794,10 @@ namespace Odyssey.Sim.Pawns
             // keeps this from becoming every colonist sleeping in the mud.
             if (pawn.Needs[NeedIndex.Rest] <= 0)
             {
+                // Where she stands — unless a tree stands there too, or somebody else does, in
+                // which case the one step out of it first (owner, 2026-09-25). Only the ring
+                // beside her: a collapse is a stumble, not a walk.
+                if (StepOutFirst(pawn, ctx, job, FreeSpot.CollapseRings)) return true;
                 job.Reset(JobIndex.Sleep);
                 job.TargetCell = -1;
                 return true;
@@ -857,7 +862,35 @@ namespace Odyssey.Sim.Pawns
             // Reserved, unlike the idler's: she is going to be there for hours, and a second
             // sleeper lying in the same cell is the fault the beds' own reservations prevent.
             int fireside = FiresideTarget.Find(pawn, ctx, reserve: true);
+            if (fireside < 0 && StepOutFirst(pawn, ctx, job, FreeSpot.GroundRings)) return true;
             job.TargetCell = fireside;
+            return true;
+        }
+
+        /// <summary>
+        /// When she may not lie where she stands — a tree stands there, or another pawn is on the
+        /// cell or walking into it — write a walk to the nearest cell she may lie in and answer
+        /// true; she sleeps when she gets there, because she is still tired and the next think
+        /// asks again from a cell that passes (owner, 2026-09-25: *"colonists sometimes sleep
+        /// through trees, double check they don't"*).
+        ///
+        /// <para><b>A walk and then a sleep, not a sleep with a target.</b> A sleep with a target
+        /// is how the job says "a bed or a fireside", and the ground's memory is keyed on its
+        /// absence — so a target here would have been a night in the mud remembered as a night in
+        /// a bed. Two jobs keep the one rule intact.</para>
+        ///
+        /// <para>False, and she lies where she is, when her own cell is fine or when nothing within
+        /// <paramref name="rings"/> is — a colonist boxed in by trunks still has to sleep, and a
+        /// walk to nowhere would be a think every tick for ever. Design 20 §14.</para>
+        /// </summary>
+        static bool StepOutFirst(Pawn pawn, PawnContext ctx, Job job, int rings)
+        {
+            if (FreeSpot.CanLie(pawn, ctx, pawn.Cell)) return false;
+            int spot = FreeSpot.Nearest(pawn, ctx, rings);
+            if (spot < 0) return false;
+            job.Reset(JobIndex.Wander);
+            job.TargetCell = spot;
+            job.Mode = pawn.OwnMode;
             return true;
         }
     }
@@ -1070,10 +1103,21 @@ namespace Odyssey.Sim.Pawns
                 if (EdgeTarget.Fill(pawn, ctx, job, pawn.OwnMode)) return true;
             }
 
+            // A bank animal off its bank goes back to it before anything else (design 30 §8):
+            // spawned in a dry field, or run off by a fight. Where no water is near enough to
+            // find, it wanders like anyone rather than standing still for ever.
+            int bank = species.bankRadius;
+            if (bank > 0 && !Wildlife.WaterBank.Near(ctx.Cells, pawn.Cell, bank))
+            {
+                if (BankTarget.Fill(pawn, ctx, job, bank, pawn.OwnMode)) return true;
+                bank = 0;
+            }
+
             bool active = IsNight(ctx) == species.nocturnal;
             int legPerCent = active ? LegPerCent : LegPerCent / OffHoursFactor;
             if (rng.NextInt(100) < legPerCent &&
-                WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, pawn.OwnMode, avoidSlopes: true))
+                WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, pawn.OwnMode, avoidSlopes: true, bankRadius: bank,
+                    divergeRadius: species.divergeRadius))
                 return true;
 
             int span = species.restTicksMax > species.restTicksMin
@@ -1139,7 +1183,7 @@ namespace Odyssey.Sim.Pawns
         public static bool Minds(Pawn pawn, PawnContext ctx)
         {
             Weather.WeatherSystem? weather = ctx.Weather;
-            return weather != null && ctx.Sky != null && !pawn.Leaving
+            return weather != null && ctx.Sky != null && !pawn.Leaving && !pawn.Species.ignoresRain
                 && weather.RainPerMille(weather.Now) >= RainGatePerMille;
         }
 
@@ -1366,49 +1410,80 @@ namespace Odyssey.Sim.Pawns
             if (warmth == null || warmth.HeatSourceCount == 0) return -1;
 
             GridSize size = ctx.Size;
-            int best = -1;
-            int bestDistance = int.MaxValue;
 
-            for (int i = 0; i < warmth.HeatSourceCount; i++)
+            // **The ring beside the fire first, then the ring behind it** (owner, 2026-09-25:
+            // *"colonists stand around the campfire in the same tile … first separate tiles"*).
+            // A cell another pawn stands on or is walking to is not free, so a crowd fills the
+            // eight round the fire and then stands a step further out rather than on top of
+            // one another; when both rings are full there is no fireside, and she wanders or
+            // lies down as she would with no fire at all. Nobody ever shares. Design 31 §20.
+            for (int ring = 1; ring <= Rings; ring++)
             {
-                CellRef fire = size.FromIndex(warmth.HeatSourceCell(i));
+                int best = -1;
+                int bestDistance = int.MaxValue;
 
-                // The eight around it, in a fixed order, so two colonists choosing on the same
-                // tick choose the same way and the hash does not depend on iteration luck.
-                for (int dz = -1; dz <= 1; dz++)
-                for (int dx = -1; dx <= 1; dx++)
+                for (int i = 0; i < warmth.HeatSourceCount; i++)
                 {
-                    if (dx == 0 && dz == 0) continue;
+                    CellRef fire = size.FromIndex(warmth.HeatSourceCell(i));
 
-                    int x = fire.X + dx;
-                    int z = fire.Z + dz;
-                    if (!size.Contains(x, z, fire.Y)) continue;
-
-                    int cell = size.Index(x, z, fire.Y);
-                    if (cell == pawn.Cell)
+                    // Round it, in a fixed order, so two colonists choosing on the same tick
+                    // choose the same way and the hash does not depend on iteration luck.
+                    for (int dz = -ring; dz <= ring; dz++)
+                    for (int dx = -ring; dx <= ring; dx++)
                     {
-                        if (excludeOwn) continue;
-                        return cell;                      // already there
+                        if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dz)) != ring) continue;
+
+                        int x = fire.X + dx;
+                        int z = fire.Z + dz;
+                        if (!size.Contains(x, z, fire.Y)) continue;
+
+                        int cell = size.Index(x, z, fire.Y);
+
+                        // Never in a tree, whether to stand or to sleep: FreeSpot's first half,
+                        // asked before "already there" so a colonist in a trunk is not there.
+                        if (ctx.TreeAt(cell)) continue;
+
+                        if (cell == pawn.Cell)
+                        {
+                            if (excludeOwn) continue;
+                            // Already there — unless somebody else is too, when she moves on
+                            // and the one who did not think yet keeps the cell.
+                            if (!ctx.Pawns.IsClaimedByOther(pawn, cell)) return cell;
+                            continue;
+                        }
+
+                        if (reserve)
+                        {
+                            long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
+                            if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
+                        }
+
+                        int distance = ctx.Distance(pawn.Cell, cell);
+                        if (distance > Reach || distance >= bestDistance) continue;
+
+                        if (!ctx.Reachable(pawn, cell)) continue;
+
+                        // Last, because it is the one question that walks the pawns: only a cell
+                        // that would otherwise win pays for it.
+                        if (ctx.Pawns.IsClaimedByOther(pawn, cell)) continue;
+
+                        bestDistance = distance;
+                        best = cell;
                     }
-
-                    if (reserve)
-                    {
-                        long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
-                        if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
-                    }
-
-                    if (!ctx.Reachable(pawn, cell)) continue;
-
-                    int distance = ctx.Distance(pawn.Cell, cell);
-                    if (distance > Reach || distance >= bestDistance) continue;
-
-                    bestDistance = distance;
-                    best = cell;
                 }
+
+                if (best >= 0) return best;
             }
 
-            return best;
+            return -1;
         }
+
+        /// <summary>
+        /// How many rings round a fire count as its fireside: the eight beside it, then the
+        /// sixteen a step further out — room for twenty-four round one fire before anybody is
+        /// turned away. Only the first ring sits (<see cref="FireBeside"/>); the second stands.
+        /// </summary>
+        public const int Rings = 2;
 
         /// <summary>
         /// The heat source in the ring round <paramref name="cell"/> — one of the eight beside it
@@ -1430,6 +1505,74 @@ namespace Odyssey.Sim.Pawns
                 if (System.Math.Abs(fire.X - at.X) <= 1 && System.Math.Abs(fire.Z - at.Z) <= 1) return source;
             }
 
+            return -1;
+        }
+    }
+
+    /// <summary>
+    /// Where a body may lie down on the ground: the one owner of that question (owner,
+    /// 2026-09-25: *"colonists sometimes sleep through trees, double check they don't"* and
+    /// *"don't have them exactly over each other — that should never happen in any scenario"*).
+    ///
+    /// <para>A tree blocks nothing — pawns walk through a trunk's cell and the grid calls it
+    /// walkable — so walkability cannot say it, and a colonist who went down where she stood
+    /// could go down inside one. The bedless sleeper, the exhausted collapse and the sleeper
+    /// who runs out on the way to her bed all ask here; the fireside asks the tree half itself,
+    /// because it also chooses for people who only stand. Design 20 §14.</para>
+    /// </summary>
+    static class FreeSpot
+    {
+        /// <summary>How far a tired colonist looks for somewhere to lie, in rings: out of a copse.</summary>
+        public const int GroundRings = 3;
+
+        /// <summary>How far a collapse looks: one step, because it is a stumble and not a walk.</summary>
+        public const int CollapseRings = 1;
+
+        /// <summary>
+        /// Can <paramref name="pawn"/> lie in this cell? Standable, no tree in it, and no other
+        /// pawn on it or walking into it.
+        /// </summary>
+        public static bool CanLie(Pawn pawn, PawnContext ctx, int cell) =>
+            (uint)cell < (uint)ctx.Size.CellCount
+            && ctx.Cells.IsWalkable(cell)
+            && !ctx.TreeAt(cell)
+            && !ctx.Pawns.IsClaimedByOther(pawn, cell);
+
+        /// <summary>
+        /// The nearest cell round her, on her own layer, that she may lie in, can reserve and can
+        /// reach; -1 when there is none within <paramref name="rings"/>. Ring by ring in a fixed
+        /// order, nearest by the travel estimate within a ring, so the answer is a function of the
+        /// board. <b>Scales with the rings squared times the pawns</b> — at most 48 candidates for
+        /// the ground search, asked once when she lies down and never per tick.
+        /// </summary>
+        public static int Nearest(Pawn pawn, PawnContext ctx, int rings)
+        {
+            GridSize size = ctx.Size;
+            CellRef at = size.FromIndex(pawn.Cell);
+            for (int ring = 1; ring <= rings; ring++)
+            {
+                int best = -1, bestDistance = int.MaxValue;
+                for (int dz = -ring; dz <= ring; dz++)
+                for (int dx = -ring; dx <= ring; dx++)
+                {
+                    if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dz)) != ring) continue;
+                    int x = at.X + dx, z = at.Z + dz;
+                    if (!size.Contains(x, z, at.Y)) continue;
+                    int cell = size.Index(x, z, at.Y);
+
+                    int distance = ctx.Distance(pawn.Cell, cell);
+                    if (distance >= bestDistance) continue;
+                    if (!ctx.Cells.IsWalkable(cell) || ctx.TreeAt(cell)) continue;
+                    long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
+                    if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
+                    if (!ctx.Reachable(pawn, cell)) continue;
+                    if (ctx.Pawns.IsClaimedByOther(pawn, cell)) continue;
+
+                    bestDistance = distance;
+                    best = cell;
+                }
+                if (best >= 0) return best;
+            }
             return -1;
         }
     }
@@ -1456,15 +1599,27 @@ namespace Odyssey.Sim.Pawns
         /// and a body resting in it is drawn on the ramp and then snaps to the floor when it sets
         /// off). Walking <i>through</i> one is unchanged. Animals only, for now: a colonist's
         /// wander is the mental break's, and moving it would move every golden.</para>
-        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, int radius, TraverseMode mode, bool avoidSlopes)
+        /// <para><paramref name="bankRadius"/>, when above nought, refuses any destination further
+        /// than that from water (design 30 §8): the frog's legs all end on its bank.</para>
+        /// <para><paramref name="divergeRadius"/>, when above nought, prefers a destination whose
+        /// heading is at least 60 degrees from that of every other pawn of the same kind within
+        /// that many cells that is already walking a leg (design 30 §8e), so a group does not set
+        /// off the same way together. Twelve tries rather than eight; the first that clears every
+        /// neighbour wins, and failing that the least alike of the tries that were otherwise good.
+        /// Integer arithmetic throughout, so the choice hashes the same on every runtime.</para>
+        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, int radius, TraverseMode mode, bool avoidSlopes, int bankRadius = 0,
+            int divergeRadius = 0)
         {
             var rng = DeterministicRandom.ForTick(
                 ctx.Seed, ctx.CurrentTick, PawnPurpose.Wander ^ (uint)pawn.Id.Value);
 
             GridSize size = ctx.Size;
             CellRef from = size.FromIndex(pawn.Cell);
+            bool diverging = divergeRadius > 0;
+            int best = -1;
+            long bestScore = long.MaxValue;
 
-            for (int attempt = 0; attempt < 8; attempt++)
+            for (int attempt = 0, tries = diverging ? 12 : 8; attempt < tries; attempt++)
             {
                 int x = from.X + rng.NextInt(-radius, radius + 1);
                 int z = from.Z + rng.NextInt(-radius, radius + 1);
@@ -1473,7 +1628,22 @@ namespace Odyssey.Sim.Pawns
                 int cell = size.Index(x, z, from.Y);
                 if (cell == pawn.Cell) continue;
                 if (avoidSlopes && ctx.Nav.Grid.CostClass[cell] == Worldgen.Natural.NaturalContent.CostClassSlope) continue;
+                if (bankRadius > 0 && !Wildlife.WaterBank.Near(ctx.Cells, cell, bankRadius)) continue;
                 if (!ctx.Reachable(pawn, cell, mode)) continue;
+                // Not where another pawn stands or is heading (owner, 2026-09-25: never exactly
+                // over each other). Last, because it is the one test that walks the pawns; a
+                // taken draw is simply another of the eight attempts. Design 31 §20.
+                if (ctx.Pawns.IsClaimedByOther(pawn, cell)) continue;
+
+                if (diverging)
+                {
+                    long score = Likeness(pawn, ctx, x - from.X, z - from.Z, divergeRadius);
+                    if (score >= Alike)
+                    {
+                        if (score < bestScore) { bestScore = score; best = cell; }
+                        continue;
+                    }
+                }
 
                 job.Reset(JobIndex.Wander);
                 job.TargetCell = cell;
@@ -1481,7 +1651,122 @@ namespace Odyssey.Sim.Pawns
                 return true;
             }
 
+            if (best >= 0)
+            {
+                job.Reset(JobIndex.Wander);
+                job.TargetCell = best;
+                job.Mode = mode;
+                return true;
+            }
             return false;
+        }
+
+        /// <summary>
+        /// A <see cref="Likeness"/> at or above this is two headings under 60 degrees apart: the
+        /// squared cosine, signed, in 1,024ths, and cos² 60° is a quarter.
+        /// </summary>
+        const long Alike = 256;
+
+        /// <summary>
+        /// How alike a heading (<paramref name="dx"/>, <paramref name="dz"/>) is to the most
+        /// alike leg another pawn of this one's kind within <paramref name="radius"/> is walking:
+        /// the signed squared cosine in 1,024ths, 1,024 for the same way, nought or less for at
+        /// right angles or beyond, and <see cref="long.MinValue"/> when nobody near is walking.
+        /// </summary>
+        static long Likeness(Pawn pawn, PawnContext ctx, int dx, int dz, int radius)
+        {
+            GridSize size = ctx.Size;
+            CellRef at = size.FromIndex(pawn.Cell);
+            long mine = (long)dx * dx + (long)dz * dz;
+            if (mine == 0) return long.MinValue;
+            long worst = long.MinValue;
+            IReadOnlyList<Pawn> all = ctx.Pawns.All;
+            for (int i = 0; i < all.Count; i++)
+            {
+                Pawn other = all[i];
+                if (ReferenceEquals(other, pawn) || other.Kind != pawn.Kind) continue;
+                Job? leg = other.CurrentJob;
+                if (leg == null || leg.DefIndex != JobIndex.Wander || leg.TargetCell < 0) continue;
+                CellRef o = size.FromIndex(other.Cell);
+                if (System.Math.Max(System.Math.Abs(o.X - at.X), System.Math.Abs(o.Z - at.Z)) > radius) continue;
+                CellRef t = size.FromIndex(leg.TargetCell);
+                long ox = t.X - o.X, oz = t.Z - o.Z;
+                long theirs = ox * ox + oz * oz;
+                if (theirs == 0) continue;
+                long dot = dx * ox + dz * oz;
+                long score = (dot >= 0 ? 1 : -1) * dot * dot * 1024 / (mine * theirs);
+                if (score > worst) worst = score;
+            }
+            return worst;
+        }
+    }
+
+    /// <summary>
+    /// The way back to the water for an animal that keeps to a bank and has strayed from it
+    /// (design 30 §8). Looks outward ring by ring for the nearest water cell on the animal's own
+    /// layer or the one below, up to <see cref="SearchRadius"/>, and walks to the reachable cell
+    /// round it nearest the animal. Asked only while the animal is off its bank, so its cost —
+    /// a few thousand reads at worst — is paid by a stray and never by a frog at home.
+    /// </summary>
+    static class BankTarget
+    {
+        /// <summary>How far a stray looks for water before it gives up and wanders.</summary>
+        public const int SearchRadius = 20;
+
+        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, int bankRadius, TraverseMode mode)
+        {
+            GridSize size = ctx.Size;
+            Odyssey.Sim.World.CellGrid grid = ctx.Cells;
+            CellRef from = size.FromIndex(pawn.Cell);
+            for (int ring = 1; ring <= SearchRadius; ring++)
+            {
+                for (int dz = -ring; dz <= ring; dz++)
+                for (int dx = -ring; dx <= ring; dx++)
+                {
+                    if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dz)) != ring) continue;
+                    int x = from.X + dx, z = from.Z + dz;
+                    if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
+                    for (int y = from.Y; y >= from.Y - 1 && y >= 0; y--)
+                    {
+                        if (!Worldgen.Natural.NaturalContent.IsWater(grid.Terrain[size.Index(x, z, y)])) continue;
+                        int target = NearestBankCell(pawn, ctx, x, z, y, bankRadius, mode);
+                        if (target < 0) continue;
+                        job.Reset(JobIndex.Wander);
+                        job.TargetCell = target;
+                        job.Mode = mode;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Of the cells round a water cell at (<paramref name="wx"/>, <paramref name="wz"/>) on its
+        /// layer or the one above — the bank stands a layer over a cut stream — the one nearest
+        /// the animal that it may enter and can reach, or −1.
+        /// </summary>
+        static int NearestBankCell(Pawn pawn, PawnContext ctx, int wx, int wz, int wy, int bankRadius, TraverseMode mode)
+        {
+            GridSize size = ctx.Size;
+            CellRef from = size.FromIndex(pawn.Cell);
+            int best = -1, bestDistance = int.MaxValue;
+            for (int y = wy; y <= wy + 1 && y < size.SizeY; y++)
+            for (int dz = -bankRadius; dz <= bankRadius; dz++)
+            for (int dx = -bankRadius; dx <= bankRadius; dx++)
+            {
+                int x = wx + dx, z = wz + dz;
+                if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
+                int cell = size.Index(x, z, y);
+                if (!ctx.Nav.Grid.CanEnter(cell, mode)) continue;
+                if (ctx.Nav.Grid.CostClass[cell] == Worldgen.Natural.NaturalContent.CostClassSlope) continue;
+                int distance = System.Math.Abs(x - from.X) + System.Math.Abs(z - from.Z);
+                if (distance >= bestDistance) continue;
+                if (!ctx.Reachable(pawn, cell, mode)) continue;
+                best = cell;
+                bestDistance = distance;
+            }
+            return best;
         }
     }
 

@@ -50,6 +50,37 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// Does some pawn other than <paramref name="me"/> hold this cell — standing or lying in
+        /// it, finishing a step into it, or on its way to it (owner, 2026-09-25: *"don't have them
+        /// exactly over each other — that should never happen in any scenario"*)?
+        ///
+        /// <para>"On its way" is the path's destination and, for the three jobs whose target
+        /// <i>is</i> where the pawn will stand — a wander, a sleep and a move order — the job's
+        /// target as well. The second is what makes two idlers thinking on the same tick choose
+        /// different cells: a job handed out this tick has not asked for its path yet, so its
+        /// destination is still -1 while its target already names the cell. A carried patient
+        /// is in somebody's arms and holds nothing; the dead hold nothing.</para>
+        ///
+        /// <para><b>Scales with the pawns</b>, one pass, and is asked per candidate cell by a
+        /// chooser that runs when a pawn <i>starts</i> a stay — an idle settle, a lie-down, a
+        /// wander leg — never per tick. Design 31 §20 has the arithmetic.</para>
+        /// </summary>
+        public bool IsClaimedByOther(Pawn me, int cell)
+        {
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                Pawn other = _pawns[i];
+                if (other == me || other.CarriedBy != 0 || Melee.IsDead(other)) continue;
+                if (other.Cell == cell || other.FinishingStepTo == cell || other.Destination == cell) return true;
+                Job? job = other.CurrentJob;
+                if (job != null && job.TargetCell == cell &&
+                    (job.DefIndex == JobIndex.Wander || job.DefIndex == JobIndex.Sleep || job.DefIndex == JobIndex.Goto))
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Build a colonist at a cell. This is the whole public API for making a pawn: one call,
         /// no partially-initialised intermediate state, and the driver pool built up front so no
         /// job start ever allocates.
@@ -155,8 +186,16 @@ namespace Odyssey.Sim.Pawns
         /// silently declining to spawn while reporting success is how a debug menu comes to lie.
         /// Only the <i>intent</i> path is bounded — <see cref="Spawn(int, int)"/> itself is what
         /// worldgen and the scenario call, and a starting colony is never anywhere near this.</para>
+        ///
+        /// <para><b>400 since 2026-09-25</b> (owner: a raid of up to two hundred beside a full
+        /// colony, design 55 §11). Measured before it moved, on the scale-target played map with
+        /// twenty colonists and two hundred raiders (Intel Xeon 2.8 GHz container, fast tier):
+        /// tick 0.23 ms at peace, 1.06 ms with the band loitering, 1.59 with every colonist on
+        /// Defend, 1.06 in the assault — of which the raid's own Pawns phase is 0.23 and the
+        /// snapshot publish of 243 pawns is 0.79. The frame side stands on 384 colonists measured
+        /// healthy on 2026-09-23 and on <c>FrameTimeTests.TheFrameWithARaidOfTwoHundred</c>.</para>
         /// </summary>
-        public const int PawnCeiling = 200;
+        public const int PawnCeiling = 400;
 
         public IntentRejection HandleSpawnPawn(Intent intent)
         {
@@ -172,8 +211,9 @@ namespace Odyssey.Sim.Pawns
                 || _ctx.Content.Items[weaponDef].weapon == null)) return IntentRejection.NotPermitted;
 
             // The ceiling. Refused rather than clamped, and refused before anything is built, so a
-            // caller that has asked for one too many is told so rather than quietly ignored.
-            if (Count >= PawnCeiling) return IntentRejection.NotPermitted;
+            // caller that has asked for one too many is told so rather than quietly ignored. A
+            // raid's members still to walk on are already promised the room (design 55 §9).
+            if (Count + (_ctx.Raids?.PendingArrivals ?? 0) >= PawnCeiling) return IntentRejection.NotPermitted;
 
             CellRef cell = intent.Cell;
             if (!_ctx.Size.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
@@ -282,10 +322,12 @@ namespace Odyssey.Sim.Pawns
         /// down — the same lift a move order uses — and a tile must be standable, unoccupied and
         /// reachable from the spawn point, so a pawn never arrives walled into a pocket. Falls back
         /// to the spawn cell itself if every ring is full. Every kind, not only bandits: a
-        /// shared tile is the same fault whoever stands on it. A debug command, so it costs a scan
-        /// of the pawns per candidate and nothing per tick.
+        /// shared tile is the same fault whoever stands on it. Reachability is asked in
+        /// <paramref name="mode"/>: a raider arriving (design 55 §4) asks it in the bandit's, or
+        /// it could be put on a ledge only a colonist can leave. It costs a scan of the pawns per
+        /// candidate: a debug command, or one raider walking on, and never a tick's worth of pawns.
         /// </summary>
-        int FreeSpawnCell(int anchor)
+        internal int FreeSpawnCell(int anchor, TraverseMode mode = TraverseMode.Colonist)
         {
             if (!Occupied(anchor)) return anchor;
 
@@ -303,7 +345,7 @@ namespace Odyssey.Sim.Pawns
                     if (!size.Contains(x, z, y)) continue;
                     int c = size.Index(x, z, y);
                     if (!_ctx.Cells.IsWalkable(c) || Occupied(c)) continue;
-                    if (!_ctx.Nav.Reachable(anchor, c, TraverseMode.Colonist)) continue;
+                    if (!_ctx.Nav.Reachable(anchor, c, mode)) continue;
                     return c;
                 }
             }
@@ -604,6 +646,9 @@ namespace Odyssey.Sim.Pawns
                 // The response (design 33 §18c), at anything but the default.
                 if (pawn.Response != HostilityResponse.FightBack)
                     writer.AddPawnAspect(pawn.Id, CombatAspects.Response, (int)pawn.Response);
+                // Crouched behind cover (design 53 §8a), derived here and never kept.
+                int crouch = CoverCrouchOf(pawn);
+                if (crouch > 0) writer.AddPawnAspect(pawn.Id, CombatAspects.CoverCrouch, crouch);
                 // Where she may work (design 43 §4a), at anything but the default.
                 if (pawn.Area != PawnArea.Anywhere)
                     writer.AddPawnAspect(pawn.Id, AreaAspects.Area, (int)pawn.Area);
@@ -812,6 +857,41 @@ namespace Odyssey.Sim.Pawns
         /// Defend join (§18) are unforced, and answer 0; so does a building, which has no pawn id
         /// and rides the order cell (<see cref="OrderCellOf"/>).
         /// </summary>
+        readonly CoverReport _crouchCover = new CoverReport();
+
+        /// <summary>
+        /// Is she crouched behind cover (design 53 §8a), and how well covered: a person standing
+        /// still in a ranged attack whose cover from her target is at least the combat Def's
+        /// <c>coverCrouchPerMille</c> with a low piece among it; or drafted, standing still with no
+        /// target, beside a piece of low cover — the most any one neighbour gives. Nought for
+        /// anything else. A pose only, published and never kept.
+        /// </summary>
+        public int CoverCrouchOf(Pawn pawn)
+        {
+            if (!pawn.IsPerson || pawn.Downed || pawn.CarriedBy != 0 || pawn.HasPath || pawn.PathPending) return 0;
+            Job? job = pawn.CurrentJob;
+            if (job != null && job.DefIndex == JobIndex.AttackRanged && pawn.CombatTarget != 0)
+            {
+                Pawn? target = Get(new PawnId(pawn.CombatTarget));
+                if (target == null) return 0;
+                int cover = Cover.Evaluate(_ctx, target.Cell, pawn.Cell, _crouchCover);
+                return cover >= _ctx.Content.Combat.coverCrouchPerMille && _crouchCover.HasLow ? cover : 0;
+            }
+            if (!pawn.Drafted || pawn.CombatTarget != 0) return 0;
+
+            GridSize size = _ctx.Size;
+            CellRef at = size.FromIndex(pawn.Cell);
+            int best = 0;
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if ((dx == 0 && dz == 0) || !size.Contains(at.X + dx, at.Z + dz, at.Y)) continue;
+                int value = Cover.BaseAt(_ctx, size.Index(at.X + dx, at.Z + dz, at.Y), out bool tall);
+                if (!tall && value > best) best = value;
+            }
+            return best;
+        }
+
         public static int OrderTargetOf(Pawn pawn)
         {
             Job? job = pawn.CurrentJob;

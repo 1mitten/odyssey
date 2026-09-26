@@ -596,6 +596,9 @@ namespace Odyssey.Presentation.World
             /// <summary>Lay the computed four-legged gait over the idle; the rig is measured at build.</summary>
             public bool QuadrupedGait;
 
+            /// <summary>The fastest gait is a hop drawn in place; see <see cref="HopSurge"/>.</summary>
+            public bool HopGait;
+
             /// <summary>A feminine body: the draw and the sheathe are the pack's <c>_Femn</c> clips (design 33 §8b).</summary>
             public bool Feminine;
 
@@ -644,6 +647,7 @@ namespace Odyssey.Presentation.World
                     Speeds = GroundSpeeds(gaits, row.scale),
                     Animal = true,
                     QuadrupedGait = row.quadrupedGait,
+                    HopGait = row.hopGait,
                 };
             }
             return looks;
@@ -1070,6 +1074,62 @@ namespace Odyssey.Presentation.World
             return (uint)look < (uint)_looks.Length && _looks[look] != null;
         }
 
+        /// <summary>
+        /// Where in its Jump clip a hopper leaves the ground and lands again, as fractions of the
+        /// clip (design 30 §8). <b>Measured, not judged</b>: <c>AnimalProbe.ShootFrog</c> samples the
+        /// frog's clip at twelve phases, and its body bone sits in a crouch to 0.33, is 12 cm up at
+        /// 0.42 and 16 cm at 0.50, and is back on its landing height by 0.83. The clip itself is in
+        /// place — the body moves four centimetres fore and aft and nothing more.
+        /// </summary>
+        public const float HopLiftOff = 0.35f, HopTouchDown = 0.78f;
+
+        /// <summary>
+        /// How much of a hop's ground a hopper has covered at <paramref name="phase"/> of the clip:
+        /// nothing until it leaves the ground, all of it once it lands, and at a constant rate in
+        /// between, because a body in the air keeps its speed along the ground.
+        /// </summary>
+        public static float HopTravel(float phase) => Mathf.InverseLerp(HopLiftOff, HopTouchDown, phase);
+
+        /// <summary>
+        /// The drawn offset from the even position, as a fraction of one hop's ground, at
+        /// <paramref name="phase"/>: behind on the ground, level at the top, ahead on landing, and
+        /// nought at both ends of the cycle so the loop joins with no step.
+        /// </summary>
+        public static float HopLead(float phase) => HopTravel(phase) - phase;
+
+        /// <summary>
+        /// The offset along its facing that makes a hopper hop rather than glide (design 30 §8).
+        ///
+        /// <para>The simulation moves a frog at an even pace, cell by cell, as it moves everybody;
+        /// its figure plays the Jump clip on a loop while it goes. Left at that, the body rises and
+        /// falls while the whole figure slides forward at a constant speed, so it crouches and
+        /// lands on a moving floor. This takes the distance one clip cycle covers at the gait's
+        /// declared speed and redistributes it within the cycle — none while crouched, all of it
+        /// through the flight — as an offset from the even position (<see cref="HopLead"/>).</para>
+        ///
+        /// <para>Drawn only, and bounded by half a hop: the simulated cell, the measured speed the
+        /// gait is solved from, the cursor box and the click all use the even position. Scaled by
+        /// the hop clip's weight in the mixer, so a frog easing to a stop eases out of it and a
+        /// resting one has none.</para>
+        /// </summary>
+        Vector3 HopSurge(Figure figure)
+        {
+            Look? look = LookAt(figure.Look);
+            if (look == null || !look.HopGait || look.Gaits.Length < 2) return Vector3.zero;
+            int hop = look.Gaits.Length - 1;
+            if (hop >= figure.Clips.Length) return Vector3.zero;
+            float weight = figure.Mixer.GetInputWeight(hop);
+            if (weight <= 1e-3f) return Vector3.zero;
+            AnimationClipPlayable clip = figure.Clips[hop];
+            double length = clip.GetAnimationClip().length;
+            if (length <= 1e-4) return Vector3.zero;
+            float phase = (float)(clip.GetTime() / length % 1.0);
+            if (phase < 0f) phase += 1f;
+            float stride = look.Speeds[hop] * (float)length;
+            Vector3 forward = Quaternion.Euler(0f, figure.Yaw, 0f) * Vector3.forward;
+            return forward * (stride * HopLead(phase) * weight);
+        }
+
         /// <summary>Gaits with a live clip, slowest first. Order is what makes the blend a blend.</summary>
         static LocomotionEntry[] Gaits(ModuleEntry? row)
         {
@@ -1204,6 +1264,53 @@ namespace Odyssey.Presentation.World
             ApplyWorkPose();
             CheckSocialGreetings();
             ApplyGazePose(deltaTime);
+            // Last, after every pass that turns the head: what is shrunk is the pose as drawn.
+            ApplyHeadHidden();
+        }
+
+        /// <summary>
+        /// The colonist whose head is taken out of the picture, or none: set by a ride whose camera
+        /// is at, or pushed up against, her eyes (design 57 §4).
+        ///
+        /// <para><b>Why the head goes rather than being looked past.</b> The face is part of the one
+        /// skinned body and its ink hull is drawn with front faces culled, so a camera inside the
+        /// head sees the hull's inside as solid black; and there is no separate head renderer to
+        /// switch off. Shrinking the head bone to nothing takes the face, the hull and the hair,
+        /// beard and headgear slots parented on it all at once, and nothing else. The shadow's head
+        /// goes with it, which from behind her own eyes nobody sees.</para>
+        /// </summary>
+        public PawnId? HeadHidden { get; set; }
+
+        /// <summary>The head bone currently shrunk, and the scale it had, to give back.</summary>
+        Transform? _shrunkHead;
+        Vector3 _shrunkHeadScale = Vector3.one;
+
+        /// <summary>The scale a hidden head is drawn at: small enough to be nothing, not zero, so no matrix degenerates.</summary>
+        const float HiddenHeadScale = 0.001f;
+
+        /// <summary>
+        /// Shrink the hidden colonist's head bone and restore any other. Every frame, because the
+        /// figure a head was hidden on can be retired and leased to somebody else between two
+        /// frames, and that somebody must not arrive headless.
+        /// </summary>
+        void ApplyHeadHidden()
+        {
+            Transform? want = null;
+            if (HeadHidden is PawnId id && _byPawn.TryGetValue(id.Value, out Figure? figure))
+                want = figure.Head;
+
+            if (_shrunkHead != null && _shrunkHead != want)
+            {
+                _shrunkHead.localScale = _shrunkHeadScale;
+                _shrunkHead = null;
+            }
+            if (want == null) return;
+            if (_shrunkHead != want)
+            {
+                _shrunkHeadScale = want.localScale;
+                _shrunkHead = want;
+            }
+            want.localScale = _shrunkHeadScale * HiddenHeadScale;
         }
 
         /// <summary>
@@ -2016,6 +2123,9 @@ namespace Odyssey.Presentation.World
 
             // A computed blow's lunge, a stagger's shove, a dodge's sidestep (design 33 §1).
             drawn += CombatOffset(figure);
+
+            // A hopper's flight (design 30 §8): still on the ground, quick through the air.
+            drawn += HopSurge(figure);
 
             figure.Transform.position = drawn;
 

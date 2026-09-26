@@ -358,6 +358,14 @@ namespace Odyssey.Sim.Contracts
         OrderTend,
 
         /// <summary>
+        /// Ask what a shot would come to (design 53 §8b): <c>A</c> is the shooter's pawn id and
+        /// <c>B</c> the target's; <c>A</c> of nought or less withdraws the question. A question like
+        /// <see cref="QueryCell"/>: it changes nothing the simulation owns, and the answer is a
+        /// <c>ShotReportView</c> on the next publish while it stands. What the hover readout reads.
+        /// </summary>
+        QueryShot,
+
+        /// <summary>
         /// Empty one colonist's hand at once (design 47 §3, the Gear tab's weapon popover): <c>A</c>
         /// is her <c>PawnId</c> value and <c>B</c> how — 0 <b>Unequip</b>, "put it down", which
         /// leaves the weapon to the haulers; 1 <b>Drop</b>, "leave this here", which forbids it so
@@ -522,6 +530,8 @@ namespace Odyssey.Sim.Contracts
             // A cooking station's bills (design 48 §5): settings over a building, on a pane you
             // open while paused. The storage filter's argument exactly.
             IntentKind.EditBill => true,
+            // A view question, like QueryCell: the readout answers paused as well as running.
+            IntentKind.QueryShot => true,
             _ => false,
         };
     }

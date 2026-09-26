@@ -3046,7 +3046,7 @@ struck cell, the swing, the thud, and the order line to the cell. Owed:
 
 - a hit-point bar over a struck building (`BuildingHealthBar` is the answer);
 - the building's hit points on the tile pane;
-- a damaged look — cracks, or a darker tint — once it is struck;
+- a damaged look — cracks, or a darker tint — once it is struck (**built for walls, design 58**);
 - a crash and dust on `Demolished`, and a sound of its own for a blow on wood and on stone;
 - the lock-on ring (§7b) round a building target.
 
@@ -4484,6 +4484,10 @@ yet whether it is a click or the start of a drag, and a drag that swung the came
 would be a lurch nobody asked for. So the press now selects the card at once (the visible answer)
 and **the slice change and the camera jump wait for the release**, and happen only for a plain
 click. A Shift-click still never jumps.
+
+**Superseded 2026-09-25** (owner): a plain single click now selects only and moves nothing; a
+**double** click on the card takes the slice and the camera to her and zooms in close. The press and
+the release keep the roles above. `14-hud-layout.md` §10.
 
 **What was there.** The strip already had a Shift-drag (`_sweepingRoster`) that **toggled** every
 card it entered — the catalogue's A2 "drag-select a range" (`10-ui-panel-catalogue.md`), built as a

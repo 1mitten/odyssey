@@ -36,6 +36,13 @@
  * it and HudStyleSheetTests checks them against it, so the alpha cannot be changed in one
  * place only. The nearly-opaque surfaces above it (BarFill .90, PopoverFill .96) are left
  * alone: at 4–10% they never showed the world, which is the thing that was wrong here.
+ *
+ * ONE EXCEPTION, 2026-09-25. The inspect pane — the colonist info pane, and the same element for
+ * any other selection — is HudTheme.InspectFill, the panel colour at .85 (owner: "the colonist
+ * info pane at 85% opacity"). It is the pane the player reads while watching the colonist it
+ * describes, so a little of the board showing through is wanted there and nowhere else: the
+ * roster cards and every other panel stay opaque. The cost is measured, not assumed: the dim ink
+ * is 4.44:1 over pure white terrain (HudLayoutTests), a hair under body minimum.
  */
 
 /* Unity's runtime theme gives every Label a small vertical margin of its own. Inside a row of a
@@ -882,11 +889,16 @@
 /* ---------------------------------------------------------------- A9/A10 inspect */
 
 /* Docked to the left edge with the stores panel above it. Its bottom sits flush against the command
-   bar, so both bottom corners and the top-left corner are squared. */
+   bar, so both bottom corners and the top-left corner are squared.
+
+   The one panel that is not opaque (owner, 2026-09-25: the colonist info pane at 85%): HudTheme.
+   InspectFill, held to it by HudStyleSheetTests. It overrides .panel's fill by coming later in the
+   sheet at the same specificity. See the header's note on the opaque fill. */
 .inspect {
     left: 0;
     bottom: 50px;
     width: 560px;
+    background-color: rgba(12, 16, 20, 0.85);
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
@@ -2822,6 +2834,15 @@
     background-color: #05070a;
 }
 
+/* The veil (design 56): the dark the menu fades into and the colony wakes out of. Warm black, the
+   dark behind closed eyes rather than a second copy of the menu's picture. Its opacity is set from
+   code by the wake; the older three-frame cover shows it opaque. */
+.curtain {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgb(6, 5, 4);
+}
+
 /* Everything that only means anything with a colony running. One container so it can be put away
    as one thing: half these regions set display in code, and an inline style beats a rule here. */
 .worldui {
@@ -3799,3 +3820,92 @@
     color: rgba(255, 255, 255, 0.50);
     margin-left: 10px;
 }
+
+/* The hit-chance readout beside the pointer (design 53 section 8b). */
+.shotreadout {
+    padding: 4px 8px;
+    background-color: rgba(12, 16, 20, 0.96);
+}
+
+/* ---------------------------------------------------------------- riding along (design 57 §6)
+
+   The whole interface while the view rides with a colonist: one strip, bottom centre, over the
+   picture rather than framing it. Who, what she is doing, her health, the speed and the way out,
+   and the first alert under them when there is one. Nothing in it is pickable: the pointer is
+   locked to the view. */
+
+.ride {
+    position: absolute;
+    left: 50%;
+    translate: -50% 0;
+    bottom: 24px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    max-width: 900px;
+    padding: 8px 16px;
+    background-color: rgba(12, 16, 20, 0.78);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+}
+
+.ride__who {
+    flex-direction: column;
+    margin-right: 20px;
+}
+
+.ride__name { color: #f2f5f8; }
+.ride__job { color: #b8c2cc; }
+
+.ride__health {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 20px;
+}
+
+.ride__bar {
+    width: 96px;
+    height: 6px;
+    margin-right: 8px;
+    background-color: rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.ride__fill {
+    height: 100%;
+    border-radius: 3px;
+}
+
+.ride__value { color: #b8c2cc; }
+
+.ride__speed {
+    color: #f2f5f8;
+    margin-right: 20px;
+}
+
+.ride__leave {
+    flex-direction: row;
+    align-items: center;
+}
+
+.ride__cap {
+    padding: 1px 5px;
+    margin-right: 6px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.25);
+    border-radius: 3px;
+}
+
+.ride__alert {
+    width: 100%;
+    margin-top: 6px;
+    -unity-text-align: middle-center;
+    color: #f0b44c;
+}
+
+/* She has gone from the frame and the camera is holding on where she was. */
+.ride--lost .ride__name,
+.ride--lost .ride__job { color: #7d8792; }

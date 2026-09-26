@@ -550,12 +550,17 @@ namespace Odyssey.Hud
         static readonly string HostileWord = Registry.Label("ui.pawn.hostile").ToLowerInvariant();
         static readonly string AnimalWord = Registry.Label("ui.pawn.animal").ToLowerInvariant();
         static readonly string BanditWord = PawnKindLabels.Label(PawnKindLabels.Bandit).ToLowerInvariant();
+        static readonly string GunmanWord = PawnKindLabels.Label(PawnKindLabels.Gunman).ToLowerInvariant();
 
         /// <summary>
-        /// The word under a hostile person's name: "bandit" for the bandit (design 42 §2), the
-        /// generic "hostile" for any hostile kind that comes after it and has no word of its own.
+        /// The word under a hostile person's name: "bandit" for the bandit (design 42 §2), "gunman"
+        /// for the gunman (design 55 §8), the generic "hostile" for any hostile kind that comes after
+        /// them and has no word of its own.
         /// </summary>
-        static string HostileKindWord(int kind) => kind == PawnKindLabels.Bandit ? BanditWord : HostileWord;
+        static string HostileKindWord(int kind) =>
+            kind == PawnKindLabels.Bandit ? BanditWord
+            : kind == PawnKindLabels.Gunman ? GunmanWord
+            : HostileWord;
 
         static string WithArticle(string noun) =>
             noun.Length > 0 && "aeiou".IndexOf(noun[0]) >= 0 ? "an " + noun : "a " + noun;
@@ -1751,6 +1756,12 @@ namespace Odyssey.Hud
         /// </summary>
         public const string DraftKey = "ui.command.draft", UndraftKey = "ui.command.undraft";
 
+        /// <summary>
+        /// First Person (design 57): the view locked behind her shoulder until Escape. Public for the
+        /// same reason as the draft's keys: the shell that draws the button has to know it is live.
+        /// </summary>
+        public const string RideKey = "ui.command.ride";
+
         /// <summary>Whether the colonist on the pane is drafted: which face the Draft button shows.</summary>
         public bool Drafted { get; private set; }
 
@@ -1770,11 +1781,11 @@ namespace Odyssey.Hud
                 IconKey = "ui.command.inspect", Label = "Inspect",
                 Enabled = false, Reason = "the record view arrives with the log (M6)",
             });
-            Commands.Add(new InspectCommand
-            {
-                IconKey = "ui.command.prioritise", Label = "Prioritise",
-                Enabled = false, Reason = "job priorities arrive with the work grid (M7)",
-            });
+            // Prioritise stood here, dimmed, promising "job priorities arrive with the work grid
+            // (M7)". The work grid has arrived and holds the priorities; a forced "do this next" is
+            // the right-click menu's. Taken out when First Person needed its room (design 57 §6), on
+            // the rule the store's dead Rename went by: an affordance for something that does not
+            // exist is worse than a gap.
             // Live since the draft (design 33 §2f). One button with two faces, as the reference
             // has it: it says what pressing it will do, and a tombstoned colonist has nothing to
             // command.
@@ -1793,6 +1804,14 @@ namespace Odyssey.Hud
                 IconKey = respond, Label = Registry.Label(respond),
                 Enabled = !Tombstoned,
                 Reason = ResponseModel.Describe(response),
+            });
+            // First Person (design 57), after the two that command her: this one only watches. Last,
+            // so the response keeps its place beside Draft.
+            Commands.Add(new InspectCommand
+            {
+                IconKey = RideKey, Label = Registry.Label(RideKey),
+                Enabled = !Tombstoned,
+                Reason = "watch from behind her shoulder; the wheel goes in to her eyes, Esc leaves",
             });
         }
     }

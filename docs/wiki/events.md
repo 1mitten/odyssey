@@ -1,8 +1,8 @@
 # Events
 
-Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.
+Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about. A raid's mix names who a band of hostiles is made of (design 55).
 
-48 entries, 23 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+51 entries, 26 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Alerts
 
@@ -66,6 +66,14 @@ Three channels, and the difference is not cosmetic. Alerts are conditions that p
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
 | **{name} has reached {skill} {level}** | `ui.toast.skillup` | A colonist's skill has gone up a level | no art | M2 |
+
+## Raid mixes
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Bandits** | `ui.raid.mix.bandits` | A band of bandits, every one hand to hand with a crowbar or a bat | no art | RD |
+| **Gunmen** | `ui.raid.mix.gunmen` | A band of gunmen, every one with a pistol | no art | RD |
+| **Mixed** | `ui.raid.mix.mixed` | Mostly bandits, with about three in ten carrying pistols | no art | RD |
 
 ---
 

@@ -161,6 +161,11 @@ namespace Odyssey.Sim.Pawns
             construction.Hearth = hearth;
             pawns.Home = new World.HomeArea(pawns);
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
+            // The raids (design 55): a clock in the pawn phase at order 15, hashed only while a band
+            // is on the board, so its registration moved no golden. Every colony gets it, as every
+            // colony gets the events that fire one.
+            var raids = new Events.RaidSystem(pawns) { Jobs = pipeline };
+            pawns.Raids = raids;
             builder
                 // The world itself, first: it is what everything below reads, and it ticks
                 // nothing, so nothing else would ever have put it in the hash (OQ-50).
@@ -182,6 +187,9 @@ namespace Odyssey.Sim.Pawns
                 // are one order earlier in the same phase.
                 .AddSystem(_ => new StartingSkillsSystem(pawns))
                 .AddSystem(_ => new NeedsSystem(pawns))
+                .AddSystem(_ => raids)
+                .AddHashable(raids)
+                .AddSnapshotContributor(raids)
                 // Inside the lambda, not before it: the factory runs during Build(), so a giver
                 // registered after this call is still picked up. Outside it, AddColony would have
                 // had to be the last call on the builder, which is precisely the kind of ordering
@@ -247,6 +255,8 @@ namespace Odyssey.Sim.Pawns
                 // The struck buildings and which edifices are targets (design 33 §13i): neither
                 // saved nor hashed, a report of the damage store and of the content.
                 .AddSnapshotContributor(new EdificeDamageContributor(pawns))
+                // What a shot would come to, while the interface asks (design 53 §8b).
+                .AddSnapshotContributor(new ShotReportContributor(pawns))
                 // The world's own answer to "what is this cell", beside the pawn registry's
                 // answer to "who is here". Every colony gets it, so a click is answered in any
                 // build rather than the ones that remembered to attach the question.

@@ -178,11 +178,13 @@ namespace Odyssey.Tests.Hud
         public void EscapeClosesAGearPopoverBeforeThePaneOrATool()
         {
             var settings = new SettingsDirector();
-            Assert.That(settings.Escape(true, false, true, false, false, false, false, false, false, false,
+            Assert.That(settings.Escape(false, true, false, true, false, false, false, false, false, false, false,
                 assignOpen: false, null), Is.EqualTo(EscapeAction.CloseGearPopover), "before the tool");
-            Assert.That(settings.Escape(true, true, false, false, false, false, false, false, false, false,
+            Assert.That(settings.Escape(false, true, true, false, false, false, false, false, false, false, false,
                 assignOpen: false, null), Is.EqualTo(EscapeAction.CloseContextMenu), "the right-click's menu first");
-            Assert.That(settings.Escape(false, false, true, false, false, false, false, false, false, false,
+            Assert.That(settings.Escape(true, true, true, false, false, false, false, false, false, false, false,
+                assignOpen: false, null), Is.EqualTo(EscapeAction.LeaveRide), "a ride above the popover");
+            Assert.That(settings.Escape(false, false, false, true, false, false, false, false, false, false, false,
                 assignOpen: false, null), Is.EqualTo(EscapeAction.DisarmTool), "the control: no popover");
         }
 

@@ -206,6 +206,13 @@ namespace Odyssey.EditorTools
                 mono: true, loadInBackground: false, placeholder: null, normalize: false),
             new("combat-shot-far", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            // Something coming down (design 58 §9), baked by tools/audio/bake_demolition.sh: wood
+            // broken or taken apart, and a mined face collapsing. The gunshot's class and its
+            // reason for **not normalising** — the bake levels every take at -19 LUFS.
+            new("break-wood", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            new("break-rock", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
             new("alert-normal", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: false, loadInBackground: false, Alert),
             new("alert-negative", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
@@ -215,6 +222,8 @@ namespace Odyssey.EditorTools
             new("alert-joined", AudioCompressionFormat.ADPCM, AudioClipLoadType.CompressedInMemory,
                 mono: false, loadInBackground: false, placeholder: null),
             new("alert-raid", AudioCompressionFormat.ADPCM, AudioClipLoadType.CompressedInMemory,
+                mono: false, loadInBackground: false, placeholder: null),
+            new("alert-raid-arrive", AudioCompressionFormat.ADPCM, AudioClipLoadType.CompressedInMemory,
                 mono: false, loadInBackground: false, placeholder: null),
             // The forest beds are minutes long, so they stream rather than sit in memory: a
             // three-minute stereo bed decompressed on load is eighteen megabytes of RAM to play
@@ -755,6 +764,29 @@ namespace Odyssey.EditorTools
                     SpatialBlend = 1f, MinDistance = 50f, MaxDistance = 400f,
                     Priority = 120, Cooldown = 0.06f,
                 },
+                // Something coming down (design 58 §9): wood broken or taken apart, and a mined
+                // face collapsing. Placed at the cell and heard across the view like the pick that
+                // leads up to it (20 / 200 m against the pick's 20 / 210). The cooldown makes a
+                // gallery of faces finishing on one tick one collapse rather than a pile-up; the
+                // priority sits among the blows, below the gunshot.
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.BreakWood,
+                    Clips = Variants("break-wood"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.85f, VolumeVariance = 0.12f, PitchVariance = 0.05f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = 110, Cooldown = 0.1f,
+                },
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.BreakRock,
+                    Clips = Variants("break-rock"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.85f, VolumeVariance = 0.12f, PitchVariance = 0.05f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = 110, Cooldown = 0.1f,
+                },
                 // The alerts. Zero variance on all five: a chime is a signal and a signal that
                 // wobbles reads as a fault, which is the opposite of what the work sounds want
                 // variance for. 2D, top voice priority, and a cooldown long enough that two
@@ -771,6 +803,10 @@ namespace Odyssey.EditorTools
                 // The raid siren carries its own crescendo and is nine seconds long; a second
                 // one starting over the first would be a mess, so its cooldown covers the clip.
                 AlertSound(SoundIds.AlertRaid, "alert-raid", 0.9f, cooldown: 10f),
+                // A raid arriving at the edge (design 55 §7): the war horn, 18 s and kept whole, so
+                // its cooldown covers the clip for the same reason as the siren's. It baked to
+                // -17.3 LUFS against the siren's -18.6, so 1.3 dB comes off here: 0.9 x 0.86.
+                AlertSound(SoundIds.AlertRaidArrive, "alert-raid-arrive", 0.78f, cooldown: 19f),
             });
 
             // The campfire, and it is played by something at last (design 31 §7): FireDirector

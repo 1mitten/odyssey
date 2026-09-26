@@ -100,6 +100,25 @@ namespace Odyssey.Sim.Weather
         }
 
         /// <summary>
+        /// Put back the temperature's weather offset after a load. The offset is written only on
+        /// this system's own cadence and is saved nowhere, so a loaded world kept the one its build
+        /// had set until the next <see cref="IntervalTicks"/> boundary, and any colonist whose needs
+        /// fell due in that gap read another outdoor temperature from the world it was saved from
+        /// and parted from it by hash. Found by a raid's save test on 2026-09-26; nothing about it is
+        /// the raid's. The value is the one the last boundary that ran set: this system runs before
+        /// the pawn systems and the tick counts up after every system, so that boundary is the last
+        /// multiple of the interval below <paramref name="currentTick"/>. (A debug force mid-interval
+        /// set it to that instant's view instead; a save taken after one resumes on the boundary's.)
+        /// </summary>
+        public void RestoreOffset(int currentTick)
+        {
+            if (!_started || _ctx.Temperature == null || currentTick <= 0) return;
+            int last = currentTick - 1;
+            last -= last % IntervalTicks;
+            _ctx.Temperature.WeatherOffsetC = ViewAt(last).TempOffsetC;
+        }
+
+        /// <summary>
         /// The first sky, with no blend: a world does not load into a spell arriving. Rolled from
         /// the season the world starts in, like every spell after it.
         /// </summary>
@@ -327,5 +346,24 @@ namespace Odyssey.Sim.Weather
         }
 
         int Clamp(int kind) => kind < 0 || kind >= _defs.Length ? 0 : kind;
+
+        /// <summary>
+        /// After a load, put back the temperature offset the weather last wrote. <b>The offset is
+        /// not saved</b> — it is derived — and it is written only on a weather pass, every
+        /// <see cref="IntervalTicks"/>, so until the next pass a loaded colony read the fresh
+        /// board's offset while the run that was never saved read the loaded sky's. The needs pass
+        /// samples a colonist's ambient in between, and a save mid-fight on a cloudy day parted from
+        /// its twin 46 ticks after the load, on one colonist's mood (found by the cover gate,
+        /// <c>CoverGateTests</c>, 2026-09-25). <paramref name="nextTick"/> is the world's tick after
+        /// the load — the next to run — so the last pass was at the interval at or below the tick
+        /// before it, and the offset is the sky's at that pass, exactly as the unbroken run holds
+        /// it. Nothing on a world that has not ticked yet.
+        /// </summary>
+        public void ReapplyOffset(int nextTick)
+        {
+            if (_ctx.Temperature == null || !_started || nextTick <= 0) return;
+            int last = (nextTick - 1) / IntervalTicks * IntervalTicks;
+            _ctx.Temperature.WeatherOffsetC = ViewAt(last).TempOffsetC;
+        }
     }
 }

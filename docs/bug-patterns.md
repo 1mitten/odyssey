@@ -603,6 +603,36 @@ fixture had just queued still going through. It landed on the dev machine and di
 
 ## The register
 
+### 2026-09-26 — The weather a loaded world stood in was its own build's (P14-adjacent; found by a raid test)
+
+**Symptom, found reviewing the raids (PR #233) before anybody played it.** A new test saved a raid
+a few ticks after its band finished arriving, loaded it, and the two worlds parted by hash five
+ticks later. Every raid field, every pawn's cell and job matched. The same save taken sixty ticks
+later resumed exactly.
+
+**Cause.** Narrowed with a throwaway probe that hashed each system and then each pawn apart: the
+pawn that parted was a *colonist*, and the field was `AmbientTempC`, because the outdoor
+temperature itself read 9.30 °C in one world and 10.67 °C in the other at the same tick.
+`TemperatureSystem.WeatherOffsetC` — the weather's share of the outdoor curve — is written by
+`WeatherSystem` on its own 120-tick cadence and **saved nowhere**, so a loaded world kept whatever
+its own build had set until the next boundary. A colonist whose needs fell due in that gap read the
+build's sky. Nothing about it is the raid's; the raid only moved the save into the gap.
+
+**How it hid.** Every round trip that checks a hash after the load either saved on a boundary, or
+had no colonist whose needs update fell inside the window, or compared hashes only at the load
+itself (where the offset is not hashed at all — only what it feeds is).
+
+**Fix.** `ColonyWorld.RebuildDerived` calls `WeatherSystem.RestoreOffset`, which sets the value the
+last boundary that ran set: the weather runs in the world phase before the pawn systems and the
+tick counts up after every system, so that boundary is the last multiple of the interval below the
+loaded tick. `WeatherWorldTests.ALoadedWorldReadsTheOutdoorTemperatureItWasSavedWith` fails without
+it (a storm against a fresh build's own sky), and so does the raid test that found it. No golden moved.
+
+**The check this earns.** *A value one system writes into another on a cadence is derived state
+that no section owns.* It is not in the writer's save because it is not the writer's field, and not
+in the reader's because the reader never computes it. Ask of every cross-system setter: what does
+the reader hold between a load and the writer's next turn?
+
 ### 2026-09-25 — A gate invariant that counted the ticks a driver was not allowed to look (P1, in a test)
 
 **Symptom.** `BanditSoakTests.TheGateWithRaids` asserts that no attacker stays on *Fighting* at a
@@ -2915,3 +2945,52 @@ only the blow that *crosses* the line kills. Found by review, not by a test — 
 - **The check:** a test of a consequence that is deferred must also run it from inside the
   deferred phase (`FallTests.AFatalFallInsideTheDeferredPhaseIsGoneTheSameTick`), and a removal
   that must not outlive its tick uses `DeferThisTick`.
+
+## A derived value written on an interval, and not on a load (2026-09-25)
+
+**Symptom.** A save taken mid-gunfight on a cloudy day resumed identically for 45 ticks and parted
+on the 46th, on one colonist's mood (`CoverGateTests.ASaveTakenMidFightResumesTheSame`), with or
+without sandbags and with cover-seeking off — and on `claude/ranged-combat` untouched, which put it
+before cover.
+
+**Cause.** `TemperatureSystem.WeatherOffsetC` is derived and never saved, and its one writer,
+`WeatherSystem`, writes it only on a weather pass (every 120 ticks). A loaded colony therefore held
+the fresh board's offset until the next pass, while the run that was never saved held the loaded
+sky's; the needs pass sampled a colonist's ambient in the gap. The weather's own state loaded and
+hashed perfectly, so the hash of the weather matched and the fault showed only downstream, in a pawn.
+
+**Measurement that found it.** Per-component state hashes on both worlds at the first divergent
+tick (only `PawnRegistry` differed), then every hashed pawn field (only `AmbientTempC` and
+`MoodTarget`), then the reader of that field.
+
+**Fix.** `WeatherSystem.ReapplyOffset`, called from `ColonyWorld.RebuildDerived` after the tick is
+restored: the offset at the last pass at or below the tick before the load's. `WeatherLoadTests` is
+the regression, with its negative control run.
+
+**The check for the next one.** Any value a system *writes into another* on an interval is derived
+state with a writer that does not run on load. Ask of each: is it written in `Load` or in
+`RebuildDerived`? The existing save tests missed it because none of them fights under a changed sky
+for longer than one weather pass before saving.
+
+## An event raised twice in one frame, re-deriving state from UI the first raise changed (2026-09-26)
+
+**Symptom.** A world arriving from the title screen is covered for three frames
+(`HudShell.CurtainFrames`, design 38 §25b) so that the build frame and the first-submit frame after
+it are never seen. A **load** from the title screen was not covered at all — found by reading the
+code while planning the wake-up (design 54), never by a report, because the frames it shows are
+the ones the player would call "a touch of loading".
+
+**Cause.** `LoadSession` raises `SessionChanged` twice in one frame: once from `BuildSession` and
+once from `RefreshAfterLoad`. `OnSessionChanged` decided whether to cover by asking whether the
+title screen's backdrop was showing — and the first raise's own `ApplySession` had just hidden it.
+So the second raise saw "not from the start screen" and lifted the cover on the build frame. The
+only curtain test pressed New game, which raises once.
+
+**Fix.** A world already behind the curtain keeps it: `stillCovering = Directors != null &&
+_curtain > 0`, asked *before* `ApplySession` and answered from the countdown rather than from the
+UI. PlayMode `StartScreenTests.ALoadedWorldIsCoveredLikeANewOne` is the regression.
+
+**The check for the next one.** A handler that reads UI state to decide what just happened is
+reading state its own previous call may have written. Ask of any event: can it fire twice in one
+frame, and does the second call ask a question the first one answered? Decide from a counter or the
+cause, not from the screen.

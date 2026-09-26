@@ -47,6 +47,32 @@ namespace Odyssey.Tests.Sim
         static void SettleSky(ColonyWorld colony) =>
             colony.World.Tick(WeatherSystem.QuickBlendTicks + WeatherSystem.IntervalTicks);
 
+        /// <summary>
+        /// A loaded world reads the outdoor temperature the saved one did. The weather's share of it
+        /// is written on the weather's own cadence and saved nowhere, so until 2026-09-26 a load
+        /// kept the sky its build had rolled until the next boundary, and a colonist whose needs fell
+        /// due in that gap parted from the saved world by hash (found by a raid's save test). A storm
+        /// against a fresh build's own sky is the control: the two must differ for the load to
+        /// have anything to put back.
+        /// </summary>
+        [Test]
+        public void ALoadedWorldReadsTheOutdoorTemperatureItWasSavedWith()
+        {
+            ColonyWorld original = Board();
+            SetSky(original, WeatherKind.Storm, 1000);
+            SettleSky(original);
+            original.World.Tick(WeatherSystem.IntervalTicks / 2);
+            int offset = original.Pawns.Temperature!.WeatherOffsetC;
+
+            ColonyWorld restored = Board();
+            Assume.That(restored.Pawns.Temperature!.WeatherOffsetC, Is.Not.EqualTo(offset), "a fresh build already had the storm's offset");
+            restored.Load(original.Save());
+
+            Assert.That(restored.Pawns.Temperature!.WeatherOffsetC, Is.EqualTo(offset));
+            int tick = restored.World.CurrentTick;
+            Assert.That(restored.Pawns.Temperature!.OutdoorTempC(tick), Is.EqualTo(original.Pawns.Temperature!.OutdoorTempC(tick)));
+        }
+
         static void Roof(ColonyWorld colony, int cell)
         {
             int above = cell + Size.LayerStride;
@@ -249,6 +275,27 @@ namespace Odyssey.Tests.Sim
             Assert.That(node.TryGiveJob(hog, colony.Pawns, job), Is.True);
             Assert.That(job.DefIndex, Is.EqualTo(JobIndex.Wander));
             Assert.That(colony.Pawns.Sky!.ShelteredFromSky(job.TargetCell), Is.True, "it was sent somewhere dry");
+        }
+
+        /// <summary>
+        /// <b>A frog stays out in the rain</b> (design 30 §8): <c>SpeciesDef.ignoresRain</c>, the
+        /// flag the shelter node's summary named for the day a species wanted it. The hog beside
+        /// it in the same downpour is the control.
+        /// </summary>
+        [Test]
+        public void AFrogStaysOutInTheRainWhereAHogGoesForCover()
+        {
+            var (colony, hog, _) = HogAndTree();
+            Pawn frog = colony.Pawns.Pawns.Spawn(Ground(colony, 12, 14), PawnKindIndex.CulvertFrog);
+            Assume.That(colony.Pawns.Sky!.ShelteredFromSky(frog.Cell), Is.False, "the frog starts in the open");
+            var node = new AnimalShelterThinkNode();
+            var job = new Job();
+
+            SetSky(colony, WeatherKind.Rain, 1000);
+            SettleSky(colony);
+            Assert.That(node.TryGiveJob(hog, colony.Pawns, job), Is.True, "the control: the hog minds the rain");
+            Assert.That(AnimalShelterThinkNode.Minds(frog, colony.Pawns), Is.False);
+            Assert.That(node.TryGiveJob(frog, colony.Pawns, job), Is.False, "the frog does not");
         }
 
         [Test]

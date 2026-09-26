@@ -141,14 +141,14 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#commodities">Commodities<b>54</b></a></li>
 <li><a href="#items">Items and equipment<b>66</b></a></li>
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
-<li><a href="#commands">Commands<b>56</b></a></li>
+<li><a href="#commands">Commands<b>58</b></a></li>
 <li><a href="#work">Work and skills<b>57</b></a></li>
-<li><a href="#colonists">Colonists<b>62</b></a></li>
+<li><a href="#colonists">Colonists<b>64</b></a></li>
 <li><a href="#health">Health and anatomy<b>39</b></a></li>
-<li><a href="#events">Events<b>48</b></a></li>
+<li><a href="#events">Events<b>51</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
-<li><a href="#world">World and interface<b>144</b></a></li>
-<li><a href="#proper-nouns">Proper nouns<b>30</b></a></li>
+<li><a href="#world">World and interface<b>147</b></a></li>
+<li><a href="#proper-nouns">Proper nouns<b>31</b></a></li>
 </ul></nav>
 <main>
 <div class="lede"><h1>Every named thing in the game</h1>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>956</b><i>named entries</i></div>
+<div class="stat"><b>976</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>684</b><i>no art yet</i></div>
+<div class="stat m"><b>704</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1340,9 +1340,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
-<div class="row" id="ui.arch.tool.sandbag" data-hay="sandbags ui.arch.tool.sandbag fast cover from salvage " data-gap="0">
+<div class="row" id="ui.arch.tool.sandbag" data-hay="sandbags ui.arch.tool.sandbag cheap, quick low cover. climbed over, never stood on " data-gap="0">
 <div class="nm">Sandbags<span class="k">ui.arch.tool.sandbag</span></div>
-<div class="dsc">Fast cover from salvage</div>
+<div class="dsc">Cheap, quick low cover. Climbed over, never stood on</div>
 <div class="art"><span class="pill">high</span> salvage gear</div>
 <div class="ms">M3</div>
 </div>
@@ -1416,7 +1416,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="commands" data-sec="1">
-<h2>Commands <em class="count">56 entries</em></h2>
+<h2>Commands <em class="count">58 entries</em></h2>
 <p class="blurb">What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein. A right-click on a thing with more than one answer, a weapon today, opens a small menu at the pointer whose rows are these commands; the menu's own words are listed after them.</p>
 <h3 class="nsh">Commands</h3>
 <div class="tbl">
@@ -1750,6 +1750,18 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Centre the colony's home on this campfire<span class="need">Needs drawing: a house over a campfire</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.command.ride" data-hay="first person ui.command.ride watch from behind her shoulder while she goes about her day. the wheel goes in to her eyes; esc leaves an eye over a figure's shoulder" data-gap="1">
+<div class="nm">First Person<span class="k">ui.command.ride</span></div>
+<div class="dsc">Watch from behind her shoulder while she goes about her day. The wheel goes in to her eyes; Esc leaves<span class="need">Needs drawing: an eye over a figure's shoulder</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RA</div>
+</div>
+<div class="row gap" id="ui.command.leaveride" data-hay="leave ui.command.leaveride back to the colony view, where you were interface words, no icon wanted" data-gap="1">
+<div class="nm">Leave<span class="k">ui.command.leaveride</span></div>
+<div class="dsc">Back to the colony view, where you were<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RA</div>
 </div>
 </div>
 <h3 class="nsh">The context menu</h3>
@@ -2132,7 +2144,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">62 entries</em></h2>
+<h2>Colonists <em class="count">64 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -2191,11 +2203,23 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">AN</div>
 </div>
+<div class="row gap" id="ui.pawn.frog" data-hay="culvert frog ui.pawn.frog a big frog of the banks. keeps to the water's edge and hops " data-gap="1">
+<div class="nm">Culvert frog<span class="k">ui.pawn.frog</span></div>
+<div class="dsc">A big frog of the banks. Keeps to the water's edge and hops</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">AN</div>
+</div>
 <div class="row gap" id="ui.pawn.bandit" data-hay="bandit ui.pawn.bandit masked in a welding helmet and a red vest, with a crowbar or a bat. hunts whoever is still standing " data-gap="1">
 <div class="nm">Bandit<span class="k">ui.pawn.bandit</span></div>
 <div class="dsc">Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.pawn.gunman" data-hay="gunman ui.pawn.gunman a bandit with a pistol, dressed as the rest. shoots whoever it can see, and clubs whoever comes close " data-gap="1">
+<div class="nm">Gunman<span class="k">ui.pawn.gunman</span></div>
+<div class="dsc">A bandit with a pistol, dressed as the rest. Shoots whoever it can see, and clubs whoever comes close</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RD</div>
 </div>
 </div>
 <h3 class="nsh">Needs</h3>
@@ -2771,8 +2795,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="events" data-sec="1">
-<h2>Events <em class="count">48 entries</em></h2>
-<p class="blurb">Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.</p>
+<h2>Events <em class="count">51 entries</em></h2>
+<p class="blurb">Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about. A raid's mix names who a band of hostiles is made of (design 55).</p>
 <h3 class="nsh">Alerts</h3>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
@@ -3073,6 +3097,28 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="ms">M2</div>
 </div>
 </div>
+<h3 class="nsh">Raid mixes</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.raid.mix.bandits" data-hay="bandits ui.raid.mix.bandits a band of bandits, every one hand to hand with a crowbar or a bat " data-gap="1">
+<div class="nm">Bandits<span class="k">ui.raid.mix.bandits</span></div>
+<div class="dsc">A band of bandits, every one hand to hand with a crowbar or a bat</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RD</div>
+</div>
+<div class="row gap" id="ui.raid.mix.gunmen" data-hay="gunmen ui.raid.mix.gunmen a band of gunmen, every one with a pistol " data-gap="1">
+<div class="nm">Gunmen<span class="k">ui.raid.mix.gunmen</span></div>
+<div class="dsc">A band of gunmen, every one with a pistol</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RD</div>
+</div>
+<div class="row gap" id="ui.raid.mix.mixed" data-hay="mixed ui.raid.mix.mixed mostly bandits, with about three in ten carrying pistols " data-gap="1">
+<div class="nm">Mixed<span class="k">ui.raid.mix.mixed</span></div>
+<div class="dsc">Mostly bandits, with about three in ten carrying pistols</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RD</div>
+</div>
+</div>
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="research" data-sec="1">
@@ -3253,7 +3299,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">144 entries</em></h2>
+<h2>World and interface <em class="count">147 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -3816,6 +3862,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M1</div>
 </div>
+<div class="row gap" id="ui.settings.seethroughall" data-hay="trees fade for every colonist ui.settings.seethroughall fade the trees in front of every colonist on screen, not only the selected ones " data-gap="1">
+<div class="nm">Trees fade for every colonist<span class="k">ui.settings.seethroughall</span></div>
+<div class="dsc">Fade the trees in front of every colonist on screen, not only the selected ones</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 <div class="row gap" id="ui.settings.cutaway" data-hay="cut away the ceiling ui.settings.cutaway see into rooms on this layer. off shows the floor above you " data-gap="1">
 <div class="nm">Cut away the ceiling<span class="k">ui.settings.cutaway</span></div>
 <div class="dsc">See into rooms on this layer. Off shows the floor above you</div>
@@ -3863,6 +3915,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">How the selected thing is marked: a line round the thing itself, or corner brackets</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.wake" data-hay="wake-up ui.settings.wake enter a colony by waking into it: blurred, warm and muffled, clearing over five seconds. any key or click wakes you at once. off fades straight in " data-gap="1">
+<div class="nm">Wake-up<span class="k">ui.settings.wake</span></div>
+<div class="dsc">Enter a colony by waking into it: blurred, warm and muffled, clearing over five seconds. Any key or click wakes you at once. Off fades straight in</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
 </div>
 <div class="row gap" id="ui.settings.developer" data-hay="developer overlay ui.settings.developer the frame-time and draw-call readout, kept on the machine between sessions " data-gap="1">
 <div class="nm">Developer overlay<span class="k">ui.settings.developer</span></div>
@@ -3935,6 +3993,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">How far from the camera grass is still drawn. Past it the ground carries the field</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">MF</div>
+</div>
+<div class="row gap" id="ui.settings.butterflies" data-hay="butterflies ui.settings.butterflies how many butterflies the meadow near the camera may hold, from none to a swarm. they glow at night. decoration, in no cell and no save " data-gap="1">
+<div class="nm">Butterflies<span class="k">ui.settings.butterflies</span></div>
+<div class="dsc">How many butterflies the meadow near the camera may hold, from none to a swarm. They glow at night. Decoration, in no cell and no save</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">AB</div>
 </div>
 <div class="row gap" id="ui.settings.foliageshadows" data-hay="grass shadows ui.settings.foliageshadows whether grass casts shadows. off, as it has always shipped: a shadow centimetres long on grass the same colour " data-gap="1">
 <div class="nm">Grass shadows<span class="k">ui.settings.foliageshadows</span></div>
@@ -4154,8 +4218,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="proper-nouns" data-sec="1" class="nouns">
-<h2>Proper nouns <em class="count">30 entries</em></h2>
-<p class="blurb">Names that are not interface keys: people, places, factions, creatures, the calendar. The brief requires every one of these to be ours rather than borrowed, so this table exists to make the empty rows impossible to miss. <strong>0 of 30 have no name at all</strong>, including the city the whole prototype is set in.</p>
+<h2>Proper nouns <em class="count">31 entries</em></h2>
+<p class="blurb">Names that are not interface keys: people, places, factions, creatures, the calendar. The brief requires every one of these to be ours rather than borrowed, so this table exists to make the empty rows impossible to miss. <strong>0 of 31 have no name at all</strong>, including the city the whole prototype is set in.</p>
 <div class="tbl">
 <div class="row head"><div>Category</div><div>Name</div><div>Notes</div><div class="st">Status</div></div>
 <div class="row" id="world.planet" data-hay="the world carrow a city-world: one settlement that grew until it covered the planet. short, bleak, easy to say, and it survives being said a thousand times. the register throughout is english industrial rather than classical or invented-exotic: a working future, not a mythic one proposed" data-gap="0">
@@ -4246,6 +4310,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="nm">Pack animal<span class="k">creature.pack</span></div>
 <div>dray hog</div>
 <div class="dsc">A larger bred cousin of the midden hog, for caravans. Not in the original list; caravans need something to carry the load and it should not be a vehicle at prototype scale</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="creature.amphibian" data-hay="bank wildlife culvert frog a big frog of the meadow's streams, ponds and lakes, and of the flooded culverts under the ruin. keeps to the water's edge; the first animal placed by where the water is. named in the register of the midden hog and the duct rat proposed" data-gap="0">
+<div class="nm">Bank wildlife<span class="k">creature.amphibian</span></div>
+<div>culvert frog</div>
+<div class="dsc">A big frog of the meadow's streams, ponds and lakes, and of the flooded culverts under the ruin. Keeps to the water's edge; the first animal placed by where the water is. Named in the register of the midden hog and the duct rat</div>
 <div class="st proposed">proposed</div>
 </div>
 <div class="row" id="creature.vermin" data-hay="city vermin duct rat the rat of the ruin: lives in the ducts and the caverns, climbs anything, eats what the colony stores. named in the register of the midden hog and the girder cat; the first animal with a full set of movements, so the one the figure work is proven on proposed" data-gap="0">
@@ -4345,7 +4415,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 956, "gaps": 684};</script>
+<script>window.WIKI={"total": 976, "gaps": 704};</script>
 <script>
 (function(){
   var D = window.WIKI;

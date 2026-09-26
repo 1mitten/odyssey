@@ -237,7 +237,14 @@ namespace Odyssey.Sim.Pawns
                 // because rest effectiveness is read off the cell and the thought was not: the
                 // bed's rate and the mud's memory, on the one tick where her rest reached zero
                 // as she arrived.
-                if (Pawn.Needs[NeedIndex.Rest] <= 0 && Pawn.Cell != Job.TargetCell)
+                //
+                // **Not inside a tree, and not on top of anybody** (owner, 2026-09-25): a walk
+                // passes through trunks, since a tree blocks nothing, so the collapse waits for
+                // the first cell on the way that she may lie in — a step or two further along
+                // the path she is already walking — rather than laying her down in the wood.
+                // FreeSpot is the one owner of that question; design 20 §14.
+                if (Pawn.Needs[NeedIndex.Rest] <= 0 && Pawn.Cell != Job.TargetCell
+                    && FreeSpot.CanLie(Pawn, ctx, Pawn.Cell))
                 {
                     if (Job.TargetCell >= 0)
                         Pawn.AddMemory(ThoughtIndex.SleptOnGround, ctx.CurrentTick);

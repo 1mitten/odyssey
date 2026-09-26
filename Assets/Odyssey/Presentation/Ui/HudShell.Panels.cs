@@ -702,9 +702,10 @@ namespace Odyssey.Presentation.Ui
             // A left press starts a sweep (design 33 §20; owner, 2026-09-24: "I should be drag the
             // across their roster profile and select them all"): dragged across other cards it
             // selects every card passed over, as the world's box does, and Shift adds them to what
-            // was held. A press that crosses no other card is a click — the one colonist, and on
-            // the release the jump to her, since a card is a way of getting to someone far away;
-            // with Shift it toggles her, as a shift-click does in the world. The rule is
+            // was held. A press that crosses no other card is a click — the one colonist and
+            // nothing else, the view left where it is (owner, 2026-09-25); a second click on the
+            // same card inside DoubleClick.Seconds takes the slice and the camera to her and zooms
+            // in close. With Shift a click toggles her, as a shift-click does in the world. The rule is
             // RosterSweep's and fast-tier tested; this only reports the pointer. Right-click and
             // hold still reorders the slots, untouched.
             card.RegisterCallback<PointerDownEvent>(evt =>
@@ -801,16 +802,26 @@ namespace Odyssey.Presentation.Ui
 
         /// <summary>
         /// The left button came up after a press on a card (design 33 §20). A plain click — no
-        /// other card covered, no Shift — is the roster's old click and takes the slice and the
-        /// camera to her; a sweep, or a Shift-click, has already said everything it has to.
+        /// other card covered, no Shift — has already selected her at the press and does nothing
+        /// more: <b>a single click selects only</b>, the view stays where it is (owner,
+        /// 2026-09-25, <c>14-hud-layout.md</c> §10). The second plain click on the same card inside
+        /// <see cref="DoubleClick.Seconds"/> — the world pick's own threshold, on the unscaled
+        /// clock so it works while paused — takes the slice to her layer and glides the camera to
+        /// her, zooming in close (<see cref="HudDirectors.CloseInOnColonist"/>). A sweep, or a
+        /// Shift-click, has already said everything it has to, and breaks a pending double.
         /// </summary>
         void FinishRosterSweep()
         {
             PawnId pressed = _rosterSweep.Pressed;
             bool additive = _rosterSweep.Additive;
-            if (_rosterSweep.Release() != RosterSweepEnd.Clicked || additive) return;
+            if (_rosterSweep.Release() != RosterSweepEnd.Clicked || additive)
+            {
+                _rosterDoubleClick.Forget();
+                return;
+            }
+            if (!_rosterDoubleClick.Click(pressed, Time.unscaledTime)) return;
             var world = _boot?.World;
-            if (world != null && pressed.IsValid) _directors?.ChooseColonist(pressed, world.Views.Current);
+            if (world != null && pressed.IsValid) _directors?.CloseInOnColonist(pressed, world.Views.Current);
         }
 
         void StartDragDrop(VisualElement sourceCard, PawnId pawnId)
@@ -1263,15 +1274,10 @@ namespace Odyssey.Presentation.Ui
             _bulletins.Refresh(world.Views.Current);
 
             // The chime rides the row, as an alert's does: the model says what is news, and a
-            // clone with no catalogue gets a null director and silence. A gift sounds glad, a
-            // blow sounds like one, and anything else is worth a glance.
+            // clone with no catalogue gets a null director and silence. Which chime is the
+            // library's (BulletinChime): a raid's war horn, else by favourability.
             if (_bulletins.Arrived > 0)
-                _boot.Audio?.PlayAlert(_bulletins.ArrivedFavourability switch
-                {
-                    1 => Audio.SoundIds.AlertHappy,
-                    2 => Audio.SoundIds.AlertNegative,
-                    _ => Audio.SoundIds.AlertNormal,
-                });
+                _boot.Audio?.PlayAlert(Audio.BulletinChime.For(_bulletins.ArrivedRaid, _bulletins.ArrivedFavourability));
 
             if (_bulletinsDrawn == _bulletins.Version) return;
             _bulletinsDrawn = _bulletins.Version;

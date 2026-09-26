@@ -313,6 +313,15 @@ namespace Odyssey.Presentation.Ui
                     Polyline(painter, true, p(17, 5), p(17, 20));
                     return;
 
+                // Sandbags (design 53 §4): bags laid like bricks, three below and two above.
+                case HudGlyphKind.ToolSandbag:
+                    Rect(painter, p(2.5f, 14), p(8.5f, 19.5f));
+                    Rect(painter, p(9, 14), p(15, 19.5f));
+                    Rect(painter, p(15.5f, 14), p(21.5f, 19.5f));
+                    Rect(painter, p(5.75f, 8), p(11.75f, 13.5f));
+                    Rect(painter, p(12.25f, 8), p(18.25f, 13.5f));
+                    return;
+
                 // ------------------------------------------------------ floors
 
                 // Deck plate: a panel with two fixing lines.
@@ -540,6 +549,7 @@ namespace Odyssey.Presentation.Ui
             { "ui.arch.tool.turret", HudGlyphKind.ToolTurret },
             { "ui.arch.tool.trap", HudGlyphKind.ToolTrap },
             { "ui.arch.tool.barricade", HudGlyphKind.ToolBarricade },
+            { "ui.arch.tool.sandbag", HudGlyphKind.ToolSandbag },
 
             { "ui.arch.tool.deckplate", HudGlyphKind.ToolDeckplate },
             { "ui.arch.tool.grating", HudGlyphKind.ToolGrating },

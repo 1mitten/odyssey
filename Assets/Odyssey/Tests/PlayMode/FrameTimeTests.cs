@@ -801,6 +801,68 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// The frame with a raid of two hundred on the board (design 55 §11): the measurement the
+        /// pawn ceiling's rule asks for before it moved from 200 to 400. Twenty colonists, then the
+        /// raid fired through the debug menu's own intent — the Mixed band, two hundred — timed while
+        /// it gathers at the edge and again once the assault has brought it into the colony. One run,
+        /// so the difference is the raid and not the machine. Most of the band is past the 64-figure
+        /// ceiling and drawn in the far form; the draw calls beside the frame say what that cost.
+        /// Asserts only that the raid was there.
+        /// </summary>
+        [UnityTest, Category("Measurement")]
+        public IEnumerator TheFrameWithARaidOfTwoHundred()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+                Assert.That(boot.Colony, Is.Not.Null, "the bootstrap never built a colony");
+
+                yield return GrowColonyTo(boot, 20);
+                float peace = 0f;
+                yield return TimeFrames("raid/peace", boot, WarmupFrames, x => peace = x);
+                int peaceDraws = boot.Renderer?.DrawCalls ?? 0;
+
+                boot.World!.Intents.Submit(new Intent(IntentKind.InvokeIncident, default, IncidentHandle.Raid, 200, 3));
+                for (int i = 0; i < 420; i++)
+                {
+                    boot.World.Tick();
+                    if (i % 20 == 0) yield return null;
+                }
+                Odyssey.Sim.Events.RaidSystem raids = boot.Colony!.Pawns.Raids!;
+                Assert.That(raids.Count, Is.EqualTo(1), "the raid was refused");
+
+                float gathering = 0f;
+                yield return TimeFrames("raid/gathering", boot, 30, x => gathering = x);
+                int gatherDraws = boot.Renderer?.DrawCalls ?? 0;
+                int gatherFigures = boot.Figures?.FigureCount ?? 0;
+
+                raids.SetPhase(raids.Groups[0], RaidPhase.Assaulting, boot.World.CurrentTick);
+                for (int i = 0; i < 3_000; i++)
+                {
+                    boot.World.Tick();
+                    if (i % 50 == 0) yield return null;
+                }
+                float assault = 0f;
+                yield return TimeFrames("raid/assault", boot, 30, x => assault = x);
+
+                WorldSnapshot frame = boot.World.Views.Current;
+                int hostiles = Hostiles(frame);
+                Debug.Log($"[FrameTime] raid of 200: peace {peace:0.00} ms ({peaceDraws} draw calls); " +
+                          $"gathering {gathering:0.00} ms ({gatherDraws} draw calls, {gatherFigures} figures); " +
+                          $"assault {assault:0.00} ms ({boot.Renderer?.DrawCalls ?? 0} draw calls, " +
+                          $"{boot.Figures?.FigureCount ?? 0} figures), {frame.Pawns.Length} pawns, {hostiles} hostile");
+                Assert.That(hostiles, Is.GreaterThan(100), "the raid was not on the board");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// The frame with a fight in view (design 33, the C2/C3 integration): ten colonists at the
         /// start timed at peace, then ten bandits spawned among them and the same colony timed
         /// again once the swinging has started — one run, so the difference is the fight and not
@@ -2257,6 +2319,98 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What the butterflies cost (<c>docs/design/52-ambient-butterflies.md</c> §9), rung by rung,
+        /// by day and by night, at the batch view and at 3840 x 2160 — the reading that sets the
+        /// presets' rungs, taken on one board in one run because that is the only comparison this
+        /// machine supports (§6c).
+        ///
+        /// <para><b>Night is its own arm</b> because the lit wings are drawn to the full zoom (design 52
+        /// §5a), so the camera sees more of them than by day; priced where fill is honest, at 4K.</para>
+        ///
+        /// <para>It asserts no times. It asserts the controls: Off drew nothing and stepped
+        /// nothing; each rung drew more than the one below it; day and night alike were one call; the
+        /// 4K arm drew at 4K. The season is held full (<see cref="Odyssey.Hud.ButterflyMeadow.FullSeason"/>)
+        /// so the rung, not the first morning of Larkspur, decides the count.</para>
+        /// </summary>
+        [UnityTest, Category("Measurement")]
+        public IEnumerator TheButterfliesAgainstTheFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            bool previousSeason = Odyssey.Hud.ButterflyMeadow.FullSeason;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            try
+            {
+                Odyssey.Hud.ButterflyMeadow.FullSeason = true;
+                yield return TimeFrames("butterflies/warm", boot, WarmupFrames, _ => { });
+
+                Odyssey.Presentation.World.ButterflyDirector? butterflies = boot.Butterflies;
+                Assert.That(butterflies, Is.Not.Null, "the session built no butterflies");
+                if (!butterflies!.Available) Assert.Ignore("the Odyssey/Butterfly shader did not compile here");
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "butterflies-4k" };
+
+                int[] rungs = Odyssey.Hud.SettingsDirector.RungsOf(Odyssey.Hud.GraphicsLadder.Butterflies);
+                var lines = new List<string>();
+                var drawn = new Dictionary<string, int>();
+
+                foreach (bool night in new[] { false, true })
+                {
+                    // Twelve hours on from noon. The ticks are ordinary ones; the colony lives them.
+                    if (night) boot.DebugSkipTicks(12 * Odyssey.Sim.Contracts.Calendar.TicksPerHour);
+                    foreach (bool big in new[] { false, true })
+                    {
+                        cam.targetTexture = big ? fourK : previousTarget;
+                        string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                        foreach (int rung in rungs)
+                        {
+                            butterflies.Capacity = rung;
+                            float ms = 0f, gpu = 0f;
+                            double section = 0d;
+                            string label = $"{(night ? "midnight" : "noon")}/{resolution}/{rung}";
+                            yield return TimeFrames($"butterflies/{label}", boot, WarmupFrames,
+                                m => ms = m, split => section = Section(split, OdysseyBootstrap.FrameSection.Butterflies),
+                                g => gpu = g);
+
+                            if (big)
+                                Assert.That(cam.pixelWidth, Is.EqualTo(3840),
+                                    "the camera was not drawing at 4K, so this arm measured the batch view");
+                            if (rung == 0)
+                                Assert.That(butterflies.LastDrawCalls, Is.Zero, "the Off rung submitted a call");
+                            else
+                                Assert.That(butterflies.LastDrawCalls, Is.EqualTo(1),
+                                    $"{label} submitted {butterflies.LastDrawCalls} calls");
+
+                            drawn[label] = butterflies.LastDrawn;
+                            lines.Add($"{label}: frame {ms:0.00} ms, gpu " + (gpu > 0f ? $"{gpu:0.00} ms" : "unavailable") +
+                                      $", Butterflies section {section:0.000} ms, {butterflies.LastDrawn} drawn " +
+                                      $"of {butterflies.Meadow.Live} live (target {butterflies.Meadow.Target})");
+                        }
+                    }
+                }
+
+                Debug.Log($"[FrameTime] butterflies ({SystemInfo.graphicsDeviceName}, {SystemInfo.graphicsDeviceType}): " +
+                          string.Join("; ", lines));
+
+                string small = $"{Screen.width}x{Screen.height}";
+                for (int r = 1; r < rungs.Length; r++)
+                    Assert.That(drawn[$"noon/{small}/{rungs[r]}"], Is.GreaterThan(drawn[$"noon/{small}/{rungs[r - 1]}"]),
+                        $"rung {rungs[r]} drew no more than rung {rungs[r - 1]}, so its arm measured nothing new");
+            }
+            finally
+            {
+                Odyssey.Hud.ButterflyMeadow.FullSeason = previousSeason;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// What <c>Odyssey/Foliage</c> costs against the pack's own foliage shader, on the same grass
         /// in the same run (<c>docs/design/38-meadow-overhaul.md</c> §4, M3).
         ///
@@ -2715,7 +2869,7 @@ namespace Odyssey.Tests.PlayMode
 
         /// <summary>
         /// The scenery drawn from GPU buffers looks exactly as the scenery drawn chunk by chunk
-        /// (design 38 §22): tufts, tall-grass stands, flowers, ground cover and bushes, with their
+        /// (design 38 §27): tufts, tall-grass stands, flowers, ground cover and bushes, with their
         /// levels of detail and the distance thinning. Stilled and settled, at three framings — the
         /// start, 70 m and 140 m, where the far field thins and simplifies — and at noon and in the
         /// evening. At each, the chunk path is shot until two shots agree (the floor), then the
@@ -2849,7 +3003,7 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
-        /// What drawing the scenery from GPU buffers is worth (design 38 §22): the chunk path against
+        /// What drawing the scenery from GPU buffers is worth (design 38 §27): the chunk path against
         /// the indirect path, one world per board, on Standard and Huge, at the start zoom and pulled
         /// back to 140 m where the owner saw the drop, at the batch view (CPU-bound) and into a
         /// 3840 x 2160 target. Only differences inside the run are quoted. And the worst regather: a
@@ -4300,7 +4454,7 @@ namespace Odyssey.Tests.PlayMode
                 SkirtLayout.TreeFarDensity = SkirtLayout.DefaultTreeFarDensity;
                 SkirtLayout.FarTreeNearDensity = SkirtLayout.DefaultFarTreeNearDensity;
                 SkirtLayout.FarTreeFarDensity = SkirtLayout.DefaultFarTreeFarDensity;
-                boot.seeThroughToEveryColonist = true;
+                boot.seeThroughToEveryColonist = false; // the default since 2026-09-25 (design 38 §27)
                 if (cam != null) cam.targetTexture = previousTarget;
                 if (fourK != null) fourK.Release();
                 UnityEngine.Object.Destroy(root);
@@ -4400,7 +4554,7 @@ namespace Odyssey.Tests.PlayMode
                 }
                 finally
                 {
-                    boot.seeThroughToEveryColonist = true;
+                    boot.seeThroughToEveryColonist = false; // the default since 2026-09-25 (design 38 §27)
                 }
                 yield break;
             }

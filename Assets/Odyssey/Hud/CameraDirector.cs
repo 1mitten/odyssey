@@ -17,12 +17,54 @@ namespace Odyssey.Hud
         /// <summary>The cell the camera is heading for, or null when it is where it was asked to be.</summary>
         public CellRef? JumpTarget { get; private set; }
 
-        public void JumpTo(CellRef cell) => JumpTarget = cell;
+        /// <summary>
+        /// How far back the camera should stand when it lands, in metres, or null to keep the
+        /// zoom the player has. Only a jump that asks for it carries one (<see cref="JumpTo(CellRef, float)"/>).
+        /// </summary>
+        public float? JumpDistance { get; private set; }
+
+        /// <summary>
+        /// Counts requests, so the rig can tell a second request for the cell it is already
+        /// heading to — the same colonist double-clicked twice, a zoom asked for mid-glide — from
+        /// the one it has already taken.
+        /// </summary>
+        public int JumpSerial { get; private set; }
+
+        /// <summary>
+        /// The distance a close-up jump stands back (roster double-click, 2026-09-25): near enough
+        /// that one colonist fills a good part of the view, and above the rig's own 10 m floor,
+        /// which it clamps to in any case.
+        /// </summary>
+        public const float CloseUpMetres = 14f;
+
+        /// <summary>A glide to the cell at the current zoom.</summary>
+        public void JumpTo(CellRef cell)
+        {
+            JumpTarget = cell;
+            JumpDistance = null;
+            JumpSerial++;
+        }
+
+        /// <summary>A glide to the cell that also zooms to <paramref name="distance"/> metres on the way.</summary>
+        public void JumpTo(CellRef cell, float distance)
+        {
+            JumpTarget = cell;
+            JumpDistance = distance;
+            JumpSerial++;
+        }
 
         /// <summary>The player moved the camera themselves: whatever it was heading for, it stops.</summary>
-        public void Cancel() => JumpTarget = null;
+        public void Cancel()
+        {
+            JumpTarget = null;
+            JumpDistance = null;
+        }
 
         /// <summary>The rig has landed on the target.</summary>
-        public void Arrived() => JumpTarget = null;
+        public void Arrived()
+        {
+            JumpTarget = null;
+            JumpDistance = null;
+        }
     }
 }

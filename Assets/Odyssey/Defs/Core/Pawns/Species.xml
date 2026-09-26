@@ -125,6 +125,48 @@
   </SpeciesDef>
 
   <!--
+    The culvert frog (proper-nouns.csv, creature.amphibian — proposed; docs/design/30-wildlife.md
+    section 8). Lives on the banks of the streams, ponds and lakes and never strays far from them:
+    bankRadius holds every leg it takes to within three cells of water, and a frog that finds
+    itself further out heads back. It hops (presentation: the Jump clip is its gait).
+
+    It does not swim. A frog would, but a swimming animal is a sixth traverse mode, and every mode
+    costs a district flood on every nav rebuild whether any pawn walks in it or not (design 33
+    section 16b); it is TraverseMode.Animal, the hog's - no ladders, no doors, no water - and sits
+    at the water's edge instead. It does not mind the rain (ignoresRain): it is the one animal
+    that stays out in it.
+
+    Drawn about 0.87 m nose to toe - well over life beside a 2.49 m colonist, and deliberately:
+    0.4 m could not be picked out from the play camera (owner, 2026-09-26: "just over double the
+    size"). Pace 1,000 per mille since the same day, so that the bigger frog's hop is about 1.3 m,
+    a body and a half, rather than the one metre it covered at 0.4 m. A radius of four, short
+    rests. INVENTED, playtest numbers. A frog never turns on
+    whoever hurts it (revenge 0) and so carries no attack.
+  -->
+  <SpeciesDef>
+    <defName>Species_CulvertFrog</defName>
+    <labelKey>ui.pawn.frog</labelKey>
+    <person>false</person>
+    <bodyLengthMm>870</bodyLengthMm>
+    <movePerMille>1000</movePerMille>
+    <traverseMode>Animal</traverseMode>
+    <wanderRadius>4</wanderRadius>
+    <restTicksMin>180</restTicksMin>
+    <restTicksMax>720</restTicksMax>
+    <bankRadius>3</bankRadius>
+    <ignoresRain>true</ignoresRain>
+    <!-- A group's frogs set off in different directions (owner, 2026-09-26): a new hop prefers a
+         heading 60 degrees or more from every other frog within six cells that is already hopping. -->
+    <divergeRadius>6</divergeRadius>
+    <figureKey>animal.frog</figureKey>
+    <healthPoints>8</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>0</revengePerMille>
+    <meleeSkill>1</meleeSkill>
+    <interceptPerMille>40</interceptPerMille>
+  </SpeciesDef>
+
+  <!--
     The animal kinds. Every needs and rest field on PawnKindDef is unread for an animal — nothing
     ticks its needs — so only the species is stated and the rest take the type's defaults.
   -->
@@ -137,6 +179,13 @@
   <PawnKindDef>
     <defName>PawnKind_DuctRat</defName>
     <species>Species_DuctRat</species>
+    <faction>Wild</faction>
+  </PawnKindDef>
+
+  <!-- Kind 4, after the bandit: kind order is a save contract and is appended. -->
+  <PawnKindDef>
+    <defName>PawnKind_CulvertFrog</defName>
+    <species>Species_CulvertFrog</species>
     <faction>Wild</faction>
   </PawnKindDef>
 
@@ -167,6 +216,24 @@
          (design 33 section 17; owner, 2026-09-24: "thieve items or kidnap people depending on
          their motivation ... for now - thieve items"). Loot carries the nearest stack off the
          board; Kidnap is the seam and does exactly what Loot does today. -->
+    <motive>Loot</motive>
+  </PawnKindDef>
+
+  <!--
+    The gunman (design 55 section 8): the bandit with a pistol. Its own kind rather than a bandit
+    handed a weapon, so a raid mix can name it and a storyteller can draw it; everything else is
+    the bandit's - a person, Hostile, the same traverse mode and motive, and the same outfit,
+    because PawnOutfits keys on a hostile person rather than on the kind. The pistol is the only
+    row in its table, so every gunman carries one.
+  -->
+  <PawnKindDef>
+    <defName>PawnKind_Gunman</defName>
+    <species>Species_Person</species>
+    <faction>Hostile</faction>
+    <weapons>
+      <li>Item_Pistol</li>
+    </weapons>
+    <traverseMode>Bandit</traverseMode>
     <motive>Loot</motive>
   </PawnKindDef>
 

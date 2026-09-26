@@ -50,6 +50,9 @@ namespace Odyssey.Tests.Hud
             (".panel", "background-color", () => HudTheme.PanelFill, "panel fill"),
             (".panel", "border-color", () => HudTheme.PanelBorder, "panel border"),
             (".card", "background-color", () => HudTheme.PanelFill, "panel fill"),
+            // The one translucent panel (owner, 2026-09-25): the inspect pane at 85%. The roster
+            // card above stays the opaque panel fill.
+            (".inspect", "background-color", () => HudTheme.InspectFill, "inspect fill"),
             (".card", "border-color", () => HudTheme.PanelBorder, "panel border"),
             (".commandbar", "background-color", () => HudTheme.BarFill, "bar fill"),
             (".commandbar", "border-color", () => HudTheme.PanelBorder, "panel border"),

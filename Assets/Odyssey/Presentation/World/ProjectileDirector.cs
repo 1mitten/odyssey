@@ -326,6 +326,12 @@ namespace Odyssey.Presentation.World
                 case CombatEventKind.Miss:
                     OnImpact(combatEvent, snapshot, figures);
                     return;
+                // Cover took it (design 53 §7e): the streak ends on the cover. A piece with hit
+                // points also reported its Hit, which ended the streak already; this is for a tree
+                // or a rock face, which report only this.
+                case CombatEventKind.Covered:
+                    if (combatEvent.Amount == 0) OnImpact(combatEvent, snapshot, figures);
+                    return;
             }
         }
 

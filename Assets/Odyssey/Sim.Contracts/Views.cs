@@ -578,6 +578,80 @@ namespace Odyssey.Sim.Contracts
         /// <see cref="Miss"/>.
         /// </summary>
         Shot = 13,
+
+        /// <summary>
+        /// Cover took a bullet (design 53 §2e): a shot the cover roll defeated, fired into the piece
+        /// it picked, or a stray caught by cover it crossed. <see cref="CombatEventView.Cell"/> is the
+        /// cover's cell, <see cref="CombatEventView.Target"/> whom the shot was at (or <c>default</c>)
+        /// and <see cref="CombatEventView.Amount"/> the damage the cover took, nought for a thing with
+        /// no hit points (a tree, a rock face). Presentation raises the <i>Cover</i> floater and the
+        /// dust there. A building struck also reports its <see cref="Hit"/> as any blow does.
+        /// </summary>
+        Covered = 14,
+    }
+
+    /// <summary>
+    /// What one shot would come to (design 53 §8b): the answer to a <c>QueryShot</c>, published
+    /// while the question stands and never saved or hashed. Every number is the simulation's own —
+    /// the rule that rolls the shot is the rule that fills this — so the readout and the dice
+    /// cannot disagree.
+    /// </summary>
+    public readonly struct ShotReportView
+    {
+        public readonly PawnId Shooter;
+        public readonly PawnId Target;
+
+        /// <summary>The aim roll's chance, per mille: skill, distance, the gun and its quality.</summary>
+        public readonly int AimPerMille;
+
+        /// <summary>The cover the target has from this shot, per mille (noisy-OR over its neighbours).</summary>
+        public readonly int CoverPerMille;
+
+        /// <summary>What the player is told: the aim times what the cover leaves, or nought out of range or sight.</summary>
+        public readonly int TotalPerMille;
+
+        /// <summary>Centre to centre, in millimetres.</summary>
+        public readonly int DistanceMm;
+
+        /// <summary>The shooter's Shooting level.</summary>
+        public readonly int ShootingLevel;
+
+        /// <summary>The gun, as an item def index.</summary>
+        public readonly int WeaponDef;
+
+        /// <summary>What the shot's descent leaves of low cover, per mille — 1,000 on the level.</summary>
+        public readonly int LowElevationPerMille;
+
+        /// <summary>
+        /// The piece of cover that gives the most, as an <see cref="EdificeHandle"/> value; -1 for a
+        /// rock face, and nought for no cover.
+        /// </summary>
+        public readonly int TopCoverEdifice;
+
+        /// <summary>How many pieces of cover the target has from this shot.</summary>
+        public readonly int CoverPieces;
+
+        public readonly bool InRange;
+        public readonly bool InSight;
+
+        public ShotReportView(PawnId shooter, PawnId target, int aimPerMille, int coverPerMille, int totalPerMille,
+            int distanceMm, int shootingLevel, int weaponDef, int lowElevationPerMille, int topCoverEdifice,
+            int coverPieces, bool inRange, bool inSight)
+        {
+            Shooter = shooter;
+            Target = target;
+            AimPerMille = aimPerMille;
+            CoverPerMille = coverPerMille;
+            TotalPerMille = totalPerMille;
+            DistanceMm = distanceMm;
+            ShootingLevel = shootingLevel;
+            WeaponDef = weaponDef;
+            LowElevationPerMille = lowElevationPerMille;
+            TopCoverEdifice = topCoverEdifice;
+            CoverPieces = coverPieces;
+            InRange = inRange;
+            InSight = inSight;
+        }
     }
 
     /// <summary>
@@ -752,6 +826,70 @@ namespace Odyssey.Sim.Contracts
             Landing = landing;
             LaunchTick = launchTick;
             LandTick = landTick;
+        }
+    }
+
+    /// <summary>
+    /// What a raid is doing (design 55 §3), in order. The phase is the simulation's; the words and
+    /// the horn are presentation's.
+    /// </summary>
+    public enum RaidPhase : byte
+    {
+        /// <summary>Members are still walking on at the edge.</summary>
+        Arriving = 0,
+
+        /// <summary>Milling at the gather point near the edge.</summary>
+        Gathering = 1,
+
+        /// <summary>Milling at the probe point, part-way in.</summary>
+        Probing = 2,
+
+        /// <summary>Making for the target, and fighting.</summary>
+        Assaulting = 3,
+
+        /// <summary>Half the band is down: the rest are leaving by the nearest edge.</summary>
+        Withdrawing = 4,
+    }
+
+    /// <summary>
+    /// One raid on the board (design 55 §3): its phase, where its standing members are, and where
+    /// it is going. Published every frame a raid exists; neither saved nor hashed — the group is.
+    /// What the alert and the Events row jump the camera to, and what the alert is raised for.
+    /// </summary>
+    public readonly struct RaidView
+    {
+        /// <summary>The group's id, stable for its life and across a save.</summary>
+        public readonly int Id;
+
+        public readonly RaidPhase Phase;
+
+        /// <summary>The mix it was made from, as an index into the content's mix order.</summary>
+        public readonly int Mix;
+
+        /// <summary>How many it set out with.</summary>
+        public readonly int Size;
+
+        /// <summary>How many of its members are standing on the board now.</summary>
+        public readonly int Standing;
+
+        /// <summary>
+        /// The middle of its standing members — the average of their cells — or the gather point
+        /// while none has arrived.
+        /// </summary>
+        public readonly CellRef Centre;
+
+        /// <summary>Where the assault makes for: the hearth, else the colony's start.</summary>
+        public readonly CellRef Target;
+
+        public RaidView(int id, RaidPhase phase, int mix, int size, int standing, CellRef centre, CellRef target)
+        {
+            Id = id;
+            Phase = phase;
+            Mix = mix;
+            Size = size;
+            Standing = standing;
+            Centre = centre;
+            Target = target;
         }
     }
 
@@ -952,6 +1090,30 @@ namespace Odyssey.Sim.Contracts
         }
     }
 
+
+    /// <summary>
+    /// Rock somebody started to mine and then took the order off (design 58 §3): no order stands
+    /// on it, but the cut is kept, so the face stays cracked. One row per such cell, and none while
+    /// every started cut is either ordered or finished — the published face of the simulation's
+    /// <c>PartMinedRock</c>.
+    ///
+    /// <para>Sparse, a report of saved and hashed state and neither itself. Progress is quantised
+    /// as <see cref="OrderView.Progress"/> is, for the same reason: it is drawn, not counted.</para>
+    /// </summary>
+    public readonly struct PartMinedView
+    {
+        /// <summary>The cell, as a whole-world index. <c>GridSize.FromIndex</c> unpacks it.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>How far through the cut the cell is, 0 for untouched and 255 for finished.</summary>
+        public readonly byte Progress;
+
+        public PartMinedView(int cellIndex, byte progress)
+        {
+            CellIndex = cellIndex;
+            Progress = progress;
+        }
+    }
 
     /// <summary>
     /// A building site: something the player has asked for that is not there yet.
@@ -1510,6 +1672,7 @@ namespace Odyssey.Sim.Contracts
         ThingView[] _things = Array.Empty<ThingView>();
         byte[] _sliceCells = Array.Empty<byte>();
         OrderView[] _orders = Array.Empty<OrderView>();
+        PartMinedView[] _partMined = Array.Empty<PartMinedView>();
         SiteView[] _sites = Array.Empty<SiteView>();
         ZoneView[] _zones = Array.Empty<ZoneView>();
         StoreView[] _stores = Array.Empty<StoreView>();
@@ -1523,6 +1686,7 @@ namespace Odyssey.Sim.Contracts
         BulletinView[] _bulletins = Array.Empty<BulletinView>();
         FallingView[] _falling = Array.Empty<FallingView>();
         ProjectileView[] _projectiles = Array.Empty<ProjectileView>();
+        RaidView[] _raids = Array.Empty<RaidView>();
         ConduitView[] _conduits = Array.Empty<ConduitView>();
         HomeCellView[] _homeCells = Array.Empty<HomeCellView>();
         PowerDeviceView[] _powerDevices = Array.Empty<PowerDeviceView>();
@@ -1614,6 +1778,9 @@ namespace Odyssey.Sim.Contracts
         public int FallingCount { get; private set; }
 
         public int ProjectileCount { get; private set; }
+
+        /// <summary>How many raids are on the board. Nearly always zero.</summary>
+        public int RaidCount { get; private set; }
 
         /// <summary>How many line cells this frame carries — see <see cref="ConduitView"/> for which.</summary>
         public int ConduitCount { get; private set; }
@@ -1746,6 +1913,9 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Every bullet in flight, in the order it was fired. See <see cref="ProjectileView"/>.</summary>
         public ReadOnlySpan<ProjectileView> Projectiles => new ReadOnlySpan<ProjectileView>(_projectiles, 0, ProjectileCount);
 
+        /// <summary>Every raid on the board, oldest first. See <see cref="RaidView"/>.</summary>
+        public ReadOnlySpan<RaidView> Raids => new ReadOnlySpan<RaidView>(_raids, 0, RaidCount);
+
         public ReadOnlySpan<PawnView> Pawns => new ReadOnlySpan<PawnView>(_pawns, 0, PawnCount);
         public ReadOnlySpan<ThingView> Things => new ReadOnlySpan<ThingView>(_things, 0, ThingCount);
 
@@ -1761,6 +1931,13 @@ namespace Odyssey.Sim.Contracts
         /// Empty when the world has no designation grid.
         /// </summary>
         public ReadOnlySpan<OrderView> Orders => new ReadOnlySpan<OrderView>(_orders, 0, OrderCount);
+
+        /// <summary>How many part-mined cells with no order on them this frame carries.</summary>
+        public int PartMinedCount { get; private set; }
+
+        /// <summary>Rock started on and left, by cell ascending. See <see cref="PartMinedView"/>.</summary>
+        public ReadOnlySpan<PartMinedView> PartMined =>
+            new ReadOnlySpan<PartMinedView>(_partMined, 0, PartMinedCount);
 
         /// <summary>Every building site in the world, in cell-index order. See <see cref="SiteView"/>.</summary>
         public ReadOnlySpan<SiteView> Sites => new ReadOnlySpan<SiteView>(_sites, 0, SiteCount);
@@ -1965,6 +2142,22 @@ namespace Odyssey.Sim.Contracts
         /// handle: the row arrives the publish after the question, and is withdrawn the publish
         /// after the question is withdrawn.
         /// </summary>
+        ShotReportView _shotReport;
+        bool _hasShotReport;
+
+        /// <summary>The answer to the standing <c>QueryShot</c>, if there is one (design 53 §8b).</summary>
+        public bool TryGetShotReport(out ShotReportView report)
+        {
+            report = _shotReport;
+            return _hasShotReport;
+        }
+
+        internal void SetShotReport(in ShotReportView report)
+        {
+            _shotReport = report;
+            _hasShotReport = true;
+        }
+
         public bool TryGetCellDetail(int cellIndex, out CellDetail detail)
         {
             for (int i = 0; i < CellDetailCount; i++)
@@ -1991,6 +2184,7 @@ namespace Odyssey.Sim.Contracts
             ThingCount = 0;
             SliceCellCount = 0;
             OrderCount = 0;
+            PartMinedCount = 0;
             SiteCount = 0;
             ZoneCount = 0;
             StoreCount = 0;
@@ -2004,9 +2198,11 @@ namespace Odyssey.Sim.Contracts
             // reader rebuilds it, and a frame nobody asks about never pays for one at all.
             _aspectsIndexed = false;
             CellDetailCount = 0;
+            _hasShotReport = false;
             BulletinCount = 0;
             FallingCount = 0;
             ProjectileCount = 0;
+            RaidCount = 0;
             ConduitCount = 0;
             PowerDeviceCount = 0;
             PowerNetCount = 0;
@@ -2102,6 +2298,12 @@ namespace Odyssey.Sim.Contracts
             _projectiles[ProjectileCount++] = view;
         }
 
+        internal void AddRaid(in RaidView view)
+        {
+            Grow(ref _raids, RaidCount + 1);
+            _raids[RaidCount++] = view;
+        }
+
         internal void AddPawn(in PawnView view)
         {
             Grow(ref _pawns, PawnCount + 1);
@@ -2125,6 +2327,12 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _orders, OrderCount + 1);
             _orders[OrderCount++] = view;
+        }
+
+        internal void AddPartMined(in PartMinedView view)
+        {
+            Grow(ref _partMined, PartMinedCount + 1);
+            _partMined[PartMinedCount++] = view;
         }
 
         internal void AddSite(in SiteView view)

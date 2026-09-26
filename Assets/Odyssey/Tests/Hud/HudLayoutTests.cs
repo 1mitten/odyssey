@@ -1018,6 +1018,28 @@ namespace Odyssey.Tests.Hud
             }
         }
 
+        /// <summary>
+        /// The inspect pane at 85% (owner, 2026-09-25) over the worst case, pure white terrain:
+        /// the primary and meta inks keep body minimum; the dim ink is the one that gives, and by
+        /// how much is pinned so a darker ink or a lighter fill cannot slide it further unseen.
+        /// </summary>
+        [Test]
+        public void TheInspectPanesTranslucencyCostsOnlyTheDimInkAHair()
+        {
+            Assert.That(HudTheme.InspectFill.A, Is.EqualTo(0.85f).Within(0.001f));
+            Assert.That(HudTheme.PanelFill.A, Is.EqualTo(1f), "every other panel stays opaque");
+
+            double primary = HudContrast.OverBrightestTerrain(HudTheme.TextPrimary, HudTheme.InspectFill);
+            double meta = HudContrast.OverBrightestTerrain(HudTheme.TextMeta, HudTheme.InspectFill);
+            double dim = HudContrast.OverBrightestTerrain(HudTheme.TextDim, HudTheme.InspectFill);
+            TestContext.WriteLine($"inspect pane over white: primary {primary:0.00}, meta {meta:0.00}, dim {dim:0.00}");
+
+            Assert.That(primary, Is.GreaterThanOrEqualTo(HudContrast.BodyMinimum));
+            Assert.That(meta, Is.GreaterThanOrEqualTo(HudContrast.BodyMinimum));
+            Assert.That(dim, Is.GreaterThanOrEqualTo(4.4),
+                "the dim ink was 4.44:1 over white when the pane went to 85%; it must not fall further");
+        }
+
         [Test]
         public void TheAccentCarriesItsOwnInk()
         {

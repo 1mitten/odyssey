@@ -209,6 +209,13 @@ namespace Odyssey.Sim.Pawns
                 // The bullets in the air (design 47 §2c): appended, no format bump. A save from
                 // before guns has no section and loads with nothing in flight.
                 pawns.Projectiles,
+                // The raids on the board (design 55 §10): appended, no format bump. A save from
+                // before raids has no section and loads with no band.
+                pawns.Raids!,
+                // The work kept in rock whose mining order was taken off (design 58 §3): appended,
+                // no format bump. A save from before has no section and loads with none kept —
+                // which is what a cancel then left.
+                designations.PartMined,
                 // The kit (design 54 §6): appended, no format bump. A save from before the kit has
                 // no section and loads with every kit empty, as every kit then was.
                 pawns.Kits,
@@ -294,6 +301,10 @@ namespace Odyssey.Sim.Pawns
             Construction.RebuildLadderConnectors(Pawns);
             Construction.RebuildDoors(Pawns);
 
+            // The weather's temperature offset is derived and written only every weather pass, so
+            // a loaded colony takes it back here or reads the fresh board's until the next pass.
+            Pawns.Weather?.ReapplyOffset(World.CurrentTick);
+
             // And which cells hold furniture nothing may be put down in — derived from the same
             // edifice list, for the same reason.
             Construction.RebuildItemBlocks();
@@ -336,6 +347,11 @@ namespace Odyssey.Sim.Pawns
             // changes nothing there.
             _nav.MarkAllDirty();
             _nav.Rebuild();
+
+            // The weather's share of the outdoor temperature is written on the weather's cadence
+            // and saved nowhere: put back the value the last boundary set, or the first needs pass
+            // after a load reads the build's sky (WeatherSystem.RestoreOffset).
+            Pawns.Weather?.RestoreOffset(World.CurrentTick);
 
             // The sky map is derived from the grid, and a load writes the grid wholesale without
             // telling the chunk grid a thing: rebuilt whole (design 43 §6). Now, so a board-wide
@@ -453,6 +469,8 @@ namespace Odyssey.Sim.Pawns
             var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns())
             {
                 Chunks = chunks,
+                // What a raid makes for with no hearth (design 55 §5). Derived, so a load has it too.
+                ColonyStart = outcome.StartCell,
             };
             var solver = new SupportSolver(grid);
             var support = new SupportSystem(grid, solver, chunks);

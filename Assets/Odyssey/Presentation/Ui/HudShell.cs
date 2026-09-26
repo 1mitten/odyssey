@@ -134,6 +134,9 @@ namespace Odyssey.Presentation.Ui
         // page it covers is copied into the scratch list at the press.
         readonly RosterSweep _rosterSweep = new RosterSweep();
         readonly List<PawnId> _sweepPage = new List<PawnId>();
+        // Two plain clicks on one card are a double click (owner, 2026-09-25): the threshold is
+        // the world pick's, shared through the model rather than copied.
+        readonly DoubleClick _rosterDoubleClick = new DoubleClick();
         VisualElement? _rosterPager;
         VisualElement? _prevPageBtn;
         VisualElement? _nextPageBtn;
@@ -610,6 +613,9 @@ namespace Odyssey.Presentation.Ui
             BuildResearch();
             BuildAssign();
             BuildAlmanac();
+            // The ride's strip (design 57 §6): outside the in-game container, since it is what shows
+            // while that container is put away, and under the start screen and the modals.
+            BuildRide();
 
             // B18, last, so it is the top-most element in the tree and its scrim covers everything
             // above. Built whether or not a session exists, because the state it belongs to is the
@@ -639,6 +645,7 @@ namespace Odyssey.Presentation.Ui
 
         void OnDestroy()
         {
+            ReleaseWake();
             if (_boot != null)
             {
                 _boot.SessionChanged -= OnSessionChanged;
@@ -676,6 +683,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.CameraSpeedChanged += OnCameraSpeedChanged;
             _directors.Settings.BuildPaletteLayoutChanged += OnBuildLayoutChanged;
             _directors.Settings.SelectionStyleChanged += OnSelectionStyleChanged;
+            _directors.Settings.WakeUpChanged += OnWakeUpChanged;
             _directors.Settings.DeveloperOverlayChanged += OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged += OnBusDbChanged;
             _directors.Settings.ExitChanged += OnExitChanged;
@@ -711,6 +719,7 @@ namespace Odyssey.Presentation.Ui
             OnCameraSpeedChanged(_directors.Settings.CameraSpeed);
             OnBuildLayoutChanged(_directors.Settings.BuildPaletteLayout);
             OnSelectionStyleChanged(_directors.Settings.SelectionStyle);
+            OnWakeUpChanged(_directors.Settings.WakeUp);
             OnDeveloperOverlayChanged();
             foreach (SettingsBus bus in SettingsDirector.Buses) OnBusDbChanged(bus);
             OnExitChanged();
@@ -748,6 +757,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.CameraSpeedChanged -= OnCameraSpeedChanged;
             _directors.Settings.BuildPaletteLayoutChanged -= OnBuildLayoutChanged;
             _directors.Settings.SelectionStyleChanged -= OnSelectionStyleChanged;
+            _directors.Settings.WakeUpChanged -= OnWakeUpChanged;
             _directors.Settings.DeveloperOverlayChanged -= OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged -= OnBusDbChanged;
             _directors.Settings.ExitChanged -= OnExitChanged;
@@ -780,6 +790,7 @@ namespace Odyssey.Presentation.Ui
 
         void OnDisable()
         {
+            ReleaseWake();
             if (_rig != null) _rig.PointerOverInterface = null;
         }
 
@@ -832,8 +843,13 @@ namespace Odyssey.Presentation.Ui
 
         void Update()
         {
+            // The wake into a world (HudShell.Wake.cs, design 56), before the session guard: its
+            // veil closes over the menu, where there is no session yet.
+            StepWake();
+
             // The curtain (HudShell.Start.cs, CurtainFrames): the new world has been drawn behind
-            // the start screen for long enough, so the screen gives way now.
+            // the start screen for long enough, so the screen gives way now. The older path, for a
+            // world built without the wake (the bench's direct build).
             if (_curtain > 0 && --_curtain == 0) LiftCurtain();
 
             var world = _boot!.World;
@@ -845,6 +861,10 @@ namespace Odyssey.Presentation.Ui
             }
 
             _directors!.Refresh(world.Views.Current);
+            // The ride (design 57): noticed going, the slice kept on her layer, and the interface
+            // swapped for the strip on the frame one begins or ends.
+            _directors.AdvanceRide(world.Views.Current, Time.unscaledDeltaTime);
+            SyncRideUi();
 
             if (!_surfaceCaptured)
             {
@@ -870,6 +890,7 @@ namespace Odyssey.Presentation.Ui
                 _fast = 0f;
                 RefreshStrip();
                 RefreshInspect();
+                RefreshRide();
             }
             if (_mid >= MidBucketSeconds)
             {

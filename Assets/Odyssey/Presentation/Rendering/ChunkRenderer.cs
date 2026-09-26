@@ -2077,8 +2077,9 @@ namespace Odyssey.Presentation.Rendering
             }
             else if (TintCode.IsLinen(tintCode))
             {
-                // One colour, whatever art or stuff is underneath: bedding is bedding.
-                tint = StuffPalette.Linen;
+                // One colour, whatever art or stuff is underneath: bedding is bedding, and a
+                // sandbag is its cloth (value 1 and up, TintCode.Hessian).
+                tint = value == 0 ? StuffPalette.Linen : StuffPalette.Hessian(value - 1);
                 emission = Color.black;
             }
             else if (TintCode.IsFoliage(tintCode))
@@ -4533,6 +4534,7 @@ namespace Odyssey.Presentation.Rendering
             Skirt.Dispose();
             _materials.Dispose();
             DisposeSeeThrough();
+            DisposeCracks();
             Clearance.Dispose();
             _indirect?.Dispose();
             _highlightBatch?.Dispose();

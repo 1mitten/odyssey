@@ -208,7 +208,16 @@ namespace Odyssey.Sim.Pawns
         /// faction. Claimed by the combat contracts step.
         /// </summary>
         public const int Bandit = 3;
-        public const int Count = 4;
+
+        /// <summary>
+        /// The bandit with a pistol (design 55 §8): its own kind so a raid mix can name it. Appended.
+        /// </summary>
+        public const int Gunman = 4;
+
+        /// <summary>The frog of the banks (design 30 §8): kind 5, species 3. Appended after the gunman.</summary>
+        public const int CulvertFrog = 5;
+
+        public const int Count = 6;
     }
 
     /// <summary>
@@ -918,6 +927,30 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public bool nocturnal;
 
+        /// <summary>
+        /// Keeps within this many cells of water, Chebyshev, or 0 for anywhere (design 30 §8): the
+        /// frog's bank. Every leg its mind picks ends this close to a water cell on its own layer
+        /// or the one below, and an animal that finds itself further out heads back to the
+        /// nearest bank it can reach. A world seeds it on the bank habitat.
+        /// </summary>
+        public int bankRadius;
+
+        /// <summary>
+        /// Stays out in the rain rather than heading for cover (design 43 §6, design 30 §8). The
+        /// shelter node's own flag, named in its summary for the day a species wanted it: a frog.
+        /// </summary>
+        public bool ignoresRain;
+
+        /// <summary>
+        /// Cells within which a new leg is turned away from its own kind's (design 30 §8e), or 0
+        /// for no such rule. A frog picking where to hop next looks at every other frog this close
+        /// that is already hopping somewhere and prefers a heading at least 60 degrees from all of
+        /// theirs (owner, 2026-09-26: a group's frogs "jump in different directions as some were
+        /// very similar"). A preference, never a refusal: where every open cell lies the same way,
+        /// the least alike is taken.
+        /// </summary>
+        public int divergeRadius;
+
         /// <summary>The figure catalogue entry presentation draws this species with. Not read by the simulation.</summary>
         public string figureKey = string.Empty;
 
@@ -1608,9 +1641,13 @@ namespace Odyssey.Sim.Pawns
             content.Kinds = ByName<PawnKindDef>(defs,
                 "PawnKind_Colonist", "PawnKind_MiddenHog", "PawnKind_DuctRat",
                 // The debug-spawned hostile person (design 33 §1), appended.
-                "PawnKind_Bandit");
+                "PawnKind_Bandit",
+                // The bandit with a pistol, a raid's second kind (design 55 §8), appended.
+                "PawnKind_Gunman",
+                // The frog of the banks (design 30 §8), appended after the gunman.
+                "PawnKind_CulvertFrog");
             content.Species = ByName<SpeciesDef>(defs,
-                "Species_Person", "Species_MiddenHog", "Species_DuctRat");
+                "Species_Person", "Species_MiddenHog", "Species_DuctRat", "Species_CulvertFrog");
             content.KindSpecies = new int[content.Kinds.Length];
             for (int k = 0; k < content.Kinds.Length; k++)
             {
@@ -1928,7 +1965,7 @@ namespace Odyssey.Sim.Pawns
         // Built as the eleventh and twelfth, moved to the twelfth and thirteenth when the stream
         // jump shipped first, and moved again when cooking (Burn) and ranged (RangedHit) shipped
         // with those: two purposes on one stream would let a cooking or shooting roll decide
-        // where a blow lands. The twentieth and twenty-first are free.
+        // where a blow lands. The twentieth and twenty-first are free; cover took the next three.
 
         /// <summary>
         /// Which region a hit lands on, by coverage (design 43 §2). SHA-256's twentieth round
@@ -1938,5 +1975,18 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>How a fall's damage is split into hits and spread (design 43 §7). The twenty-first.</summary>
         public const uint FallSplit = 0x2DE9_2C6F;
+
+        // Cover's three (design 53 §2d, §2e). SHA-256's twenty-second, twenty-third and
+        // twenty-fourth round constants. Built on the twentieth to the twenty-second, moved when
+        // health (design 43) shipped first on the twentieth and twenty-first.
+
+        /// <summary>Whether cover defeats a shot whose aim roll hit (design 53 §2d).</summary>
+        public const uint RangedCover = 0x4A74_84AA;
+
+        /// <summary>Which piece of cover a defeated shot is fired into, weighted by what each gave.</summary>
+        public const uint RangedCoverPick = 0x5CB0_A9DC;
+
+        /// <summary>Whether a stray crossing a cover cell is caught by it, salted by the cell as well as the shooter.</summary>
+        public const uint RangedCoverIntercept = 0x76F9_88DA;
     }
 }

@@ -68,10 +68,36 @@ namespace Odyssey.Tests.PlayMode
         /// is roughly half its single-thread throughput and throttles under sustained load, so
         /// three covers that gap with margin. It stands until someone measures a real laptop, at
         /// which point this constant is replaced by the observation and this paragraph deleted.
+        ///
+        /// <b>The headroom belongs to the machine, not the test</b> (2026-09-26). The Unity tier
+        /// runs on two self-hosted runners, and the second, an Intel i7-9700F, measured the
+        /// per-label cost at 30.9 us against the 9800X3D's 17.0 quiet (<c>docs/lessons.md</c>,
+        /// "The logged baseline is not enough") — 1.8 times slower, so three times a laptop there
+        /// is 1.6 here, and the same commit failed on one runner and passed on the other. The
+        /// per-label figure is the ruler because it is the one quantity the lessons found stable
+        /// across runs. A machine not in the table gets the strict default.
         /// </summary>
         const float LaptopBudgetMs = 3.5f;
-        const float HeadroomFactor = 3f;
-        const float DevBudgetMs = LaptopBudgetMs / HeadroomFactor;
+        const float DefaultHeadroom = 3f;
+
+        static readonly (string Cpu, float Headroom)[] KnownMachines =
+        {
+            ("Ryzen 7 9800X3D", 3f),
+            ("i7-9700F", 3f * 17.0f / 30.9f),
+        };
+
+        static float HeadroomFactor
+        {
+            get
+            {
+                string cpu = SystemInfo.processorType ?? string.Empty;
+                foreach (var (name, headroom) in KnownMachines)
+                    if (cpu.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0) return headroom;
+                return DefaultHeadroom;
+            }
+        }
+
+        static float DevBudgetMs => LaptopBudgetMs / HeadroomFactor;
 
         /// <summary>Which of the three dense panels a run puts up.</summary>
         [Flags]
@@ -180,7 +206,7 @@ namespace Odyssey.Tests.PlayMode
                 Debug.Log($"[R1] dense case: {GridColumns}x{GridRows} grid ({GridColumns * GridRows} cells), " +
                           $"{RosterCards} cards, {ArchiveRows} archive rows (ListView, virtualised) — " +
                           $"{hudMs:0.000} ms against a {DevBudgetMs:0.000} ms dev budget " +
-                          $"({LaptopBudgetMs} ms laptop / {HeadroomFactor} headroom, ASSUMED), " +
+                          $"({LaptopBudgetMs} ms laptop / {HeadroomFactor:0.00} headroom for {SystemInfo.processorType}, ASSUMED), " +
                           $"{bytesPerFrame:0.0} B/frame over {all.Collections} gen-0 collections.");
 
                 // F1, first half. "Allocates anything per frame after warm-up" is the ADR's own
@@ -207,7 +233,7 @@ namespace Odyssey.Tests.PlayMode
                 // F1, second half.
                 Assert.That(hudMs, Is.LessThan(DevBudgetMs),
                     $"the dense HUD costs {hudMs:0.000} ms on this machine against a {DevBudgetMs:0.000} ms " +
-                    $"budget ({LaptopBudgetMs} ms on the target laptop divided by {HeadroomFactor} headroom). " +
+                    $"budget ({LaptopBudgetMs} ms on the target laptop divided by {HeadroomFactor:0.00} headroom for {SystemInfo.processorType}). " +
                     "Read the per-panel arms logged above before calling this a framework verdict. " +
                     "That is flip condition F1 of ADR 0003.");
             }

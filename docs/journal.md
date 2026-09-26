@@ -13731,3 +13731,499 @@ run, and nothing did.
 **Use is published rather than derived**: the rule is `Kit.UseOf`, the order asks it and the
 snapshot carries it, so the button can never offer what the order refuses. On the way the survey
 for this unit found the weapon-quality publish outside its null check (PR #236).
+
+## 2026-09-25 — Cover: ground, interview, research and design 53
+
+The owner asked for cover in the reference's mould, with sandbags and barricades, built on the ranged
+line. **Grounding came first, and found three things.**
+- **The slot was already there.** The ranged hit formula has `CombatDef.coverPerMille` fixed at 1000,
+  so cover is a replacement of one global number with a per-shot value, not a new term.
+- **`LineOfSight.Walk` already lists every cell a shot crosses, in order.** A low, passable thing was
+  never struck because `LandBullet` only reaches a building through the *blocking* branch.
+- **No shooter chooses where to stand.** A shooter stops at the first step from which the line opens.
+
+The research (`a-10-cover.md`) recovered the reference's rule almost whole, despite every wiki page
+being refused: only the eight neighbours count; the angle bands run 15/27/40/52/65° with diagonals
+counted ×1.75; a shooter within 1.9 or 2.9 cells of the cover gets it at a third or two thirds; pieces
+combine by noisy-OR; a full-fill thing is worth 75 %, not 100 %; and a shot the cover wins is fired
+*into* the cover. That last rule is why a sandbag line wears down, and it is the part worth copying
+most.
+
+**The interview's one real design choice was height** (`cover-interview.md` Q9 and Q13). The first
+option offered graded low cover by layer count, and it was wrong once the code was read: a wall is
+one full layer, so from one layer up a shooter genuinely sees over it, and "tall cover keeps its full
+value" would make every wall a bunker against a rooftop. The owner took grading by the **shot's angle
+of descent** instead. It is linear in the tangent so that no `atan` enters the simulation. A shooter
+one layer up and ten cells away still faces the sandbags in full; at two cells they are nearly gone.
+
+**The expensive answer the owner chose knowingly is pass-through-only.** Cover is then always beside a
+pawn and never under her, and no line seals anyone in. The price is one owner for "may a pawn end up
+here" (`Standing.CanStandAt`), asked by every picker, plus an audit of thirty-one walkability callers
+and a sweep as the safety net. It is designed as a unit of its own (CV4) with a Long-tier property
+test, because a missed caller fails silently.
+
+**Numbering and branching.** Design 53: `main` holds 47 (ranged), 48 (cooking) and 49 (the bill
+list), and no open branch claims 50. The code will stack on `claude/ranged-combat`. The owner asked
+whether ranged was merged, and it is not: only its design merged (PR #220). The merge order is
+therefore ranged, then cover. **Next:** the owner's approval of design 53 (§10 lists five points).
+
+## 2026-09-25 — Cover built (CV1–CV9), and the dance an old test caught
+
+The owner approved design 53 with one word, and the nine units went in the same day on this
+branch, with `claude/ranged-combat` merged in first because nothing about cover means anything
+without its line of sight and its bullet.
+
+**The rule is integers or it is nothing.** An angle band is a squared-cosine comparison by
+cross-multiplication, the ×1.75 diagonal penalty is a second table of edges rather than a multiply
+on an angle nobody computed, and the descent is graded in its tangent, so no `atan` enters a thing
+whose output feeds a roll. `CoverTests.TheRuleNeverTouchesAFloat` reads the file.
+
+**The one surprise was behavioural, and an existing test found it.** Cover-seeking as first written
+let a fighter look again whenever her line opened with under 20 % of cover. `APistolBanditShootsAColonist`
+went red: the colonist being shot at fled, each step moved the best cell, and the bandit repositioned
+for four hundred ticks without once firing. The fix is a window — cover is sought only in the first
+240 ticks of an attack, read off the saved tick the job began — and it is the reference's own shape:
+its raiders pick a position when they choose a target, not every step.
+
+**Two things are true only because the save was thought about.** The sweep that steps a pawn off a
+sandbag it came to rest on first kept its own timer; a colony saved and loaded would have stepped her
+off on a different tick from one never saved, and the resume gate would have parted. It reads
+`JobStartTick` now. And a covered bullet's cell rides flag bit 4 of the projectile record, so a file
+written before cover loads unchanged and no format number moved.
+
+**Pass-through-only cost less than feared.** The design braced for thirty-one callers; in practice
+the walk toil is the choke point every destination passes through, so snapping a goal there, plus
+the four pickers that choose where to *stop* (shooting, striking, a side, eviction), was enough. A
+day inside a ring of 48 sandbags: 4,351 pawn-ticks crossing it and the sweep never fired.
+
+**Not proven here:** the Presentation half — the joined boxes, the crouch, the building bars, the
+floater and the readout — has no compiler in a container without Unity. It follows the shelf's and
+the pawn bars' code line for line, and the owner's first Unity run is its test.
+
+## 2026-09-25 — Cover merged with main, the barricade out, and the sandbags drawn as bags
+
+**The merge found a real collision, not a textual one.** Health (design 43) reached `main` first on
+SHA-256's twentieth and twenty-first round constants — the same two cover had taken for
+`RangedCover` and `RangedCoverPick`. Two purposes on one stream would let a shot's cover roll and
+where a blow lands decide each other. Health shipped, so cover moved to the twenty-second to
+twenty-fourth; `QueryShot` appended after health's two intents so `main`'s intent values are
+unchanged. No golden moved. The first Unity compile of the Presentation half passed; the one
+EditMode failure, `WeaponSheathGapTests` (a bat 3.2 cm off the hip against 3.0), is on `main` too —
+three other worktrees fail it with the same number.
+
+**The owner's first look:** *"barricades are odd and buggy so remove them for now and the sandbags
+need to look like sandbags. Please search the internet to understand how a sandbag looks."* The
+barricade went back to what `main` had, a dim chip; it was the last building handle and the last
+edifice, so nothing renumbered. The search is research `e-12`, and the finding that shaped the
+drawing is what reads as sandbags from a distance: the scalloped top, the groove where two rounded
+bags meet, and the half-bag stagger. A scaled box has none of the three, which is why no tuning of
+the placeholder would have answered the report.
+
+**So the bags are drawn one at a time**, `SandbagMesh` beside the pillow, laid by `CoverShape` as a
+revetment is laid — stretchers in running bond, two rows deep, under a header course, battered. The
+thing that made it cheap to get right is that 2.5 m is exactly three stretchers: the bond repeats per
+cell, so a dragged line is continuous without any piece knowing its place in the line, and "the
+cell a bag starts in draws it" gives every straddling bag exactly one owner. The Blender set the
+design planned is not needed unless the owner's eye says otherwise. Design 53 §7a-bis and §13.
+
+## 2026-09-25 — Six polish reports in one PR (`claude/polish-batch`)
+
+The owner sent six reports at once and asked for them in parallel, folded into one PR. Four
+questions were settled first. **Trees fade for the selection only**, with a Graphics switch for
+everyone that starts off: this reverses the 2026-09-24 call (design 38 §17c) because the trees
+cleared round colonists with nothing selected. **The colonist pane at 85%**; roster cards and the
+other panels stay opaque, since the 2026-09-21 call for opacity was about them. **A roster double
+click glides and zooms in close.** And **the no-shared-tile rule goes in both the sim and the
+drawing**.
+
+Three lanes worked in one worktree on files that did not overlap, and each committed by path.
+
+- **Sim.** One predicate for where someone may lie down (`JobSystem.FreeSpot`). The tree rule for
+  landings lives inside `ColonyItems.CellHasSpace`, so every drop, refund, grant and falling load
+  obeys it. A "claimed by another" check covers standing, stepping-into and heading-to;
+  `PawnRegistry.IsClaimedByOther` is asked only when a pawn starts a stay, never per tick. The
+  fireside grew a second ring for when the first is full.
+- **Goldens.** Two moved: the played board and the city. `GoldenColonyProbe` shows every economy
+  number identical. Only positions changed, plus one extra wander per colony, which is the wander
+  now skipping taken tiles.
+- **Drawing.** `PawnPose.StandApart` spreads anyone standing still on a shared cell round a ring,
+  0.7 m apart, in id order. It uses `PawnCrowdIndex.Here` (one bucket), so the cost stays bounded
+  (P12). Six fallback pose calls in the bootstrap and the pick were asking without the crowd, so a
+  pawn past the figure cap had its ring and bracket at the cell centre while the body stood apart.
+  They now pass it.
+
+**Measured, not assumed.** EditMode on the merge: 4,153 tests, one failure,
+`WeaponSheathGapTests`. `origin/main` in the same worktree fails the same assertion (4,152, one
+failure), which agrees with the birds entry above: it is `main`'s and still needs its own fix.
+
+**What the parallel lanes cost.** Two agents' fast-tier runs locked each other's test DLLs, and one
+agent saw the other's half-finished Sim edits fail to compile. Lanes that share a worktree should
+not share a test binary. Next time, give the Sim lane its own worktree.
+
+## 2026-09-26 — Butterflies, and a night that lights up
+
+The owner asked for procedural butterflies that look and move decently, a graphics setting if they
+cost anything, and a night made spectacular by their glowing in varying colours. Interviewed in two
+rounds (`docs/research/butterflies-interview.md`), researched in three capped subagents (`e-13`,
+`d-24`, `e-14`), built on its own worktree as the owner asked: design 52.
+
+**Grounded against `origin/main`, not the checkout.** The local `main` was 47 pull requests behind;
+weather, the flower dressing, the quality presets and the settings window had all landed since. And
+a sibling branch held **ambient birds** (design 50, PR #230) — found by checking which design numbers
+were taken on every remote branch, not just `main`. The butterflies follow the birds' shape on
+purpose: an engine-free model in `Odyssey.Hud` behind a seam the render mirror answers, a frame
+section of its own, the shader kept alive for the player build. Design numbers 50 and 51 and research
+`d-23` and `e-12` were already claimed on branches; this is 52, `d-24`, `e-13`, `e-14`.
+
+**Two research results disagreed and the design sides with the one that measured the engine.** The
+wing research wanted the pattern over bloom's 1.1 threshold for glow; the cost research found that a
+few-pixel region crossing a half-resolution bloom threshold shimmers as it moves, and bloom's clamp
+is global. So the wing stays at or under 1.0 and the spectacle is a halo and a light the pass draws
+itself — the light read off the depth texture, so it falls on a colonist or a wall as well as the
+grass, and is never a URP light (Forward+ caps a camera at 256).
+
+**The one departure from the birds is the clock.** Birds and rain run on game time; a butterfly
+beats ten times a second, so at speed 3 it would strobe. Real seconds while the world runs, none on
+a pause.
+
+**The colour-blind test earned its keep on its first run**: magenta was 17 Lab units from the night
+sky under deuteranopia, and was lifted. And **the rain test found a real bug**: the surplus margin
+that stops the count hunting kept two butterflies alive when the target was nought, so every
+downpour would have left two out in it for ever.
+
+**A debug row, Skip to night**, because Skip to morning lands at four with a minute of dark left —
+too little to judge the one thing the owner asked to be spectacular.
+
+**Then the owner looked (2026-09-26)**: *"the day effect superb, the night effect is odd, it just
+needs to colour the butterflies a illuminating colour and they move around - not those big glowing
+saucers. Also make sure it's performant."* The halo and the pool of light went, and with them the
+second call and every depth-texture read; the whole wing is now lit in its hue, the pattern
+brightest, and the wings are drawn to the full zoom at night, a little larger, where the halos had
+carried a far night. The research had argued the spectacle into a separate light because the wing
+could not safely cross bloom's threshold; the owner's answer was that the wing was the spectacle all
+along, and the ceiling that argument was about still holds (design 52 §5a).
+
+## 2026-09-25 — The culvert frog: an animal placed by the water
+
+The owner handed over a third Quaternius model, a frog, and asked for it animated, frog-like, and
+living by the streams, ponds and lakes. Design 30 §8 holds the decisions; this is the why.
+
+**The habitat is the new thing, not the frog.** Everything a frog shares with the hog — the mind,
+the save, the hash, the ramp-only hop — was already there. What was not was an animal placed by
+something other than trees or rock, so the bank became a habitat (`WaterBank.Near`, its one owner)
+and, unlike the other two, a tether: a species can say it keeps within so many cells of water, and
+the animal mind holds every leg to it and walks a stray back. It is the first rule in the mind that
+reads the terrain, and it is paid only by frogs that are off their bank.
+
+**Adding a kind moved every other kind's numbers.** A wildlife table divides one target by weight,
+so a third entry would have made the hogs and rats rarer without anyone asking. The density went up
+by exactly the frogs' share (15 → 21) so the old two stay as common as they were.
+
+**It does not swim, on purpose.** A swimming animal is a sixth traverse mode, and every mode is a
+flood on every nav rebuild; the frog sits at the water's edge instead, and that is the owner's call
+to reverse with its cost stated.
+
+**The hop took two measurements.** The first probe of the clip found lift-off and landing at 0.35
+and 0.78 of the Jump and no travel in it, which is what the hop pacing is built from: the drawn
+position holds still on the ground and covers the whole hop in the air, because a looping jump on
+an even pace is a frog on a travelator. The second probe, under the real director, found the jump
+**not looping** — the importer loops clips named Idle, Walk and Run, and the frog's gait is called
+Jump — so the frog took one hop and slid on its last frame. `AnimalImport.Hops` is the fix, and the
+same probe then read a hop every 52 frames: 23 moving, 29 still.
+
+**The catalogue rebuild stripped the colonists' swatches again**, exactly as `docs/lessons.md`
+warns; the frog row was spliced into the committed asset instead, and the diff is the row alone.
+
+## 2026-09-26 — The frog, bigger, commoner and a colour of its own
+
+The owner's first ask before playing: just over double the size, more of them, and a green that
+is not the grass's. ×0.24 (2.2 times), weight 4 in groups of 3–5 with the density raised by the
+frogs' share, and the embedded green remapped to a jade material of our own. Two consequences
+worth writing down. **A bigger frog on the same hop is a shuffling frog**, so its pace went up
+with its size and the hop is a body and a half again. **And "more" stopped at the ceiling**: 24
+is the figure budget's, not the wildlife's, so it was left alone and the played board's 22 pawns
+sit under it. Design 30 §8c-bis.
+
+**Later the same day: greener, and apart.** The jade read as teal, so the hue came back to an
+emerald. And a group's frogs hopped the same way because they were seeded together, thought on the
+same ticks and stood on a bank that ran one way; each new hop now prefers a heading 60 degrees
+from every neighbour already hopping. The control mattered: without the rule 28 % of such hops
+matched a neighbour, with it 6.5 %, and the test's bound sits between them. Design 30 §8e.
+
+## 2026-09-25 — Raids: a band that stalks, then strikes
+
+The owner asked for a raid: 1 to 200 hostiles from a random edge, a few hours of wandering at the
+edge, then a push inward and an attack. It is fired from a debug slider and dropdown, with its own
+sound. A two-round interview settled the rest: the ceiling to 400 measured first; mixes as data;
+gather → probe → assault; the hearth as the target; withdrawal at half; one edge; no auto-draft;
+and headcount-and-days sizing at 0. Design 55.
+
+**The shape is the reference's** — a group controller the members defer to — **and the names are
+ours.** The single decision that mattered was *where the fight lives*. The raid's node only
+decides where a member walks, and hands over to the bandit's unchanged `HostileThinkNode` whenever
+there is something to fight. So design 33's tuning is the raid's tuning, and a lone bandit thinks
+exactly as it did.
+
+**Everything is drawn once, at the fire, and saved.** The slots, arrival ticks, kinds and loiter
+are all decided then, so the system's tick draws nothing, and a save mid-trickle or mid-loiter
+resumes to the same hash. That is tested, and so is a Long-tier soak with a lockstep twin. The
+group is hashed only while it exists, the pattern `Projectiles` set, and the full fast tier —
+goldens included — passed unchanged.
+
+**The owner's assault horn was already in the game.** Baked through the alert chain, the Pixabay
+`low-horn-185556` is `alert-raid.wav` sample for sample (correlation 1.0000). The owner's
+`notification-raid.mp3` of 2026-09-19 was the same file under another name. Only the war horn was
+added. The siren's source and licence are now known.
+
+**The measurement moved the ceiling, and it pointed somewhere else.** Two hundred raiders cost
+the Pawns phase 0.17 ms. The snapshot publish of 243 pawns costs 0.79, and it would cost the same
+for 243 colonists. The risk the plan named — every non-FightBack colonist scanning every pawn
+while anything hostile stands — is real at +0.51 ms, and only with the whole colony on Defend.
+Recorded, not fixed.
+
+**The soak found a balance question, not a fault.** Eight raiders downed all five armed,
+undrafted colonists in both seeds. That is design 33 §21d's finding again, now with a band.
+The playtest queue has it.
+
+## 2026-09-26 — The raids reviewed: a band that came back for ever, and the weather a load forgot
+
+PR #233 was reviewed against `main` after the birds merged. It had never been compiled in Unity
+(the container it was built in had no editor), and its Presentation half compiled at the first
+attempt. The merge itself was one journal conflict — and one collision no marker showed: the birds
+had taken design 50 on `main`, and two open PRs hold 51 and 52, so the raids became 53 — and then 55,
+when cover merged as 53 during the review and the kit PR holds 54. The second merge also found cover
+and the raid sharing three random streams (design 55 §15).
+
+**The finding worth keeping is the yo-yo.** The raid node hands every fight to the bandit's own
+mind, which is the design's best decision, but it asked again on every think: a raider that reached
+the hearth and chased a colonist forty cells away was marched back to the hearth the moment its
+chase re-chose, and handed over again on arrival. The rule "the group decides where, the member's
+mind decides the fight" was true of each think and false of the sequence. A member now remembers
+that it has turned to fight (`RaidMember.Engaged`), and the group stops steering it until the
+withdrawal. Ten other faults, each small, are tabled in design 55 §15; the only one a player would
+have met first was the *Raid* alert sending the camera to the band's layer as a depth.
+
+**The save test for that fix found something older.** It parted five ticks after its load, and a
+probe that hashed each system and then each pawn apart put it on a *colonist's* ambient
+temperature: the weather's share of the outdoor curve is written by the weather on its own cadence
+and saved nowhere, so a loaded world stood in its build's sky until the next boundary. That is on
+`main` for every save, and was fixed here because the raid test cannot pass without it. The lesson
+is in `docs/bug-patterns.md`: a value one system writes into another is derived state no section owns.
+
+## 2026-09-26 — Waking into the world
+
+The owner asked for the jump from the menu into a colony to stop feeling like loading: fade the menu
+out, then open on the world as waking from sleep — blurred, the sound closed and distant — coming
+into focus. Asked four things and answered: five seconds, the camera settles, the colony holds until
+the eyes are open, New game and Load alike, soft and warm. Design 56.
+
+**Reading the code first found two faults that were there already**, and they went in as their own
+PR before the feature (`claude/load-curtain`). A load was never covered: `LoadSession` raises
+`SessionChanged` twice in one frame and the second raise asked a question — is the title screen
+showing? — that the first had just answered no to, so it lifted the cover on the build frame. And the
+menu's bed faded on the unclamped real-time delta, so the frame after a one-second build took a
+quarter of its fade in one step. The first is now a bug-patterns row.
+
+**The move that makes it seamless is small**: the world is still built in one frame and still handed
+over in that frame, behind an opaque cover — the order design 38 §25b measured to be the only cheap
+one — but the *request* for the build now waits until the screen has been drawn black twice. The
+freeze is still there; it is black.
+
+**The plan's blur was wrong, and the source said so before any probe.** It proposed URP's Bokeh
+depth of field with a 4K shot against Gaussian as the tie-breaker. URP's own constants settle it:
+Bokeh's radius is capped at twenty pixels of the screen's height and Gaussian's at 1.5, so at 4K both
+are a soft picture rather than sleep, and depth of field has never been used here, so a player build
+would have stripped it. The blur is a small dual-filter pass of our own, injected from
+`beginCameraRendering` for the five seconds and gone after, its depth chosen from the screen height.
+
+**Two decisions to keep.** The hold is a gate on the tick loop and never a speed, so it cannot be
+saved, remembered as the player's pause, or reorder against a load's own speed restore. And the
+dream's volume overrides only the numbers it moves: `Add<T>(overrides: true)`, which the storm's
+volume uses, would have swapped the golden hour's un-blendable bloom and vignette settings for URP's
+defaults the moment the weight left nought.
+
+Written in a container with no Unity: the model and its setting are proven in the fast tier; the
+engine half is uncompiled and owes both Unity tiers, a player build and the hitch tour's mid-wake
+picture before it merges (design 56 §11).
+
+## 2026-09-26 — Riding along with a colonist
+
+The owner asked for a first-person mode opened from the colonist card, *"locked until esc"*, to see
+a colonist *"fighting with a melee, walking"* up close. The grounding changed the request's shape
+before any code: **there is no first-person arms rig in any pack we own**, and the face is part of
+the one skinned body whose ink hull goes solid black from inside. So from her eyes you see the far
+end of her own swing at most, and only a camera outside her shows her fighting. The owner took all
+four recommendations: behind the shoulder with the wheel in to the eyes, watch only, a minimal
+strip, time untouched. "Implement" came without a name, so it is **Ride along** until they say
+otherwise (design 57 §1).
+
+Three decisions are worth keeping:
+
+- **The camera is stood first in `LateUpdate`**, from her figure's last drawn feet. Placed in the
+  rig's `Update`, it would chase last frame's figure. Placed after the figures, it would be culled
+  against the frustum taken before them.
+- **The colony view is frozen, not moved.** A ride writes the transform alone, so a save mid-ride
+  records the colony view, and leaving is one instant re-apply.
+- **Doors are not solid to the spring arm**, although the picker counts them. Otherwise every
+  threshold would collapse the camera into her head.
+
+Her head is shrunk by its bone whenever the camera is within 0.6 m of her eyes. That happens at the
+eye stop, and wherever walls have squeezed the camera against her.
+
+**The card's dead Prioritise button went to make room.** It promised the work grid, which has
+shipped. A fourth labelled button would have run her unwrapping name under the buttons.
+
+**Built in a container with no .NET SDK and no Unity.** The Microsoft download host is refused by
+the network policy. So neither the fast tier nor the Presentation compile has run here, and the
+first compile of this branch is its CI run. The frame at a level view is unmeasured and owed
+(design 57 §7).
+
+### 2026-09-26 — the mode is called First Person
+
+The owner, before the first play: *"call this Mode 'First Person' Not go along with the ride"*. The
+label of `ui.command.ride` is **First Person**, in their casing, although the registry is otherwise
+sentence case. Design 57 had argued against the name because the default view is over her shoulder
+rather than from her eyes; the owner has decided, and the wheel's eye stop is still one scroll away.
+Only the label moved: the key, `RideDirector`, `RideCamera` and the design's file name keep *ride*,
+because a key is stable and renaming the internals is churn with no player-facing effect.
+
+### 2026-09-26 — merging the wake: one flag with two owners, and design 57
+
+`main` gained the wake into a world (#240, #241) while First Person waited, and both had reached for
+`HotkeyDirector.Suspended` to hold the game's keys. Git saw only two doc comments disagreeing. The
+fault under them was real: the wake sets the flag at the press of Start and holds it while the
+world is built, and building the world constructs a new `HudDirectors`, whose constructor cleared
+the flag so a colony left mid-ride would not hand the next one a dead keyboard. Merged as one flag,
+**every wake would have handed the player live keys under its curtain half way through**. The ride
+now holds its own, `HotkeyDirector.HeldByRide`, which `GameKeysLive` reads beside `Suspended`, and
+`RideTests.ANewSessionDoesNotReleaseTheWakesHold` is the assertion. It is the register's first
+pattern again: one rule with two owners, found only because the two owners met in a merge.
+
+The wake also reached `main` as design 56 first, so the ride is **design 57**
+(`docs/design/57-ride-along.md`), by the precedent cover set when the birds took 50. Only the
+lines this branch wrote were renumbered; the wake's references to 56 are its own.
+
+## 2026-09-26 — Cracks: a struck wall and a face being mined, drawn broken
+
+The owner asked for damage levels on walls, "a general effect for cracks … after there is so many
+hps left", then for rock being mined too. Everything the look needed was already published — a
+struck building's hit points since design 33 §13, a mining order's progress since the cut moved on
+to the cell — and both design 33 §13k and 53 §7d had listed "cracks, or a darker tint" as owed. Four
+answers settled it: three stages at 25/50/75 % gone, cracks only (no destroyed-wall mesh yet), walls
+and rock first, and the cracks replace the pale cut slab. Design 58.
+
+**The option chosen was the one that is general.** Decals were not switched on in the pipeline, want
+a scene object each (which the project avoids), and bleed on to whoever stands beside the wall; a
+destroyed-model swap is walls only and licensed art. Drawing the cell's own meshes again in a multiply
+shader cracks whatever `ChunkMesher.MeshCell` emits — core and panels, the walls-down stump, a rock's
+boulder — by the selection highlight's route, so it cannot drift from the chunk. It batches by mesh
+and stage, so a run of walls costs one wall's calls (P10 was named before a line was written).
+
+**The one simulation change came out of the second answer.** A cancelled mining order zeroed its
+cell's ledger, so a half-cut face healed, which nobody could see until it was drawn as cracks. The
+owner: "Keep its state." The work now moves to a sparse `PartMinedRock` on the cancel and comes back
+with the next order, keyed by the terrain it was cut from so a changed cell cannot inherit a head
+start. Hashed only while non-empty and saved as an appended section: no golden moved, and the fast
+tier passed unchanged on the first run. The control was run — with the keep disabled, three of the
+five tests fail.
+
+**Built without an editor.** The Presentation half — the pass, `Odyssey/Crack`, the wiring and
+`CrackPassTests` — is uncompiled until the next Unity run, which is the first thing owed.
+
+## 2026-09-26 — Cracks, the first look: burst from a point, six levels for rock, and the break
+
+The owner played design 58 the same day and moved three things (§1a). **The heavy stages read as
+shapes.** The pattern was the borders of a Voronoi tiling, and a tiling closes every line into a
+cell, so a face covered in it looks like paving however it is warped. What a blow leaves is a few
+long cracks running out from one place, so the pattern now bursts from an impact point hashed per
+cell: tapering rays with their own length and wander, branches forking off them that web the face
+only late, a crushed patch and grime at the end. One severity drives it all, so the ladder could grow
+without a tuning table. **Rock got six levels** from a tenth of the cut; a wall's three stages became
+every other rung of the same ladder, so a wall and a face at one level look equally broken.
+
+**The break.** A cracked cell that comes down now shudders, halves, quarters, falls and sinks — the
+felled tree's topple is the precedent. The crack pass already held each cracked cell's own meshes, so
+a cell that stops being listed hands its batch to a watch rather than dropping it. **The first rule
+for "it came down" was wrong on paper before it ran**: fewer drawn parts than before. A wall built
+beside a cracked one hides a panel, so the cracked wall would have broken for gaining a neighbour.
+The watch asks the mirror instead — rock no longer solid, the building gone — and that is the test
+that pins it. The pieces are the cell's meshes clipped to quarters in a shader of our own, because the
+art's shaders cannot clip and the pack's meshes are not all readable for a CPU cut; the cost is a
+shading of our own for 1.6 s, which the shudder is there to hide.
+
+**Found on the way:** the first build listed `Odyssey/Crack` in `ShaderInclusion.Required` without
+the instancing keep-alive material that `EveryKeptShaderAlsoHasAnInstancingKeepAliveMaterial`
+requires of every entry, so that test would have failed. Both crack shaders have one now. No tier
+was run on this round, at the owner's word; the Hud half builds clean with `dotnet build`.
+
+## 2026-09-26 — Cracks: the sound of it coming down
+
+The owner supplied two Pixabay recordings — a wood smash and a boulder impact — for wood broken or
+taken apart and for a mined face collapsing, "processed as necessary and blended into the
+environment". Design 58 §9. Both masters measured brick-walled over full scale (+2.5 and +3.3 dBFS
+in the float decode, the boulder at full-scale RMS for a third of a second), so the bake is the
+gunshot's: −12 dB in float first, band-limited, the synthesised outdoor space and slapback, three
+takes at three speeds with their own tails, levelled on loudness into a limiter. The level was set
+against what leads up to it, measured rather than guessed: the pick is −24 LUFS, the melee thud −18.5,
+so a collapse at −19 is the payoff of the strokes without shouting over a fight.
+
+**When to play it was the design question.** The simulation says nothing when a wall is taken apart
+or a face mined out. The break's watch (§7) only sees cracked cells, and a deconstruct never cracks,
+so the sounds have their own watch over every cell with work on it — mining orders, deconstruct
+orders, struck buildings — which writes down what stood there on first sight and listens for it to
+go. Written down on first sight, because the snapshot's views can run a publish ahead of the mirror:
+the same lesson the break taught an hour earlier. Unity-free behind a five-method interface the render
+mirror already satisfied word for word, so the fast tier tests it.
+
+**Later the same day: the one-blow gap, closed.** The owner confirmed both recordings are Pixabay and
+asked for the gap to be fixed: a wooden building broken from whole in a single blow was never struck,
+so never tracked, so silent. The combat log already reports `Demolished` with the anchor cell — but
+the material is the problem, not the moment: by the time the event is published the building has
+left the mirror. So the mirror now notes every non-tree building leaving it with its stuff, the way it
+already noted felled trees for the topple, and the watch pairs the event with the note in either
+order. A cell heard is held for a second so a struck-then-broken wall, which both paths see, is heard
+once. Nine watch tests, run on their own (17 ms); no tier.
+
+**And renumbered to design 58 on the merge.** PR #242 (the ride along) reached `main` while this was
+in review and took design 57, and its code cites "design 57 §…" throughout — so two designs sharing
+the number would have made every such reference ambiguous. The cracks are `58-cracks.md` now; the
+rewrite touched only lines this branch added (49, found from the diff against `main`, plus one
+split across a comment break), and no ride-along file. Commit messages keep the old number.
+
+## 2026-09-26 — A second Windows machine, from nothing (`D:\dev\odyssey`)
+
+A clone with no editor, no Python and no packs, on an RTX 2080 with C: 97% full. Python 3.13 went
+in per `local-dev.md` §10; the fast tier and all three content gates were green before Unity
+existed. **The editor took three attempts**: Hub's headless install stopped at a UAC prompt without
+a word in its log, a hand-run `/S` install exited 2 twice (the prompt declined), and the owner's own
+run failed extracting into `%TEMP%` on a full C:. With room made it installed to
+`D:\Unity\Hub\Editor` (`UNITY_HUB_EDITORS` points `unity.sh` there).
+
+**The packs were unpacked rather than imported** (`tools/synty/unpack.py`, new), because two of the
+ten ship PolygonGeneric under the same GUIDs and Unity's importer cannot leave a folder out. The five
+PolygonGeneric copies were compared file by file before choosing: 1,267 of 1,268 identical, the odd
+one newer in Sci-Fi City 1.3.4 (the old machine had 1.3.3), so that is the one installed. Before any
+editor opened, every GUID the committed assets reference into `Assets/Synty` resolved, the whole of
+`ModuleCatalogue.asset` included.
+
+**The first open changed a committed file.** `UpgradeBuiltInMaterials` ran URP's project-wide
+upgrader, which rewrote `Resources/OdysseyKeepAlive/Standard.mat` — the material that keeps the
+built-in Standard shader in a player build — to URP Lit. Restored, and the upgrade now walks
+`Assets/Synty` only (566 materials; a re-run leaves the tree clean). `docs/lessons.md`.
+
+**EditMode on `main`: 4,363 total, 4,324 passed, 1 failed** — `WeaponSheathGapTests`, the bat on
+`Character_MilitaryMale_01` at 3.2 cm against 0.8–3.0, which the 2026-09-25 entry above found on a
+clean `main` with the same number. Identical to the tenth of a centimetre on a different machine
+with separately unpacked packs, which is the best evidence available that the art matches. It
+still needs its own fix.
+
+**Then the machine became a second Unity runner** (`UPSTAIRS`, owner: *"fix it up with the unity
+label"*). Two things stood in the way. `unity.sh` found editors only under `C:\Program Files` or an
+environment variable a runner started before `setx` never sees, so it now also reads Hub's own
+install location. And `HudStressTests` asserted one budget, laptop ÷ 3, written for a Ryzen 7
+9800X3D: here the dense HUD read 1.285 ms against 1.167. The ruler for "how much slower is this
+box" is the per-label figure, the only quantity `docs/lessons.md` (2026-09-23) found stable —
+17.0 us quiet there, 30.9 here — so the headroom is now a table of known CPUs (3 for the 9800X3D,
+unchanged; 3 × 17.0 / 30.9 ≈ 1.65 here, a 2.12 ms budget), and an unknown machine keeps the strict
+3. The label goes on after the fix is merged, or every PR branched from the old `main` could fail
+on whichever runner picked it up.

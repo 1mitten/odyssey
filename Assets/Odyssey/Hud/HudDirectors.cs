@@ -5,9 +5,9 @@ namespace Odyssey.Hud
 {
     /// <summary>
     /// The interface directors that exist so far, built together so that the rules between them
-    /// live in one place: a layer change clears the selection, and choosing a colonist from the
-    /// roster moves the slice to their layer, selects them, and sends the camera to them, in that
-    /// order. Presenters in the Unity assembly hold one of these and realise what it decides.
+    /// live in one place: a layer change clears the selection, and going to a colonist (an alert,
+    /// a roster card double-clicked) moves the slice to their layer, selects them, and sends the
+    /// camera to them, in that order. Presenters in the Unity assembly hold one of these and realise what it decides.
     ///
     /// Unity-free by construction (ADR 0003): everything here runs in the fast tier.
     /// </summary>
@@ -38,6 +38,15 @@ namespace Odyssey.Hud
 
         /// <summary>Whether the Almanac reference browser is open, and what entry it shows.</summary>
         public AlmanacDirector Almanac { get; } = new AlmanacDirector();
+
+        /// <summary>
+        /// Riding along with one colonist (design 57). Session state, likewise: a ride belongs to
+        /// the colony it was begun in and a new session starts with none.
+        /// </summary>
+        public RideDirector Ride { get; } = new RideDirector();
+
+        /// <summary>The layer the slice was on when the ride began, to go back to when it ends.</summary>
+        int _rideReturnLayer;
 
         /// <summary>
         /// The settings panel's levers — and <b>handed in rather than made here since U38</b>,
@@ -91,14 +100,76 @@ namespace Odyssey.Hud
             Hotkeys = hotkeys ?? throw new System.ArgumentNullException(nameof(hotkeys));
             Slice.Bind(layerCount, startLayer);
             Slice.LayerChanged += _ => Selection.OnLayerChanged();
+
+            // The keys are held while a ride runs (design 57 §5), and the preferences they live in
+            // outlive a session: a colony left mid-ride must not hand the next one a keyboard that
+            // answers nothing.
+            Hotkeys.HeldByRide = false;
         }
 
         /// <summary>
-        /// The roster path: a card is clicked for a colonist who may be anywhere, so this takes
-        /// the player to them — their layer first, since the picker will not look through a
-        /// floor, then the selection, then a camera jump to their cell at the current zoom. A
-        /// world click does none of the moving; that colonist is already under the cursor, and a
-        /// view that shifts under a click is the camera fighting the player.
+        /// Ride along with a colonist (design 57): the First Person button on her card. The ride
+        /// takes the view, so what stood in it is put aside — the selection (her own outline and
+        /// brackets would be drawn over the shot, and a selected colonist's sight line fades walls
+        /// beside her), any armed tool, and the game's keys other than time and Escape — and the
+        /// slice goes to her layer. False, and nothing changed, when she cannot be ridden with.
+        /// </summary>
+        public bool BeginRide(PawnId id, WorldSnapshot snapshot)
+        {
+            if (Ride.Riding) return false;
+            int layer = Slice.ActiveLayer;
+            if (!Ride.Begin(id, snapshot)) return false;
+
+            _rideReturnLayer = layer;
+            Designate.Tool = DesignateTool.None;
+            Camera.Cancel();
+            Selection.Clear();
+            Hotkeys.HeldByRide = true;
+            if (snapshot.TryGetPawn(id, out PawnView view)) Slice.SetLayer(view.Cell.Y);
+            return true;
+        }
+
+        /// <summary>
+        /// Once a frame while riding, in real seconds: the slice follows her up a ladder and down a
+        /// shaft, and the ride ends by itself once she has been gone from the frame for
+        /// <see cref="RideDirector.LostHoldSeconds"/>.
+        /// </summary>
+        public void AdvanceRide(WorldSnapshot snapshot, float realSeconds)
+        {
+            if (!Ride.Riding) return;
+            Ride.Advance(snapshot, realSeconds);
+            if (Ride.Expired)
+            {
+                EndRide(snapshot);
+                return;
+            }
+            if (snapshot.TryGetPawn(Ride.Pawn, out PawnView view) && view.Cell.Y != Slice.ActiveLayer)
+                Slice.SetLayer(view.Cell.Y);
+        }
+
+        /// <summary>
+        /// Leave the ride (Escape, or her going): the keys come back, the slice returns to the
+        /// layer it was on, and she is the selection — so the pane the player pressed First Person
+        /// on is the pane they come back to. Nothing if no ride is running.
+        /// </summary>
+        public void EndRide(WorldSnapshot snapshot)
+        {
+            if (!Ride.Riding) return;
+            PawnId id = Ride.Pawn;
+            Ride.End();
+            Hotkeys.HeldByRide = false;
+            Slice.SetLayer(_rideReturnLayer);
+            if (snapshot.TryGetPawn(id, out _)) Selection.Choose(id);
+        }
+
+        /// <summary>
+        /// The go-to-them path (alerts, the Events panel, the Work and Almanac rows): a colonist
+        /// who may be anywhere, so this takes the player to them — their layer first, since the
+        /// picker will not look through a floor, then the selection, then a camera jump to their
+        /// cell at the current zoom. A world click does none of the moving; that colonist is
+        /// already under the cursor, and a view that shifts under a click is the camera fighting
+        /// the player. The roster card no longer comes here on a single click — see
+        /// <see cref="CloseInOnColonist"/>.
         /// </summary>
         public bool ChooseColonist(PawnId id, WorldSnapshot snapshot)
         {
@@ -106,6 +177,21 @@ namespace Odyssey.Hud
             Slice.SetLayer(view.Cell.Y);
             Selection.Choose(id);
             Camera.JumpTo(view.Cell);
+            return true;
+        }
+
+        /// <summary>
+        /// A roster card double-clicked (owner, 2026-09-25; <c>14-hud-layout.md</c> §10): what
+        /// <see cref="ChooseColonist"/> does, and the camera also zooms in close
+        /// (<see cref="CameraDirector.CloseUpMetres"/>) as it glides. A single click on a card only
+        /// selects, and never moves the view.
+        /// </summary>
+        public bool CloseInOnColonist(PawnId id, WorldSnapshot snapshot)
+        {
+            if (!snapshot.TryGetPawn(id, out PawnView view)) return false;
+            Slice.SetLayer(view.Cell.Y);
+            Selection.Choose(id);
+            Camera.JumpTo(view.Cell, CameraDirector.CloseUpMetres);
             return true;
         }
 

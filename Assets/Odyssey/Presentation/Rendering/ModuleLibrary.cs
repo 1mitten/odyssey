@@ -934,6 +934,7 @@ namespace Odyssey.Presentation.Rendering
                 case ModuleShape.WaterSurface: mesh = WaterMesh.Surface; break;
                 case ModuleShape.WaterFall: mesh = WaterMesh.Fall; break;
                 case ModuleShape.Pillow: mesh = PillowMesh.Mesh; break;
+                case ModuleShape.Sandbag: mesh = SandbagMesh.Mesh; break;
                 default: mesh = PrimitiveMeshes.UnitCube; break;
             }
 
@@ -1163,6 +1164,7 @@ namespace Odyssey.Presentation.Rendering
                     centre = Vector3.zero;
                     return;
                 case ModuleShape.Pillow:
+                case ModuleShape.Sandbag:
                     // The unit box, so the caller's scale reads directly as the pillow's size in
                     // metres divided by a cell. Centred on its own middle rather than standing on
                     // a floor, because a pillow is placed by where it lies on a mattress.

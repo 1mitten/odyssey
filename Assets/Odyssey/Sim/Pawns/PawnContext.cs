@@ -94,7 +94,28 @@ namespace Odyssey.Sim.Pawns
         public bool DebugJumpsAlwaysFail { get; set; }
 
         /// <summary>The standing orders, when the world has them. Null in a bare pawn fixture.</summary>
-        public DesignationGrid? Designations { get; set; }
+        public DesignationGrid? Designations
+        {
+            get => _designations;
+            set
+            {
+                _designations = value;
+                // The items learn where the trees are from the same place (design 23 §11): nothing
+                // is put down in a cell a tree stands in, and the grid of standing orders is the
+                // one thing that can say which handles are trees.
+                Items.Trees = value;
+            }
+        }
+
+        DesignationGrid? _designations;
+
+        /// <summary>
+        /// Whether a tree stands in the cell — the one question a pawn asks before lying down or
+        /// settling somewhere (owner, 2026-09-25: *"colonists sometimes sleep through trees"*).
+        /// A tree blocks nothing, so walkability cannot answer it. False in a bare fixture, which
+        /// has no trees to ask about.
+        /// </summary>
+        public bool TreeAt(int cell) => _designations != null && _designations.IsTree(cell);
 
         /// <summary>
         /// The building sites, when the world has them. Null in a bare pawn fixture, exactly as
@@ -230,6 +251,19 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>The campfire home is centred on (design 43 §3f). Null in a bare fixture.</summary>
         public World.Hearth? Hearth { get; set; }
+
+        /// <summary>
+        /// Every raid on the board and the clock that runs them (design 55). Set by the composition
+        /// root; null only in a hand-built context, where no raid can fire.
+        /// </summary>
+        public Events.RaidSystem? Raids { get; set; }
+
+        /// <summary>
+        /// Where the colony started — the generator's start cell — or null where there was none (a
+        /// hand-built test board). What a raid makes for with no hearth (design 55 §5). Derived:
+        /// set at every build, so a load has it as the new game did, and neither saved nor hashed.
+        /// </summary>
+        public CellRef? ColonyStart { get; set; }
 
         /// <summary>
         /// Where a thing is, as a cell a colonist can walk to: its own cell, the cell of the store

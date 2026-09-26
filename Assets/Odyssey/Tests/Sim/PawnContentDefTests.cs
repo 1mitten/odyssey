@@ -310,12 +310,33 @@ namespace Odyssey.Tests.Sim
         // Medicine rows were dropped for design 37's (design 43 §15), so no handle moved. No golden
         // moved: the ledger is hashed only while a pawn has anything on it. Re-taken from the
         // merged pack.
+        // 2026-09-25, design 53 §2-§3 (cover, CV1): CombatDef's coverPerMille slot deleted, and the cover
+        // numbers added — fullFillCoverPerMille 750, the low and tall descent tangents 176/700 and 577/1732,
+        // coverInterceptPerMille 500, coverCrouchPerMille 200; WildPlantDef coverPerMille and coverTall
+        // (trees 250 tall, bushes 150 low).
+        // Cover merged onto health, 2026-09-25: its three streams moved to the 22nd-24th; re-taken.
         //
+        // 2026-09-25, raids (design 55 §8): PawnKind_Gunman appended at kind 4 — a hostile person
+        // armed from a table of one, Item_Pistol, with the bandit's traverse mode and motive. No
+        // golden moved: no golden spawns a hostile.
+        // Raids merged onto cover, 2026-09-26: re-taken from the merged pack.
+        // 2026-09-25, the culvert frog (design 30 §8): Species_CulvertFrog and PawnKind_CulvertFrog
+        // appended (kind 4, species 3; kind 5 since the merge with raids), and SpeciesDef gained bankRadius and ignoresRain, both
+        // nought/false on every other species. Taken from a freshly loaded pack.
+        // 2026-09-26, the owner's first ask on the frog: bodyLengthMm 400 -> 870 and movePerMille
+        // 800 -> 1,000, so the bigger frog hops a body and a half. Taken from a freshly loaded pack.
+        // And SpeciesDef gained divergeRadius (frog 6; design 30 §8e), the same day.
+        // The frog merged with cover, 2026-09-26: re-taken from the merged pack.
+        // The frog merged with raids, 2026-09-26: the gunman keeps kind 4 and the frog moves to 5;
+        // re-taken from the merged pack.
+                //
         // The kit (design 54), 2026-09-26: ItemDef gained kitCap (5 on medical supplies, 3 on the
         // ration pack, nought on everything else) and Job_TakeIntoKit was appended at 28. No golden
         // moved: the job's counters reach the hash only once one has run, and the kit's ledger adds
         // nothing while every kit is empty.
-        const ulong ContentFingerprint = 15035839191909394385UL;
+        // The kit merged with main (the ride, the wake, part-mined rock), 2026-09-26: re-taken
+        // from the merged pack.
+        const ulong ContentFingerprint = 5852814635696034407UL;
 
 
         [Test]

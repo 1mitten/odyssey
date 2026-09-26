@@ -37,7 +37,9 @@ namespace Odyssey.Presentation.World
     /// resolves one; this class turns each id into a <see cref="ModuleLibrary"/> index exactly
     /// once, at construction, so the mesher deals only in integers.
     /// </summary>
-    public sealed class WorldRenderModel
+    // IDemolitionCells: the five questions the demolition sounds ask are already this class's own
+    // (design 58 §9), so the mirror answers them as it stands.
+    public sealed class WorldRenderModel : Odyssey.Hud.IDemolitionCells
     {
         readonly ushort[] _terrain;
         readonly ushort[] _floor;
@@ -157,6 +159,7 @@ namespace Odyssey.Presentation.World
         readonly int _galleyModule;
         readonly int _bedPillowModule;
         readonly int _shelfModule;
+        readonly int _sandbagModule;
         readonly int _storeEdgeModule;
 
         /// <summary>The strip drawn along a stockpile's outer edge. See <c>ChunkMesher.EmitStoreEdge</c>.</summary>
@@ -228,6 +231,8 @@ namespace Odyssey.Presentation.World
             // whatever the bed's frame is made of (BedShape, PillowMesh).
             _bedPillowModule = library.Resolve(ModuleIds.BedPillow, ModuleShape.Pillow);
             _shelfModule = library.Resolve(ModuleIds.Shelf, ModuleShape.SolidBlock);
+            // Cover (design 53 §7a-bis): one bag, laid as a wall by CoverShape.
+            _sandbagModule = library.Resolve(ModuleIds.Sandbags, ModuleShape.Sandbag);
             _storeEdgeModule = library.Resolve(ModuleIds.StoreEdge, ModuleShape.FloorSlab);
         }
 
@@ -921,6 +926,10 @@ namespace Odyssey.Presentation.World
             // and a rolling neighbour in front could take the click instead — measured by
             // CampfirePickTests. FireDirector draws the flames at this height; one number.
             if (_edifice[index] == CoreContent.EdificeCampfire) return FireDirector.FlameHeight;
+
+            // Cover (design 53 §7): the top of the bags or the rail, which is what is clicked and
+            // what a deconstruct mark sits on.
+            if (CoverShape.Draws(_edifice[index])) return CoverShape.Top(_edifice[index]);
             return 0f;
         }
 
@@ -1045,6 +1054,8 @@ namespace Odyssey.Presentation.World
             if (def == CoreContent.EdificeHeater) return _heaterModule;
             // The galley (design 48), above the trees' range for the same reason.
             if (def == CoreContent.EdificeGalley) return _galleyModule;
+            // Cover (design 53), above the trees' range for the same reason.
+            if (def == CoreContent.EdificeSandbags) return _sandbagModule;
             // The natural table continues CoreContent's numbering, as terrain does. A tree is not
             // a kind of wall: before this branch existed every tree fell through the switch below
             // to the wall module and the woodland rendered as a grid of grey boxes.
@@ -1505,6 +1516,7 @@ namespace Odyssey.Presentation.World
             {
                 int index = Size.Index(x, z, y);
                 ushort was = _edifice[index];
+                ushort wasStuff = _edificeStuff[index];
                 CopyCell(grid, edifices, index);
 
                 // A tree that was standing and is not any more: felled, or taken by a collapse.
@@ -1513,6 +1525,13 @@ namespace Odyssey.Presentation.World
                 // has no trees falling in it.
                 if (NaturalContent.IsTree(was) && _edifice[index] != was && _felled.Count < MaxFelledPending)
                     _felled.Add(new FelledTree(index, was));
+                // Any other building gone, with what it was made of — which nothing else can say
+                // once it has left the mirror. For the demolition sounds (design 58 §9): a wall
+                // broken from whole in one blow was never struck before, so this is the only
+                // record of its stuff.
+                else if (was != 0 && !NaturalContent.IsTree(was) && _edifice[index] != was
+                         && _removed.Count < MaxFelledPending)
+                    _removed.Add(new RemovedEdifice(index, was, wasStuff));
             }
         }
 
@@ -1554,6 +1573,28 @@ namespace Odyssey.Presentation.World
         {
             into.AddRange(_felled);
             _felled.Clear();
+        }
+
+        /// <summary>A building other than a tree that has just left the mirror, and its stuff.</summary>
+        public readonly struct RemovedEdifice
+        {
+            public readonly int Cell;
+            public readonly ushort Def;
+            public readonly ushort Stuff;
+            public RemovedEdifice(int cell, ushort def, ushort stuff) { Cell = cell; Def = def; Stuff = stuff; }
+        }
+
+        readonly List<RemovedEdifice> _removed = new List<RemovedEdifice>();
+
+        /// <summary>
+        /// Hand over the buildings removed since the last call, oldest first, and forget them.
+        /// Capped as the felled trees are (<see cref="MaxFelledPending"/>), so a list nobody reads
+        /// cannot grow.
+        /// </summary>
+        public void DrainRemoved(List<RemovedEdifice> into)
+        {
+            into.AddRange(_removed);
+            _removed.Clear();
         }
 
         /// <summary>The module a tree of this species is drawn from, before its variant is picked.</summary>
