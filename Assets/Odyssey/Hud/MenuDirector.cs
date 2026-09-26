@@ -87,14 +87,22 @@ namespace Odyssey.Hud
         /// <summary>Which board size, as an index into <see cref="MapSizes.All"/>.</summary>
         public readonly int Size;
 
+        /// <summary>
+        /// Who tells the colony's story and how hard (design 59). Carried into the session's
+        /// <see cref="StoryDirector"/>; nothing in the simulation reads it until the storyteller is
+        /// built.
+        /// </summary>
+        public readonly StoryChoice Story;
+
         public NewGameChoice(uint seed, uint[]? colonists, string? name, int size,
-            string?[]? names = null)
+            string?[]? names = null, StoryChoice? story = null)
         {
             Seed = seed;
             Colonists = colonists;
             Names = names;
             Name = name ?? string.Empty;
             Size = size;
+            Story = story ?? StoryChoice.Default;
         }
     }
 
@@ -502,7 +510,7 @@ namespace Odyssey.Hud
 
             StartRequested?.Invoke(
                 new NewGameChoice(Seed.Seed, Colonists?.ChosenSeeds(), ColonyName, Size,
-                    Colonists?.ChosenNames()));
+                    Colonists?.ChosenNames(), Story));
             return true;
         }
 
@@ -537,8 +545,29 @@ namespace Odyssey.Hud
             Changed?.Invoke();
         }
 
+        /// <summary>
+        /// The storyteller and difficulty the page is offering (design 59 §12): Jacob at Normal
+        /// until the player picks. Kept across visits to the page, unlike the seed and the people,
+        /// because it is a preference about how to play rather than a draw.
+        /// </summary>
+        public StoryChoice Story { get; private set; } = StoryChoice.Default;
+
+        public void ChooseStoryteller(int teller) => SetStory(Story.WithTeller(teller));
+        public void ChooseRung(int rung) => SetStory(Story.WithRung(rung));
+        public void SetThreat(int percent) => SetStory(Story.WithThreat(percent));
+        public void SetBigThreats(bool on) => SetStory(Story.WithBigThreats(on));
+        public void SetAdaptation(int percent) => SetStory(Story.WithAdaptation(percent));
+        public void SetGrace(int hundredths) => SetStory(Story.WithGrace(hundredths));
+
+        void SetStory(StoryChoice next)
+        {
+            if (next.Equals(Story)) return;
+            Story = next;
+            Changed?.Invoke();
+        }
+
         /// <summary>Raised when something on the setup page that is not the seed or the people has
-        /// changed — the colony's name, or the board size.</summary>
+        /// changed — the colony's name, the board size, or the story.</summary>
         public event Action? Changed;
 
         void Perform(string key)

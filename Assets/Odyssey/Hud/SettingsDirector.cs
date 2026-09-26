@@ -383,6 +383,14 @@ namespace Odyssey.Hud
         /// (design 56 §9).</summary>
         public const string WakeUpKey = "ui.settings.wake";
 
+        /// <summary>The registry key naming the pause-on-big-threats switch, and the key it is
+        /// stored under (design 59 §12). A machine preference: it is how this player likes to be
+        /// told, not a fact about a colony, so it is live on the title screen too.</summary>
+        public const string PauseOnBigThreatsKey = "ui.settings.pausebigthreats";
+
+        /// <summary>The note on the Story rows with no colony open: both belong to a colony.</summary>
+        public const string StoryChosenKey = "ui.settings.storychosen";
+
         /// <summary>The registry key naming the exit row.</summary>
         /// <summary>The heading over the levers that decide how the frame is paced and drawn.</summary>
         public const string DisplayGroupKey = "ui.settings.display";
@@ -458,6 +466,8 @@ namespace Odyssey.Hud
             BuildLayoutKey,
             SelectionStyleKey,
             WakeUpKey,
+            PauseOnBigThreatsKey,
+            StoryChosenKey,
             ExitKey,
             "ui.settings.shadows",
             "ui.settings.surround",
@@ -1090,6 +1100,13 @@ namespace Odyssey.Hud
         /// <summary>The wake-up's two rungs, in the order they are drawn.</summary>
         public static readonly bool[] WakeUpRungs = { true, false };
 
+        /// <summary>
+        /// Whether the clock stops when a raid or other big threat arrives (design 59 §2, ruling
+        /// 9). On unless the player turned it off: a player running at speed 3 who first hears a
+        /// raid as a horn has lost the seconds the horn was for.
+        /// </summary>
+        public bool PauseOnBigThreats { get; private set; } = true;
+
         /// <summary>The two rungs, in the order they are drawn.</summary>
         public static readonly SelectionStyle[] SelectionStyles = { SelectionStyle.Highlight, SelectionStyle.Brackets };
 
@@ -1146,6 +1163,9 @@ namespace Odyssey.Hud
 
         /// <summary>Raised when the wake-up is switched, with its new state.</summary>
         public event Action<bool>? WakeUpChanged;
+
+        /// <summary>Raised when the pause-on-big-threats switch changes, with its new state.</summary>
+        public event Action<bool>? PauseOnBigThreatsChanged;
 
         /// <summary>Raised when one bus's volume changes, with the bus that changed.</summary>
         public event Action<SettingsBus>? BusDbChanged;
@@ -1292,6 +1312,7 @@ namespace Odyssey.Hud
                     break;
                 case SettingsTab.Gameplay:
                     SetAutosaveDays(AutosaveClock.DefaultDays);
+                    SetPauseOnBigThreats(true);
                     break;
             }
         }
@@ -1562,6 +1583,15 @@ namespace Odyssey.Hud
             WakeUpChanged?.Invoke(on);
         }
 
+        /// <summary>Switch the pause on a big threat on or off, and write it down.</summary>
+        public void SetPauseOnBigThreats(bool on)
+        {
+            if (PauseOnBigThreats == on) return;
+            PauseOnBigThreats = on;
+            _store?.Write(PauseOnBigThreatsKey, on);
+            PauseOnBigThreatsChanged?.Invoke(on);
+        }
+
         /// <summary>
         /// Choose a Build-palette layout, from either of the two controls that offer one, and
         /// write the choice down. Stored as the enum's ordinal, which is the one place this
@@ -1738,6 +1768,9 @@ namespace Odyssey.Hud
 
             bool? wake = store.Read(WakeUpKey);
             if (wake.HasValue) SetWakeUp(wake.Value);
+
+            bool? pause = store.Read(PauseOnBigThreatsKey);
+            if (pause.HasValue) SetPauseOnBigThreats(pause.Value);
 
             int? style = store.ReadInt(SelectionStyleKey);
             if (style.HasValue && IsSelectionStyle(style.Value))

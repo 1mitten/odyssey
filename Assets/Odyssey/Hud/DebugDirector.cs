@@ -49,6 +49,12 @@ namespace Odyssey.Hud
         public const string WeatherTabKey = "ui.debug.tab.weather";
         public const string SpawnPawnKey = "ui.debug.spawnpawn";
 
+        /// <summary>The tension gauge's preview on the Events tab (design 59 §12): a band and a
+        /// cause to look at until the storyteller drives the gauge.</summary>
+        public const string TensionKey = "ui.debug.tension";
+        public const string TensionCauseKey = "ui.debug.tensioncause";
+        public const string TensionOffKey = "ui.debug.tensionoff";
+
         /// <summary>The two animals (design 29 §7): the same intent as the colonist's, with a kind.</summary>
         public const string SpawnHogKey = "ui.debug.spawnhog";
 
@@ -138,6 +144,7 @@ namespace Odyssey.Hud
             WeatherTabKey, WeatherClearKey, WeatherOvercastKey, WeatherDrizzleKey, WeatherRainKey,
             WeatherDownpourKey, WeatherStormKey, RainParticlesKey, WetGlossKey,
             RaidSizeKey, RaidMixKey, RaidAutoKey,
+            TensionKey, TensionCauseKey, TensionOffKey,
         };
 
         /// <summary>

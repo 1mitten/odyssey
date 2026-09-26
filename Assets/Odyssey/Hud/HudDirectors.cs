@@ -33,6 +33,10 @@ namespace Odyssey.Hud
         /// <summary>Whether the Research tab is open, and the research until the mechanism exists (design 34).</summary>
         public ResearchDirector Research { get; } = new ResearchDirector();
 
+        /// <summary>The colony's storyteller and difficulty, and the gauge's preview, held on the
+        /// interface side until the storyteller is built (design 59 §12).</summary>
+        public StoryDirector Story { get; } = new StoryDirector();
+
         /// <summary>Whether the Assign tab is open (design 43 §6). Session state, likewise.</summary>
         public AssignDirector Assign { get; } = new AssignDirector();
 

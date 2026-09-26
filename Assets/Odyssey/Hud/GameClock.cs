@@ -30,5 +30,22 @@ namespace Odyssey.Hud
         public static string SeasonName(long tick) => Calendar.SeasonName(tick);
         public static int DayOfMonth(long tick) => Calendar.DayOfMonth(tick);
         public static string Describe(long tick) => Calendar.Describe(tick);
+
+        /// <summary>
+        /// The clock's date, "Day 12 · Larkspur": the day and the month, and <b>not the season</b>
+        /// (design 59 §12, mockup 25g). With the season the longest date measured about 150 px and
+        /// the line about 297 against the 247 the 271-wide panel holds, so the tension gauge could
+        /// not join it without a second line. The season lives in the weather glyph's tooltip and
+        /// in the date's own (<see cref="FullDate"/>).
+        /// </summary>
+        public static string DateLine(long tick) => "Day " + DayOfMonth(tick) + " · " + MonthName(tick);
+
+        /// <summary>"Day 12 · Larkspur · Wash": the whole date, for the date's tooltip.</summary>
+        public static string FullDate(long tick) => DateLine(tick) + " · " + SeasonName(tick);
+
+        /// <summary>"Rain · Wash": the weather glyph's tooltip, now carrying the season too; the
+        /// season alone when the sky has no word.</summary>
+        public static string WeatherTip(string weatherWord, long tick) =>
+            weatherWord.Length == 0 ? SeasonName(tick) : weatherWord + " · " + SeasonName(tick);
     }
 }

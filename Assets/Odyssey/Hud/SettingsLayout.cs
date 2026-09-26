@@ -126,7 +126,7 @@ namespace Odyssey.Hud
             SettingsTab.Graphics => "Display, performance and detail",
             SettingsTab.Audio => "Volume by channel",
             SettingsTab.Keys => "Two bindings per action; the second is optional",
-            SettingsTab.Gameplay => "Saving",
+            SettingsTab.Gameplay => "Saving, pausing and story",
             _ => string.Empty,
         };
 
@@ -158,6 +158,8 @@ namespace Odyssey.Hud
         public const string ViewGroupKey = "ui.settings.group.view";
         public const string ToolsGroupKey = "ui.settings.group.tools";
         public const string TimeGroupKey = "ui.settings.group.time";
+        public const string PausingGroupKey = "ui.settings.group.pausing";
+        public const string StoryGroupKey = "ui.settings.group.story";
 
         /// <summary>Every key this window names that <see cref="SettingsDirector.IconKeys"/> does
         /// not, so <c>RegistryTests</c> can hold it to the naming CSV.</summary>
@@ -165,6 +167,7 @@ namespace Odyssey.Hud
         {
             ScaleGroupKey, CameraGroupKey, PaletteGroupKey, SelectionGroupKey, PerformanceGroupKey, VolumeGroupKey,
             CuesGroupKey, SavingGroupKey, GameGroupKey, ViewGroupKey, ToolsGroupKey, TimeGroupKey,
+            PausingGroupKey, StoryGroupKey,
         };
 
         /// <summary>The Graphics ladders under Display, in order; the rest go under Performance.

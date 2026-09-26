@@ -1065,6 +1065,84 @@ namespace Odyssey.Hud
         /// </summary>
         public const int SetupSkillsGap = 24;
 
+        // ------------------------------------------------------------------ the Story block
+        // Claude Design's mockups 25a-25c (design 59 §12). The New game page is three columns:
+        // the candidates, the chosen one's skills, and the Story block in the space the skills cap
+        // left empty. Every length here is pinned against Hud.uss by HudStyleSheetTests.
+
+        /// <summary>The candidates' column on the setup page (25a: 400, up from 340).</summary>
+        public const int SetupPeopleColumn = 400;
+
+        /// <summary>Between the page's three columns.</summary>
+        public const int SetupColumnGap = 48;
+
+        /// <summary>The compact page (25c) narrows the candidates, the skills and the gaps.</summary>
+        public const int SetupPeopleColumnCompact = 260;
+        public const int SetupSkillsWidthCompact = 420;
+        public const int SetupColumnGapCompact = 24;
+
+        /// <summary>A compact skill line: two to the 420 grid, each with the gap after it.</summary>
+        public const int SetupSkillRowWidthCompact = SetupSkillsWidthCompact / SetupSkillColumns - SkillColumnGap;
+
+        /// <summary>The narrowest the Story block may be and still hold three cards side by side,
+        /// each a 64 portrait tile and a 19/600 name of up to fourteen characters.</summary>
+        public const int StoryMinWidth = 560;
+
+        /// <summary>
+        /// The page's content width below which the compact layout applies: the full layout's two
+        /// fixed columns, their gaps and the narrowest Story block. <b>Not a screen size.</b> The
+        /// HUD's canvas is always 1920 x 1080 at 100% interface scale, so "1280 x 720" is what the
+        /// page sees at 150% or on a narrower aspect; the page asks its own laid-out width.
+        /// </summary>
+        public const int SetupCompactBelow =
+            SetupPeopleColumn + SetupColumnGap + SetupSkillsWidth + SetupColumnGap + StoryMinWidth;
+
+        public const int StoryCardGap = 9;
+        public const int StoryCardPad = 12;
+
+        /// <summary>The portrait tile, and the emblem drawn in it until the art is commissioned.</summary>
+        public const int StoryPortrait = 64;
+        public const int StoryEmblem = 40;
+
+        /// <summary>Three lines of a 13/400 blurb at 1.4 line height, fixed so the cards align.</summary>
+        public const int StoryBlurbHeight = 54;
+
+        /// <summary>The selected storyteller's blurb under the cards on the compact page.</summary>
+        public const int StoryBlurbHeightCompact = 36;
+
+        public const int StoryStripHeight = 40;
+        public const int StoryStripHeightCompact = 28;
+
+        /// <summary>Above the Difficulty heading; less on the compact page, which has 608 px of
+        /// height for everything.</summary>
+        public const int StorySectionGap = 26;
+        public const int StorySectionGapCompact = 16;
+
+        /// <summary>The seven-rung ladder, one joined row (4 + 3 on the compact page).</summary>
+        public const int StoryLadderHeight = 36;
+        public const int StoryLadderHeightCompact = 30;
+
+        /// <summary>The Custom block under the ladder, always drawn so picking Custom moves nothing.</summary>
+        public const int StoryCustomGap = 12;
+        public const int StoryCustomRow = 30;
+        public const int StoryCustomRowCompact = 28;
+        public const int StoryCustomColumnGap = 24;
+        public const int StoryCustomSlider = 140;
+        public const int StoryCustomFigure = 44;
+
+        /// <summary>How visible the Custom block is on any rung but Custom: read, not pressed.</summary>
+        public const float StoryCustomDim = 0.4f;
+
+        /// <summary>Settings: a Custom lever's row sits in from the Difficulty row above it.</summary>
+        public const int SettingsCustomIndent = 12;
+
+        /// <summary>Settings: the storyteller's three segments' side padding.</summary>
+        public const int SettingsSegmentPad = 14;
+
+        /// <summary>The tension gauge on the clock line, and its gap from the weather glyph.</summary>
+        public const int ClockGauge = 16;
+        public const int ClockGaugeGap = 6;
+
         /// <summary>
         /// How many needs the colonist body draws: Food, Rest and Mood, the three the model
         /// carries and the three <c>HudShell.SetNeed</c> fills by index.
