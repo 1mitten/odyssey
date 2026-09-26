@@ -23,6 +23,10 @@ namespace Odyssey.Sim.Pawns
             // every colonist feels a colonist's death. After the weapon drop, so a death is mourned
             // with the weapon already on the ground. C4 (rescue) needed no listener.
             ctx.CombatHooks.Add(new FriendlyFireListener(ctx));
+
+            // The storyteller (design 59 §5): a colonist lost eases the tension. Last, because it
+            // only writes numbers of its own and no other listener reads them.
+            ctx.CombatHooks.Add(new Events.StorytellerCombatListener(ctx));
         }
     }
 }

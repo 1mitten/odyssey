@@ -276,8 +276,54 @@ namespace Odyssey.Sim.Events
 
         // ------------------------------------------------------------------ tension (ST3)
 
+        /// <summary>What a colonist's death and a colonist downed take off the tension, at Normal
+        /// and in a colony of five or fewer (design 59 §5). INVENTED.</summary>
+        public const int DeathDrop = 250, DownDrop = 60;
+
+        /// <summary>What a quiet day gives back, below and at or above the starting 1000.</summary>
+        public const int QuietBelow = 25, QuietAbove = 10;
+
+        /// <summary>
+        /// A colonist died or was downed (design 59 §5): the tension drops, by less in a bigger colony
+        /// and by the difficulty's adaptation strength, and the cause is written down for the gauge's
+        /// tooltip. <b>Colonists only</b> — a raider going down eases nothing. Called by
+        /// <see cref="StorytellerCombatListener"/> inside the fight's tick; it writes this system's
+        /// own numbers and touches no pawn.
+        /// </summary>
+        public void NoteLoss(Pawn pawn, bool died, int tick)
+        {
+            if (_storyteller < 0 || !pawn.IsColonist) return;
+            int colonists = 0;
+            var pawns = _ctx.Pawns.All;
+            for (int i = 0; i < pawns.Count; i++)
+                if (pawns[i].IsColonist) colonists++;
+            colonists = Math.Max(1, colonists);
+
+            long drop = died ? DeathDrop : DownDrop;
+            drop = drop * Math.Min(1000, 5000 / colonists) / 1000;
+            drop = drop * _adaptationPercent / 100;
+            _tension = Math.Max(TensionMin, _tension - (int)drop);
+            _cause = died ? TensionCauseKind.Died : TensionCauseKind.Downed;
+            _causeTick = tick;
+        }
+
+        /// <summary>
+        /// A day has turned: if nobody was lost in it, the tension climbs back, faster from below
+        /// the start than above it, by the difficulty's adaptation strength; and the cause becomes a
+        /// run of quiet days.
+        /// </summary>
         void OnDay(int tick)
         {
+            bool lossToday = (_cause == TensionCauseKind.Died || _cause == TensionCauseKind.Downed)
+                             && tick - _causeTick < Calendar.TicksPerDay;
+            if (lossToday) return;
+            int gain = (_tension < TensionStart ? QuietBelow : QuietAbove) * _adaptationPercent / 100;
+            _tension = Math.Min(TensionMax, _tension + gain);
+            if (_cause != TensionCauseKind.Quiet)
+            {
+                _cause = TensionCauseKind.Quiet;
+                _causeTick = tick - Calendar.TicksPerDay;
+            }
         }
 
         /// <summary>The tension's band (design 59 §5a).</summary>
