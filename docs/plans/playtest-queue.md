@@ -23,6 +23,19 @@ the next session learns to ignore.
 
 ## Open
 
+- **Ride along: does the shoulder camera show a colonist's day and a fight clearly?**
+  (`claude/planning-session-fok6wm`, design 56.) Select a colonist, press **Ride along** on her
+  card, and let her work, walk up a terrace and go through a door.
+  - Draft her into a melee fight and watch it. Wrong: her body hides the blow, or the camera swings
+    about as she turns.
+  - Wheel in to the eyes. Wrong: a black smear or a hollow face in view, or it makes you queasy.
+  - Walk her along a wall and into a small room. Wrong: the camera goes through the wall or jumps
+    in and out.
+  - Press Escape. Wrong: the camera does not come back where it was, walls-down does not come back,
+    or the pointer stays hidden.
+  - Read the strip at the bottom. Wrong: a missing fact you wanted, or it covers the action.
+  - Check the card's buttons now Prioritise is gone. Wrong: her name runs under them.
+
 - **Polish batch: trees, drops, the fire, the roster, the pane, the fade** (`claude/polish-batch`,
   designs 20 §14, 23 §11, 31 §20, 25 §10, 14 §10–§11, 38 §27).
   - Gather six or more colonists round a campfire at night. Each should be on their own tile, with

@@ -161,3 +161,11 @@ overturned):
 | 4 | **Time unchanged** | Entering or leaving does not touch the speed. Speed keys and pause stay live; every other game key (slice, walls-down, tools, tabs) is gated while riding. |
 
 Still open: **the name** (Q5). The §4 assumptions stand unless the owner overturns one.
+
+**2026-09-26, "Implement".** The name was not given, so the build uses **Ride along**
+(`ui.command.ride`), one CSV row to change. Two assumptions moved in the building:
+
+- **The rebindable key was deferred**, to keep the settings layout untouched without a Unity run.
+- **The card's dead Prioritise placeholder was removed** to make room for the button.
+
+Design: `docs/design/56-ride-along.md`.

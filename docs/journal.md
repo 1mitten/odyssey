@@ -13873,3 +13873,35 @@ temperature: the weather's share of the outdoor curve is written by the weather 
 and saved nowhere, so a loaded world stood in its build's sky until the next boundary. That is on
 `main` for every save, and was fixed here because the raid test cannot pass without it. The lesson
 is in `docs/bug-patterns.md`: a value one system writes into another is derived state no section owns.
+
+## 2026-09-26 — Riding along with a colonist
+
+The owner asked for a first-person mode opened from the colonist card, *"locked until esc"*, to see
+a colonist *"fighting with a melee, walking"* up close. The grounding changed the request's shape
+before any code: **there is no first-person arms rig in any pack we own**, and the face is part of
+the one skinned body whose ink hull goes solid black from inside. So from her eyes you see the far
+end of her own swing at most, and only a camera outside her shows her fighting. The owner took all
+four recommendations: behind the shoulder with the wheel in to the eyes, watch only, a minimal
+strip, time untouched. "Implement" came without a name, so it is **Ride along** until they say
+otherwise (design 56 §1).
+
+Three decisions are worth keeping:
+
+- **The camera is stood first in `LateUpdate`**, from her figure's last drawn feet. Placed in the
+  rig's `Update`, it would chase last frame's figure. Placed after the figures, it would be culled
+  against the frustum taken before them.
+- **The colony view is frozen, not moved.** A ride writes the transform alone, so a save mid-ride
+  records the colony view, and leaving is one instant re-apply.
+- **Doors are not solid to the spring arm**, although the picker counts them. Otherwise every
+  threshold would collapse the camera into her head.
+
+Her head is shrunk by its bone whenever the camera is within 0.6 m of her eyes. That happens at the
+eye stop, and wherever walls have squeezed the camera against her.
+
+**The card's dead Prioritise button went to make room.** It promised the work grid, which has
+shipped. A fourth labelled button would have run her unwrapping name under the buttons.
+
+**Built in a container with no .NET SDK and no Unity.** The Microsoft download host is refused by
+the network policy. So neither the fast tier nor the Presentation compile has run here, and the
+first compile of this branch is its CI run. The frame at a level view is unmeasured and owed
+(design 56 §7).
