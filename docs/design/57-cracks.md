@@ -1,11 +1,11 @@
 # 57: Cracks — a struck wall and a face being mined, drawn broken
 
-**Status (2026-09-26): played once; second round built, not yet played** — branch
+**Status (2026-09-26): played twice, ready to merge — PR #243** — branch
 `claude/sat-wall-damage-levels-5eq8cn`. The first build was played the same day and moved three
 things (§1a): the cracks are drawn from an impact point now rather than as a tiling (§4), rock has
-six levels (§2), and a cracked thing that comes down **breaks apart** (§7). The Hud half compiles
-clean; the Presentation half compiles in the owner's editor, and **no tier has been run on this
-round** (owner: *"no tests or checks"*).
+six levels (§2), and a cracked thing that comes down **breaks apart** (§7); then the sounds (§9).
+Owner, after the second round: *"happy to get ready to merge into main"*. Merged with `main` on
+2026-09-26: fast tier and Long tier green, content gates clean; the Unity tiers run on the PR's CI.
 
 **Numbered 57, not 56.** PR #241 holds design 56 (the wake into the world).
 
