@@ -14341,3 +14341,36 @@ its swatch, temperatures in red, amber and green, a planet "at least 4x" and "mo
 - **Nothing outlives the menu**: `ReleaseWorldMap` destroys the texture, drops the buffer, the names and
   the planet and pauses the ease timer when a colony goes live. Before this the texture and its buffer
   sat in memory for the whole game, and the ease timer fired every 16 ms under it.
+
+## 2026-09-26 — deep mining: depth is a processing problem, not a storage one
+
+The owner asked for mining to be "more comprehensive but performant": more depth, processed only when
+necessary or behind a cut-off into "deeper mining", with ore, gold, coal and perhaps caverns. Sixteen
+answers in five rounds (`docs/research/deep-mining-interview.md`); design 62; plan
+`docs/plans/deep-mining.md`. Nothing built.
+
+- **The cut-off the brief floated was not needed.** Design 28 §11 had already measured 16 → 24 layers
+  at +48 % memory with the tick and the frame in noise, and §8.5 had already rejected unloading the
+  simulation. The one per-edit cost that grows with depth is `NavGraph.Rebuild`, because every solid
+  10 × 10 block allocates an `Impassable` region that nothing links, seeds or reads — regions grew
+  2,008 → 3,166 on Standard while links stayed at ~1,940. Every consumer already copes with a cell
+  that has no region, because air never had one. So "process it only when necessary" became **never
+  touch rock nobody has opened**, and the owner took one continuous board of **32 layers** over a
+  separate deep level generated on breach.
+- **Two per-frame walks were found on the way**: underground, `SliceSettings.LowestDrawnLayer` returns
+  0, so every director walks every layer to bedrock; and `DoorDirector.EnsureDoorList` rescans every
+  cell on any version move. Both are DM1, beside the region change.
+- **A leak that is a bug today**: the inspect pane publishes an undiscovered ore cell's real terrain
+  and work (`CellDetailContributor`), so clicking a plain-looking rock tells you it is iron. The fog
+  unit fixes it.
+- **The support solver already knows about rock.** Rock is load-bearing and grounded rock is a
+  source, so a dug ceiling already carries a correct support value; only the drop test (slabs only)
+  and a rock-specific maximum are missing. The slab maximum of 4 would drop any ceiling more than
+  three cells from a wall, and the new larger caverns would cave in on the first full solve — so
+  caverns are generated inside the span, and an old save's wide rooms are proposed to be grandfathered.
+- **Grass stays diggable** (the owner's question mid-interview): a grass tile is a whole 3 m block of
+  soil, ore only ever replaces rock at least three layers down, and digging soft ground is the only
+  way to sink a shaft on flat meadow. It will read *Dig*, and a Mine drag that starts on rock marks
+  only rock — decided once from the start cell, because per cell is P4.
+- Both research subagents had every wiki page refused by the proxy and worked from search extracts;
+  the band table and the cave-in numbers are marked as our synthesis.
