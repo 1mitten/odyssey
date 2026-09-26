@@ -14238,3 +14238,20 @@ because a vital region at nought downs whatever the pool, and shock is a count o
 
 The balance probe says the ladder is steep: the king ends a fight with 97 % of its pool.
 
+## 2026-09-26 — The butcher's voice, and its cleaver's whoosh
+
+Three pig recordings, each one call under a second, so the variations had to be made rather than
+cut. Resampling lower (pitch and pace together) gives a bigger animal, not a chipmunk slowed down.
+
+The first bake held the −3 dBFS ceiling by turning each take down, and it left the fling at −20
+LUFS, no louder than the hurt. The owner had asked for exactly the opposite. A pig's call peaks
+about 17 dB over its loudness, so the takes now go through a lookahead limiter, as the combat thud
+did, and the ladder is 7 dB from the grunt to the bellow.
+
+The cleaver was silent on the same grounds a bite is: a natural attack. Its whoosh is the sword's,
+eight semitones down and re-cut so its peak sits at the whoosh's own 40 ms, so the swing schedule
+needed no new number.
+
+Proved by listening through the code: the fight test now tallies `AudioDirector.Played` and hears
+all four moments.
+

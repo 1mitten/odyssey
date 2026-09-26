@@ -153,6 +153,28 @@ The lossless master is what is committed; the MP3 is not, per the rule above.
 - **Levelled before folding**, so the limiter's lookahead never sees the seam.
 - **Stereo, source rate kept.** A 2D bed's width is most of what makes it read as all around.
 
+**The butcher's voice and its cleaver, 2026-09-26** (design 62 §8d, `tools/audio/bake_butcher.sh`).
+Three owner-supplied Pixabay recordings, each a single call of under a second, mono 44.1 kHz:
+`freesound_community-pig-sound-47168` (a grunt), `-pig-squeak-47166` (a squeal) and
+`-pig-oink-47167` (an oink).
+
+- **The variations are made, not cut.** Each take is a source resampled lower, 0.54 to 0.90 of
+  its rate, which lowers the pitch and slows the call together: a bigger throat, not a
+  pitch-shifted small one. A low shelf gives each weight at the play distance, and the deepest are
+  low-passed. The result is fifteen takes: strike ×4, hurt ×4, fling ×4, down ×3.
+- **Four loudnesses, the owner's order** ("loud when he knocks people back or even when hit"):
+  strike −21, hurt −18, fling −15 and down −14 LUFS (max momentary).
+- **A lookahead limiter, not the ceiling.** A pig's call peaks about 17 dB over its loudness, so
+  holding the −3 dBFS ceiling by turning each take down left the fling at −20 LUFS, no louder than
+  the hurt. Each take is lifted by its full gain into a latency-compensated limiter at −3 dBFS.
+- **The deep whoosh is the committed sword whoosh at 0.62**, about eight semitones down, with its
+  top rolled off. Its head is re-cut so its loudest 10 ms is centred at 0.041 s again, the
+  whoosh's own timing constant, and it is levelled at −19 LUFS, two over the sword's −21.
+- **Imported without normalising** (`ButcherSoundTests`), or the ladder flattens.
+- **The level's pitch at play time:** 1.00, 0.94, 0.88 and 0.82 from the butcher to the king
+  (`SpeciesDef.voicePitchPerMille`).
+- **Pixabay Content License**, as the blows: the owner to confirm.
+
 ## Licensing
 
 **Open, and it has to be decided rather than discovered — `campfire.wav`.** The file the clip was

@@ -391,6 +391,39 @@ routes a butcher there. The spawn test asserts the card's picture is that one.
 The photographs (`Logs/look/butcher-levels.png`, the four portraits) show the four colourways and
 the step in size.
 
+### 8d. Its voice and its cleaver's whoosh (owner, 2026-09-26)
+
+> *"process and make variations of this sound when the pig gets a hit or makes a strike play these
+> sounds at varying volumes - loud when he knocks people back or even when hit ... this is for when
+> they get knocked down or killed"* and *"make sure their weapon has a swoosh like a sword as well -
+> make it deeper if you can"*
+
+**A voice is content, heard by presentation.** `SpeciesDef.voice` names it and
+`voicePitchPerMille` sets its pitch (1.00 to 0.82 from the butcher to the king); neither is read by
+the simulation. `Odyssey.Hud.CreatureVoice` decides the moment, whose voice it is and whether it
+comes from the attacker or the target:
+
+| Moment | When | Takes | Loudness (bake / catalogue) | Cooldown |
+|---|---|---|---|---|
+| **Strike** | its swing starts | 4 grunts | −21 LUFS / 0.55 ± 25 % | 0.8 s |
+| **Hurt** | a blow lands on it | 4 squeals | −18 / 0.80 ± 18 % | 0.6 s |
+| **Fling** | it throws somebody (a knockback or a slam) | 4 bellows | −15 / 1.00 ± 8 % | 0.5 s |
+| **Down** | it is downed or dies | 3 oinks | −14 / 1.00 | 0.3 s |
+
+The cooldowns make a sweep that flings three people one bellow, not three. The sound ids are
+`odyssey.sound.voice.butcher.{strike,hurt,fling,down}` (`SoundIds.Voice`), and the bake is
+`tools/audio/bake_butcher.sh` (`docs/reference/audio-sourcing.md`).
+
+**The cleaver whooshes deep.** A natural attack was silent (fists and bites are), so a species
+that swings a weapon of its own (a Heavy or Light style, `BloodSides.WieldsNatural`) schedules
+`CombatCue.HeavyWhoosh`. That is the sword whoosh baked eight semitones down, with its peak at the
+whoosh's own 40 ms, so it is timed by the same rules and no new constant. A sharp critical is still
+the slice.
+
+**Heard in a real fight** (`TheButcherInAFightPhotographed`, which now tallies every sound it
+hears through `AudioDirector.Played`): all four moments, the deep whoosh three times, and the
+thud on every landed blow.
+
 ## 9. Content and the registry
 
 New keys in `icon-keys.csv`, none with art, so they fall through to a generated placeholder as
