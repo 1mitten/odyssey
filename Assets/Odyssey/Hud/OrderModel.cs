@@ -5,6 +5,19 @@ using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
 {
+    /// <summary>The Draft toggle's three faces (design 61 §3).</summary>
+    public enum DraftFace
+    {
+        /// <summary>No selected colonist is drafted.</summary>
+        Off,
+
+        /// <summary>Every selected colonist is drafted.</summary>
+        On,
+
+        /// <summary>Some are and some are not: the off tile with a red line along its foot.</summary>
+        Mixed,
+    }
+
     /// <summary>
     /// What a player's hand means for the colonists they have selected (design 33 §2f): the draft
     /// key, and a right-click on the world with no tool armed.
@@ -67,6 +80,25 @@ namespace Odyssey.Hud
                 if (anyUndrafted == IsDrafted(snapshot, pawn)) continue;
                 into.Add(new Intent(IntentKind.SetDrafted, default, pawn.Value, anyUndrafted ? 1 : 0));
             }
+        }
+
+        /// <summary>
+        /// What the header's Draft toggle shows for a selection (design 61 §3): <b>on only if every
+        /// selected colonist is drafted</b>, mixed when some are, off otherwise. Animals are passed
+        /// over, as <see cref="ToggleDraft"/> passes them over, so the face and the press can never
+        /// disagree: a mixed face is exactly the selection a press drafts the rest of.
+        /// </summary>
+        public static DraftFace DraftFaceOf(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot)
+        {
+            int colonists = 0, drafted = 0;
+            for (int i = 0; i < selection.Count; i++)
+            {
+                if (!IsColonist(snapshot, selection[i])) continue;
+                colonists++;
+                if (IsDrafted(snapshot, selection[i])) drafted++;
+            }
+            if (drafted == 0) return DraftFace.Off;
+            return drafted == colonists ? DraftFace.On : DraftFace.Mixed;
         }
 
         /// <summary>

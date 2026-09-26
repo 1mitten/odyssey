@@ -402,6 +402,7 @@ namespace Odyssey.Hud
             { "ui.keys.debugmenu", "Debug menu" },
             { "ui.keys.draft", "Draft" },
             { "ui.keys.fell", "Chop tool" },
+            { "ui.keys.firstperson", "First Person" },
             { "ui.keys.forward", "Camera forward" },
             { "ui.keys.frame", "Frame the map" },
             { "ui.keys.growzone", "Growing zone tool" },

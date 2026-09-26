@@ -100,11 +100,11 @@ namespace Odyssey.Tests.Hud
             hotkeys.Listen(HotkeyAction.CameraTurnLeft, 0);
             Assert.That(hotkeys.Listening, Is.EqualTo((HotkeyAction.CameraTurnLeft, 0)));
 
-            Assert.That(hotkeys.Capture(HudKey.Z), Is.EqualTo(RebindResult.Bound));
-            Assert.That(hotkeys.Key(HotkeyAction.CameraTurnLeft, 0), Is.EqualTo(HudKey.Z));
+            Assert.That(hotkeys.Capture(HudKey.J), Is.EqualTo(RebindResult.Bound));
+            Assert.That(hotkeys.Key(HotkeyAction.CameraTurnLeft, 0), Is.EqualTo(HudKey.J));
             Assert.That(hotkeys.Listening, Is.Null, "a bound key closes the door behind it");
             Assert.That(changed, Is.EqualTo(new[] { HotkeyAction.CameraTurnLeft }));
-            Assert.That(store.ReadString(HotkeyDirector.KeyOf(HotkeyAction.CameraTurnLeft)), Is.EqualTo("Z"),
+            Assert.That(store.ReadString(HotkeyDirector.KeyOf(HotkeyAction.CameraTurnLeft)), Is.EqualTo("J"),
                 "the binding is written as the key's name, readable by eye in the registry");
         }
 
@@ -112,7 +112,7 @@ namespace Odyssey.Tests.Hud
         public void NothingIsCapturedWhileNobodyIsListening()
         {
             var hotkeys = new HotkeyDirector();
-            Assert.That(hotkeys.Capture(HudKey.Z), Is.EqualTo(RebindResult.UnknownKey));
+            Assert.That(hotkeys.Capture(HudKey.J), Is.EqualTo(RebindResult.UnknownKey));
             Assert.That(hotkeys.Key(HotkeyAction.CameraTurnLeft, 0), Is.EqualTo(HudKey.Q));
         }
 
@@ -141,9 +141,9 @@ namespace Odyssey.Tests.Hud
         {
             var hotkeys = new HotkeyDirector();
             hotkeys.Listen(HotkeyAction.SliceUp, 0);
-            hotkeys.Capture(HudKey.Z);
+            hotkeys.Capture(HudKey.J);
 
-            Assert.That(hotkeys.Key(HotkeyAction.SliceUp, 0), Is.EqualTo(HudKey.Z));
+            Assert.That(hotkeys.Key(HotkeyAction.SliceUp, 0), Is.EqualTo(HudKey.J));
             Assert.That(HotkeyDirector.DefaultKey(HotkeyAction.SliceUp, 0), Is.EqualTo(HudKey.R),
                 "the default is a fact about the shipped game, not about this machine");
             Assert.That(HotkeyDirector.DefaultKey(HotkeyAction.SliceUp, 1), Is.EqualTo(HudKey.PageUp));
@@ -195,7 +195,7 @@ namespace Odyssey.Tests.Hud
             hotkeys.UseStore(store);
 
             hotkeys.Listen(HotkeyAction.SliceUp, 0);
-            hotkeys.Capture(HudKey.Z);
+            hotkeys.Capture(HudKey.J);
             hotkeys.ClearSlot(HotkeyAction.Pause, 0);
 
             hotkeys.ResetKeys();
@@ -214,13 +214,13 @@ namespace Odyssey.Tests.Hud
             var store = new FakeSettingsStore();
             first.UseStore(store);
             first.Listen(HotkeyAction.ToolFell, 0);
-            first.Capture(HudKey.Z);
+            first.Capture(HudKey.J);
 
             // A second director over the same store is a restart: nothing in memory, everything
             // in the file.
             var second = new HotkeyDirector();
             second.UseStore(store);
-            Assert.That(second.Key(HotkeyAction.ToolFell, 0), Is.EqualTo(HudKey.Z));
+            Assert.That(second.Key(HotkeyAction.ToolFell, 0), Is.EqualTo(HudKey.J));
             Assert.That(second.Key(HotkeyAction.ToolMine, 0), Is.EqualTo(HudKey.M),
                 "an action the file never mentions keeps its default");
         }
@@ -246,8 +246,8 @@ namespace Odyssey.Tests.Hud
         public void TwoStoredLinesOnOneKeySettleInDrawOrder()
         {
             var store = new FakeSettingsStore();
-            store.Preset(HotkeyDirector.KeyOf(HotkeyAction.ToolMine), "Z");
-            store.Preset(HotkeyDirector.KeyOf(HotkeyAction.ToolFell), "Z");
+            store.Preset(HotkeyDirector.KeyOf(HotkeyAction.ToolMine), "J");
+            store.Preset(HotkeyDirector.KeyOf(HotkeyAction.ToolFell), "J");
 
             var hotkeys = new HotkeyDirector();
             hotkeys.UseStore(store);
@@ -255,7 +255,7 @@ namespace Odyssey.Tests.Hud
             // Mine draws before Fell, so mine keeps the disputed key and fell falls back to
             // its default. Somebody has to win, and "whoever the panel lists first" is a
             // rule a reader can reconstruct without the code.
-            Assert.That(hotkeys.Key(HotkeyAction.ToolMine, 0), Is.EqualTo(HudKey.Z));
+            Assert.That(hotkeys.Key(HotkeyAction.ToolMine, 0), Is.EqualTo(HudKey.J));
             Assert.That(hotkeys.Key(HotkeyAction.ToolFell, 0), Is.EqualTo(HudKey.C));
             Assert.That(hotkeys.LoadConflicts, Is.EqualTo(new[] { (HotkeyAction.ToolFell, 0) }));
         }

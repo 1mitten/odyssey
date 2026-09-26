@@ -152,8 +152,13 @@ namespace Odyssey.Tests.Hud
             Assert.That(marks[0].OrderCell, Is.EqualTo(777));
         }
 
+        /// <summary>
+        /// The header's Draft toggle is one toggle, drafted or not (design 61): its key never
+        /// swaps, because the icon never swaps. The old button changed face to Undraft and rebuilt
+        /// the header to do it.
+        /// </summary>
         [Test]
-        public void ThePanesDraftButtonIsLiveAndChangesFace()
+        public void ThePanesDraftToggleIsLiveAndKeepsItsKey()
         {
             var model = new InspectModel();
             model.SetColonist(Ada);
@@ -162,13 +167,62 @@ namespace Odyssey.Tests.Hud
             InspectCommand draft = model.Commands.Find(c => c.IconKey == InspectModel.DraftKey);
             Assert.That(draft.IconKey, Is.EqualTo(InspectModel.DraftKey));
             Assert.That(draft.Enabled, Is.True);
-            Assert.That(draft.Label, Is.EqualTo(Registry.Label(InspectModel.DraftKey)));
             Assert.That(model.Drafted, Is.False);
 
             model.Refresh(Frame(true, false));
-            InspectCommand undraft = model.Commands.Find(c => c.IconKey == InspectModel.UndraftKey);
-            Assert.That(undraft.IconKey, Is.EqualTo(InspectModel.UndraftKey), "the button still says Draft");
+            Assert.That(model.Commands.FindIndex(c => c.IconKey == InspectModel.DraftKey), Is.Not.EqualTo(-1),
+                "drafting her took the toggle away");
             Assert.That(model.Drafted, Is.True);
+        }
+
+        /// <summary>
+        /// On reads "Drafted", off reads "Draft" (design 61 §2): the registry's words, the status and
+        /// the verb.
+        /// </summary>
+        [Test]
+        public void TheToggleSaysDraftOffAndDraftedOn()
+        {
+            Assert.That(Registry.Label(InspectModel.DraftKey), Is.EqualTo("Draft"));
+            Assert.That(Registry.Label(InspectModel.DraftedKey), Is.EqualTo("Drafted"));
+        }
+
+        /// <summary>
+        /// The face is the whole selection's (design 61 §3): on only when every colonist is drafted,
+        /// mixed when some are, off when none are. The hog is in every selection and never counts,
+        /// or a drafted pair with an animal beside them would read as mixed for ever.
+        /// </summary>
+        [TestCase(false, false, DraftFace.Off)]
+        [TestCase(true, false, DraftFace.Mixed)]
+        [TestCase(false, true, DraftFace.Mixed)]
+        [TestCase(true, true, DraftFace.On)]
+        public void TheToggleFaceIsTheWholeSelections(bool ada, bool bo, DraftFace face)
+        {
+            Assert.That(OrderModel.DraftFaceOf(Everyone, Frame(ada, bo)), Is.EqualTo(face));
+        }
+
+        /// <summary>One colonist is never mixed; nobody at all, or only the hog, is off.</summary>
+        [Test]
+        public void OneColonistIsOnOrOffAndAnAnimalAloneIsOff()
+        {
+            Assert.That(OrderModel.DraftFaceOf(new[] { Ada }, Frame(true, false)), Is.EqualTo(DraftFace.On));
+            Assert.That(OrderModel.DraftFaceOf(new[] { Bo }, Frame(true, false)), Is.EqualTo(DraftFace.Off));
+            Assert.That(OrderModel.DraftFaceOf(new[] { Hog }, Frame(true, true)), Is.EqualTo(DraftFace.Off));
+            Assert.That(OrderModel.DraftFaceOf(new PawnId[0], Frame(true, true)), Is.EqualTo(DraftFace.Off));
+        }
+
+        /// <summary>
+        /// A press on a mixed selection drafts the rest (design 61 §3), and the face after it is On:
+        /// the face and the press are the same rule read two ways.
+        /// </summary>
+        [Test]
+        public void APressOnAMixedSelectionDraftsTheRest()
+        {
+            var sent = new List<Intent>();
+            OrderModel.ToggleDraft(Everyone, Frame(true, false), sent);
+            Assert.That(sent.Count, Is.EqualTo(1));
+            Assert.That(sent[0].A, Is.EqualTo(Bo.Value));
+            Assert.That(sent[0].B, Is.EqualTo(1), "a mixed press released somebody");
+            Assert.That(OrderModel.DraftFaceOf(Everyone, Frame(true, true)), Is.EqualTo(DraftFace.On));
         }
 
         [Test]
