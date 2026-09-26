@@ -14417,3 +14417,55 @@ vanished at 21:00 and reappeared at 05:00 in one frame each. The rings now sink 
 flatten, which puts them edge-on — nothing left to see — and a jump in the hour is eased over four
 real seconds instead of taken. A pixel diff against clouds-off at 2% presence found nothing looking
 away from the sun and 39 pixels in 1.44 million looking up. Design 63 §4e.
+
+## 2026-09-26 — Expeditions designed: one clock, many boards, one screen
+
+The owner, pointing at the reference's caravans as something that *"doesn't work well"*, asked how
+colonists could travel the new planet to explore, find situations with rewards and choices, and one
+day cross the sea. They also asked whether a split window would limit us. This was run as Ground →
+Interview → Research → Plan with no code. The outputs are design 64, `docs/plans/expeditions.md`,
+the interview (19 answers, five rounds) and three research files.
+
+**The split-window answer is no, and the evidence is the genre, not taste.**
+
+- Nine games were surveyed (`b-away-play.md`). No single-player colony game uses split screen or
+  picture-in-picture as its main view.
+- Where one exists it is used to watch, never to control.
+- The complaints cluster on *attention*, not on screen space:
+  - Anno 1800 hides another session's alerts until you visit;
+  - Oxygen Not Included: Spaced Out's switching is called clunky and unsupervised dupes die;
+  - Dwarf Fortress missions are opaque.
+
+So the design is one screen with board tabs, an away strip, labelled alerts that pause with **Go**,
+and a journey log with an ETA. A watch-only inset stays possible later without changing the model.
+
+**The simulation was already ready for it, and the composition root was not.**
+
+- `ColonyWorld.Build` makes a self-contained world, and `BanditSoakTests` ticks two in lockstep.
+- An idle board costs about 0.065 ms a tick at any size.
+- The blockers are four:
+  - `BuildSession` refuses a second session;
+  - `PawnId`s restart at 1 per registry, and `ColonistNames.Book` is keyed by them;
+  - `Despawn` destroys a pawn instead of detaching it;
+  - a pawn's state is spread over seven save sections.
+
+**The architecture check added the invariant that shapes everything else.** Every board's tick must
+equal the campaign's, because pawns carry absolute ticks (memory expiry, the skill day, the
+treatment cooldown). A site board is therefore born with `StartAtTick(campaign.Tick)`, which
+`ColonyWorld.Build` already supports.
+
+**Two claims were corrected by reading the code rather than the plan:**
+
+- **There is no game over**, so "game over counts every colonist" is a rule for when one is built.
+- **Raid size already counts only the targeted board's colonists** (`RaidWorker.cs:224` sizes from
+  `ctx.Pawns`), so the fairness rule is "keep it and pin it", not "build it".
+
+**The owner departed from one recommendation: site boards are Standard, 120 × 120 × 16**, not
+64 × 64. That is about 16 MiB of simulation and 4 MiB of mirror for each live site. The frame does
+not pay, because one board is drawn. The tick with colonists busy on both boards is the number EX7
+must measure.
+
+**The riskiest unit is moving a pawn** (EX3), so the first unit is a spike that does it in a test and
+lists what breaks (EX0). The second riskiest is splitting the 4,600-line bootstrap into simulation
+and drawing halves (EX8), whose switch time (estimated 130–180 ms) must be measured before it is
+promised.
