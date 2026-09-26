@@ -1010,3 +1010,17 @@ ui.world.region.deep,{name} Deep,ui.world,WG,A sea's name in one of its frames
 ui.world.region.shelf,The {name} Shelf,ui.world,WG,A sea's name in one of its frames
 ui.world.region.sound,{name} Sound,ui.world,WG,A sea's name in one of its frames
 ui.world.region.gulfof,Gulf of {name},ui.world,WG,A sea's name in one of its frames
+ui.temperament.label,Temperament,ui.temperament,FA,"How an animal answers a person who comes near"
+ui.temperament.timid,Timid,ui.temperament,FA,"Runs from anyone who comes near. Never fights, even cornered"
+ui.temperament.skittish,Skittish,ui.temperament,FA,"Keeps its distance. Fights if cornered or hurt"
+ui.temperament.defensive,Defensive,ui.temperament,FA,"Stands its ground. Hurt one and the group may turn on you"
+ui.temperament.territorial,Territorial,ui.temperament,FA,"Warns anyone who comes near, then charges. Most charges stop short"
+ui.temperament.predator,Predator,ui.temperament,FA,"Hunts other animals when hungry. Shy of people unless it is starving"
+ui.almanac.fact.approached,When approached,ui.almanac,FA,"Almanac: what an animal does when a person comes near it"
+ui.almanac.fact.struck,When struck,ui.almanac,FA,"Almanac: what an animal does when somebody hits it"
+ui.almanac.fact.group,Group,ui.almanac,FA,"Almanac: how many travel together, and what the group does as one"
+ui.almanac.fact.active,Active,ui.almanac,FA,"Almanac: the hours an animal is out, and the weather it shelters from"
+ui.almanac.fact.hunts,Food chain,ui.almanac,FA,"Almanac: what an animal hunts, grazes or steals, and what hunts it"
+ui.almanac.fact.danger,Danger to colonists,ui.almanac,FA,"Almanac: what an animal can do to a colonist, and when"
+ui.almanac.fact.signature,Signature,ui.almanac,FA,"Almanac: the one thing that makes this animal play differently"
+ui.almanac.notyet,Not yet in the game,ui.almanac,FA,"Almanac: a behaviour that is designed and not built yet (forest animals FA2 and FA3)"

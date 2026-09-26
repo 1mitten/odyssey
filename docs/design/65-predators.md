@@ -194,7 +194,16 @@ A predator may make **a colonist** its target only when **all** hold (owner's an
 1. it is **Starving** (food 0);
 2. the **world rule** `predatorsHuntPeople` is on (§5c);
 3. the colonist is **alone**: no *other* standing colonist within the herd radius (12 cells) of her;
-4. she is reachable, within `huntRadius`, and standing.
+4. she is reachable, within `huntRadius`, and standing;
+5. **a person is within its prey limit**: `preyMaxBodySizePerMille` is at least the person's
+   `bodySizePerMille` (1,000). The wolf's 1,300 passes; the fox's 250 does not, so a starving fox is
+   never a man-eater. The rule is the prey rule of §3a applied to a person, so there is one owner.
+
+*Added 2026-09-26, from the Almanac lane's reading:* without rule 5 the fox, a predator by §1, met
+the other four and could stalk a colonist, which nobody asked for. **The bear** has no hunger in FA2
+(§2), so it is never a man-eater in FA2 either. The owner's answer 6 was put as "a wolf or bear"; the
+bear's danger in FA2 is its territory and a charge when crowded (design 64), and a hungry bear is a
+later unit that would pass rule 5 at 2,150.
 
 It prefers animal prey: the §3a search runs first and a person is considered only when it finds
 nothing. A starving wolf beside a deer takes the deer.

@@ -886,8 +886,9 @@ namespace Odyssey.Hud
 
             // 10. Fauna
             // 10. Fauna: the animals that are actually in the game (design 29, design 30), by
-            // the names the registry gives them. Everything here is what the simulation does;
-            // taming, hunting, meat and health are not in the game and are not claimed.
+            // the names the registry gives them. The properties are what the simulation does; the
+            // behaviour rows come from AnimalBehaviour, which marks every line the game does not do
+            // yet (forest animals FA2, FA3) rather than leaving it out or claiming it.
             list.Add(new AlmanacCategory("Fauna", "M4.5 9.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z M12.5 9.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z M8.5 15.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z", new List<AlmanacEntry>
             {
                 new AlmanacEntry(
@@ -897,17 +898,13 @@ namespace Odyssey.Hud
                     "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
                         ("Pace", "60% of a colonist's walk"), ("Lives", "The ruined city, in groups of 2 to 3"),
-                        ("Day", "Out by day, rests three times longer at night"), ("Leg", "Within 8 cells, then a rest of 5 to 15 s"),
+                        ("Leg", "Within 8 cells, then a rest of 5 to 15 s"),
                         ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
                         ("Body", "1.2 m long"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
                         "A sounder lands together and drifts apart across its patch of rubble. Each hog takes a short leg and then rests, and by night rests far longer. One that decides to go walks to the nearest board edge and is gone; another sounder walks in when the board is short.",
-                        effects: new[] {
-                            ("Sounder", "Three to five arrive together and wander independently; the Animals tab counts them."),
-                            ("Ramps only", "A hog goes up and down a terrace step where a bank is drawn, and nowhere else."),
-                            ("No swimming", "Streams and ponds are walls to it; the census keeps it off water when it lands.")
-                        }),
+                        specs: AnimalBehaviour.SpecsFor(PawnKindLabels.MiddenHogKind)),
                     new[] { (AlmanacKeys.Rat, "another animal of the ruin"), (AlmanacKeys.Boar, "its wild cousin of the meadow's woods"), (AlmanacKeys.Ladder, "the one climb it never takes") }
                 ),
                 new AlmanacEntry(
@@ -917,17 +914,13 @@ namespace Odyssey.Hud
                     "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
                         ("Pace", "90% of a colonist's walk"), ("Lives", "Beside rock, rubble and cavern mouths, alone"),
-                        ("Day", "Out at night, rests three times longer by day"), ("Leg", "Within 5 cells, then a rest of 2 to 8 s"),
+                        ("Leg", "Within 5 cells, then a rest of 2 to 8 s"),
                         ("Climbs", "Anything a colonist can, ladders included; never water"), ("Stays", "About two days, then walks off the edge"),
                         ("Body", "0.3 m long"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
                         "A rat darts and stops: short legs, short rests, and most of its living done in the dark. It takes the ladders a hog cannot, so a rat can turn up on a storey no hog reaches.",
-                        effects: new[] {
-                            ("Nocturnal", "By day it rests three times as long and takes a third as many legs."),
-                            ("Climber", "Ladders and hops are open to it; water is not."),
-                            ("Alone", "Lands and arrives one at a time, by rock.")
-                        }),
+                        specs: AnimalBehaviour.SpecsFor(PawnKindLabels.DuctRatKind)),
                     new[] { (AlmanacKeys.Hog, "another animal on the board"), (AlmanacKeys.Ladder, "a climb it takes and a hog does not"), (AlmanacKeys.Stone, "the rock it is seeded beside") }
                 ),
                 new AlmanacEntry(
@@ -937,17 +930,13 @@ namespace Odyssey.Hud
                     "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
                         ("Pace", "A colonist's walk, in hops of about 1.3 m"), ("Lives", "On the banks of water, in threes to fives"),
-                        ("Day", "Out by day, rests three times longer at night"), ("Leg", "Within 4 cells, then a rest of 3 to 12 s"),
+                        ("Leg", "Within 4 cells, then a rest of 3 to 12 s"),
                         ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
                         ("Body", "0.9 m long, a bright jade green"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
                         "A frog takes short legs along its bank and sits between them. Put one down away from water and it heads for the nearest bank it can reach; with none nearby it wanders like anything else. New frogs walk in only where the water meets the edge of the board.",
-                        effects: new[] {
-                            ("Bank", "Every leg ends within three cells of water."),
-                            ("Rain", "Stays out in it; the hogs and rats go for cover."),
-                            ("No swimming", "It sits at the water's edge; streams and ponds are walls to it.")
-                        }),
+                        specs: AnimalBehaviour.SpecsFor(PawnKindLabels.CulvertFrogKind)),
                     new[] { (AlmanacKeys.Raccoon, "another animal of the banks"), (AlmanacKeys.Moose, "another animal of the banks"), ("Shallow Water", "the water it keeps beside") }
                 ),
 
@@ -961,17 +950,13 @@ namespace Odyssey.Hud
                     "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
                         ("Pace", "130% of a colonist's walk"), ("Lives", "Open grass away from the trees, 1 to 3 together"),
-                        ("Day", "Out by day, rests three times longer at night"), ("Leg", "Within 5 cells, then a rest"),
+                        ("Leg", "Within 5 cells, then a rest"),
                         ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
                         ("Body", "0.25 m at the shoulder"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
                         "A rabbit takes short legs across the grass and sits between them. It lands where no tree stands within two cells, so the meadow's clearings and open slopes are where to look.",
-                        effects: new[] {
-                            ("Quick", "Nothing on the board is faster on the flat."),
-                            ("Open ground", "Seeded on grass at least two cells from a tree."),
-                            ("No swimming", "Streams and ponds are walls to it.")
-                        }),
+                        specs: AnimalBehaviour.SpecsFor(PawnKindLabels.VergeRabbit)),
                     new[] { (AlmanacKeys.Fox, "the night animal of the same woods"), (AlmanacKeys.Deer, "the other grazer of the meadow") }
                 ),
                 new AlmanacEntry(
@@ -981,17 +966,13 @@ namespace Odyssey.Hud
                     "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
                         ("Pace", "120% of a colonist's walk"), ("Lives", "The woodland edge, in herds of 3 to 6"),
-                        ("Day", "Out by day, rests three times longer at night"), ("Leg", "Within 9 cells, then a rest"),
+                        ("Leg", "Within 9 cells, then a rest"),
                         ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
                         ("Body", "1.0 m at the shoulder, a stag 1.2 m"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
                         "A herd lands together and spreads along the trees, each deer taking its own legs and rests. The pane names the form: Doe, or Stag.",
-                        effects: new[] {
-                            ("Herd", "Three to six arrive together; the Animals tab counts them."),
-                            ("Doe and stag", "Two forms of one animal, dealt by its seed."),
-                            ("No swimming", "Streams and ponds are walls to it.")
-                        }),
+                        specs: AnimalBehaviour.SpecsFor(PawnKindLabels.HedgerowDeer)),
                     new[] { (AlmanacKeys.Moose, "the bigger animal of the same woods"), (AlmanacKeys.Wolf, "the pack of the deep woods"), (AlmanacKeys.Rabbit, "the other grazer of the meadow") }
                 ),
                 new AlmanacEntry(
@@ -1001,17 +982,13 @@ namespace Odyssey.Hud
                     "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
                         ("Pace", "105% of a colonist's walk"), ("Lives", "The woodland, alone"),
-                        ("Day", "Out at night, rests three times longer by day"), ("Leg", "Within 7 cells, then a rest"),
+                        ("Leg", "Within 7 cells, then a rest"),
                         ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
                         ("Body", "0.4 m at the shoulder"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
                         "A fox is most of its time resting by day, and out on longer legs after dark. Look for it at night, alone among the trees.",
-                        effects: new[] {
-                            ("Nocturnal", "By day it rests three times as long and takes a third as many legs."),
-                            ("Alone", "Lands and arrives one at a time."),
-                            ("No swimming", "Streams and ponds are walls to it.")
-                        }),
+                        specs: AnimalBehaviour.SpecsFor(PawnKindLabels.AshFox)),
                     new[] { (AlmanacKeys.Rabbit, "the small animal of the open grass"), (AlmanacKeys.Wolf, "the other hunter's shape in the woods"), (AlmanacKeys.Raccoon, "another animal of the night") }
                 ),
                 new AlmanacEntry(
@@ -1021,17 +998,13 @@ namespace Odyssey.Hud
                     "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
                         ("Pace", "90% of a colonist's walk"), ("Lives", "The banks of water, alone or in a pair"),
-                        ("Day", "Out at night, rests three times longer by day"), ("Leg", "Within 5 cells, then a rest"),
+                        ("Leg", "Within 5 cells, then a rest"),
                         ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
                         ("Body", "0.3 m at the shoulder"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
                         "A raccoon keeps near the water and keeps to the dark. It walks where an animal may walk and no further: a closed door is a wall to it.",
-                        effects: new[] {
-                            ("Nocturnal", "By day it rests three times as long and takes a third as many legs."),
-                            ("Doors", "Cannot open one, so a closed door keeps it out."),
-                            ("No swimming", "It lives by the water but will not go into it.")
-                        }),
+                        specs: AnimalBehaviour.SpecsFor(PawnKindLabels.GutterRaccoon)),
                     new[] { (AlmanacKeys.Frog, "another animal of the banks"), (AlmanacKeys.Skunk, "another animal of the night"), ("Shallow Water", "the water it keeps beside") }
                 ),
                 new AlmanacEntry(
@@ -1041,17 +1014,13 @@ namespace Odyssey.Hud
                     "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
                         ("Pace", "70% of a colonist's walk"), ("Lives", "The woodland floor, alone"),
-                        ("Day", "Out at night, rests three times longer by day"), ("Leg", "Within 4 cells, then a rest"),
+                        ("Leg", "Within 4 cells, then a rest"),
                         ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
                         ("Body", "0.25 m at the shoulder"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
                         "A skunk takes the shortest legs of anything in the woods and does most of it after dark.",
-                        effects: new[] {
-                            ("Nocturnal", "By day it rests three times as long and takes a third as many legs."),
-                            ("Slow", "The slowest walker in the woods."),
-                            ("No swimming", "Streams and ponds are walls to it.")
-                        }),
+                        specs: AnimalBehaviour.SpecsFor(PawnKindLabels.RubbleSkunk)),
                     new[] { (AlmanacKeys.Raccoon, "another animal of the night"), (AlmanacKeys.Fox, "another animal of the night") }
                 ),
                 new AlmanacEntry(
@@ -1061,17 +1030,13 @@ namespace Odyssey.Hud
                     "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
                         ("Pace", "A colonist's walk"), ("Lives", "The woodland, in sounders of 3 to 5"),
-                        ("Day", "Out at night, rests three times longer by day"), ("Leg", "Within 8 cells, then a rest"),
+                        ("Leg", "Within 8 cells, then a rest"),
                         ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
                         ("Body", "0.9 m at the shoulder"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
                         "A sounder lands together in the trees and drifts apart, each boar taking its own legs and rests, most of them after dark.",
-                        effects: new[] {
-                            ("Sounder", "Three to five arrive together; the Animals tab counts them."),
-                            ("Nocturnal", "By day it rests three times as long and takes a third as many legs."),
-                            ("No swimming", "Streams and ponds are walls to it.")
-                        }),
+                        specs: AnimalBehaviour.SpecsFor(PawnKindLabels.ThicketBoar)),
                     new[] { (AlmanacKeys.Hog, "its cousin of the ruin"), (AlmanacKeys.Wolf, "the pack of the deep woods"), (AlmanacKeys.Bear, "the biggest thing in the same woods") }
                 ),
                 new AlmanacEntry(
@@ -1081,17 +1046,13 @@ namespace Odyssey.Hud
                     "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
                         ("Pace", "A colonist's walk"), ("Lives", "The banks of water and the woods, 1 to 3 together"),
-                        ("Day", "Out by day, rests three times longer at night"), ("Leg", "Within 10 cells, then a rest"),
+                        ("Leg", "Within 10 cells, then a rest"),
                         ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
                         ("Body", "1.8 m at the shoulder, a bull 1.9 m"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
                         "A moose takes long legs between long rests, near the water or under the trees. The pane names the form: Cow, or Bull.",
-                        effects: new[] {
-                            ("Cow and bull", "Two forms of one animal, dealt by its seed."),
-                            ("Tallest", "It stands above a colonist's head."),
-                            ("No swimming", "It keeps to the banks; the water is a wall to it.")
-                        }),
+                        specs: AnimalBehaviour.SpecsFor(PawnKindLabels.MireMoose)),
                     new[] { (AlmanacKeys.Deer, "the smaller animal of the same woods"), (AlmanacKeys.Raccoon, "another animal of the banks"), (AlmanacKeys.Bear, "the other giant of the woods") }
                 ),
                 new AlmanacEntry(
@@ -1101,17 +1062,13 @@ namespace Odyssey.Hud
                     "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
                         ("Pace", "110% of a colonist's walk"), ("Lives", "The deep woods, away from the start, in packs of 2 to 4"),
-                        ("Day", "Out at night, rests three times longer by day"), ("Leg", "Within 12 cells, then a rest"),
+                        ("Leg", "Within 12 cells, then a rest"),
                         ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
                         ("Body", "0.8 m at the shoulder"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
                         "A pack lands together in the deep woods and ranges further on each leg than anything else on the board, most of it after dark.",
-                        effects: new[] {
-                            ("Pack", "Two to four arrive together; the Animals tab counts them."),
-                            ("Far from the start", "Seeded deeper in the woods than the other animals."),
-                            ("No swimming", "Streams and ponds are walls to it.")
-                        }),
+                        specs: AnimalBehaviour.SpecsFor(PawnKindLabels.RidgeWolf)),
                     new[] { (AlmanacKeys.Deer, "the herd of the woodland edge"), (AlmanacKeys.Bear, "the other animal kept far from the start"), (AlmanacKeys.Fox, "the small hunter's shape of the same woods") }
                 ),
                 new AlmanacEntry(
@@ -1121,17 +1078,13 @@ namespace Odyssey.Hud
                     "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
                         ("Pace", "A colonist's walk"), ("Lives", "The woods and the rock, away from the start, alone"),
-                        ("Day", "Out by day, rests three times longer at night"), ("Leg", "Within 10 cells, then a rest"),
+                        ("Leg", "Within 10 cells, then a rest"),
                         ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
                         ("Body", "1.1 m at the shoulder"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
                         "A bear lands alone, far from the clearing, and takes long legs between long rests.",
-                        effects: new[] {
-                            ("Alone", "Lands and arrives one at a time."),
-                            ("Toughest", "More hit points than anything else on the board."),
-                            ("No swimming", "Streams and ponds are walls to it.")
-                        }),
+                        specs: AnimalBehaviour.SpecsFor(PawnKindLabels.QuarryBear)),
                     new[] { (AlmanacKeys.Wolf, "the other animal kept far from the start"), (AlmanacKeys.Moose, "the other giant of the woods"), (AlmanacKeys.Stone, "the rock it is seeded beside") }
                 )
             }));

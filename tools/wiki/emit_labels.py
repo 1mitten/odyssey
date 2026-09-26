@@ -34,8 +34,9 @@ NAMES_OUT = os.path.join("Assets", "Odyssey", "Hud", "ColonistNames.g.cs")
 # Namespaces whose description column the screen reads as well as its name. Only these, so the
 # generated file does not carry seven hundred tooltip seeds nothing draws: a research project's
 # description is the body of the Research tab's detail pane (docs/design/34-research-tab.md), and
-# writing it in C# would be the second copy the registry exists to prevent.
-DESCRIBED = ("ui.research.project", "ui.world")
+# writing it in C# would be the second copy the registry exists to prevent. A temperament's description is
+# the Almanac's line and the inspect pane's tooltip (docs/design/64-animal-temperament.md §9).
+DESCRIBED = ("ui.research.project", "ui.world", "ui.temperament")
 
 
 def load_labels():
