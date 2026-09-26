@@ -52,9 +52,9 @@ namespace Odyssey.Sim.Saving
         /// the combat contracts step's: C1's four, then the eight combat fields. 3 appends the
         /// knock-down clock and the pending swing (design 33 §9b, §9g). 4 appends the jump's landing
         /// (design 46 §6). 5 appends the treatment cooldown (design 37). 6 appends a sweep's
-        /// knockback immunity (design 62 §7).
+        /// knockback immunity (design 62 §7). 7 appends a thrower's clock (design 62 §7a).
         /// </summary>
-        public const int Layout = 6;
+        public const int Layout = 7;
 
         const int FlagDrafted = 1;
         const int FlagDowned = 2;
@@ -117,6 +117,9 @@ namespace Odyssey.Sim.Saving
 
                 // Layout 6: the butcher's fling (design 62 §7).
                 writer.Write(pawn.KnockbackImmuneUntilTick);
+
+                // Layout 7: the butcher's thrown rock (design 62 §7a).
+                writer.Write(pawn.HurlReadyTick);
             }
             _scratch.Clear();
         }
@@ -163,6 +166,9 @@ namespace Odyssey.Sim.Saving
                 // Layout 6: nobody had been flung before the butcher.
                 int immuneUntil = layout >= 6 ? reader.ReadInt() : 0;
 
+                // Layout 7: nobody threw before the butcher did.
+                int hurlReady = layout >= 7 ? reader.ReadInt() : 0;
+
                 Pawn? pawn = _pawns.Get(new Contracts.PawnId(id));
                 if (pawn == null) continue;
 
@@ -186,6 +192,7 @@ namespace Odyssey.Sim.Saving
                 pawn.PendingStunTicks = pendingStun;
                 pawn.TreatedUntilTick = treatedUntil;
                 pawn.KnockbackImmuneUntilTick = immuneUntil;
+                pawn.HurlReadyTick = hurlReady;
 
                 // A step an order interrupted, rebuilt as the one-step path it was (design 33
                 // §2d). The pawn section has already restored the progress into it, and

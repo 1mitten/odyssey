@@ -31,6 +31,26 @@ namespace Odyssey.Sim.Pawns
             return 0;
         }
 
+        /// <summary>
+        /// The one of the eight a line from <paramref name="from"/> to <paramref name="to"/> points
+        /// along, on any layers and at any distance: straight when one axis is more than twice the
+        /// other, else diagonal. Nought only for one column. The way a thrown rock flings its victim
+        /// — straight away from the thrower (design 62 §7a).
+        /// </summary>
+        public static int Toward(GridSize size, int from, int to)
+        {
+            CellRef a = size.FromIndex(from), b = size.FromIndex(to);
+            int dx = b.X - a.X, dz = b.Z - a.Z;
+            if (dx == 0 && dz == 0) return 0;
+            int ax = dx < 0 ? -dx : dx, az = dz < 0 ? -dz : dz;
+            int sx = dx > 0 ? 1 : dx < 0 ? -1 : 0, sz = dz > 0 ? 1 : dz < 0 ? -1 : 0;
+            if (ax > 2 * az) sz = 0;
+            else if (az > 2 * ax) sx = 0;
+            for (int f = 1; f <= 8; f++)
+                if (Dx[f] == sx && Dz[f] == sz) return f;
+            return 0;
+        }
+
         /// <summary>The step a facing points along. (0, 0) for nought.</summary>
         public static (int dx, int dz) Step(int facing) =>
             facing >= 1 && facing <= 8 ? (Dx[facing], Dz[facing]) : (0, 0);
@@ -123,7 +143,9 @@ namespace Odyssey.Sim.Pawns
         {
             if (target.CarriedBy != 0) return new FlingPath(-1, FlingStop.None);
             GridSize size = ctx.Size;
-            int facing = SweepArc.Facing(size, attacker.Cell, target.Cell);
+            // Straight away from whoever struck it, wherever they stood: beside it for a cleaver, far
+            // off and below for a thrown rock (design 62 §7a).
+            int facing = SweepArc.Toward(size, attacker.Cell, target.Cell);
             if (facing == 0) return new FlingPath(-1, FlingStop.None);
             var (dx, dz) = SweepArc.Step(facing);
             TraverseMode mode = target.OwnMode;

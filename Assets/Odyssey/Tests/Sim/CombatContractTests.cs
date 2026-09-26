@@ -358,6 +358,7 @@ namespace Odyssey.Tests.Sim
             Moves("a carrier", () => pawn.CarriedBy = 2, () => pawn.CarriedBy = 0);
             Moves("a treatment cooldown", () => pawn.TreatedUntilTick = 99, () => pawn.TreatedUntilTick = 0);
             Moves("a knockback immunity", () => pawn.KnockbackImmuneUntilTick = 99, () => pawn.KnockbackImmuneUntilTick = 0);
+            Moves("a thrower's clock", () => pawn.HurlReadyTick = 99, () => pawn.HurlReadyTick = 0);
             Moves("a struck building", () => colony.Pawns.EdificeDamage.Set(123, 4_000),
                 () => colony.Pawns.EdificeDamage.Clear(123));
 
@@ -384,6 +385,7 @@ namespace Odyssey.Tests.Sim
             a.CarriedBy = b.Id.Value;
             a.TreatedUntilTick = 15_030; // layout 4, medical supplies (design 37)
             a.KnockbackImmuneUntilTick = 2_345; // layout 6, the butcher's fling (design 62)
+            a.HurlReadyTick = 3_456; // layout 7, the butcher's rock (design 62 §7a)
             colony.Pawns.Corpses.Add(b, 31, 5);
             colony.Pawns.EdificeDamage.Set(1_234, 55_000);
             colony.Pawns.EdificeDamage.Set(99, 1);
@@ -403,6 +405,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(back.CarriedBy, Is.EqualTo(b.Id.Value));
             Assert.That(back.TreatedUntilTick, Is.EqualTo(15_030));
             Assert.That(back.KnockbackImmuneUntilTick, Is.EqualTo(2_345));
+            Assert.That(back.HurlReadyTick, Is.EqualTo(3_456));
 
             Assert.That(restored.Pawns.Corpses.Count, Is.EqualTo(1));
             Assert.That(restored.Pawns.Corpses[0].Pawn, Is.EqualTo(b.Id.Value));

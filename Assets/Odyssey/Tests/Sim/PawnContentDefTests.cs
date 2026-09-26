@@ -339,7 +339,8 @@ namespace Odyssey.Tests.Sim
         // butcher calls in "butcher", its levels at 1,000 / 940 / 880 / 820.
         // And ButcherBase's traverseMode Animal -> Bandit (design 62 §3a): the owner shot one dead
         // from a rock it could not climb.
-        const ulong ContentFingerprint = 15773818850882015392UL;
+        // And SpeciesDef gained hurl, the butcher's thrown rock (design 62 §7a), null elsewhere.
+        const ulong ContentFingerprint = 11334523027874196340UL;
 
 
         [Test]

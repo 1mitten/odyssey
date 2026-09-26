@@ -81,6 +81,7 @@ namespace Odyssey.Sim.Pawns
                 if (pawn.StunnedUntilTick != 0 && tick >= pawn.StunnedUntilTick) pawn.StunnedUntilTick = 0;
                 if (pawn.KnockedDownUntilTick != 0 && tick >= pawn.KnockedDownUntilTick) pawn.KnockedDownUntilTick = 0;
                 if (pawn.KnockbackImmuneUntilTick != 0 && tick >= pawn.KnockbackImmuneUntilTick) pawn.KnockbackImmuneUntilTick = 0;
+                if (pawn.HurlReadyTick != 0 && tick >= pawn.HurlReadyTick) pawn.HurlReadyTick = 0;
                 if (pawn.NextSwingTick != 0 && tick >= pawn.NextSwingTick
                     && !(pawn.Driver is AttackMeleeJobDriver { InWindup: true }))
                     pawn.NextSwingTick = 0;

@@ -1025,6 +1025,14 @@ namespace Odyssey.Sim.Pawns
         public SweepDef? sweep;
 
         /// <summary>
+        /// A ranged attack of its own, thrown only at a colonist above it or out of its reach
+        /// (<see cref="Hurl"/>, design 62 §7a), or null. An <see cref="AttackDef"/> with a
+        /// <see cref="AttackDef.ranged"/> block — the pistol's shape — whose cooldown is the
+        /// throw's own clock (<see cref="Pawn.HurlReadyTick"/>), never the melee swing's.
+        /// </summary>
+        public AttackDef? hurl;
+
+        /// <summary>
         /// Whose voice this species calls in, by name, or empty for a silent one (design 62 §8d):
         /// presentation hears a moment of a fight by <c>odyssey.sound.voice.{voice}.{moment}</c>.
         /// Not read by the simulation.

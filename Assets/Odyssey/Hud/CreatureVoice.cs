@@ -40,6 +40,7 @@ namespace Odyssey.Hud
             {
                 case CombatEventKind.Swing:
                 case CombatEventKind.SwingCritical:
+                case CombatEventKind.Shot: // a thrown rock (design 62 §7a) is a strike too
                     fromAttacker = true;
                     return attackerVoiced ? VoiceCue.Strike : VoiceCue.None;
                 case CombatEventKind.KnockedBack:

@@ -197,6 +197,33 @@
     <!-- The pig's voice (design 62 section 8d): a grunt as it swings, a squeal when it is hit, a
          bellow when it throws somebody, an oink as it goes down. Presentation only. -->
     <voice>butcher</voice>
+    <!--
+      The thrown rock (design 62 section 7a; owner, 2026-09-26: "have a mechanism so this isn't too
+      easy"). Thrown only at a colonist above it - a rock, a ledge, a roof - or one it cannot reach
+      at all, and never from behind cover: one rock, then it goes back to climbing up to her. Blunt,
+      so it can stun; a landed rock rolls the level's fling, so it usually knocks her off her perch.
+      Its cooldown is the throw's own clock (six seconds), never the cleaver's; its wind-up is the
+      throw (0.75 s). Thrown at the level's melee skill. Slow in the air (0.35 m a tick, a second
+      at 25 m) so it can be seen coming. INVENTED, the first tuning.
+    -->
+    <hurl>
+      <damage>9</damage>
+      <cooldownTicks>360</cooldownTicks>
+      <windupTicks>45</windupTicks>
+      <damageKind>Blunt</damageKind>
+      <stunPerMille>250</stunPerMille>
+      <stunTicks>60</stunTicks>
+      <style>Heavy</style>
+      <ranged>
+        <rangeMm>25000</rangeMm>
+        <speedMmPerTick>350</speedMmPerTick>
+        <accuracyByDistance>
+          <li><mm>3000</mm><perMille>900</perMille></li>
+          <li><mm>12000</mm><perMille>800</perMille></li>
+          <li><mm>25000</mm><perMille>600</perMille></li>
+        </accuracyByDistance>
+      </ranged>
+    </hurl>
   </SpeciesDef>
 
   <!-- Level 1, the butcher: 4.4 m, five colonists' worth, a veteran's arm. -->

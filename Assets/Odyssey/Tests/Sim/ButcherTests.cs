@@ -561,6 +561,105 @@ namespace Odyssey.Tests.Sim
             Assert.That(reached, Is.True, $"kind {kind} never got up the rock to her: a perch to shoot it from");
         }
 
+        /// <summary>A column of stone <paramref name="layers"/> high at (dx, dz): a perch nothing climbs if it is two or more.</summary>
+        static void Pillar(ColonyWorld colony, int dx, int dz, int layers)
+        {
+            for (int y = 0; y < layers; y++) Paint(colony, At(colony, dx, dz, y), NaturalContent.TerrainRock);
+            colony.Pawns.Nav.Rebuild();
+        }
+
+        /// <summary>
+        /// A colonist on a stone column two layers high is out of every walk's reach — a hop is one
+        /// layer — so the butcher throws (design 62 §7a): a Shot with its own weapon id, its clock
+        /// set, and the rock arriving as a hit or a miss. Before the throw it only ever wandered.
+        /// </summary>
+        [Test]
+        public void ItThrowsARockAtAColonistOnAPerchItCannotReach()
+        {
+            var colony = Board(colonists: 1, beds: 0);
+            colony.World.Tick();
+            Pillar(colony, 0, 0, 2);
+            Pawn her = colony.Pawns.Pawns.All[0];
+            Assert.That(Draft(colony, her), Is.EqualTo(IntentRejection.None));
+            Stand(colony, her, At(colony, 0, 0, 2));
+            Assert.That(colony.Pawns.Cells.IsWalkable(her.Cell), Is.True, "the fixture: she is not on the column");
+            Pawn butcher = Spawn(colony, PawnKindIndex.Butcher, At(colony, -6, 0));
+            Stand(colony, butcher, At(colony, -6, 0));
+            Assert.That(colony.Pawns.CanTravel(butcher, her.Cell, butcher.OwnMode), Is.False, "the fixture: it can walk to her");
+
+            var tape = new Tape();
+            int thrown = -1;
+            for (int t = 0; t < 900 && thrown < 0; t++)
+            {
+                tape.Tick(colony, 1);
+                foreach (var e in tape.Events)
+                    if (e.Kind == CombatEventKind.Shot && e.Attacker == butcher.Id) { thrown = e.Tick; break; }
+            }
+            Assert.That(thrown, Is.GreaterThanOrEqualTo(0), "it never threw at her");
+            var shot = tape.Events.First(e => e.Kind == CombatEventKind.Shot && e.Attacker == butcher.Id);
+            Assert.That(shot.Weapon, Is.EqualTo(Hurl.WeaponOf(PawnKindIndex.Butcher)), "not reported as its own throw");
+            Assert.That(butcher.HurlReadyTick, Is.EqualTo(0).Or.GreaterThan(colony.World.CurrentTick - 1), "the throw's clock");
+
+            tape.Tick(colony, 200);
+            bool landed = tape.Events.Any(e => e.Attacker == butcher.Id && e.Tick > thrown
+                && (e.Kind == CombatEventKind.Hit || e.Kind == CombatEventKind.Miss));
+            Assert.That(landed, Is.True, "the rock never came down");
+        }
+
+        /// <summary>
+        /// Whom it throws at (design 62 §7a): the colonist it is after when she stands above it and
+        /// out of reach; never one on its own level, who is walked to and cleaved; and not while its
+        /// clock runs.
+        /// </summary>
+        [Test]
+        public void ItThrowsUpAtAPerchAndNeverAtSomebodyOnItsOwnLevel()
+        {
+            var colony = Board(colonists: 1, beds: 0);
+            colony.World.Tick();
+            Pillar(colony, 0, 0, 1);
+            Pawn her = colony.Pawns.Pawns.All[0];
+            Stand(colony, her, At(colony, 0, 0, 1));
+            Pawn butcher = Spawn(colony, PawnKindIndex.Butcher, At(colony, -5, 0));
+            Stand(colony, butcher, At(colony, -5, 0));
+
+            Assert.That(Hurl.TargetFor(butcher, colony.Pawns, her), Is.SameAs(her), "a colonist on a rock above it");
+            butcher.HurlReadyTick = colony.World.CurrentTick + 100;
+            Assert.That(Hurl.TargetFor(butcher, colony.Pawns, her), Is.Null, "thrown again while its clock runs");
+            butcher.HurlReadyTick = 0;
+            Stand(colony, her, At(colony, 3, 3));
+            Assert.That(Hurl.TargetFor(butcher, colony.Pawns, her), Is.Null, "a rock thrown at somebody on its own level");
+        }
+
+        /// <summary>
+        /// A rock that lands flings her straight away from the thrower — off the far side of her
+        /// perch (design 62 §7a) — though the thrower stands four cells off and a layer below.
+        /// </summary>
+        [Test]
+        public void ALandedRockKnocksHerOffTheFarSide()
+        {
+            var colony = Board(colonists: 1, beds: 0);
+            colony.World.Tick();
+            Pillar(colony, 0, 0, 1);
+            Pawn her = colony.Pawns.Pawns.All[0];
+            Assert.That(Draft(colony, her), Is.EqualTo(IntentRejection.None));
+            Stand(colony, her, At(colony, 0, 0, 1));
+            Pawn butcher = Spawn(colony, PawnKindIndex.Butcher, At(colony, -4, 0));
+            Stand(colony, butcher, At(colony, -4, 0));
+            int from = her.Cell;
+            colony.Pawns.Combat!.ApplySwing(butcher, her, Hurl.ArmamentOf(butcher, colony.Pawns),
+                new SwingOutcome(CombatEventKind.Hit, 1_000, 0, critical: false, knockback: true), colony.World.CurrentTick);
+            Assert.That(her.Cell, Is.Not.EqualTo(from), "she stayed on her perch");
+            Assert.That(Size.FromIndex(her.Cell).X, Is.GreaterThan(Size.FromIndex(from).X), "not flung away from the thrower");
+            Assert.That(Size.FromIndex(her.Cell).Y, Is.LessThan(Size.FromIndex(from).Y), "still up on the rock");
+        }
+
+        [Test]
+        public void ItThrowsAtItsOwnLevelNotAColonistsRoll()
+        {
+            var (colony, butcher, _) = Scene(1);
+            Assert.That(colony.Pawns.RangedRules.ShootingLevel(butcher), Is.EqualTo(14));
+        }
+
         // ---- the real fight -----------------------------------------------------------------
 
         /// <summary>

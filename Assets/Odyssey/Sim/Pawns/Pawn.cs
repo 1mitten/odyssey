@@ -355,6 +355,13 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Immune to being knocked back right now, at <paramref name="tick"/>.</summary>
         public bool KnockbackImmuneAt(int tick) => KnockbackImmuneUntilTick > tick;
 
+        /// <summary>
+        /// A thrower's throw is ready again at this tick (design 62 §7a, <see cref="Hurl"/>): its own
+        /// clock, so a thrown rock never delays the cleaver. Nought when ready; put back to nought
+        /// once past. Saved (layout 7) and hashed only while set (bit 29).
+        /// </summary>
+        public int HurlReadyTick { get; internal set; }
+
         // The swing in the air, decided when its wind-up began (design 33 §9g) and applied at its
         // impact: what the rules rolled, kept here through the wind-up so a save taken mid-swing
         // lands the same blow. Set only while an attack driver is in its wind-up, cleared when
@@ -417,7 +424,7 @@ namespace Odyssey.Sim.Pawns
             HpMilli != HpMaxMilli || Downed || NextSwingTick != 0 || StunnedUntilTick != 0
             || RetaliateAgainst != 0 || EquippedItem != 0 || CombatTarget != 0 || CarriedBy != 0
             || KnockedDownUntilTick != 0 || PendingSwing != 0 || TreatedUntilTick != 0
-            || KnockbackImmuneUntilTick != 0;
+            || KnockbackImmuneUntilTick != 0 || HurlReadyTick != 0;
 
         /// <summary>Cell index, layer included. Always layer-aware; there is no 2D form of this.</summary>
         public int Cell { get; set; }
@@ -1180,7 +1187,8 @@ namespace Odyssey.Sim.Pawns
             // is bit 23, the second of the two left free: walked only while it has anything on it,
             // so a colony nobody has hurt hashes as before health.
             // The area (design 43 §4a) is bit 27, nought at the default, for the same reason.
-            // A sweep's knockback immunity (design 62 §7) is bit 28, walked only while set.
+            // A sweep's knockback immunity (design 62 §7) is bit 28, walked only while set, and a
+            // thrower's clock (design 62 §7a) bit 29.
             bool combat = HasCombatState;
             bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;
             bool health = HasHealthState;
@@ -1189,7 +1197,7 @@ namespace Odyssey.Sim.Pawns
                 | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0)
                 | (TreatedUntilTick != 0 ? 1 << 22 : 0) | (health ? 1 << 23 : 0)
                 | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0) | ((int)Area << 27)
-                | (KnockbackImmuneUntilTick != 0 ? 1 << 28 : 0));
+                | (KnockbackImmuneUntilTick != 0 ? 1 << 28 : 0) | (HurlReadyTick != 0 ? 1 << 29 : 0));
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
             if (JumpLanding >= 0) hash.Add(JumpLanding);
@@ -1207,6 +1215,7 @@ namespace Odyssey.Sim.Pawns
                 if (knocked) hash.Add(KnockedDownUntilTick);
                 if (TreatedUntilTick != 0) hash.Add(TreatedUntilTick);
                 if (KnockbackImmuneUntilTick != 0) hash.Add(KnockbackImmuneUntilTick);
+                if (HurlReadyTick != 0) hash.Add(HurlReadyTick);
                 if (swinging)
                 {
                     hash.Add(PendingSwing);

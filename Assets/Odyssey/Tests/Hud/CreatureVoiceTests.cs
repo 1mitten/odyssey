@@ -15,6 +15,7 @@ namespace Odyssey.Tests.Hud
     {
         [TestCase(CombatEventKind.Swing, true, false, VoiceCue.Strike, true)]
         [TestCase(CombatEventKind.SwingCritical, true, false, VoiceCue.Strike, true)]
+        [TestCase(CombatEventKind.Shot, true, false, VoiceCue.Strike, true)]
         [TestCase(CombatEventKind.KnockedBack, true, false, VoiceCue.Fling, true)]
         [TestCase(CombatEventKind.Slam, true, false, VoiceCue.Fling, true)]
         [TestCase(CombatEventKind.Hit, false, true, VoiceCue.Hurt, false)]
