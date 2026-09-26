@@ -1006,7 +1006,15 @@ namespace Odyssey.Presentation.Ui
             // shell attaching to a world that is already up — shows at once.
             bool fromStartScreen = _boot!.Directors != null && CurtainFrames > 0
                                    && _backdrop.style.display == DisplayStyle.Flex;
+            // A world that is already behind the curtain keeps it. A load raises this twice in
+            // the same frame — once when the world is built, once when the save has been read
+            // into it (RefreshAfterLoad) — and the first raise has already hidden the backdrop
+            // the test above reads, so the second used to lift the cover on the build frame
+            // itself: a load showed exactly the frames the curtain exists to hide
+            // (docs/bug-patterns.md, "An event raised twice in one frame").
+            bool stillCovering = _boot.Directors != null && _curtain > 0;
             ApplySession();
+            if (stillCovering) return;
             if (fromStartScreen)
             {
                 _curtain = CurtainFrames;
