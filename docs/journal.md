@@ -14268,3 +14268,11 @@ first try and the test failed for that, not for the fault, which the trace showe
 **Unity found one more.** `PrisonBedTests` had never been compiled by Unity, and Unity's older NUnit
 takes only a string for `Does.Not.Contain`. EditMode on the merge: 4,612 / 4,574 / 1 failed, the
 `WeaponSheathGapTests` bat that fails on `main` too. Design 59 §16 tables all of it.
+
+**Then the header, measured rather than argued.** `DockedTabGeometryTests.TheLongestNameStillClearsTheColonistsButtons`
+laid the colonist pane out at 1920 × 1080: Draft, Fight back, Arrest, First Person, Almanac and Close
+took 448 px and left **17** for the name line, where *Charlotte* alone needs 95. The owner chose the
+right-click menu for Arrest (while nobody selected is drafted, beside Tend and Equip), which is where
+the design had first put it. The header is `main`'s three again, with the name clear by 6 px — and
+the word after the name 72 px short **on `main` too**, since First Person's 117 went in. That is
+logged by the test and left as the header's own question.

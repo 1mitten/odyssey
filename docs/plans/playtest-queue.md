@@ -62,10 +62,10 @@ the next session learns to ignore.
   - With a prison bed free, fight a raid (Debug → Events → Raid, size 5) until one surrenders: she is
     usually bleeding, walks herself to the cell, lies down, and a doctor comes. Wrong: she stays on
     her feet bleeding, or the doctor's walk round to the cell takes so long it feels broken.
-  - Open a colonist's pane with no free prison bed: *Arrest* is dim, and hovering it says why. Free a
-    bed and press it. Wrong: the dim state is not noticeable, or the colony's mood does not dip.
-  - The colonist's header now holds four buttons (Draft, the response, Arrest, First Person). Wrong:
-    it looks crowded, or Arrest sits too close to Draft for something that serious.
+  - Select one colonist (not drafted) and right-click another: the menu offers *Arrest*. With no free
+    prison bed it is dim and says why. Free a bed and choose it. Wrong: you look for Arrest on her
+    pane, the dim row is not noticeable, or the colony's mood does not dip.
+  - Draft a colonist and right-click another colonist. Wrong: a menu opens instead of the move.
   - **The numbers are yours to confirm** (design 59 §8–§10): 2 % a day escape risk for one prisoner,
     a quarter of badly hurt raiders surrendering, arrests resisted 5–60 % by mood, recruitment taking
     days. Say which feel wrong.

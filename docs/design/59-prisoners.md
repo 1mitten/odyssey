@@ -381,9 +381,11 @@ colony's total doubles rather than quadruples.
 
 ### Arrest
 
-- **How it is given:** ~~a context-menu row on a standing colonist, with a drafted colonist
-  selected (`OfferArrest`)~~ — **superseded as built** (§15a): a command on her own pane, which sends
-  the nearest colonist on his feet; dim with its reason when it would be refused (§16 H2).
+- **How it is given:** a row in the right-click menu on a standing colonist (`OfferArrest`) —
+  **while nobody selected is drafted**, so a drafted right-click stays a move. P10 built it as a
+  button on her own pane instead (§15a); the second review measured that header and the owner moved
+  it back to the menu (§16 H1). It sends the first standing colonist selected, or the nearest, and is
+  dim with its reason when it would be refused (§16 H2).
 - **On contact** the target rolls resistance: 20 % + (500 − mood) / 20, clamped to 5–60 %.
 - **If she resists**, she is Escaping: she fights the arrester or flees, and is downed, then
   captured.
@@ -615,8 +617,8 @@ the row says otherwise.
 
 | # | Fault | Fix |
 |---|---|---|
-| H1 | **Four labelled buttons in the colonist's header**, where design 57 §6 took the fourth out because it runs her name under them | **Measured, and open: the owner's call** (below) |
-| H2 | **Arrest was always live** and a refused press did nothing | Dim with its reason — she is down, no free prison bed, nobody else on their feet — from the new `WorldSnapshot.PrisonBedFree` (`ArrestIsDimWithItsReasonWhenItWouldBeRefused`, `WhetherAPrisonBedStandsFreeIsPublished`) |
+| H1 | **Four labelled buttons in the colonist's header**, where design 57 §6 took the fourth out because it runs her name under them | Measured (below), and **the owner's ruling: Arrest is a right-click row** on a standing colonist while nobody selected is drafted (`ContextMenuModel.OfferArrest`, `ArrestMenuTests`); the header is `main`'s three again |
+| H2 | **Arrest was always live** and a refused press did nothing | The row is dim with its reason — no free prison bed, nobody else on their feet — from the new `WorldSnapshot.PrisonBedFree` (`ArrestMenuTests.ArrestIsDimWithItsReasonWhenItWouldBeRefused`, `WhetherAPrisonBedStandsFreeIsPublished`) |
 | H3 | **Capture was offered on a prisoner lying in her own bed**, refused in silence, and a drafted right-click on her cell opened the menu instead of moving | A sparse `stray` aspect from `CaptureRules.WantsCapture`, the order's own rule (`APrisonerInHerBedIsOfferedNothingAndTheClickIsAMove`) |
 | H4 | **The mode row cycled Hold → Recruit → Release → Exile**, so going back to Hold passed through Release and Exile while the game ran | A popover of the four to choose from, the bed owner picker's (`InspectModel.OfferedModes`) |
 | H5 | **Willingness showed 0 % on Hold** where nothing could move it | Shown in Recruit, or once a warden has made a start (`AHoldPrisonerNobodyHasTalkedToShowsNoWillingness`) |
@@ -645,8 +647,9 @@ the two tiers' NUnit).
 | Almanac, Close | 26 + 4 each |
 
 The six take 448 of a 560 pane whose titles start 82 in, leaving **17 px** for the name line; the
-longest given name, *Charlotte*, and *colonist · L6* after it need **173**. **Without Arrest it is
-101, so `main` already clips a long name** since First Person's 117 went in (design 57 §6 counted
-three buttons with Prioritise gone, not their widths). The test fails until the header is decided,
-and it is the number any later header change starts from.
+longest given name, *Charlotte*, and *colonist · L6* after it need **173**, the name alone **95**.
+**Without Arrest it is 101**: the name clears the buttons by 6 px, and the word after it is 72 short
+— **on `main` too**, since First Person's 117 went in (design 57 §6 counted three buttons with
+Prioritise gone, not their widths). With the owner's ruling Arrest left the header, and the test
+asserts the name clears and logs the word's shortfall, which is the header's own open question.
 

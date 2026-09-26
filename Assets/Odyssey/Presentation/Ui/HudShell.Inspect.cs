@@ -2306,10 +2306,6 @@ namespace Odyssey.Presentation.Ui
             // The response beside it (design 33 §18e): the model decides, this carries its intents.
             if (command.Enabled && ResponseModel.IsResponseKey(command.IconKey))
                 button.RegisterCallback<ClickEvent>(_ => CycleResponse());
-            // Arrest (design 59 §10): A of nought asks the simulation for the nearest able colonist.
-            if (command.Enabled && command.IconKey == InspectModel.ArrestKey)
-                button.RegisterCallback<ClickEvent>(_ =>
-                    _boot?.World?.Intents.Submit(new Intent(IntentKind.OrderArrest, default, 0, _inspect.Pawn.Value)));
             // First Person (design 57): watching, not commanding, so no intent — the directors take
             // the view and the rig and this shell follow them on the next frame.
             if (command.Enabled && command.IconKey == InspectModel.RideKey)

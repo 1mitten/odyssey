@@ -421,9 +421,6 @@ namespace Odyssey.Tests.Hud
         {
             var snapshot = Frame.Write();
             snapshot.AddPawn(new PawnView(new PawnId(3), new CellRef(4, 5, 1), 620, 710, 72, JobHandle.Eat));
-            // Somebody to make an arrest, and a bed to put her in: Arrest is live only then (design 59 §16 H2).
-            snapshot.AddPawn(new PawnView(new PawnId(4), new CellRef(6, 5, 1), 620, 710, 72, JobHandle.Wait));
-            snapshot.SetPrisonBedFree(true);
 
             var pane = new InspectModel();
             pane.SetColonist(new PawnId(3));
@@ -444,11 +441,12 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.Tabs.Single(t => t.Name == "Health").Enabled, Is.True);
 
             Assert.That(pane.Commands, Is.Not.Empty);
-            // The draft, the response (design 33 §2f, §18e), the arrest (design 59 §10) and First
-            // Person (design 57) are the commands wired; the rest may not pretend to be.
+            // The draft, the response (design 33 §2f, §18e) and First Person (design 57) are the
+            // commands wired; the rest may not pretend to be. Arrest is a right-click row on her, not
+            // a fourth button (design 59 §16 H1).
             Assert.That(pane.Commands.Where(c => c.Enabled).Select(c => c.IconKey),
-                Is.EqualTo(new[] { InspectModel.DraftKey, ResponseModel.FightBackKey, InspectModel.ArrestKey, InspectModel.RideKey }),
-                "only Draft, the response, Arrest and First Person are wired, and none of the others may pretend to be");
+                Is.EqualTo(new[] { InspectModel.DraftKey, ResponseModel.FightBackKey, InspectModel.RideKey }),
+                "only Draft, the response and First Person (design 57) are wired, and none of the others may pretend to be");
         }
 
         /// <summary>

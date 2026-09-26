@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Sim.Contracts;
@@ -157,7 +158,13 @@ namespace Odyssey.Tests.Hud
             Assert.That(RightClick(Both, frame, new CellRef(6, 6, 1), Hog), Is.Empty, "attacked a hog");
             Assert.That(RightClick(Both, frame, new CellRef(8, 8, 1), Raider), Is.Empty, "attacked a bandit");
             Assert.That(RightClick(Both, frame, new CellRef(8, 4, 1), Cy), Is.Empty, "rescued");
-            Assert.That(RightClick(Both, frame, new CellRef(7, 4, 1), Bo, ctrl: true), Is.Empty, "Ctrl-attacked");
+            // A standing colonist under an undrafted selection is offered Arrest since design 59
+            // §16 H1 (the owner's ruling): a menu, never an attack.
+            var sent = new List<Intent>();
+            var menu = new List<ContextMenuRow>();
+            OrderModel.RightClick(Both, frame, new CellRef(7, 4, 1), Bo, true, sent, menu);
+            Assert.That(sent, Is.Empty, "Ctrl-attacked");
+            Assert.That(menu.Select(r => r.Key), Is.EqualTo(new[] { ContextMenuModel.ArrestKey, ContextMenuModel.CancelKey }));
         }
 
         [Test]

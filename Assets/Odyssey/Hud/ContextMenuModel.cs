@@ -100,6 +100,7 @@ namespace Odyssey.Hud
             if (cell.HasValue) OfferEquip(selection, snapshot, cell.Value, into);
             OfferCapture(selection, snapshot, under, into);
             OfferTend(selection, snapshot, under, into);
+            OfferArrest(selection, snapshot, under, into);
 
             if (into.Count == 0) return false;
             into.Add(new ContextMenuRow(CancelKey, Registry.Label(CancelKey), enabled: true, string.Empty, Nothing));
@@ -271,6 +272,63 @@ namespace Odyssey.Hud
             }
             var order = new[] { new Intent(IntentKind.OrderTend, patient.Cell, doctor.Value, under.Value) };
             into.Add(new ContextMenuRow(TendKey, label, enabled: true, string.Empty, order));
+        }
+
+        /// <summary>The verb on a colonist's Arrest row (design 59 §10).</summary>
+        public const string ArrestKey = "ui.command.arrest";
+
+        /// <summary>
+        /// <b>Arrest</b>, on a colonist under the pointer who is on her feet (design 59 §10, owner's
+        /// ruling 2026-09-26 at the second review): a row here rather than a button in her pane's
+        /// header, which with Draft, the response and First Person left 17 px for her name
+        /// (design 59 §16 H1). <b>Only while nobody selected is drafted</b>, so a drafted
+        /// right-click that touches a colonist is still a move (design 33 §2f). The first standing
+        /// colonist of the selection other than her is sent; with none, the nearest who can reach
+        /// her (<c>A = 0</c>). Dim with its reason when the simulation would refuse it
+        /// (<see cref="ArrestRefusal"/>). No colonist selected, no row.
+        /// </summary>
+        static void OfferArrest(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot, PawnId under,
+            List<ContextMenuRow> into)
+        {
+            if (!under.IsValid || !snapshot.TryGetPawn(under, out PawnView target) || !target.IsColonist || target.IsDowned)
+                return;
+
+            bool anyColonist = false;
+            PawnId arrester = PawnId.None;
+            for (int i = 0; i < selection.Count; i++)
+            {
+                if (!snapshot.TryGetPawn(selection[i], out PawnView view) || !view.IsColonist) continue;
+                if (OrderModel.IsDrafted(snapshot, view.Id)) return;
+                anyColonist = true;
+                if (!arrester.IsValid && view.Id != under && !view.IsDowned) arrester = view.Id;
+            }
+            if (!anyColonist) return;
+
+            string label = Registry.Label(ArrestKey);
+            string? refusal = ArrestRefusal(snapshot, under);
+            if (refusal != null)
+            {
+                into.Add(new ContextMenuRow(ArrestKey, label, enabled: false, refusal, Nothing));
+                return;
+            }
+            var order = new[] { new Intent(IntentKind.OrderArrest, target.Cell, arrester.IsValid ? arrester.Value : 0, under.Value) };
+            into.Add(new ContextMenuRow(ArrestKey, label, enabled: true, string.Empty, order));
+        }
+
+        /// <summary>
+        /// Why an arrest of <paramref name="target"/> would be refused, in the menu's words, or null
+        /// when it would be sent (design 59 §16 H2). Read off what the simulation publishes — her
+        /// state, the colony's, whether a prison bed stands free — the three refusals a player can
+        /// see coming. The simulation still decides; this only stops the press doing nothing.
+        /// </summary>
+        public static string? ArrestRefusal(WorldSnapshot snapshot, PawnId target)
+        {
+            if (!snapshot.TryGetPawn(target, out PawnView her) || her.IsDowned) return "she is down; she can only be captured";
+            if (!snapshot.PrisonBedFree) return "no free prison bed";
+            var pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+                if (pawns[i].Id != target && pawns[i].IsColonist && !pawns[i].IsDowned) return null;
+            return "nobody else is on their feet to take her";
         }
 
         /// <summary>

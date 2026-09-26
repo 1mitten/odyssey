@@ -821,8 +821,7 @@ namespace Odyssey.Hud
                 }
 
                 AddColonistTabs();
-                AddColonistCommands(!Tombstoned && OrderModel.IsDrafted(snapshot, Pawn), ResponseModel.Of(snapshot, Pawn),
-                    Tombstoned ? null : ArrestRefusal(snapshot, Pawn));
+                AddColonistCommands(!Tombstoned && OrderModel.IsDrafted(snapshot, Pawn), ResponseModel.Of(snapshot, Pawn));
                 RefreshSkills(snapshot);
                 return;
             }
@@ -1979,23 +1978,7 @@ namespace Odyssey.Hud
         /// </summary>
         public int Response { get; private set; }
 
-        /// <summary>
-        /// Why an arrest of <paramref name="target"/> would be refused, in the pane's words, or null
-        /// when it would be sent (design 59 §16 H2). Read off what the simulation publishes — her
-        /// state, the colony's, whether a prison bed stands free — the three refusals a player can
-        /// see coming. The simulation still decides; this only stops the press doing nothing.
-        /// </summary>
-        public static string? ArrestRefusal(WorldSnapshot snapshot, PawnId target)
-        {
-            if (!snapshot.TryGetPawn(target, out PawnView her) || her.IsDowned) return "she is down; she can only be captured";
-            if (!snapshot.PrisonBedFree) return "no free prison bed";
-            var pawns = snapshot.Pawns;
-            for (int i = 0; i < pawns.Length; i++)
-                if (pawns[i].Id != target && pawns[i].IsColonist && !pawns[i].IsDowned) return null;
-            return "nobody else is on their feet to take her";
-        }
-
-        void AddColonistCommands(bool drafted, int response, string? arrestRefusal = null)
+        void AddColonistCommands(bool drafted, int response)
         {
             Drafted = drafted;
             Response = response;
@@ -2028,16 +2011,10 @@ namespace Odyssey.Hud
                 Enabled = !Tombstoned,
                 Reason = ResponseModel.Describe(response),
             });
-            // Arrest (design 59 §10): on her own pane rather than a right-click on her, because a
-            // right-click that touches a colonist is a move (design 33 §2f) and must stay one. The
-            // nearest colonist who can reach her is sent; with no free prison bed it is refused.
-            Commands.Add(new InspectCommand
-            {
-                IconKey = ArrestKey, Label = Registry.Label(ArrestKey),
-                Enabled = !Tombstoned && arrestRefusal == null,
-                Reason = arrestRefusal ?? "the nearest colonist takes her into custody",
-            });
-            // First Person (design 57), after the three that command her: this one only watches. Last,
+            // Arrest is not here (design 59 §16 H1, the owner's ruling): a fourth labelled button
+            // left 17 px for her name. It is a row in the right-click menu on her while nobody
+            // selected is drafted (ContextMenuModel.OfferArrest).
+            // First Person (design 57), after the two that command her: this one only watches. Last,
             // so the response keeps its place beside Draft.
             Commands.Add(new InspectCommand
             {
@@ -2047,7 +2024,5 @@ namespace Odyssey.Hud
             });
         }
 
-        /// <summary>The colonist pane's arrest command (design 59 §10).</summary>
-        public const string ArrestKey = "ui.command.arrest";
     }
 }

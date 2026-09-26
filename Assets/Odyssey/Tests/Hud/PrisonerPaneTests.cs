@@ -146,48 +146,24 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.CellRows.Select(r => r.Name), Is.EqualTo(new[] { InspectModel.EscapingRow }));
         }
 
+        /// <summary>
+        /// Arrest is not a button on anybody's pane (design 59 §16 H1): a fourth labelled one left
+        /// her name 17 px. It is a right-click row (<c>ArrestMenuTests</c>).
+        /// </summary>
         [Test]
-        public void AColonistsPaneOffersArrestAndAPrisonersDoesNot()
+        public void NoPaneCarriesArrest()
         {
             WorldSnapshot frame = Frame.Write(layers: 4);
             var ada = new PawnId(1);
             frame.AddPawn(new PawnView(ada, new CellRef(4, 4, 1), 800, 800, 700, flags: PawnFlags.Person));
-            frame.AddPawn(new PawnView(new PawnId(2), new CellRef(6, 4, 1), 800, 800, 700, flags: PawnFlags.Person));
             frame.SetPrisonBedFree(true);
             var model = new InspectModel();
             model.SetColonist(ada);
             model.Refresh(frame);
-            Assert.That(model.Commands.Any(c => c.IconKey == InspectModel.ArrestKey && c.Enabled), Is.True);
+            Assert.That(model.Commands.Any(c => c.IconKey == ContextMenuModel.ArrestKey), Is.False);
 
             InspectModel held = Pane(Board(PrisonMode.Hold, 0));
-            Assert.That(held.Commands.Any(c => c.IconKey == InspectModel.ArrestKey), Is.False);
-        }
-
-        /// <summary>
-        /// Design 59 §16 H2. Arrest was always live, and the three refusals a player can see coming
-        /// — she is down, no prison bed is free, nobody else can take her — made the press do
-        /// nothing at all. It is dim now, with the reason, from what the simulation publishes.
-        /// </summary>
-        [TestCase("down")]
-        [TestCase("nobed")]
-        [TestCase("alone")]
-        public void ArrestIsDimWithItsReasonWhenItWouldBeRefused(string why)
-        {
-            WorldSnapshot frame = Frame.Write(layers: 4);
-            var ada = new PawnId(1);
-            PawnFlags hers = PawnFlags.Person | (why == "down" ? PawnFlags.Downed : PawnFlags.None);
-            frame.AddPawn(new PawnView(ada, new CellRef(4, 4, 1), 800, 800, 700, flags: hers));
-            if (why != "alone")
-                frame.AddPawn(new PawnView(new PawnId(2), new CellRef(6, 4, 1), 800, 800, 700, flags: PawnFlags.Person));
-            frame.SetPrisonBedFree(why != "nobed");
-
-            var model = new InspectModel();
-            model.SetColonist(ada);
-            model.Refresh(frame);
-            InspectCommand arrest = model.Commands.Single(c => c.IconKey == InspectModel.ArrestKey);
-            Assert.That(arrest.Enabled, Is.False, "live, and the press would do nothing");
-            Assert.That(arrest.Reason, Is.EqualTo(InspectModel.ArrestRefusal(frame, ada)));
-            Assert.That(arrest.Reason, Is.Not.Empty);
+            Assert.That(held.Commands.Any(c => c.IconKey == ContextMenuModel.ArrestKey), Is.False);
         }
 
         /// <summary>
