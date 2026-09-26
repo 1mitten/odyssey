@@ -4115,6 +4115,10 @@ in progress (§2d), and the tree runs the same tick. **Not asked** of a colonist
 
 ### 18e. The pane
 
+**Superseded 2026-09-26 by design 61:** the pane's header no longer carries the response. It is set
+on the Assign tab's Response column (design 43 §6), and `HudShell.CycleResponse` is gone.
+`ResponseModel.Cycle` stays as the selection-wide rule. What follows is the record.
+
 A second live button on a colonist's pane, after Draft. **It shows the response she has** — *Fight
 back*, *Defend*, *Flee*, each a registry name (`ui.command.fightback`, `ui.command.defend`,
 `ui.command.flee`) — and pressing it moves to the next, round the three. Its tooltip says what the

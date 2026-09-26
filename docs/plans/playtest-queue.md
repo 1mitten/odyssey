@@ -23,6 +23,17 @@ the next session learns to ignore.
 
 ## Open
 
+- **The inspect header's two toggles** (`claude/inspect-header-actions`, design 61, mockup 24c).
+  Select a colonist and look at the pane's top right.
+  - Press Draft, then T. Wrong: the shield does not fill red and read *Drafted*, or the two
+    disagree.
+  - Box-select two colonists and draft one of them from its own pane. Wrong: no red line along the
+    foot of the Draft tile, or a press releases the drafted one instead of drafting the other.
+  - Select two colonists. Wrong: First Person still looks pressable. Select one and press Z, then Z
+    again. Wrong: you do not come back to where the camera was.
+  - Read the caps T and Z, and hover each tile. Wrong: the cap is lost in the corner of the 40 px
+    tile, or the hover does nothing you can see.
+
 - **First Person: does the shoulder camera show a colonist's day and a fight clearly?**
   (`claude/planning-session-fok6wm`, design 57.) Select a colonist, press **First Person** on her
   card, and let her work, walk up a terrace and go through a door.
