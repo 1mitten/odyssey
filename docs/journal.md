@@ -13958,3 +13958,36 @@ Written in a container with no Unity: the model and its setting are proven in th
 engine half is uncompiled and owes both Unity tiers, a player build and the hitch tour's mid-wake
 picture before it merges (design 56 §11).
 
+
+## 2026-09-26 — Trading, designed
+
+The owner asked for trading in the reference's mould, re-dressed for Odyssey: gold as the currency,
+and a debug-menu event bringing one person in from an edge to the hearth, where a right-click
+*Trade* opens a deal. **Documents only**: an interview (`trading-interview.md`), design 57 and
+`docs/plans/trading.md`. No code is started until the plan is approved.
+
+**Three surveys found the game had the parts and not the side.**
+- **Reusable:** the raid's edge arrival, its hearth lookup and milling, a pawn leaving by an edge,
+  the right-click menu, the ordered-job template, the modal and the bill stepper.
+- **Already named:** the registry had the trade command, the tab, the bulletin and a *Credit chit*
+  currency with coin art, all unused.
+- **Missing:** a **neutral side**. `Faction` is Colony, Wild or Hostile, and the mind is chosen as
+  animal, else hostile, else colonist. So a friendly stranger would have walked in and started
+  hauling. `PawnView.IsColonist` would have put them on the roster.
+
+**Eight answers, and every recommendation was taken but one.** The harm question came back as
+*"1 and 3 depending"*. It is read as accidental harm sending the trader away and a deliberate,
+ordered attack turning them hostile, and design 57 §7 asks the owner to confirm that reading.
+
+**Decisions to keep.**
+- **Gold is an item, not a number.** The unused *Credit chit* row is renamed rather than joined by a
+  second currency.
+- **Price has one owner**, `TradePricing`, in per-mille integers. Selling is always at least a unit
+  above buying, so a loop always loses.
+- **The HUD holds the ledger's quantities until Confirm.** The simulation re-validates the whole
+  deal and applies it atomically or not at all.
+- **Loose goods within four cells of the trader count as the colony's**, or the gold one deal pays
+  out cannot be spent in the next until somebody hauls it.
+
+**Written with the reference unread**: `rimworldwiki.com` is blocked by this container's network
+policy. The reference mechanics used are the ones already in `a-11` and `a-14`.
