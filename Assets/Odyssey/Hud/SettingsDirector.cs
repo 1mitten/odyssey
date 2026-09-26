@@ -1829,10 +1829,6 @@ namespace Odyssey.Hud
                 inventoryOpen, researchOpen, assignOpen: false, startScreen);
 
         /// <summary>
-        /// The same rule with the Assign tab in it (design 43 §6), which docks in the Work tab's
-        /// corner beside the others and unwinds at their rung. The one the presenter calls.
-        /// </summary>
-        /// <summary>
         /// The same rule with a ride in it (design 56 §5), above everything: while the view rides
         /// with a colonist nothing else is on screen, so there is nothing else for Escape to close,
         /// and the owner's words were that the view is kept "until they push Esc". The one the
@@ -1846,6 +1842,10 @@ namespace Odyssey.Hud
                 : Escape(contextMenuOpen, toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
                     inventoryOpen, researchOpen, assignOpen, startScreen);
 
+        /// <summary>
+        /// The same rule with the Assign tab in it (design 43 §6), which docks in the Work tab's
+        /// corner beside the others and unwinds at their rung.
+        /// </summary>
         public EscapeAction Escape(bool contextMenuOpen, bool toolArmed, bool paletteOpen, bool menuOpen,
             bool workOpen, bool almanacOpen, bool animalsOpen, bool inventoryOpen, bool researchOpen,
             bool assignOpen, MenuScreen? startScreen)
