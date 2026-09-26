@@ -212,7 +212,11 @@ namespace Odyssey.Sim.Pawns
         /// The bandit with a pistol (design 55 §8): its own kind so a raid mix can name it. Appended.
         /// </summary>
         public const int Gunman = 4;
-        public const int Count = 5;
+
+        /// <summary>The frog of the banks (design 30 §8): kind 5, species 3. Appended after the gunman.</summary>
+        public const int CulvertFrog = 5;
+
+        public const int Count = 6;
     }
 
     /// <summary>
@@ -915,6 +919,30 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public bool nocturnal;
 
+        /// <summary>
+        /// Keeps within this many cells of water, Chebyshev, or 0 for anywhere (design 30 §8): the
+        /// frog's bank. Every leg its mind picks ends this close to a water cell on its own layer
+        /// or the one below, and an animal that finds itself further out heads back to the
+        /// nearest bank it can reach. A world seeds it on the bank habitat.
+        /// </summary>
+        public int bankRadius;
+
+        /// <summary>
+        /// Stays out in the rain rather than heading for cover (design 43 §6, design 30 §8). The
+        /// shelter node's own flag, named in its summary for the day a species wanted it: a frog.
+        /// </summary>
+        public bool ignoresRain;
+
+        /// <summary>
+        /// Cells within which a new leg is turned away from its own kind's (design 30 §8e), or 0
+        /// for no such rule. A frog picking where to hop next looks at every other frog this close
+        /// that is already hopping somewhere and prefers a heading at least 60 degrees from all of
+        /// theirs (owner, 2026-09-26: a group's frogs "jump in different directions as some were
+        /// very similar"). A preference, never a refusal: where every open cell lies the same way,
+        /// the least alike is taken.
+        /// </summary>
+        public int divergeRadius;
+
         /// <summary>The figure catalogue entry presentation draws this species with. Not read by the simulation.</summary>
         public string figureKey = string.Empty;
 
@@ -1605,9 +1633,11 @@ namespace Odyssey.Sim.Pawns
                 // The debug-spawned hostile person (design 33 §1), appended.
                 "PawnKind_Bandit",
                 // The bandit with a pistol, a raid's second kind (design 55 §8), appended.
-                "PawnKind_Gunman");
+                "PawnKind_Gunman",
+                // The frog of the banks (design 30 §8), appended after the gunman.
+                "PawnKind_CulvertFrog");
             content.Species = ByName<SpeciesDef>(defs,
-                "Species_Person", "Species_MiddenHog", "Species_DuctRat");
+                "Species_Person", "Species_MiddenHog", "Species_DuctRat", "Species_CulvertFrog");
             content.KindSpecies = new int[content.Kinds.Length];
             for (int k = 0; k < content.Kinds.Length; k++)
             {

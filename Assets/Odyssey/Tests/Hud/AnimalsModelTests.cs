@@ -208,7 +208,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(AlmanacDirector.ResolveSelection(inspect), Is.EqualTo(("Fauna", Registry.Label("ui.pawn.rat"))));
         }
 
-        /// <summary>The Almanac's Fauna is the two animals the game has, by their registry names, and nothing invented.</summary>
+        /// <summary>The Almanac's Fauna is the three animals the game has, by their registry names, and nothing invented.</summary>
         [Test]
         public void TheAlmanacsFaunaAreTheAnimalsInTheGame()
         {
@@ -216,7 +216,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(fauna, Is.Not.Null);
             var names = new List<string>();
             foreach (AlmanacEntry entry in fauna!.Entries) names.Add(entry.Name);
-            Assert.That(names, Is.EquivalentTo(new[] { Registry.Label("ui.pawn.hog"), Registry.Label("ui.pawn.rat") }));
+            Assert.That(names, Is.EquivalentTo(new[] { Registry.Label("ui.pawn.hog"), Registry.Label("ui.pawn.rat"), Registry.Label("ui.pawn.frog") }));
             foreach (AlmanacEntry entry in fauna.Entries)
             {
                 Assert.That(entry.Definition, Does.Not.Contain("Tame chance"), "taming is not in the game");

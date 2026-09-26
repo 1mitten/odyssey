@@ -143,12 +143,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
 <li><a href="#commands">Commands<b>53</b></a></li>
 <li><a href="#work">Work and skills<b>57</b></a></li>
-<li><a href="#colonists">Colonists<b>62</b></a></li>
+<li><a href="#colonists">Colonists<b>63</b></a></li>
 <li><a href="#health">Health and anatomy<b>39</b></a></li>
 <li><a href="#events">Events<b>51</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
 <li><a href="#world">World and interface<b>137</b></a></li>
-<li><a href="#proper-nouns">Proper nouns<b>30</b></a></li>
+<li><a href="#proper-nouns">Proper nouns<b>31</b></a></li>
 </ul></nav>
 <main>
 <div class="lede"><h1>Every named thing in the game</h1>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>925</b><i>named entries</i></div>
+<div class="stat"><b>927</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>653</b><i>no art yet</i></div>
+<div class="stat m"><b>655</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1917,7 +1917,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">62 entries</em></h2>
+<h2>Colonists <em class="count">63 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -1973,6 +1973,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.pawn.rat" data-hay="duct rat ui.pawn.rat vermin from the ducts and the caverns. climbs anything " data-gap="1">
 <div class="nm">Duct rat<span class="k">ui.pawn.rat</span></div>
 <div class="dsc">Vermin from the ducts and the caverns. Climbs anything</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">AN</div>
+</div>
+<div class="row gap" id="ui.pawn.frog" data-hay="culvert frog ui.pawn.frog a big frog of the banks. keeps to the water's edge and hops " data-gap="1">
+<div class="nm">Culvert frog<span class="k">ui.pawn.frog</span></div>
+<div class="dsc">A big frog of the banks. Keeps to the water's edge and hops</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">AN</div>
 </div>
@@ -3919,8 +3925,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="proper-nouns" data-sec="1" class="nouns">
-<h2>Proper nouns <em class="count">30 entries</em></h2>
-<p class="blurb">Names that are not interface keys: people, places, factions, creatures, the calendar. The brief requires every one of these to be ours rather than borrowed, so this table exists to make the empty rows impossible to miss. <strong>0 of 30 have no name at all</strong>, including the city the whole prototype is set in.</p>
+<h2>Proper nouns <em class="count">31 entries</em></h2>
+<p class="blurb">Names that are not interface keys: people, places, factions, creatures, the calendar. The brief requires every one of these to be ours rather than borrowed, so this table exists to make the empty rows impossible to miss. <strong>0 of 31 have no name at all</strong>, including the city the whole prototype is set in.</p>
 <div class="tbl">
 <div class="row head"><div>Category</div><div>Name</div><div>Notes</div><div class="st">Status</div></div>
 <div class="row" id="world.planet" data-hay="the world carrow a city-world: one settlement that grew until it covered the planet. short, bleak, easy to say, and it survives being said a thousand times. the register throughout is english industrial rather than classical or invented-exotic: a working future, not a mythic one proposed" data-gap="0">
@@ -4011,6 +4017,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="nm">Pack animal<span class="k">creature.pack</span></div>
 <div>dray hog</div>
 <div class="dsc">A larger bred cousin of the midden hog, for caravans. Not in the original list; caravans need something to carry the load and it should not be a vehicle at prototype scale</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="creature.amphibian" data-hay="bank wildlife culvert frog a big frog of the meadow's streams, ponds and lakes, and of the flooded culverts under the ruin. keeps to the water's edge; the first animal placed by where the water is. named in the register of the midden hog and the duct rat proposed" data-gap="0">
+<div class="nm">Bank wildlife<span class="k">creature.amphibian</span></div>
+<div>culvert frog</div>
+<div class="dsc">A big frog of the meadow's streams, ponds and lakes, and of the flooded culverts under the ruin. Keeps to the water's edge; the first animal placed by where the water is. Named in the register of the midden hog and the duct rat</div>
 <div class="st proposed">proposed</div>
 </div>
 <div class="row" id="creature.vermin" data-hay="city vermin duct rat the rat of the ruin: lives in the ducts and the caverns, climbs anything, eats what the colony stores. named in the register of the midden hog and the girder cat; the first animal with a full set of movements, so the one the figure work is proven on proposed" data-gap="0">
@@ -4110,7 +4122,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 925, "gaps": 653};</script>
+<script>window.WIKI={"total": 927, "gaps": 655};</script>
 <script>
 (function(){
   var D = window.WIKI;
