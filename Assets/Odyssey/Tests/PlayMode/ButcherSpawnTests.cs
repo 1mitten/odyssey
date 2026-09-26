@@ -130,7 +130,11 @@ namespace Odyssey.Tests.PlayMode
                 bool telegraphed = false, flung = false;
                 int swingFrames = -1;
                 var log = new System.Text.StringBuilder();
-                for (int frame = 0; frame < 3_000 && !(telegraphed && flung && swingFrames >= 40); frame++)
+                // Every sound the fight is heard in, by id (design 62 §8d).
+                var heard = new System.Collections.Generic.SortedDictionary<string, int>();
+                if (boot.Audio != null)
+                    boot.Audio.Played += id => heard[id] = heard.TryGetValue(id, out int n) ? n + 1 : 1;
+                for (int frame = 0; frame < 3_000 && !(telegraphed && flung && swingFrames >= 40 && frame >= 600); frame++)
                 {
                     world.Tick();
                     rig.FocusOn(colony.Pawns.Size.FromIndex(butcher.Cell), telegraphed && swingFrames < 40 ? 11f : 20f);
@@ -161,7 +165,11 @@ namespace Odyssey.Tests.PlayMode
                         yield return Photograph("butcher-fling", target);
                     }
                 }
+                // Its death, to hear the last of its four moments.
+                colony.Pawns.Combat!.Kill(butcher, null, -1, world.CurrentTick);
+                for (int i = 0; i < 20; i++) { world.Tick(); yield return null; }
                 TestContext.WriteLine(log.ToString());
+                foreach (var pair in heard) TestContext.WriteLine($"heard {pair.Key} x{pair.Value}");
                 TestContext.WriteLine($"telegraphed {telegraphed}, flung {flung}");
             }
             finally
