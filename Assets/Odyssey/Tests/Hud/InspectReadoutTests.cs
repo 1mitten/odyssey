@@ -141,10 +141,11 @@ namespace Odyssey.Tests.Hud
             byte floorStuff = StuffHandle.None, byte support = 0,
             ushort moveCost = 1000, ushort workToClear = 0,
             byte quality = 0, int owner = 0, byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue,
-            byte zoneYield = 0, bool isIndoors = false, int ambientTempC = int.MinValue) =>
+            byte zoneYield = 0, bool isIndoors = false, int ambientTempC = int.MinValue,
+            byte bedPurpose = CellDetail.BedForColony) =>
             new CellDetail(Size.Index(At), terrain, edifice, floorStuff, support, moveCost, workToClear,
                 quality, owner, zonePlant, cropGrowth, zoneYield, isIndoors,
-                ambientTempC: ambientTempC);
+                ambientTempC: ambientTempC, bedPurpose: bedPurpose);
 
         [Test]
         public void ATileSaysHowWarmItIsWhenItKnows()
@@ -247,7 +248,7 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(model.Title, Is.EqualTo("Bed"), "the bed's own icon key names it");
             Assert.That(Rows(model), Is.EqualTo(
-                "quality=decent | owner=" + ColonistNames.Of(frame, new PawnId(2)) + " | walk speed=100%"));
+                "quality=decent | owner=" + ColonistNames.Of(frame, new PawnId(2)) + " | for prisoners=No | walk speed=100%"));
             Assert.That(model.BedUnderPane, Is.True, "the shell arms the owner row on this word");
         }
 
@@ -266,8 +267,25 @@ namespace Odyssey.Tests.Hud
             InspectModel model = Looking(FrameWith(
                 Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Bed, quality: QualityHandle.Normal)));
 
-            Assert.That(Rows(model), Is.EqualTo("quality=normal | owner=Assign… | walk speed=100%"));
+            Assert.That(Rows(model), Is.EqualTo("quality=normal | owner=Assign… | for prisoners=No | walk speed=100%"));
             Assert.That(model.BedUnderPane, Is.True);
+        }
+
+        /// <summary>
+        /// <b>A bed says what it is for</b> (design 60 §11a): the pane's second press on a bed, and a
+        /// prison bed with no room round it says it shackles rather than leaving it to be found out.
+        /// </summary>
+        [TestCase(CellDetail.BedForColony, "No", false)]
+        [TestCase(CellDetail.BedForPrisoners, "Yes", true)]
+        [TestCase(CellDetail.BedShackles, "Yes, shackled", true)]
+        public void ABedSaysWhatItIsFor(byte purpose, string said, bool forPrisoners)
+        {
+            InspectModel model = Looking(FrameWith(
+                Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Bed, quality: QualityHandle.Normal,
+                    bedPurpose: purpose)));
+
+            Assert.That(Rows(model), Does.Contain(InspectModel.BedPurposeRow + "=" + said));
+            Assert.That(model.BedForPrisoners, Is.EqualTo(forPrisoners), "what a press on the row reverses");
         }
 
         /// <summary>

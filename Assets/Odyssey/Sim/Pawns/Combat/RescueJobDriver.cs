@@ -117,20 +117,23 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>The bed is still a bed, still hers or nobody's, and nobody else lies in it.</summary>
-        bool StillFree(PawnContext ctx, Pawn patient)
+        protected bool StillFree(PawnContext ctx, Pawn patient)
         {
             int bed = Job.DestCell;
             if (!RescueRules.IsBed(ctx, bed)) return false;
-            int owner = ctx.Construction?.BedOwnerAt(bed) ?? 0;
-            if (owner != 0 && owner != patient.Id.Value) return false;
+            if (!BedRule.MayUse(UserFor(patient), patient.Id.Value, BedRules.PurposeAt(ctx, bed), BedRules.OwnerAt(ctx, bed)))
+                return false;
             return ctx.Reservations.IsReservedBy(Pawn.Id, RescueRules.BedKey(bed));
         }
+
+        /// <summary>The pool the carried pawn's bed is judged from: her own, unless a subclass carries her as something else.</summary>
+        protected virtual BedUser UserFor(Pawn patient) => BedRules.UserOf(patient);
 
         /// <summary>
         /// Set her on the bed's head cell, out of the arms, holding its reservation herself: the
         /// rescuer's claim ends with this job, and hers must last until she gets up (§11c).
         /// </summary>
-        void Lay(PawnContext ctx, Pawn patient)
+        protected virtual void Lay(PawnContext ctx, Pawn patient)
         {
             int bed = Job.DestCell;
             patient.CarriedBy = 0;

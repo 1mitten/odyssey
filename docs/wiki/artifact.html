@@ -141,11 +141,11 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#commodities">Commodities<b>54</b></a></li>
 <li><a href="#items">Items and equipment<b>34</b></a></li>
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
-<li><a href="#commands">Commands<b>55</b></a></li>
+<li><a href="#commands">Commands<b>57</b></a></li>
 <li><a href="#work">Work and skills<b>57</b></a></li>
-<li><a href="#colonists">Colonists<b>63</b></a></li>
+<li><a href="#colonists">Colonists<b>77</b></a></li>
 <li><a href="#health">Health and anatomy<b>39</b></a></li>
-<li><a href="#events">Events<b>51</b></a></li>
+<li><a href="#events">Events<b>55</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
 <li><a href="#world">World and interface<b>187</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>32</b></a></li>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>980</b><i>named entries</i></div>
+<div class="stat"><b>1003</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>708</b><i>no art yet</i></div>
+<div class="stat m"><b>731</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1219,7 +1219,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="commands" data-sec="1">
-<h2>Commands <em class="count">55 entries</em></h2>
+<h2>Commands <em class="count">57 entries</em></h2>
 <p class="blurb">What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein. A right-click on a thing with more than one answer, a weapon today, opens a small menu at the pointer whose rows are these commands; the menu's own words are listed after them.</p>
 <h3 class="nsh">Commands</h3>
 <div class="tbl">
@@ -1283,6 +1283,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Treat this patient</div>
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.command.finishoff" data-hay="finish off ui.command.finishoff kill a downed enemy where she lies, rather than bring her in " data-gap="1">
+<div class="nm">Finish off<span class="k">ui.command.finishoff</span></div>
+<div class="dsc">Kill a downed enemy where she lies, rather than bring her in</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
 </div>
 <div class="row" id="ui.command.operate" data-hay="operate ui.command.operate perform surgery " data-gap="0">
 <div class="nm">Operate<span class="k">ui.command.operate</span></div>
@@ -1557,6 +1563,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Close the menu a right-click opened, and order nothing</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.menu.needsdraft" data-hay="draft someone first ui.menu.needsdraft only a drafted colonist can be ordered to do this " data-gap="1">
+<div class="nm">Draft someone first<span class="k">ui.menu.needsdraft</span></div>
+<div class="dsc">Only a drafted colonist can be ordered to do this</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
 </div>
 </div>
 <p class="empty" hidden>No entries in this section match.</p>
@@ -1929,7 +1941,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">63 entries</em></h2>
+<h2>Colonists <em class="count">77 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -1957,6 +1969,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Held, and someone must feed them<span class="need">Needs drawing: human figure, restrained</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M2</div>
+</div>
+<div class="row gap" id="ui.pawn.released" data-hay="let go ui.pawn.released released or exiled, and walking off the board free a figure walking away from an open door" data-gap="1">
+<div class="nm">Let go<span class="k">ui.pawn.released</span></div>
+<div class="dsc">Released or exiled, and walking off the board free<span class="need">Needs drawing: a figure walking away from an open door</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
 </div>
 <div class="row" id="ui.pawn.animal" data-hay="animal ui.pawn.animal tame or wild creature " data-gap="0">
 <div class="nm">Animal<span class="k">ui.pawn.animal</span></div>
@@ -2005,6 +2023,40 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">A bandit with a pistol, dressed as the rest. Shoots whoever it can see, and clubs whoever comes close</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">RD</div>
+</div>
+</div>
+<h3 class="nsh">What the colony does with a prisoner</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.prisoner.hold" data-hay="hold ui.prisoner.hold kept in her cell, fed and tended, and nothing more asked of her " data-gap="1">
+<div class="nm">Hold<span class="k">ui.prisoner.hold</span></div>
+<div class="dsc">Kept in her cell, fed and tended, and nothing more asked of her</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.prisoner.recruit" data-hay="recruit ui.prisoner.recruit a warden talks to her every six hours until she is willing to join " data-gap="1">
+<div class="nm">Recruit<span class="k">ui.prisoner.recruit</span></div>
+<div class="dsc">A warden talks to her every six hours until she is willing to join</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.prisoner.release" data-hay="release ui.prisoner.release walked out of the cell and let go. a colonist under arrest goes back to work " data-gap="1">
+<div class="nm">Release<span class="k">ui.prisoner.release</span></div>
+<div class="dsc">Walked out of the cell and let go. A colonist under arrest goes back to work</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.prisoner.exile" data-hay="exile ui.prisoner.exile walked to the edge of the map and sent away for good " data-gap="1">
+<div class="nm">Exile<span class="k">ui.prisoner.exile</span></div>
+<div class="dsc">Walked to the edge of the map and sent away for good</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.prisoner.ransom" data-hay="ransom ui.prisoner.ransom sold back to her own people. needs factions, so not yet " data-gap="1">
+<div class="nm">Ransom<span class="k">ui.prisoner.ransom</span></div>
+<div class="dsc">Sold back to her own people. Needs factions, so not yet</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M7</div>
 </div>
 </div>
 <h3 class="nsh">Needs</h3>
@@ -2281,6 +2333,54 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Standing where the line is open and firing at a target</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">RC</div>
+</div>
+<div class="row gap" id="ui.status.capturing" data-hay="capturing ui.status.capturing carrying a downed enemy to a prison bed " data-gap="1">
+<div class="nm">Capturing<span class="k">ui.status.capturing</span></div>
+<div class="dsc">Carrying a downed enemy to a prison bed</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.status.feedingprisoner" data-hay="feeding a prisoner ui.status.feedingprisoner carrying a meal to a prisoner, in her cell or on her bed " data-gap="1">
+<div class="nm">Feeding a prisoner<span class="k">ui.status.feedingprisoner</span></div>
+<div class="dsc">Carrying a meal to a prisoner, in her cell or on her bed</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.status.chatting" data-hay="talking to a prisoner ui.status.chatting a warden talking a prisoner round, which fills her willingness " data-gap="1">
+<div class="nm">Talking to a prisoner<span class="k">ui.status.chatting</span></div>
+<div class="dsc">A warden talking a prisoner round, which fills her willingness</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.status.escorting" data-hay="escorting ui.status.escorting walking a released prisoner out " data-gap="1">
+<div class="nm">Escorting<span class="k">ui.status.escorting</span></div>
+<div class="dsc">Walking a released prisoner out</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.status.goingtocell" data-hay="going to a cell ui.status.goingtocell a raider who has given up walking herself to a prison bed " data-gap="1">
+<div class="nm">Going to a cell<span class="k">ui.status.goingtocell</span></div>
+<div class="dsc">A raider who has given up walking herself to a prison bed</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.status.escaping" data-hay="escaping ui.status.escaping a prisoner breaking out: through the door, then for the edge " data-gap="1">
+<div class="nm">Escaping<span class="k">ui.status.escaping</span></div>
+<div class="dsc">A prisoner breaking out: through the door, then for the edge</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.status.leaving" data-hay="leaving ui.status.leaving let go and walking off the board " data-gap="1">
+<div class="nm">Leaving<span class="k">ui.status.leaving</span></div>
+<div class="dsc">Let go and walking off the board</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.status.arresting" data-hay="arresting ui.status.arresting walking to a colonist to take her into custody " data-gap="1">
+<div class="nm">Arresting<span class="k">ui.status.arresting</span></div>
+<div class="dsc">Walking to a colonist to take her into custody</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
 </div>
 </div>
 <h3 class="nsh">Pace and what it is made of</h3>
@@ -2574,7 +2674,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="events" data-sec="1">
-<h2>Events <em class="count">51 entries</em></h2>
+<h2>Events <em class="count">55 entries</em></h2>
 <p class="blurb">Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about. A raid's mix names who a band of hostiles is made of (design 55).</p>
 <h3 class="nsh">Alerts</h3>
 <div class="tbl">
@@ -2729,6 +2829,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.alert.noprisonbed" data-hay="no prison bed ui.alert.noprisonbed somebody the colony means to hold is down with no free prison bed to be carried to " data-gap="1">
+<div class="nm">No prison bed<span class="k">ui.alert.noprisonbed</span></div>
+<div class="dsc">Somebody the colony means to hold is down with no free prison bed to be carried to</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
 <div class="row gap" id="ui.alert.nohearth" data-hay="no hearth ui.alert.nohearth somebody is kept home, and there is no hearth: build or mark a campfire a campfire ring with no fire" data-gap="1">
 <div class="nm">No hearth<span class="k">ui.alert.nohearth</span></div>
 <div class="dsc">Somebody is kept home, and there is no hearth: build or mark a campfire<span class="need">Needs drawing: a campfire ring with no fire</span></div>
@@ -2804,6 +2910,24 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">A prisoner has joined us<span class="need">Needs drawing: a prisoner joining us</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M2</div>
+</div>
+<div class="row gap" id="ui.bulletin.escaped" data-hay="prisoner escaped ui.bulletin.escaped a prisoner broke out and got away " data-gap="1">
+<div class="nm">Prisoner escaped<span class="k">ui.bulletin.escaped</span></div>
+<div class="dsc">A prisoner broke out and got away</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.bulletin.surrendered" data-hay="surrendered ui.bulletin.surrendered a badly hurt raider gave up and walked to a cell " data-gap="1">
+<div class="nm">Surrendered<span class="k">ui.bulletin.surrendered</span></div>
+<div class="dsc">A badly hurt raider gave up and walked to a cell</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
+</div>
+<div class="row gap" id="ui.bulletin.arrested" data-hay="arrested ui.bulletin.arrested a colonist was taken into custody " data-gap="1">
+<div class="nm">Arrested<span class="k">ui.bulletin.arrested</span></div>
+<div class="dsc">A colonist was taken into custody</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">PS</div>
 </div>
 <div class="row" id="ui.bulletin.research" data-hay="research complete ui.bulletin.research a project has finished " data-gap="0">
 <div class="nm">Research complete<span class="k">ui.bulletin.research</span></div>
@@ -4452,7 +4576,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 980, "gaps": 708};</script>
+<script>window.WIKI={"total": 1003, "gaps": 731};</script>
 <script>
 (function(){
   var D = window.WIKI;

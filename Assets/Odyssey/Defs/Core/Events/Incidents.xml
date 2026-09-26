@@ -156,4 +156,50 @@
     </raid>
   </IncidentDef>
 
+  <!--
+    The prison (docs/design/60-prisoners.md), four things the world writes down when they happen
+    and nothing fires: a prisoner talked round and joining, a prisoner breaking out and getting
+    away, a raider giving up, a colonist arrested. Recorded workers, so the debug menu's Events tab
+    leaves them off its list; the gates are the defaults and read by nothing.
+  -->
+  <IncidentDef>
+    <defName>Incident_Recruited</defName>
+    <label>recruited</label>
+    <description>A prisoner was talked round and joined the colony. Recorded when it happens; nothing fires it</description>
+    <bulletinKey>ui.bulletin.recruited</bulletinKey>
+    <favourability>Good</favourability>
+    <category>Misc</category>
+    <worker>Recorded</worker>
+  </IncidentDef>
+
+  <IncidentDef>
+    <defName>Incident_PrisonerEscaped</defName>
+    <label>prisoner escaped</label>
+    <description>A prisoner broke out and got off the board. Recorded when it happens; nothing fires it</description>
+    <bulletinKey>ui.bulletin.escaped</bulletinKey>
+    <favourability>Bad</favourability>
+    <category>Misc</category>
+    <worker>Recorded</worker>
+  </IncidentDef>
+
+  <IncidentDef>
+    <defName>Incident_Surrendered</defName>
+    <label>surrendered</label>
+    <description>A badly hurt raider gave up and walked to a prison bed. Recorded when it happens; nothing fires it</description>
+    <bulletinKey>ui.bulletin.surrendered</bulletinKey>
+    <favourability>Good</favourability>
+    <category>Misc</category>
+    <worker>Recorded</worker>
+  </IncidentDef>
+
+  <IncidentDef>
+    <defName>Incident_Arrested</defName>
+    <label>arrested</label>
+    <description>A colonist was arrested and taken to a prison bed. Recorded when it happens; nothing fires it</description>
+    <bulletinKey>ui.bulletin.arrested</bulletinKey>
+    <favourability>Bad</favourability>
+    <category>Misc</category>
+    <worker>Recorded</worker>
+  </IncidentDef>
+
 </Defs>

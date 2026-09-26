@@ -198,7 +198,11 @@ namespace Odyssey.Sim.Pawns
         {
             _ctx.Sync(world);
             _hostilityKnown = false;
+            // A bed that changed purpose, or a room that merged into a cell, loses an owner of the
+            // wrong kind first (design 60 §5b), so the sweep below wakes whoever is lying in it.
+            _ctx.Construction?.SweepBedPurposes();
             GetOutOfTheWrongBed(world.CurrentTick);
+            TickCustody(world.CurrentTick);
             var pawns = _ctx.Pawns.All;
             for (int i = 0; i < pawns.Count; i++) TickPawn(pawns[i], world.CurrentTick);
         }
@@ -268,10 +272,16 @@ namespace Odyssey.Sim.Pawns
                 if (pawn.CurrentJob == null) continue;
                 if (_ctx.Content.Jobs[pawn.CurrentJob.DefIndex].driver != JobIndex.Sleep) continue;
 
-                int owner = sites.BedOwnerAt(pawn.CurrentJob.TargetCell);
-                if (owner == pawn.Id.Value) continue;
+                int bed = pawn.CurrentJob.TargetCell;
+                int owner = sites.BedOwnerAt(bed);
+                // Still the right kind of bed for her (design 60 §5a): a bed turned into a prison
+                // bed under a sleeping colonist wakes her like a bed given away does. A target
+                // that is no bed at all (the ground, a fireside) answers as a colony bed nobody
+                // owns, so it passes exactly as it did.
+                bool fits = bed < 0 || BedRule.Fits(BedRules.UserOf(pawn), sites.BedPurposeAt(bed));
+                if (fits && owner == pawn.Id.Value) continue;
 
-                if (owner == 0 && !sites.PawnOwnsABed(pawn.Id.Value)) continue;
+                if (fits && owner == 0 && !sites.PawnOwnsABed(pawn.Id.Value)) continue;
 
                 EndJob(pawn, JobStatus.Failed);
                 _woken.Add(pawn);
@@ -290,6 +300,10 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         void ResumeSleep(Pawn pawn, int tick)
         {
+            // The chooser below is a colonist's (review 2026-09-26): it falls back to the fireside.
+            // Anybody else — a prisoner woken in a bed that stopped being hers — is between jobs,
+            // and her own tree picks her bed from her own room this same tick.
+            if (!pawn.IsColonist) return;
             var job = pawn.JobBuffer;
             job.Reset(JobIndex.Wait);
             if (CriticalNeedsThinkNode.TrySleep(pawn, _ctx, job)) StartJob(pawn, job, tick);
@@ -502,8 +516,13 @@ namespace Odyssey.Sim.Pawns
             // An animal consults the animal tree (design 29 §3), never the colonist's: a node
             // that returned false for a person would be a node every colonist evaluated on
             // every think, and the animal's whole mind is one node anyway.
-            // A hostile person consults the hostile tree (design 33 §5), for the same reason.
-            ThinkNode[] tree = !pawn.IsPerson ? AnimalTree : pawn.IsHostile ? HostileTree : _tree;
+            // A hostile person consults the hostile tree (design 33 §5), for the same reason, and a
+            // prisoner the prisoner's (design 60 §6) — custody first, because an escapee is hostile
+            // but is not a raider.
+            ThinkNode[] tree = !pawn.IsPerson ? AnimalTree
+                : pawn.Custody != PawnCustody.Free ? PrisonerTrees.For(pawn.Custody)
+                : pawn.IsHostile ? HostileTree
+                : _tree;
             var job = pawn.JobBuffer;
             for (int i = 0; i < tree.Length; i++)
             {
@@ -745,6 +764,8 @@ namespace Odyssey.Sim.Pawns
                 // this scan is not optional once a shelf accepts food.
                 int at = ctx.WhereIs(item);
                 if (at < 0) continue;
+                // A prisoner's meal is hers (design 60 §14): food in a cell is not a colonist's.
+                if (PrisonCells.Holds(ctx, at)) continue;
 
                 int distance = ctx.Distance(pawn.Cell, at);
                 if (food.foodTier == bestTier && distance >= bestDistance) continue;
@@ -805,9 +826,10 @@ namespace Odyssey.Sim.Pawns
 
                 // A bed that is somebody's is theirs and nobody else checks in: no colonist
                 // sleeps in another's bed, which is the whole of what ownership is (design 20
-                // §7). The scenario's own spots answer 0 — nobody's, as they always were.
-                int owner = ctx.Construction != null ? ctx.Construction.BedOwnerAt(cell) : 0;
-                if (owner != 0 && owner != me) continue;
+                // §7), and nobody sleeps in the wrong kind of bed (design 60 §5a). The
+                // scenario's own spots answer 0 — nobody's, as they always were.
+                if (!BedRules.CanUse(pawn, cell, ctx)) continue;
+                int owner = BedRules.OwnerAt(ctx, cell);
 
                 long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
@@ -1871,6 +1893,9 @@ namespace Odyssey.Sim.Pawns
                 // it.
                 int at = ctx.WhereIs(item);
                 if (at < 0) continue;
+                // Food in a prison cell stays there (design 60 §14): a hauler carrying a prisoner's
+                // meal back out through the door is the warden's work undone.
+                if (ctx.Content.Items[item.DefIndex].nutrition > 0 && PrisonCells.Holds(ctx, at)) continue;
                 if (!ctx.Content.Items[item.DefIndex].haulable) continue;
 
                 // Which pass this stored thing belongs to. A loose thing is never refused -

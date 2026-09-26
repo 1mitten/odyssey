@@ -287,8 +287,16 @@ namespace Odyssey.Sim.Saving
         /// <para>11 (design 59, world generation): the <b>header</b> grew the planet site — a flag,
         /// then the world seed and the tile's fields, the biome by Def name. A file at 10 or below
         /// reads back no site and rebuilds the board it always did. Nothing in a section moved.</para>
+        ///
+        /// <para>12 (design 60, prisoners): <b>no layout changed</b>, for 10's reason — the tenth
+        /// skill, Social, reads from a nine-skill file as nought, and the same guard deals it once
+        /// to a colonist from a file below 12 (<c>BackfillSkills</c>). Custody and the prison's
+        /// records went into sections of their own, which needed no bump. Written as 11 on its
+        /// branch and moved on the merge, because world generation had taken 11 on `main`: a
+        /// file at 11 carries a site and no Social, so it is the site's reader and the skill's
+        /// deal both.</para>
         /// </remarks>
-        public const int CurrentFormatVersion = 11;
+        public const int CurrentFormatVersion = 12;
 
         public static void Save(SimWorld world, Stream stream, IReadOnlyList<ISaveable> components,
             SaveRecipe? recipe = null)

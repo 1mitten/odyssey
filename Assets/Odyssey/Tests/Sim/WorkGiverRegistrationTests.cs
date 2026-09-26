@@ -137,8 +137,14 @@ namespace Odyssey.Tests.Sim
                 // Doctor is the second emergency (design 37), behind rescue by the work types' order.
                 // Cook sits after growing and before cutting (design 48 §5): a hungry colony cooks
                 // before it fells.
-                "Rescue", "Doctor", "Deliver", "Build", "LayConduit", "Deconstruct", "RemoveConduit",
-                "Forage", "Harvest", "Sow", "Cook", "Fell", "Mine", "Refuel", "Haul",
+                // Capture is the third (design 60 §7): a captured raider is usually bleeding, so the
+                // warden's carry to a prison bed is an emergency, after the colony's own wounded.
+                "Rescue", "Doctor", "Capture", "Deliver", "Build", "LayConduit", "Deconstruct", "RemoveConduit",
+                // FeedPrisoner is warden work and warden work is scanned last (design 60 §7): a
+                // prisoner goes hungry slowly, and the capture that brings her in is the emergency.
+                // Recruit follows feeding by the name tiebreak, which is why it is not called Chat:
+                // a hungry prisoner outranks a talk that will keep for an hour.
+                "Forage", "Harvest", "Sow", "Cook", "Fell", "Mine", "Refuel", "Haul", "FeedPrisoner", "Recruit", "Release",
             }));
         }
 

@@ -2773,3 +2773,16 @@ that differs only in line endings is the same case.
 **Hub's headless install fails without saying so.** Twice on that machine: once at a UAC prompt
 nobody saw (the log ends at *"Install … started"*), once because the installer unpacks into
 `%TEMP%` on C: whatever the destination. `docs/setup/local-dev.md` §8a.
+## An allocation test that fails only in the full run: find the phase before blaming the code (2026-09-26)
+
+`AspectScaleTests.RepeatedFramesStopAllocating` measures `GC.GetAllocatedBytesForCurrentThread`
+over twenty ticks and allows 4 KB. On the prisoner branch it failed about one full fast-tier run in
+two (4.9–8.2 KB) and **never** when run alone or with its own class, in a container on .NET 8.0.131
+(Ubuntu's package). It had passed three full runs before the branch's second unit, which was the
+trap: the change looked guilty. Turning tiered compilation off did not stop it. What settled it was
+temporary per-phase counters inside `SimWorld.Tick`: the stray allocation landed in the snapshot
+phase on one failing run, the pawn phase on another, and outside every phase on a third. **The
+simulation is deterministic; a real per-frame allocation lands in the same place every run.** One
+that wanders is the runtime's, on the test thread. The test now takes the least of three windows,
+which a structure that reallocates every frame still fails. The lesson is the method: instrument by
+phase before bisecting commits, because an intermittent failure bisects badly.

@@ -29,6 +29,11 @@ namespace Odyssey.Hud
             "ui.bulletin.medicaldrop",
             // A band walking in from one edge (design 55): its Events row is the warning.
             "ui.bulletin.raidincoming",
+            // The prison's four (design 60), recorded when they happen.
+            "ui.bulletin.recruited",
+            "ui.bulletin.escaped",
+            "ui.bulletin.surrendered",
+            "ui.bulletin.arrested",
         };
 
         /// <summary>The key for an incident the table does not know, so the fault is visible on screen.</summary>

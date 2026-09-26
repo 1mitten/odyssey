@@ -1124,7 +1124,12 @@ namespace Odyssey.Sim.Construction
             else RaiseEdifice(cell, def, stuff, second, facing, quality);
 
             if (def.edifice == CoreContent.EdificeDoor) ctx.Nav.SetDoor(cell, isDoor: true, open: false);
-            if (def.edifice == CoreContent.EdificeBed) _items.AddBed(cell);
+            if (def.edifice == CoreContent.EdificeBed)
+            {
+                _items.AddBed(cell);
+                // Raised inside a cell: a prison bed, and marked so it stays one (design 60 §5b).
+                Purposes?.Raised(cell);
+            }
             // Cover that is crossed but never stood on (design 53 §5): the crossing's price.
             if (def.passThrough) ctx.Nav.SetPassThrough(cell, def.crossCost);
 
@@ -1574,6 +1579,7 @@ namespace Odyssey.Sim.Construction
             if (was.Def == CoreContent.EdificeBed)
             {
                 _items.RemoveBed(was.CellIndex);
+                Purposes?.Forget(was.CellIndex);
                 ReleasePatientsBed(ctx, was.CellIndex);
             }
 
@@ -1787,8 +1793,14 @@ namespace Odyssey.Sim.Construction
 
             // -1 is the interface's "release"; 0 is the record's "nobody" — the same answer.
             int pawnId = pawn < 0 ? 0 : pawn;
-            if (pawnId != 0 && _pawns.Get(new PawnId(pawnId)) == null)
-                return IntentRejection.NotPermitted;
+            if (pawnId != 0)
+            {
+                // Only somebody who sleeps from this bed's pool may be given it: never a hog or a
+                // bandit, and never a colonist a prison bed (design 60 §5a, `BedRule`).
+                Pawns.Pawn? owner = _pawns.Get(new PawnId(pawnId));
+                if (owner == null || !BedRule.MayOwn(BedRules.UserOf(owner), BedPurposeAt(index)))
+                    return IntentRejection.NotPermitted;
+            }
             if (placed.Owner == pawnId) return IntentRejection.AlreadyInThatState;
 
             // One bed per colonist, kept by the handler rather than hoped for by the interface:
@@ -1889,18 +1901,104 @@ namespace Odyssey.Sim.Construction
             return false;
         }
 
-        /// <summary>Built beds nobody owns — the shared pool anyone may sleep in.</summary>
-        public int UnownedBedCount()
+        /// <summary>Built colony beds nobody owns — the shared pool any colonist may sleep in.</summary>
+        public int UnownedBedCount() => UnownedBedCount(BedPurpose.Colony);
+
+        /// <summary>Built beds of this purpose nobody owns: the shared pool of that kind of bed.</summary>
+        public int UnownedBedCount(BedPurpose purpose)
         {
             int free = 0;
             for (int i = 0; i < _edifices.Count; i++)
             {
                 PlacedEdifice bed = _edifices[i];
-                if (bed.Def == CoreContent.EdificeBed && !bed.Removed && bed.Built && bed.Owner == 0)
+                if (bed.Def == CoreContent.EdificeBed && !bed.Removed && bed.Built && bed.Owner == 0
+                    && BedPurposeAt(bed.CellIndex) == purpose)
                     free++;
             }
             return free;
         }
+
+        /// <summary>
+        /// What the bed at this cell is for (design 60 §5b), asked of <see cref="Purposes"/>, the
+        /// one owner. A cell with no bed, and every bed in a fixture with no purposes, answers
+        /// <see cref="BedPurpose.Colony"/>.
+        /// </summary>
+        public BedPurpose BedPurposeAt(int cell) => Purposes?.PurposeAt(cell) ?? BedPurpose.Colony;
+
+        /// <summary>What every bed is for (design 60 §5b). Set by the composition root.</summary>
+        public Pawns.BedPurposes? Purposes { get; set; }
+
+        /// <summary>
+        /// <c>SetBedPurpose(cell, A = purpose)</c> (design 60 §5b): mark the bed at the cell and its
+        /// room for prisoners, or unmark them. Here because this class is the one owner of who owns a
+        /// bed, and a bed that changes purpose loses an owner of the wrong kind in the same breath.
+        /// </summary>
+        public IntentRejection HandleSetBedPurpose(Intent intent)
+        {
+            if (Purposes == null) return IntentRejection.NotPermitted;
+            if (!_grid.Contains(intent.Cell.X, intent.Cell.Z, intent.Cell.Y)) return IntentRejection.OutOfBounds;
+            IntentRejection answer = Purposes.SetPurpose(_grid.Index(intent.Cell), intent.A);
+            if (answer == IntentRejection.None) SweepBedPurposes();
+            return answer;
+        }
+
+        long _sweptPurposes = -1;
+        bool _sweptNone, _everMarked;
+
+        /// <summary>
+        /// Clear every owner who may not own her bed any more (design 60 §5b): a colonist whose bed
+        /// became a prison bed — marked, or its room merged into a cell — and a prisoner whose bed
+        /// stopped being one. Raises <see cref="BedOwnershipChanged"/>, so the job system wakes a
+        /// sleeper in a bed that is no longer hers. Costs one comparison unless the purposes or the
+        /// rooms have changed since it last looked, and nothing at all on a board with no prison bed.
+        /// </summary>
+        public void SweepBedPurposes()
+        {
+            if (Purposes == null) return;
+            // **A load is not a change** (design 60 §16 #1). What the sweep last saw is not saved,
+            // so the first sweep after a load used to find the key moved and raise
+            // BedOwnershipChanged, waking a sleeper the twin that never saved left asleep. Owners
+            // were stripped before the save, so priming from what was loaded is what that twin
+            // holds: the key it last swept at, and whether there were any marks.
+            if (Purposes.Loaded)
+            {
+                Purposes.ClearLoaded();
+                _sweptNone = !Purposes.Any;
+                _everMarked |= Purposes.Any;
+                if (Purposes.Any) _sweptPurposes = Purposes.StateKey;
+                return;
+            }
+            // A board with no prison bed, having been swept once with none, has nothing to find:
+            // the only thing that can make a colonist's bed wrong for her is a mark.
+            bool none = !Purposes.Any;
+            if (none && _sweptNone) return;
+            long key = Purposes.StateKey;
+            if (key == _sweptPurposes && none == _sweptNone) return;
+            _sweptNone = none;
+            if (none && !_everMarked) return;
+            _everMarked = true;
+
+            for (int i = 0; i < _edifices.Count; i++)
+            {
+                PlacedEdifice bed = _edifices[i];
+                if (bed.Def != CoreContent.EdificeBed || bed.Removed || bed.Owner == 0) continue;
+                Pawns.Pawn? owner = _pawns.Get(new PawnId(bed.Owner));
+                if (owner != null && BedRule.MayOwn(BedRules.UserOf(owner), BedPurposeAt(bed.CellIndex)))
+                    continue;
+                bed.Owner = 0;
+                _edifices[i] = bed;
+            }
+            // **Raised whenever the purposes moved, not only when an owner was stripped** (review
+            // 2026-09-26): an *unowned* bed that turned into a prison bed has a colonist asleep in
+            // it and nobody to strip, and the job system's wake sweep reads only this flag.
+            BedOwnershipChanged = true;
+            // Asking may have solved the rooms; the key is what they are now.
+            _sweptPurposes = Purposes.StateKey;
+        }
+
+        /// <summary><see cref="BedPurposeAt(int)"/> by cell reference, which is how the pane holds one.</summary>
+        public BedPurpose BedPurposeAt(CellRef cell) =>
+            _grid.Contains(cell.X, cell.Z, cell.Y) ? BedPurposeAt(_grid.Index(cell)) : BedPurpose.Colony;
 
         /// <summary>
         /// A colonist who has just reached a bed nobody owns takes it as her own — the "not
@@ -1922,19 +2020,26 @@ namespace Odyssey.Sim.Construction
             if (cell < 0 || cell >= _grid.Edifice.Length) return false;
             if (BedOwnerAt(cell) != 0) return false;
             if (PawnOwnsABed(pawn.Value)) return false;
+            Pawns.Pawn? sleeper = _pawns.Get(pawn);
+            if (sleeper == null) return false;
 
+            // Everyone else who sleeps from the same pool and has no bed of their own. Only the
+            // same pool: a hog, a bandit or a prisoner wants none of the colony's beds, and until
+            // 2026-09-26 every pawn on the board was counted here, so a colony with wildlife
+            // kept its beds shared for ever (design 60 §5a).
             int bedlessOthers = 0;
             var all = _pawns.All;
             for (int i = 0; i < all.Count; i++)
             {
                 Pawns.Pawn other = all[i];
                 if (other.Id.Value == pawn.Value) continue;
+                if (!BedRules.SharesPool(sleeper, other)) continue;
                 if (!PawnOwnsABed(other.Id.Value)) bedlessOthers++;
             }
 
             // One bed leaves the pool if this succeeds; what is left must still cover everyone
             // else who has none.
-            if (UnownedBedCount() - 1 < bedlessOthers) return false;
+            if (UnownedBedCount(BedPurposeAt(cell)) - 1 < bedlessOthers) return false;
 
             return AssignOwnerAt(cell, pawn.Value) == IntentRejection.None;
         }

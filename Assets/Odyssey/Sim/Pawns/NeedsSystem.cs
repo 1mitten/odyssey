@@ -155,7 +155,9 @@ namespace Odyssey.Sim.Pawns
             // The slice has no recreation buildings, so idling is the only source of joy there
             // is. Without one, joy falls to zero on every colonist, mood sits under the break
             // threshold permanently, and a ten-day run measures nothing but mental breaks.
-            if (!pawn.Asleep)
+            // A prisoner's is held where it is (design 60 §4b): a cell has no way to meet it, and a
+            // wait in one is not the idle hour a colonist spends by the fire.
+            if (!pawn.Asleep && pawn.Custody == PawnCustody.Free)
             {
                 if (IsIdling(pawn))
                 {
@@ -168,6 +170,10 @@ namespace Odyssey.Sim.Pawns
                     Fall(pawn, NeedIndex.Joy);
                 }
             }
+
+            // Held, and feeling it (design 60 §6): renewed every interval she is held, so it lasts as
+            // long as the cell does and a quarter-day after.
+            if (pawn.Custody == PawnCustody.Prisoner) pawn.AddMemory(ThoughtIndex.Imprisoned, tick);
 
             UpdateMood(pawn, tick);
             RollMentalBreak(pawn, tick, interval);

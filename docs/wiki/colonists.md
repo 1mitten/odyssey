@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-63 entries, 45 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+77 entries, 59 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -12,6 +12,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Visitor** | `ui.pawn.visitor` | Here peacefully, and watching <br>**Needs:** human figure, neutral | no art | M2 |
 | **Hostile** | `ui.pawn.hostile` | Will attack <br>**Needs:** human figure, hostile | no art | M2 |
 | **Prisoner** | `ui.pawn.prisoner` | Held, and someone must feed them <br>**Needs:** human figure, restrained | no art | M2 |
+| **Let go** | `ui.pawn.released` | Released or exiled, and walking off the board free <br>**Needs:** a figure walking away from an open door | no art | PS |
 | **Animal** | `ui.pawn.animal` | Tame or wild creature | sheet 06 (action tiles), med | M2 |
 | **Synth** | `ui.pawn.synth` | Machine intelligence. Not alive, not harmless <br>**Needs:** a machine intelligence. Nothing in the sheets is recognisably robotic | no art | M2 |
 | **Corpse** | `ui.pawn.corpse` | Rots, upsets people, can be buried or worse | sheet 07 (anatomy), high | M2 |
@@ -20,6 +21,16 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Culvert frog** | `ui.pawn.frog` | A big frog of the banks. Keeps to the water's edge and hops | no art | AN |
 | **Bandit** | `ui.pawn.bandit` | Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing | no art | CB |
 | **Gunman** | `ui.pawn.gunman` | A bandit with a pistol, dressed as the rest. Shoots whoever it can see, and clubs whoever comes close | no art | RD |
+
+## What the colony does with a prisoner
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Hold** | `ui.prisoner.hold` | Kept in her cell, fed and tended, and nothing more asked of her | no art | PS |
+| **Recruit** | `ui.prisoner.recruit` | A warden talks to her every six hours until she is willing to join | no art | PS |
+| **Release** | `ui.prisoner.release` | Walked out of the cell and let go. A colonist under arrest goes back to work | no art | PS |
+| **Exile** | `ui.prisoner.exile` | Walked to the edge of the map and sent away for good | no art | PS |
+| **Ransom** | `ui.prisoner.ransom` | Sold back to her own people. Needs factions, so not yet | no art | M7 |
 
 ## Needs
 
@@ -79,6 +90,14 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Sheltering** | `ui.status.sheltering` | An animal waiting out the rain under a roof or a tree, or walking to one | no art | WE |
 | **In the rain** | `ui.status.inrain` | A colonist under open sky while it rains, and walking slower for it. Said beside her pace | no art | WE |
 | **Shooting** | `ui.status.shooting` | Standing where the line is open and firing at a target | no art | RC |
+| **Capturing** | `ui.status.capturing` | Carrying a downed enemy to a prison bed | no art | PS |
+| **Feeding a prisoner** | `ui.status.feedingprisoner` | Carrying a meal to a prisoner, in her cell or on her bed | no art | PS |
+| **Talking to a prisoner** | `ui.status.chatting` | A warden talking a prisoner round, which fills her willingness | no art | PS |
+| **Escorting** | `ui.status.escorting` | Walking a released prisoner out | no art | PS |
+| **Going to a cell** | `ui.status.goingtocell` | A raider who has given up walking herself to a prison bed | no art | PS |
+| **Escaping** | `ui.status.escaping` | A prisoner breaking out: through the door, then for the edge | no art | PS |
+| **Leaving** | `ui.status.leaving` | Let go and walking off the board | no art | PS |
+| **Arresting** | `ui.status.arresting` | Walking to a colonist to take her into custody | no art | PS |
 
 ## Pace and what it is made of
 

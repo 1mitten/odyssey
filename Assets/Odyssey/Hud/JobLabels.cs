@@ -59,6 +59,10 @@ namespace Odyssey.Hud
             // The ranged attack (design 47 §2d), JobHandle 27, after the kitchen's: a word of its own rather than
             // "Fighting", so a line of shooters reads as shooting.
             "ui.status.shooting",
+            // The prisoner line (design 60 §7), JobHandle 28 to 35, in handle order.
+            "ui.status.capturing", "ui.status.feedingprisoner", "ui.status.chatting",
+            "ui.status.escorting", "ui.status.goingtocell", "ui.status.escaping",
+            "ui.status.leaving", "ui.status.arresting",
         };
 
         public static string IconKey(int jobDef) =>

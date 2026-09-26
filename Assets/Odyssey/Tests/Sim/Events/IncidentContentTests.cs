@@ -42,7 +42,11 @@ namespace Odyssey.Tests.Sim.Events
         // 2026-09-25, raids (design 55): Incident_Raid appended at index 5 — Bad, ThreatBig, worker
         // Raid, the first Def with a per-worker block (<raid>), gates earliestDay 3 and
         // minRefireDays 4 (invented). No golden moved: no golden fires an incident.
-        const ulong ContentFingerprint = 7539131593735443081UL;
+        //
+        // 2026-09-26, prisoners (design 60 §8-§10): Incident_Recruited, Incident_PrisonerEscaped,
+        // Incident_Surrendered and Incident_Arrested appended at 6 to 9, all Recorded — written
+        // down when a prisoner joins, gets away, gives up or is taken, never fired.
+        const ulong ContentFingerprint = 9985608285918444475UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

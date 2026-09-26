@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
@@ -105,6 +106,66 @@ namespace Odyssey.Tests.PlayMode
                     Assert.That(inspect.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex),
                         "closing the Assign tab did not bring back the chosen colonist's pane");
                 }
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>
+        /// The colonist pane's header (design 60 §16 H1): the longest given name in the pool must
+        /// clear the buttons. Design 57 §6 took a fourth labelled button out because it "would have
+        /// run her name under the buttons"; the prisoner line put one back (Arrest) and this test,
+        /// measuring at 1920 x 1080, found 17 px left where the name needs about 70. Arrest is a
+        /// right-click row now. **The word after the name does not fit either, on `main` too**
+        /// since First Person went in: that shortfall is logged, not asserted, and is the header's
+        /// own open question. The margin is the number a later button has to fit into.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheLongestNameStillClearsTheColonistsButtons()
+        {
+            GameObject root = Build();
+            try
+            {
+                yield return new WaitForSecondsRealtime(0.3f);
+                for (int i = 0; i < 3; i++) yield return null;
+                var boot = root.GetComponentInChildren<OdysseyBootstrap>();
+                var doc = root.GetComponentInChildren<UIDocument>();
+                HudDirectors? directors = boot!.Directors;
+                if (directors == null) { Assert.Ignore("no session, so there is no pane to open"); yield break; }
+                int colonists = Colonists(boot.World!.Views.Current, out Odyssey.Sim.Contracts.PawnId first);
+                Assume.That(colonists, Is.GreaterThan(0));
+
+                directors.ChooseColonist(first, boot.World!.Views.Current);
+                for (int i = 0; i < 6; i++) yield return null;
+
+                VisualElement inspect = doc!.rootVisualElement.Q("inspect");
+                VisualElement titles = inspect.Q(className: "inspect__titles");
+                var title = inspect.Q<Label>(className: "inspect__title");
+                var meta = inspect.Q<Label>(className: "inspect__meta");
+                Assume.That(titles != null && title != null && meta != null, "the header's parts");
+
+                // Whatever stands after the name block in the header — the toggles, then Close over
+                // Info (design 61) — is what the name line runs into.
+                VisualElement header = titles!.parent;
+                int at = header.IndexOf(titles);
+                Assume.That(at + 1, Is.LessThan(header.childCount), "nothing after the name block");
+                float rightEdge = header[at + 1].worldBound.xMin;
+
+                string longest = "";
+                foreach (string name in ColonistNamePool.Names) if (name.Length > longest.Length) longest = name;
+                float nameWidth = title!.MeasureTextSize(longest, 0, VisualElement.MeasureMode.Undefined, 0, VisualElement.MeasureMode.Undefined).x;
+                float metaWidth = meta!.MeasureTextSize(meta.text, 0, VisualElement.MeasureMode.Undefined, 0, VisualElement.MeasureMode.Undefined).x;
+                float needed = nameWidth + meta.resolvedStyle.marginLeft + metaWidth;
+                float room = rightEdge - titles.worldBound.xMin;
+                var parts = new System.Text.StringBuilder();
+                for (int i = at + 1; i < header.childCount; i++)
+                    parts.Append($" [{header[i].GetClasses().FirstOrDefault() ?? header[i].name}: {header[i].worldBound.width:0}]");
+                Debug.Log($"[Header] after the name:{parts}; room for the name line {room:0}; '{longest}' needs {nameWidth:0}, " +
+                          $"with '{meta.text}' {needed:0}; margin {room - needed:0}");
+                Assert.That(nameWidth, Is.LessThanOrEqualTo(room),
+                    $"'{longest}' needs {nameWidth:0} and the header leaves {room:0}: her name runs under its controls");
             }
             finally
             {

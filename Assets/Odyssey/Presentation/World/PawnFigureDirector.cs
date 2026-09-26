@@ -2532,7 +2532,22 @@ namespace Odyssey.Presentation.World
         Figure Lease(in PawnView view, Vector3 at)
         {
             PawnId pawn = view.Id;
-            if (_byPawn.TryGetValue(pawn.Value, out Figure? existing)) return existing;
+            if (_byPawn.TryGetValue(pawn.Value, out Figure? existing))
+            {
+                // Her outfit moves while she is drawn: taken, dressed for her cell, recruited, let
+                // go (design 60 §11d; review 2026-09-26). The same face is repainted in place; a
+                // different one needs its own figure, so this one is parked and a new one leased.
+                PawnOutfit outfit = PawnOutfits.For(view);
+                if (existing.Outfit == outfit) return existing;
+                if (existing.Look == LookFor(in view))
+                {
+                    existing.Outfit = outfit;
+                    Repaint(existing, pawn);
+                    return existing;
+                }
+                Park(existing);
+                _byPawn.Remove(pawn.Value);
+            }
 
             // The pool is keyed by face as well as by being free: a figure is a *built* prefab
             // with a graph bound to its own rig, so handing a parked one to a pawn wearing a
@@ -2615,16 +2630,21 @@ namespace Odyssey.Presentation.World
 
             for (int i = 0; i < _retired.Count; i++)
             {
-                Figure figure = _byPawn[_retired[i]];
-                figure.Pawn = -1;
-                // Put the axe away on the way into the pool. A figure parked mid-swing and handed
-                // to a colonist who is only walking past would otherwise arrive carrying it.
-                figure.WorkWeight = 0f;
-                ShowHeldTool(figure, working: false);
-                HideWeapon(figure);
-                figure.GameObject.SetActive(false);
+                Park(_byPawn[_retired[i]]);
                 _byPawn.Remove(_retired[i]);
             }
+        }
+
+        /// <summary>Back into the pool: nobody's, hidden, with nothing in its hands.</summary>
+        void Park(Figure figure)
+        {
+            figure.Pawn = -1;
+            // Put the axe away on the way into the pool. A figure parked mid-swing and handed
+            // to a colonist who is only walking past would otherwise arrive carrying it.
+            figure.WorkWeight = 0f;
+            ShowHeldTool(figure, working: false);
+            HideWeapon(figure);
+            figure.GameObject.SetActive(false);
         }
 
         Figure Create(int look)

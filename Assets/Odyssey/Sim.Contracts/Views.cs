@@ -331,14 +331,34 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly PawnFlags Flags;
 
+        /// <summary>
+        /// Whether the colony holds this pawn (design 60 §4). A byte beside <see cref="Flags"/>
+        /// rather than a bit in it, because that byte is full and belongs to the fight. Derived each
+        /// publish from the pawn's saved custody, so neither saved nor hashed here.
+        /// </summary>
+        public readonly PawnCustody Custody;
+
+        /// <summary>
+        /// Wearing the prison jumpsuit (design 60 §11d): she has been laid in a prison bed and is
+        /// not free again. Read by the one outfit owner, <c>PawnOutfits</c>, and by nothing else.
+        /// </summary>
+        public readonly bool Dressed;
+
         /// <summary>A person — a colonist or a hostile one — as against an animal.</summary>
         public bool IsPerson => (Flags & PawnFlags.Person) != 0;
 
         /// <summary>An animal: the species is not a person.</summary>
         public bool IsAnimal => (Flags & PawnFlags.Person) == 0;
 
-        /// <summary>One of ours: a person who is not hostile. The roster, the Work tab and the draft.</summary>
-        public bool IsColonist => (Flags & (PawnFlags.Person | PawnFlags.Hostile)) == PawnFlags.Person;
+        /// <summary>
+        /// One of ours: a person who is not hostile and nobody's prisoner. The roster, the Work tab
+        /// and the draft. A prisoner is neither ours nor an enemy (design 60 §4b).
+        /// </summary>
+        public bool IsColonist =>
+            (Flags & (PawnFlags.Person | PawnFlags.Hostile)) == PawnFlags.Person && Custody == PawnCustody.Free;
+
+        /// <summary>Held by the colony, or breaking out of it.</summary>
+        public bool IsPrisoner => Custody == PawnCustody.Prisoner || Custody == PawnCustody.Escaping;
 
         public bool IsHostile => (Flags & PawnFlags.Hostile) != 0;
         public bool IsDrafted => (Flags & PawnFlags.Drafted) != 0;
@@ -357,8 +377,11 @@ namespace Odyssey.Sim.Contracts
             bool working = false, CellRef workCell = default,
             PawnGesture gesture = PawnGesture.None, byte gestureSerial = 0,
             bool asleep = false, int movePerMille = 0, int moveDeltaPerMille = 0,
-            int kind = 0, PawnFlags? flags = null, bool seated = false, bool jumpingShort = false)
+            int kind = 0, PawnFlags? flags = null, bool seated = false, bool jumpingShort = false,
+            PawnCustody custody = PawnCustody.Free, bool dressed = false)
         {
+            Custody = custody;
+            Dressed = dressed;
             Seated = seated;
             JumpingShort = jumpingShort;
             Kind = kind;
@@ -1622,6 +1645,17 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly int AmbientTempC;
 
+        /// <summary>
+        /// What the bed standing here is for (design 60 §5b): <see cref="BedForColony"/> — every
+        /// cell with no bed says the same — <see cref="BedForPrisoners"/>, or
+        /// <see cref="BedShackles"/> for a prison bed with no room around it.
+        /// </summary>
+        public readonly byte BedPurpose;
+
+        public const byte BedForColony = 0;
+        public const byte BedForPrisoners = 1;
+        public const byte BedShackles = 2;
+
         public CellDetail(int cellIndex, byte terrain, byte edifice, byte floorStuff, byte support,
             ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0,
             byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue, byte zoneYield = 0,
@@ -1629,8 +1663,9 @@ namespace Odyssey.Sim.Contracts
             int storageCells = 0, int storageOrdinal = 0,
             byte storeKind = StoreNone, byte storedStacks = 0, byte storeSlots = 0,
             byte storedDef = 255, int storedUnits = 0, int storeCellIndex = -1,
-            int ambientTempC = int.MinValue)
+            int ambientTempC = int.MinValue, byte bedPurpose = BedForColony)
         {
+            BedPurpose = bedPurpose;
             StoreCellIndex = storeCellIndex;
             StorageZone = storageZone;
             StoragePriority = storagePriority;
@@ -1806,6 +1841,13 @@ namespace Odyssey.Sim.Contracts
         /// centred on. Always published; it is one number.
         /// </summary>
         public int HearthCell { get; private set; } = -1;
+
+        /// <summary>
+        /// Whether any prison bed stands free for a new prisoner (design 60 §16 H2): what an arrest
+        /// is refused for when there is none, so the pane can say so rather than the press doing
+        /// nothing. False on a board with no prison bed; worked out only when one is marked.
+        /// </summary>
+        public bool PrisonBedFree { get; private set; }
 
         /// <summary>How many home border cells are published. See <see cref="HomeCellView"/>.</summary>
         public int HomeCellCount { get; private set; }
@@ -2209,6 +2251,7 @@ namespace Odyssey.Sim.Contracts
             PowerVersion = 0;
             Weather = WeatherView.None;
             HearthCell = -1;
+            PrisonBedFree = false;
             HomeCellCount = 0;
             HomeVersion = 0;
             CombatEventCount = 0;
@@ -2271,6 +2314,8 @@ namespace Odyssey.Sim.Contracts
         internal void SetWeather(in WeatherView view) => Weather = view;
 
         internal void SetHearthCell(int cell) => HearthCell = cell;
+
+        internal void SetPrisonBedFree(bool free) => PrisonBedFree = free;
 
         internal void SetHomeVersion(int version) => HomeVersion = version;
 

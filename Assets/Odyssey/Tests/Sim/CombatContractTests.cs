@@ -83,7 +83,11 @@ namespace Odyssey.Tests.Sim
             Assert.That(JobHandle.Cook, Is.EqualTo(26));
             // And the ranged line's (design 47 §3a), 27 after the kitchen's.
             Assert.That(JobHandle.AttackRanged, Is.EqualTo(27));
-            Assert.That(JobHandle.Count, Is.EqualTo(28));
+            // And the prisoner line's eight (design 60 §7), 28 to 35.
+            Assert.That(new[] { JobHandle.Capture, JobHandle.FeedPrisoner, JobHandle.Chat, JobHandle.Escort,
+                    JobHandle.GoToCell, JobHandle.Escape, JobHandle.LeaveFree, JobHandle.Arrest },
+                Is.EqualTo(new[] { 28, 29, 30, 31, 32, 33, 34, 35 }));
+            Assert.That(JobHandle.Count, Is.EqualTo(36));
             Assert.That(new[] { ItemHandle.Bat, ItemHandle.Crowbar, ItemHandle.Machete, ItemHandle.ArcBlade },
                 Is.EqualTo(new[] { 7, 8, 9, 10 }));
             // Medical supplies at 11 (design 37), the wild foods at 12 and 13 (design 45 §6), and
@@ -99,7 +103,9 @@ namespace Odyssey.Tests.Sim
             Assert.That(WorkHandle.Doctor, Is.EqualTo(6));
             // 8 since the kitchen appended Work_Cooking at 7 (design 48).
             Assert.That(WorkHandle.Cooking, Is.EqualTo(7));
-            Assert.That(WorkHandle.Count, Is.EqualTo(8));
+            // 9 since the prisoner line appended Work_Warden at 8 (design 60 §7).
+            Assert.That(WorkHandle.Warden, Is.EqualTo(8));
+            Assert.That(WorkHandle.Count, Is.EqualTo(9));
             Assert.That(SkillIndex.Melee, Is.EqualTo(5));
             // 7 since medical supplies appended Skill_Medicine at 6 (design 37), and 8 since the
             // kitchen appended Skill_Cooking at 7 (design 48).
@@ -107,7 +113,9 @@ namespace Odyssey.Tests.Sim
             Assert.That(SkillIndex.Cooking, Is.EqualTo(7));
             // And Shooting at 8 (design 47), after the kitchen: nine.
             Assert.That(SkillIndex.Shooting, Is.EqualTo(8));
-            Assert.That(SkillIndex.Count, Is.EqualTo(9));
+            // And Social at 9 (design 60 §8), after Shooting: ten.
+            Assert.That(SkillIndex.Social, Is.EqualTo(9));
+            Assert.That(SkillIndex.Count, Is.EqualTo(10));
             Assert.That(PawnKindIndex.Bandit, Is.EqualTo(3));
             // 5 since the raid appended the gunman at 4 (design 55 §8).
             Assert.That(PawnKindIndex.Gunman, Is.EqualTo(4));
@@ -130,7 +138,9 @@ namespace Odyssey.Tests.Sim
             PawnContent content = ContentPack.Pawns();
             Assert.That(content.Jobs.Skip(17).Select(j => j.defName), Is.EqualTo(new[]
                 { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue", "Job_Steal",
-                  "Job_Treat", "Job_Patient", "Job_Forage", "Job_Cook", "Job_AttackRanged" }));
+                  "Job_Treat", "Job_Patient", "Job_Forage", "Job_Cook", "Job_AttackRanged",
+                  "Job_Capture", "Job_FeedPrisoner", "Job_Chat", "Job_Escort", "Job_GoToCell",
+                  "Job_Escape", "Job_LeaveFree", "Job_Arrest" }));
             for (int i = 0; i < content.Jobs.Length; i++)
                 Assert.That(content.Jobs[i].driver, Is.EqualTo(i), content.Jobs[i].defName + " names another driver");
             Assert.That(content.Jobs[JobIndex.AttackMelee].trainsSkill, Is.EqualTo(SkillIndex.Melee));

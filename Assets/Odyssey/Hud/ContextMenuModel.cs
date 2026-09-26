@@ -98,7 +98,9 @@ namespace Odyssey.Hud
         {
             into.Clear();
             if (cell.HasValue) OfferEquip(selection, snapshot, cell.Value, into);
+            OfferCapture(selection, snapshot, under, into);
             OfferTend(selection, snapshot, under, into);
+            OfferArrest(selection, snapshot, under, into);
 
             if (into.Count == 0) return false;
             into.Add(new ContextMenuRow(CancelKey, Registry.Label(CancelKey), enabled: true, string.Empty, Nothing));
@@ -180,6 +182,62 @@ namespace Odyssey.Hud
         /// <summary>The Tend row's verb (design 43 §11): "Tend", "Treat this patient".</summary>
         public const string TendKey = "ui.command.tend";
 
+        /// <summary>The two rows on a downed enemy (design 60 §7): bring her in, or kill her.</summary>
+        public const string CaptureKey = "ui.command.capture", FinishOffKey = "ui.command.finishoff";
+
+        /// <summary>Why Finish off is dim: nobody selected is drafted, and only the drafted fight.</summary>
+        public const string NeedsDraftKey = "ui.menu.needsdraft";
+
+        /// <summary>
+        /// Capture, then Finish off, on a downed person who is not ours (design 60 §7, the owner's
+        /// ruling of 2026-09-26: "Menu: Capture / Finish off"). The right-click that used to kill a
+        /// downed bandit outright opens this instead, so nothing happens by accident.
+        ///
+        /// <para>Capture sends the primary colonist — the first standing one, drafted or not — with
+        /// <see cref="IntentKind.OrderCapture"/>, which marks the target first, so an order refused
+        /// for want of a free prison bed still leaves a warden to bring her in once there is one.
+        /// Finish off is the old attack, from every drafted colonist selected; dim, with its reason,
+        /// when nobody selected is drafted. A downed prisoner lying outside her bed is offered
+        /// Capture alone — she is brought back, never finished off from a menu.</para>
+        /// </summary>
+        static void OfferCapture(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot, PawnId under,
+            List<ContextMenuRow> into)
+        {
+            if (!under.IsValid || !snapshot.TryGetPawn(under, out PawnView target)) return;
+            if (!target.IsPerson || !target.IsDowned || target.IsColonist) return;
+            if (!target.IsHostile && target.Custody != PawnCustody.Prisoner) return;
+            // A prisoner only when she is to be brought back (design 60 §16 H3): one lying in her
+            // own prison bed was offered a Capture the simulation refused in silence, and a
+            // drafted right-click on her cell opened the menu instead of moving there.
+            if (target.Custody == PawnCustody.Prisoner && !snapshot.TryGetPawnAspect(under, PrisonAspectNames.StrayKey, out _))
+                return;
+
+            bool anyColonist = false;
+            PawnId primary = PawnId.None;
+            for (int i = 0; i < selection.Count && !primary.IsValid; i++)
+            {
+                if (!snapshot.TryGetPawn(selection[i], out PawnView view) || !view.IsColonist) continue;
+                anyColonist = true;
+                if (!view.IsDowned) primary = view.Id;
+            }
+            if (!anyColonist) return;
+
+            string capture = Registry.Label(CaptureKey);
+            if (!primary.IsValid)
+                into.Add(new ContextMenuRow(CaptureKey, capture, enabled: false, Registry.Label(DownedReasonKey), Nothing));
+            else
+                into.Add(new ContextMenuRow(CaptureKey, capture, enabled: true, string.Empty,
+                    new[] { new Intent(IntentKind.OrderCapture, target.Cell, primary.Value, under.Value) }));
+
+            if (!target.IsHostile) return;
+            var attack = new List<Intent>();
+            bool any = CombatOrders.Attack(selection, snapshot, target, attack);
+            string finish = Registry.Label(FinishOffKey);
+            into.Add(any
+                ? new ContextMenuRow(FinishOffKey, finish, enabled: true, string.Empty, attack.ToArray())
+                : new ContextMenuRow(FinishOffKey, finish, enabled: false, Registry.Label(NeedsDraftKey), Nothing));
+        }
+
         /// <summary>
         /// Tend, on a colonist under the pointer who has an injury nobody has tended (design 43
         /// §11), read off the body's sparse aspects. The primary colonist of the selection — the
@@ -214,6 +272,63 @@ namespace Odyssey.Hud
             }
             var order = new[] { new Intent(IntentKind.OrderTend, patient.Cell, doctor.Value, under.Value) };
             into.Add(new ContextMenuRow(TendKey, label, enabled: true, string.Empty, order));
+        }
+
+        /// <summary>The verb on a colonist's Arrest row (design 60 §10).</summary>
+        public const string ArrestKey = "ui.command.arrest";
+
+        /// <summary>
+        /// <b>Arrest</b>, on a colonist under the pointer who is on her feet (design 60 §10, owner's
+        /// ruling 2026-09-26 at the second review): a row here rather than a button in her pane's
+        /// header, which with Draft, the response and First Person left 17 px for her name
+        /// (design 60 §16 H1). <b>Only while nobody selected is drafted</b>, so a drafted
+        /// right-click that touches a colonist is still a move (design 33 §2f). The first standing
+        /// colonist of the selection other than her is sent; with none, the nearest who can reach
+        /// her (<c>A = 0</c>). Dim with its reason when the simulation would refuse it
+        /// (<see cref="ArrestRefusal"/>). No colonist selected, no row.
+        /// </summary>
+        static void OfferArrest(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot, PawnId under,
+            List<ContextMenuRow> into)
+        {
+            if (!under.IsValid || !snapshot.TryGetPawn(under, out PawnView target) || !target.IsColonist || target.IsDowned)
+                return;
+
+            bool anyColonist = false;
+            PawnId arrester = PawnId.None;
+            for (int i = 0; i < selection.Count; i++)
+            {
+                if (!snapshot.TryGetPawn(selection[i], out PawnView view) || !view.IsColonist) continue;
+                if (OrderModel.IsDrafted(snapshot, view.Id)) return;
+                anyColonist = true;
+                if (!arrester.IsValid && view.Id != under && !view.IsDowned) arrester = view.Id;
+            }
+            if (!anyColonist) return;
+
+            string label = Registry.Label(ArrestKey);
+            string? refusal = ArrestRefusal(snapshot, under);
+            if (refusal != null)
+            {
+                into.Add(new ContextMenuRow(ArrestKey, label, enabled: false, refusal, Nothing));
+                return;
+            }
+            var order = new[] { new Intent(IntentKind.OrderArrest, target.Cell, arrester.IsValid ? arrester.Value : 0, under.Value) };
+            into.Add(new ContextMenuRow(ArrestKey, label, enabled: true, string.Empty, order));
+        }
+
+        /// <summary>
+        /// Why an arrest of <paramref name="target"/> would be refused, in the menu's words, or null
+        /// when it would be sent (design 60 §16 H2). Read off what the simulation publishes — her
+        /// state, the colony's, whether a prison bed stands free — the three refusals a player can
+        /// see coming. The simulation still decides; this only stops the press doing nothing.
+        /// </summary>
+        public static string? ArrestRefusal(WorldSnapshot snapshot, PawnId target)
+        {
+            if (!snapshot.TryGetPawn(target, out PawnView her) || her.IsDowned) return "she is down; she can only be captured";
+            if (!snapshot.PrisonBedFree) return "no free prison bed";
+            var pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+                if (pawns[i].Id != target && pawns[i].IsColonist && !pawns[i].IsDowned) return null;
+            return "nobody else is on their feet to take her";
         }
 
         /// <summary>

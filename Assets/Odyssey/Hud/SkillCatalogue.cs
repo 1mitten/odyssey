@@ -124,7 +124,9 @@ namespace Odyssey.Hud
             new Entry("ui.skill.fabrication", NotSimulated, "no production chain"),
             // Live with medical supplies (design 37): treating trains it, and it buys speed at it.
             new Entry("ui.skill.medicine", "medicine", string.Empty),
-            new Entry("ui.skill.social", NotSimulated, "no other people"),
+            // Live from the prisoner line's contracts step (design 60 §8): Skill_Social, rolled at
+            // the start and trained by a warden's chats.
+            new Entry("ui.skill.social", "social", string.Empty),
             // Live from the ranged line's contracts step (design 47 §3a): Skill_Shooting, rolled at
             // the start and read by the per-cell accuracy curve.
             new Entry("ui.skill.shooting", "shooting", string.Empty),

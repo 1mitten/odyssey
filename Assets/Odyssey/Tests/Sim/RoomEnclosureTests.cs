@@ -117,6 +117,29 @@ namespace Odyssey.Tests.Sim
             }
         }
 
+        /// <summary>
+        /// <b>A fill that outgrows the room limit must not wall in the next one</b> (design 60
+        /// §15d). The fill used to stop the moment a region passed 2,500 cells, leaving the cells
+        /// it had queued marked visited and never processed; a later fill that reached one took it
+        /// for a wall. So a room whose doorway gave on to that frontier stayed a room with its door
+        /// gone. Found by a prisoner whose cell door was broken and whose cell went on holding her.
+        /// Swept across positions because the frontier's place depends on the board: every one
+        /// must come out open, and the control is the same room with its door standing.
+        /// </summary>
+        [Test]
+        public void AGapOntoABigOutdoorRegionIsNeverEnclosed()
+        {
+            for (int p = 30; p <= 50; p++)
+            {
+                var f = new Fixture(100, 100, 4);
+                f.BuildRoom(p, p, p + 4, p + 4, doorX: p, doorZ: p + 2, withRoof: true);
+                Assert.That(f.Enclosure.IsIndoors(f.Cell(p + 2, p + 2, 0)), Is.True, $"the control at {p}: a room");
+                f.Demolish(p, p + 2);
+                Assert.That(f.Enclosure.IsIndoors(f.Cell(p + 2, p + 2, 0)), Is.False, $"at {p}: the doorway is open to the sky");
+                Assert.That(f.Enclosure.RoomAt(f.Cell(p + 2, p + 2, 0)), Is.Zero, $"at {p}");
+            }
+        }
+
         [Test]
         public void FullyEnclosedRoofedRoomIsIndoors()
         {

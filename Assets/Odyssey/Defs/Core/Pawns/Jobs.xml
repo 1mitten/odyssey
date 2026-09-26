@@ -345,4 +345,74 @@
     <trainsSkill>8</trainsSkill>
   </JobDef>
 
+  <!--
+    The prisoner line (design 60 section 7), claimed together by its contracts step (P3), 28 to
+    35, so that no two units append a job and both call it the same number. Each driver was
+    written by its own unit (P5 to P12).
+
+    None may be taken away by a casual think: a body in the arms, a meal on its way to a cell, a
+    warden mid-sentence, an escort, a raider walking to her surrender, a breakout and an arrest are
+    all things a better-looking job must not interrupt. The carrying and walking jobs have the
+    generous walking expiry, for Job_Rescue's reason: a cell can be a long way off. Job_Escape and
+    Job_LeaveFree never expire, for Job_Steal's: an expiry at the board's edge would start the walk
+    again. Job_Chat trains Skill_Social (9) at every working job's rate; its workTicks is one
+    conversation (INVENTED, 300, five game seconds at speed one).
+  -->
+  <JobDef>
+    <defName>Job_Capture</defName>
+    <driver>28</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_FeedPrisoner</defName>
+    <driver>29</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Chat</defName>
+    <driver>30</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+    <workTicks>300</workTicks>
+    <trainsSkill>9</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Escort</defName>
+    <driver>31</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_GoToCell</defName>
+    <driver>32</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Escape</defName>
+    <driver>33</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_LeaveFree</defName>
+    <driver>34</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Arrest</defName>
+    <driver>35</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+  </JobDef>
+
 </Defs>

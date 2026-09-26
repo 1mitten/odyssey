@@ -45,6 +45,10 @@ namespace Odyssey.Sim.Pawns
                 return false;
             }
 
+            // Still standing, and badly hurt with this blow: a raider may give up (design 60 §10).
+            // Her fight is over whether or not the blow's stun lands, so she is not standing in it.
+            if (!target.Downed && Surrender.Consider(target, before, _ctx, tick)) return false;
+
             return !target.Downed;
         }
 
@@ -203,7 +207,7 @@ namespace Odyssey.Sim.Pawns
 
             // Up when whole, for a colonist (design 33 §11c), and only once the body lets her too:
             // blood still past its worst stage keeps her down at a full pool (design 43 §3).
-            int recoverAt = pawn.IsColonist ? 1_000 : _ctx.Content.Combat.downedRecoverAtPerMille;
+            int recoverAt = pawn.HealsAsAColonist ? 1_000 : _ctx.Content.Combat.downedRecoverAtPerMille;
             if ((long)pawn.HpMilli * 1_000 >= (long)pawn.HpMaxMilli * recoverAt && !pawn.CurrentVitals().Incapacitated)
                 Recover(pawn, tick);
         }

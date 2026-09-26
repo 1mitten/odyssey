@@ -78,6 +78,24 @@ namespace Odyssey.Sim.World
         /// </summary>
         public event Action<ThermalRoom>? RoomResolved;
 
+        /// <summary>
+        /// Moves every time a solve changes which room any cell is in. Not saved and not hashed: a
+        /// counter for caches built over the rooms (the prison's cells, design 60 §5b) to know when
+        /// to look again, so they never re-walk the rooms on a query.
+        /// </summary>
+        public int Generation
+        {
+            get
+            {
+                // Solved first, as every other question here is: a counter read before a pending
+                // solve would call rooms current that are about to change.
+                EnsureSolved();
+                return _generation;
+            }
+        }
+
+        int _generation;
+
         public EnclosureGrid(CellGrid cells, IReadOnlyList<PlacedEdifice> edifices)
         {
             _cells = cells;
@@ -214,6 +232,7 @@ namespace Odyssey.Sim.World
             {
                 if (!_dirtyLayers[y]) continue;
                 bool changed = FillLayer(y);
+                if (changed) _generation++;
                 _dirtyLayers[y] = false;
                 _surfaceDirty[y] = true;
                 if (y + 1 < _dirtyLayers.Length) _surfaceDirty[y + 1] = true;
@@ -300,11 +319,14 @@ namespace Odyssey.Sim.World
                     if (x == 0 || x == sizeX - 1 || z == 0 || z == sizeZ - 1)
                         touchesMapEdge = true;
 
-                    if (_currentRoomCells.Count > MaxRoomCells)
-                    {
-                        exceededLimit = true;
-                        break;
-                    }
+                    // **Flagged, never cut short** (design 60 §15d). The fill used to break here,
+                    // leaving every cell it had queued marked visited and unprocessed — so a later
+                    // fill that reached one treated it as a wall, and a room whose doorway opened on
+                    // to a big outdoor region scanned first came out enclosed. A broken cell door
+                    // left its cell a cell. Carrying on costs nothing: every cell of a layer is
+                    // visited once either way, and the cells a break skipped were only flooded
+                    // again as regions of their own.
+                    if (_currentRoomCells.Count > MaxRoomCells) exceededLimit = true;
 
                     // North (z + 1)
                     if (z + 1 < sizeZ) ProcessNeighbour(baseCell, currLocal + sizeX, 0, ref tail);

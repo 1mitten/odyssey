@@ -14341,3 +14341,145 @@ its swatch, temperatures in red, amber and green, a planet "at least 4x" and "mo
 - **Nothing outlives the menu**: `ReleaseWorldMap` destroys the texture, drops the buffer, the names and
   the planet and pauses the ease timer when a colony goes live. Before this the texture and its buffer
   sat in memory for the whole game, and the ease timer fired every 16 ms under it.
+## 2026-09-26 — Prisoners designed: a bed that makes a room, and two owners before any feature
+
+The owner asked for a prisoner system "similar-ish to RimWorld's but improved", with beds assignable
+as prison beds that make a room a prison. Ground, interview (four rounds, sixteen questions) and
+research were run in one session; design 60 and `docs/plans/prisoners.md` came out of it, and no
+code was written.
+
+**The ground found more reserved than built.** The registry already names a prisoner, capture,
+arrest, recruit, the escape alert and the Warden column; the Social skill is drawn and not
+simulated; the packs carry prisoner bodies. What does not exist is any notion that a pawn's side
+can change: faction is a property of the *kind*, and the kind's setter says nothing may change it.
+The design keeps that promise — a sparse custody override and one static owner of sides,
+`Allegiance`, rather than turning a bandit's kind into a colonist's — because rewriting the kind
+could not express an arrested colonist and would throw away the home faction ransom will need.
+
+**The ground also found the fault the feature would have multiplied.** Four near-copies of "own
+bed, else nearest unowned" choose beds, and a fifth in the owner picker, which offers hogs and
+bandits as owners; `TryClaimForSleeper` counts every pawn as wanting a bed. Adding "unless it is a
+prison bed" to five places is bug-patterns P1 by construction, so the first unit is `BedRules` and
+nothing prisoner-shaped at all.
+
+**The owner's answers leaned towards the reference's complaints.** A visible bar instead of a
+hidden recruit roll; escape risk shown with its reasons and scaled by 1/√n — the reference's own
+later slave rebellion made the same correction for headcount; prisoners who cannot open doors and
+escapees who must bash one, so that door material and an airlock matter where the reference's
+players report they do not. A right-click on a downed enemy, which today executes it, becomes a
+menu. The research could not read the reference's pages (the proxy refused all four), so its
+numbers are marked low confidence and ours are proposals for the first play.
+
+**One refinement over the design pass:** it would have spent the pawn hash word's last two free
+bits on `Joined` and `Dressed`. Those are hashed through the prison section instead, and bits 30–31
+stay free for whatever needs a per-pawn flag next.
+
+## 2026-09-26 — Prisoners built, P1–P12: what the tests pinned that the design had not
+
+The plan was approved and every unit went in the same day, tests first, on the fast tier. Four
+things are worth keeping.
+
+**The design's arrest gesture would have broken a fixed decision.** Design 60 put Arrest on a
+right-click over a standing colonist with a drafted colonist selected. Three Hud tests failed on
+the first build, and they were right to: a colonist's hit box covers the cell behind her at the
+play camera, and design 33's review found every drafted order just behind the squad doing nothing
+until a click that touched a pawn was made a move. A menu there would have taken the move away for
+the rarest order in the game. Arrest is a button on the target's own pane instead, and the
+simulation sends the nearest colonist who can reach her (`OrderArrest`, `A = 0`). **A test that
+fails on a new feature is sometimes the decision the feature forgot**, and the answer is to move
+the feature.
+
+**Givers of one work type are scanned by type name, so a name is a priority.** The chat giver sorted
+ahead of feeding, and a hungry prisoner would have waited while a warden talked to her cellmate.
+It is `RecruitWorkGiver` now, and the escort's is `ReleaseWorkGiver`, and the scan-order test's
+comment says why: renaming either back is a behaviour change dressed as a tidy.
+
+**A released bandit could not have left her cell.** Custody decides the traverse mode, and a
+Released pawn fell through to her kind's, which is a bandit's, which opens no door. The warden has
+opened it, so a Released pawn walks as a colonist does; and a surrendered raider or a quiet
+arrestee walks herself into the cell in a colonist's mode for that one job, which is the whole
+reason surrender needs no carry.
+
+**The risk shown is the risk rolled, proven rather than asserted.** `EscapeTests` rebuilds the
+hourly threshold from the published aspect alone and checks it against 20,000 hourly rolls, with a
+doubled threshold as the negative control that must disagree. Parts per million rather than per
+mille, because the √n divisor and the ×0.7 lose too much in thousandths.
+
+No golden moved after P3. Unity has compiled none of it: the pane's rows, the Arrest button and the
+jumpsuit are Presentation code the fast tier never sees.
+
+## 2026-09-26 — The prisoner line reviewed: ten faults, and what the first build's tests could not see
+
+A high-effort review of the whole branch returned ten findings, reviewed and unverified. Each was
+checked in the code before any fix; **all ten were real**. Design 60 §15d tables them.
+
+**The worst was one the tests were built to catch and did not.** `CustodyTests` already
+round-tripped a prisoner through a save and compared hashes, but it set every field of the record
+first, and the fault lived in the record being *empty*: a freshly taken prisoner holds an empty
+record, a load drops an empty record, and the hash counted it. The save-mid-raid gate would have
+found it the first time a surrender and a save met. The lesson is the one the determinism tests
+keep teaching: **round-trip the state the game actually makes, not the state a test finds
+interesting**, and for any sparse record ask whether empty and absent hash the same.
+
+**Most of the rest were the edges between custody and systems written before it.** The attack
+drivers knew a target could die or go down, not that she could give up. The wake sweep assumed a
+bed goes wrong only when its owner is taken away. The outfit's owner read the Hostile flag that
+custody now rewrites. The bed purpose derived from rooms forgot itself when the room opened. None of
+these is a prisoner rule. Each is an older rule meeting a new state, which is where a review earns
+its keep.
+
+**Every fix went in test first, and every new test was run against the code without its fix**
+(six failed, six then passed). The first build's tests had passed on their first run more often
+than was comfortable, and running the negative controls is what makes a green result mean
+something. No golden moved.
+
+## 2026-09-26 — Prisoners, the second review: merged, renumbered, and nineteen faults
+
+The owner asked for the prisoner branch to be reviewed, changed where it needed it, and made ready.
+It was 63 commits behind `main`, so it was merged first, in its own worktree
+(`D:\dev\odyssey-prisoners`, the packs junctioned). Sixteen conflicts, every one two appends at one
+place. The one that needed a decision was the colonist pane: the branch added Arrest and `main` added
+First Person, each "last". First Person's comment says it goes last so the response keeps its place
+beside Draft, so the order is Draft, response, Arrest, First Person, and `RideTests` now asserts
+"last" rather than "straight after the response", which is what it had meant.
+
+**Design 58 was taken.** `main` had renumbered cracks from 57 to 58 that morning because the ride
+along took 57, so prisoners became 59. The branch's 255 lines that said "design 58" were rewritten
+from the diff's own added lines, which keeps every cracks reference that also says 58; a grep for
+prisoner words beside a 58 found none left.
+
+**No collision git could not see.** Custody's hash bit 28 is free on `main`, and `main` added the
+frog's kind and species while prisoners added none. The played-board golden was re-baked from the
+merge and measured with `GoldenColonyProbe` on three checkouts: the merge equals `main` in every
+number, and differs from the branch only by `main`'s seven frogs.
+
+**Three passes, then every finding checked before any fix.** Simulation, interface, and whether the
+tests and docs bear out their claims, each in its own context. Nine simulation findings, eight
+interface, and a docs list; one (the shackled walk) needed its test strengthened before it could
+fail. **The tenth simulation fault was found by a test for the fourth**: an arrest with no bed left
+timed out rather than failing the way it should. A trace every 300 ticks showed the arrester
+walking a cell every 200 ticks after a colonist walking one every 100: the prisoner drivers chose a
+new place beside her every tick she moved, and each new destination snapped his step back. The
+melee chase had met it in C7. One rule now (`PrisonerFollow.StandFor`), and 2,261 ticks to catch
+her. The branch's own arrest test had passed because its target stood still.
+
+**What the numbers were.** A bleeding prisoner lying down is treated by about tick 3,600 on the test
+board: the doctor fetches supplies and walks round to the cell door. The window was 3,000 on the
+first try and the test failed for that, not for the fault, which the trace showed.
+
+**Unity found one more.** `PrisonBedTests` had never been compiled by Unity, and Unity's older NUnit
+takes only a string for `Does.Not.Contain`. EditMode on the merge: 4,612 / 4,574 / 1 failed, the
+`WeaponSheathGapTests` bat that fails on `main` too. Design 60 §16 tables all of it.
+
+**Then the header, measured rather than argued.** `DockedTabGeometryTests.TheLongestNameStillClearsTheColonistsButtons`
+laid the colonist pane out at 1920 × 1080: Draft, Fight back, Arrest, First Person, Almanac and Close
+took 448 px and left **17** for the name line, where *Charlotte* alone needs 95. The owner chose the
+right-click menu for Arrest (while nobody selected is drafted, beside Tend and Equip), which is where
+the design had first put it. The header is `main`'s three again, with the name clear by 6 px — and
+the word after the name 72 px short **on `main` too**, since First Person's 117 went in. That is
+logged by the test and left as the header's own question.
+
+**And `main` moved underneath it the same afternoon**: #245 rebuilt the header as two icon toggles
+with Close over Info (design 61). Merged a second time; main's side taken in the model and its
+tests, Arrest left in the menu, and the header measurement retargeted at the new layout, since the
+actions row it measured is gone.

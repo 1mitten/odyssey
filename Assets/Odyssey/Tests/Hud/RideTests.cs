@@ -15,12 +15,12 @@ namespace Odyssey.Tests.Hud
         static readonly PawnId Ada = new PawnId(1), Raider = new PawnId(10), Hog = new PawnId(11);
 
         /// <summary>Ada, a colonist on layer <paramref name="adaLayer"/>; a bandit and a hog beside her.</summary>
-        static WorldSnapshot Frame(int adaLayer = 1, bool withAda = true)
+        static WorldSnapshot Frame(int adaLayer = 1, bool withAda = true, PawnCustody adaCustody = PawnCustody.Free)
         {
             WorldSnapshot frame = Odyssey.Tests.Hud.Frame.Write();
             if (withAda)
                 frame.AddPawn(new PawnView(Ada, new CellRef(1, 1, adaLayer), 800, 800, 700, JobHandle.Wait,
-                    flags: PawnFlags.Person));
+                    flags: PawnFlags.Person, custody: adaCustody));
             frame.AddPawn(new PawnView(Raider, new CellRef(5, 1, 1), 800, 800, 700, JobHandle.Wait, kind: 3,
                 flags: PawnFlags.Person | PawnFlags.Hostile));
             frame.AddPawn(new PawnView(Hog, new CellRef(6, 1, 1), 800, 800, 700, JobHandle.Wander, kind: 1,
@@ -180,6 +180,21 @@ namespace Odyssey.Tests.Hud
             directors.BeginRide(Ada, Frame(adaLayer: 1));
             directors.AdvanceRide(Frame(adaLayer: 3), 0.016f);
             Assert.That(directors.Slice.ActiveLayer, Is.EqualTo(3));
+        }
+
+        /// <summary>
+        /// Design 60 §16 H8. Arrested, she is still on the board but no longer one of ours, and a
+        /// ride starts only on a colonist: it ends as it does when she goes, after the same hold.
+        /// </summary>
+        [Test]
+        public void TheRideEndsWhenSheIsTakenIntoCustody()
+        {
+            var directors = new HudDirectors(4, 1);
+            directors.BeginRide(Ada, Frame());
+            directors.AdvanceRide(Frame(adaCustody: PawnCustody.Prisoner), 1.5f);
+            Assert.That(directors.Ride.Lost, Is.True, "a prisoner is still ridden as a colonist");
+            directors.AdvanceRide(Frame(adaCustody: PawnCustody.Prisoner), 0.6f);
+            Assert.That(directors.Ride.Riding, Is.False);
         }
 
         /// <summary>
