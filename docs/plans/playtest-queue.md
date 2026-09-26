@@ -44,6 +44,22 @@ the next session learns to ignore.
   Meadow and skip a few months (Debug → Skip one month): Rime should bite harder than on the suggested
   site. A wrong answer looks like: the map a patchwork nobody would call a planet, Meadow lost in the
   colours, names over the zoom buttons, or a mountainous board indistinguishable from today's.
+- **The Pig Butcher, second round: the cleaver, the card and four levels** (`claude/pig-butcher`,
+  PR #248, design 62 §4b, §8c). Debug → Spawn → the four butcher rows, near drafted colonists.
+  - Watch a swing. Wrong: the cleaver still hangs at its hip, or the blow does not read as the
+    cleaver striking.
+  - Click one. Wrong: the card shows anything but the pig-headed butcher in that level's colours.
+  - Spawn all four side by side. Wrong: you cannot tell the levels apart, or the step in size
+    (4.4 to 5.6 m) is too small or too large.
+  - Fight level 1 with three or four colonists. Wrong: it is not the *easiest* you had in mind. The
+    probe says it still beats four bats every time (§4b).
+  - Stand a drafted gunman on a rock or a roof and shoot it (design 62 §3a, §7a). Wrong: it still
+    wanders below; the rock it throws is not seen coming; it throws so often it is a gunman; being
+    knocked off the perch feels unfair rather than earned.
+  - Listen to a fight (design 62 §8d). Wrong: the grunt on its swing is as loud as the bellow when
+    it throws somebody; the squeal when hit is lost under the thud; the oink as it dies is missing
+    or comic; the cleaver's whoosh is not clearly deeper than a sword's.
+
 - **First Person: does the shoulder camera show a colonist's day and a fight clearly?**
   (`claude/planning-session-fok6wm`, design 57.) Select a colonist, press **First Person** on her
   card, and let her work, walk up a terrace and go through a door.

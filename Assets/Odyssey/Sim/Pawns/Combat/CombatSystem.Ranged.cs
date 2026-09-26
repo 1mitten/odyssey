@@ -32,7 +32,11 @@ namespace Odyssey.Sim.Pawns
                 Pawn? close = CombatJobs.EnemyInReach(_ctx, pawn);
                 if (close == null) return;
                 // The shot never happened: its clock comes back, as when an aim breaks.
-                if (pawn.Driver is AttackRangedJobDriver { InAim: true }) pawn.NextSwingTick = 0;
+                if (pawn.Driver is AttackRangedJobDriver { InAim: true })
+                {
+                    pawn.NextSwingTick = 0;
+                    pawn.HurlReadyTick = 0; // a thrower's rock never left the hand (design 62 §7a)
+                }
                 SwapAttack(pawn, close, JobIndex.AttackMelee, tick);
                 return;
             }
@@ -102,7 +106,7 @@ namespace Odyssey.Sim.Pawns
                 return;
             }
 
-            Armament armament = _ctx.WeaponRules.ArmamentOf(shooter, _ctx);
+            Armament armament = Hurl.ArmamentOf(shooter, _ctx);
             if (!aim.AimDone(armament)) return;
             aim.EndAim();
 
@@ -164,11 +168,25 @@ namespace Odyssey.Sim.Pawns
         {
             Pawn? shooter = _ctx.Pawns.Get(new PawnId(bullet.Shooter));
             Pawn? target = bullet.Target != 0 ? _ctx.Pawns.Get(new PawnId(bullet.Target)) : null;
-            AttackDef? attack = bullet.Weapon >= 0 && bullet.Weapon < _ctx.Content.Items.Length
-                ? _ctx.Content.Items[bullet.Weapon].weapon : null;
+            // A thrown rock (design 62 §7a) lands with its thrower's species' throw, known by its
+            // weapon id even if the thrower has died since.
+            AttackDef? attack = Hurl.IsHurl(bullet.Weapon) ? Hurl.AttackOf(_ctx, bullet.Weapon)
+                : bullet.Weapon >= 0 && bullet.Weapon < _ctx.Content.Items.Length
+                    ? _ctx.Content.Items[bullet.Weapon].weapon : null;
             if (attack == null) return;
             var armament = new Armament(attack, bullet.Weapon);
             var hit = new SwingOutcome(CombatEventKind.Hit, bullet.DamageMilli);
+            // A rock usually knocks her off her perch: the thrower's fling chance, rolled here on
+            // its own stream (the shot's roll said only whether it flew true).
+            SweepDef? fling = Hurl.IsHurl(bullet.Weapon)
+                ? _ctx.Content.SpeciesOf(Hurl.KindOf(bullet.Weapon)).sweep : null;
+            if (fling != null)
+            {
+                var roll = DeterministicRandom.ForTick(_ctx.Seed, tick,
+                    PawnPurpose.SweepKnock ^ (uint)bullet.Shooter ^ ((uint)bullet.Target << 16));
+                hit = new SwingOutcome(CombatEventKind.Hit, bullet.DamageMilli, 0, critical: false,
+                    knockback: roll.NextInt(1_000) < fling.knockbackPerMille);
+            }
 
             // A shot aimed true lands on its target wherever it now stands (owner, 2026-09-25: "make
             // sure shots that hit actually connect with the target directly"): the line is walked to

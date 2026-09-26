@@ -37,6 +37,12 @@ namespace Odyssey.Presentation.World
         /// <summary>Where a weapon is held, from its butt, as a fraction of its length. INVENTED.</summary>
         public const float WeaponGripFraction = 0.1f;
 
+        /// <summary>
+        /// The weapon "def" of a body's own weapon (<c>Look.HandProp</c>, design 62 §5): not an item,
+        /// so below every item index and apart from −1, bare hands.
+        /// </summary>
+        const int NaturalWeaponDef = -2;
+
         /// <summary>Live figures with a weapon prop showing, at the hip or in the hand. For tests.</summary>
         public int ArmedFigures
         {
@@ -67,7 +73,24 @@ namespace Odyssey.Presentation.World
                 && _frame.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponKey, out int held))
                 def = held;
 
+            // A body with a weapon of its own holds it whenever it holds no item (design 62 §5).
+            Look? own = LookAt(figure.Look);
+            bool natural = def < 0 && own != null && own.HandProp != null;
+            if (natural) def = NaturalWeaponDef;
+
             if (def != figure.WeaponDef) SwapWeapon(figure, def);
+            if (natural && figure.Weapon != null)
+            {
+                // Always in the fist: it is never sheathed, and on the ground it is not drawn.
+                // FitWeaponBothWays leaves every new prop at the hip for the sheath to draw, and
+                // this path never runs the sheath, so it is put in the hand here — a no-op once it
+                // is there. Without it the cleaver hung at the butcher's left hip through every
+                // swing (owner, 2026-09-26: "he wasn't using a weapon to strike people").
+                PlaceWeapon(figure, atHip: false);
+                bool inHand = figure.SleepWeight <= 0.001f && !pawn.IsDowned;
+                if (figure.Weapon.activeSelf != inHand) figure.Weapon.SetActive(inHand);
+                return;
+            }
             if (figure.Weapon == null)
             {
                 // Still stepped, so a weapon taken up mid-fight is drawn from the state it finds.
@@ -106,15 +129,27 @@ namespace Odyssey.Presentation.World
             figure.WeaponDef = def;
             figure.IsGun = IsGunDef(def);
             figure.GunSlide = null;
-            if (def < 0 || figure.RightHand == null) return;
+            // Bare hands draw nothing; a body's own weapon (NaturalWeaponDef, below nought too) does.
+            if ((def < 0 && def != NaturalWeaponDef) || figure.RightHand == null) return;
 
-            string? module = ModuleIds.Item(def);
-            ModuleEntry? row = module != null && _catalogue != null ? _catalogue.Find(module) : null;
-            GameObject? prefab = row != null ? row.prefab : null;
+            GameObject? prefab;
+            if (def == NaturalWeaponDef)
+            {
+                prefab = LookAt(figure.Look)?.HandProp;
+            }
+            else
+            {
+                string? module = ModuleIds.Item(def);
+                ModuleEntry? row = module != null && _catalogue != null ? _catalogue.Find(module) : null;
+                prefab = row != null ? row.prefab : null;
+            }
             if (prefab == null) return;
 
             GameObject prop = Object.Instantiate(prefab, figure.RightHand);
             prop.name = "Weapon" + def;
+            // A butcher level's cleaver is in its colourway (design 62 §4b).
+            Material? paint = def == NaturalWeaponDef ? LookAt(figure.Look)?.Paint : null;
+            if (paint != null) Repaint(prop.GetComponentsInChildren<Renderer>(includeInactive: true), paint);
             SetLayer(prop.transform, _layer);
             var colliders = prop.GetComponentsInChildren<Collider>(includeInactive: true);
             for (int i = 0; i < colliders.Length; i++) colliders[i].enabled = false;

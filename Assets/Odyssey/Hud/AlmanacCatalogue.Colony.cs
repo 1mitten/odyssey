@@ -64,6 +64,25 @@ namespace Odyssey.Hud
                     "A gunman is a bandit in everything but its weapon. Put walls or sandbags between it and the colony.",
                     ("Mixed raids", "About three raiders in ten carry pistols.")),
                 new[] { ("ui.pawn.bandit", "the rest of the band"), ("ui.item.pistol", "what it carries"), ("ui.arch.tool.sandbag", "cover against it") }),
+
+            // The butcher and its three harder levels (design 62), one page: the levels are the same
+            // creature in the pack's four colourways, each bigger and tougher than the last.
+            Keyed("ui.pawn.butcher", People, "Person", "Hostile",
+                "A pig-headed giant with a cleaver as long as a man. Its swing sweeps three cells at once and usually throws whoever it lands on two cells back, into a wall, into somebody else or off a ledge.",
+                "The debug menu, four levels", AlmanacAction.FindOnMap,
+                new[] {
+                    ("Health", "500 to 1,400 points by level; never stunned, never knocked back"),
+                    ("Size", "4.4 m to 5.6 m by level: one cell, drawn huge"),
+                    ("Weapon", "Its own cleaver, which it never drops"),
+                    ("Climbs", "Every rock, ledge and ladder a colonist can; breaks shut doors"),
+                    ("Throws", "A rock at anybody above it or out of its reach, 25 m"),
+                },
+                Effects("BEHAVIOUR",
+                    "A butcher walks at the nearest colonist it can reach and cleaves the cell in front of it and the two either side. A colonist on a rock or a roof gets a rock thrown at her, which usually knocks her off, and then it climbs up after her. Four levels: " + L("ui.pawn.butcher") + ", " + Lc("ui.pawn.butcher.scarred") + ", " + Lc("ui.pawn.butcher.blood") + " and " + Lc("ui.pawn.butcher.king") + ", each bigger and harder to kill.",
+                    ("Thrown", "Flung two cells (three by the king); a wall or a body in the way hurts both; a ledge is a fall."),
+                    ("Fighting it", "Spread out: it strikes three cells at a time. Guns from range, and never from a perch.")),
+                new[] { ("ui.pawn.bandit", "the rest of the band"), ("ui.item.pistol", "the answer to it"), ("ui.arch.tool.sandbag", "cover against its rocks") },
+                alsoKeys: new[] { "ui.pawn.butcher.scarred", "ui.pawn.butcher.blood", "ui.pawn.butcher.king" }),
         };
 
         static IReadOnlyList<AlmanacEntry> FaunaEntries() => new List<AlmanacEntry>

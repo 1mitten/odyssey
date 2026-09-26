@@ -122,6 +122,11 @@ namespace Odyssey.Hud
             { "ui.pawn.colonist", "M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M4 21a8 8 0 0 1 16 0" },
             { "ui.pawn.bandit", "M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M4 21a8 8 0 0 1 16 0 M8 7h8" },
             { "ui.pawn.gunman", "M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M4 21a8 8 0 0 1 16 0 M15 14h6" },
+            // the butcher's four levels (design 62): a pig's head and a cleaver; scarred, bloodied, crowned
+            { "ui.pawn.butcher", "M5 12c0-4 3-7 7-7s7 3 7 7-3 7-7 7-7-3-7-7z M10 13h4v3h-4z M7 5L5 2 M17 5l2-3 M20 14l3-4v8z" },
+            { "ui.pawn.butcher.scarred", "M5 12c0-4 3-7 7-7s7 3 7 7-3 7-7 7-7-3-7-7z M10 13h4v3h-4z M7 5L5 2 M17 5l2-3 M8 7l4 4" },
+            { "ui.pawn.butcher.blood", "M5 12c0-4 3-7 7-7s7 3 7 7-3 7-7 7-7-3-7-7z M10 13h4v3h-4z M7 5L5 2 M17 5l2-3 M21 17c0 1.5-1 2.5-2 2.5s-2-1-2-2.5 2-4 2-4 2 2.5 2 4z" },
+            { "ui.pawn.butcher.king", "M5 13c0-4 3-7 7-7s7 3 7 7-3 7-7 7-7-3-7-7z M10 14h4v3h-4z M7 5l2 2 3-4 3 4 2-2v2H7z" },
             // fauna
             { "ui.pawn.hog", "M4 13c0-3 3-6 8-6s8 3 8 6v3H4v-3z M6 16v3 M18 16v3 M20 12l2-1" },
             { "ui.pawn.rat", "M3 13c1-2 4-3 7-3 4 0 8 2 10 6H2c0-1 0-2 1-3z M17 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" },

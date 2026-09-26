@@ -69,7 +69,9 @@ namespace Odyssey.Sim.Pawns
             AfflictionKind injury = armament.Attack.damageKind == DamageKind.Sharp ? AfflictionKind.Wound : AfflictionKind.Bruise;
             if (!Hurt(target, attacker, outcome.DamageMilli, injury, HitSet.Melee, weapon, tick)) return;
 
-            if (outcome.StunTicks > 0)
+            // The unstoppable (design 62 §7) are never stunned: the roll is dropped here, where every
+            // blow is applied, so a test's exact blow and a bullet obey it too.
+            if (outcome.StunTicks > 0 && !target.Species.unstoppable)
             {
                 int until = tick + outcome.StunTicks;
                 if (until > target.StunnedUntilTick) target.StunnedUntilTick = until;
@@ -82,7 +84,13 @@ namespace Odyssey.Sim.Pawns
             // A critical that rolled its knockback, on a target still on its feet: death and the
             // fall were resolved first and returned above (design 33 §9b). Before the reaction, so
             // an animal that runs runs from where it landed.
-            if (outcome.Knockback) KnockBack(target, attacker, weapon, tick);
+            // A sweeping species flings instead (design 62 §7); the unstoppable are never moved.
+            if (outcome.Knockback && !target.Species.unstoppable)
+            {
+                SweepDef? sweep = attacker.Species.sweep;
+                if (sweep != null) Fling(target, attacker, sweep, weapon, tick);
+                else KnockBack(target, attacker, weapon, tick);
+            }
 
             // A colonist in the way of another colonist's bullet does not turn on her (design 47
             // §2c): the memory of it is SwingResolved's, above; fighting back is for being attacked.

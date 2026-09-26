@@ -243,7 +243,10 @@ namespace Odyssey.Sim.Pawns
             if (Pawn.Drafted) Pawn.DraftQuietSinceTick = tick;
             Pawn.BeginGesture(PawnGesture.Strike);
             SwingOutcome outcome = ctx.MeleeRules.Resolve(Pawn, target, armament, ctx, tick);
-            Pawn.HoldSwing(outcome);
+            // A sweeping species keeps the way it faced (design 62 §5): the arc is the one it wound
+            // up in, not the one the target has moved to. Nought for everybody else.
+            int facing = Pawn.Species.sweep != null ? SweepArc.Facing(ctx.Size, Pawn.Cell, target.Cell) : 0;
+            Pawn.HoldSwing(outcome, facing);
             CombatEventKind kind = outcome.Landed && outcome.Critical ? CombatEventKind.SwingCritical : CombatEventKind.Swing;
             ctx.CombatLog.Report(kind, Pawn.Id, target.Id, ctx.Size.FromIndex(target.Cell), tick,
                 armament.Attack.windupTicks, armament.ItemDef);
