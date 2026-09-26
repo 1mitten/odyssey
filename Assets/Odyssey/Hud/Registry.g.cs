@@ -868,6 +868,7 @@ namespace Odyssey.Hud
             { "ui.status.sowing", "Sowing" },
             { "ui.status.stealing", "Stealing" },
             { "ui.status.tending", "Tending" },
+            { "ui.status.trading", "Trading" },
             { "ui.status.treating", "Treating" },
             { "ui.status.wandering", "Wandering" },
             { "ui.storage.preset.everything", "Everything" },

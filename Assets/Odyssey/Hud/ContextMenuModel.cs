@@ -99,6 +99,7 @@ namespace Odyssey.Hud
             into.Clear();
             if (cell.HasValue) OfferEquip(selection, snapshot, cell.Value, into);
             OfferTend(selection, snapshot, under, into);
+            OfferTrade(selection, snapshot, under, into);
 
             if (into.Count == 0) return false;
             into.Add(new ContextMenuRow(CancelKey, Registry.Label(CancelKey), enabled: true, string.Empty, Nothing));
@@ -214,6 +215,46 @@ namespace Odyssey.Hud
             }
             var order = new[] { new Intent(IntentKind.OrderTend, patient.Cell, doctor.Value, under.Value) };
             into.Add(new ContextMenuRow(TendKey, label, enabled: true, string.Empty, order));
+        }
+
+        /// <summary>The Trade row's verb (design 57 §6): "Trade", "Open the ledger with this trader".</summary>
+        public const string TradeKey = "ui.command.trade";
+
+        /// <summary>
+        /// Trade, on a trader under the pointer (design 57 §6) that is not leaving and that nobody
+        /// else is negotiating with — read off its published <see cref="TradeView"/>. The primary
+        /// colonist of the selection, the first standing one, is sent; a selection whose every
+        /// colonist is down gets the row disabled, reason "Downed". No colonist selected, no row.
+        /// </summary>
+        static void OfferTrade(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot, PawnId under,
+            List<ContextMenuRow> into)
+        {
+            if (!under.IsValid || !snapshot.TryGetPawn(under, out PawnView trader) || !trader.IsVisitor) return;
+            ReadOnlySpan<TradeView> trades = snapshot.Trades;
+            int at = -1;
+            for (int i = 0; i < trades.Length; i++) if (trades[i].Trader == under) { at = i; break; }
+            if (at < 0 || trades[at].Leaving) return;
+
+            bool anyColonist = false;
+            PawnId negotiator = PawnId.None;
+            for (int i = 0; i < selection.Count && !negotiator.IsValid; i++)
+            {
+                if (!snapshot.TryGetPawn(selection[i], out PawnView view) || !view.IsColonist) continue;
+                anyColonist = true;
+                if (!view.IsDowned) negotiator = view.Id;
+            }
+            if (!anyColonist) return;
+            PawnId busy = trades[at].Negotiator;
+            if (busy.IsValid && busy != negotiator) return;
+
+            string label = Registry.Label(TradeKey);
+            if (!negotiator.IsValid)
+            {
+                into.Add(new ContextMenuRow(TradeKey, label, enabled: false, Registry.Label(DownedReasonKey), Nothing));
+                return;
+            }
+            var order = new[] { new Intent(IntentKind.OrderTrade, trader.Cell, negotiator.Value, under.Value) };
+            into.Add(new ContextMenuRow(TradeKey, label, enabled: true, string.Empty, order));
         }
 
         /// <summary>

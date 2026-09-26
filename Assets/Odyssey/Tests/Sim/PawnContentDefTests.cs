@@ -334,7 +334,9 @@ namespace Odyssey.Tests.Sim
         // value 1). Taken from a freshly loaded pack.
         // 2026-09-26, trading T2 (design 57 §5): Faction.Visitor, and PawnKind_Trader appended at
         // kind 6 (a person of the Visitor faction with a pistol and the bandit's traverse mode).
-        const ulong ContentFingerprint = 13390042206882871226UL;
+        // 2026-09-26, trading T5 (design 57 §6): Job_Trade appended at JobHandle 28 (driver 28, not
+        // casually interruptible, no expiry).
+        const ulong ContentFingerprint = 3889624182061518727UL;
 
 
         [Test]

@@ -136,6 +136,7 @@ ui.stat.pace.drafted,Drafted,ui.stat,WE,"A drafted colonist runs"
 ui.stat.pace.running,Running,ui.stat,WE,"Running to a fight or away from one"
 ui.stat.pace.standard,The standard walk,ui.stat,WE,"The pace tooltip when nothing is making her faster or slower"
 ui.status.shooting,Shooting,ui.status,RC,"Standing where the line is open and firing at a target"
+ui.status.trading,Trading,ui.status,TR,"Walking to a trader, or negotiating with one while the trade window is open"
 ui.combat.miss,Miss,ui.combat,CB,A swing that did not land
 ui.combat.dodge,Dodge,ui.combat,CB,A swing the target stepped out of
 ui.combat.cover,Cover,ui.combat,CB,"A bullet the cover in its way took instead"

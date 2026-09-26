@@ -904,6 +904,103 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// A trader on the board and its negotiation (design 57 §5–§6): what the trader's pane and the
+    /// trade window read. One per visit; there is at most one visit today.
+    /// </summary>
+    public readonly struct TradeView
+    {
+        /// <summary>The visit's id, stable for its life and across a save.</summary>
+        public readonly int Visit;
+
+        public readonly PawnId Trader;
+
+        /// <summary>The negotiating colonist, or <c>default</c> while nobody is negotiating.</summary>
+        public readonly PawnId Negotiator;
+
+        /// <summary>The negotiator is beside the trader: the window may open.</summary>
+        public readonly bool Ready;
+
+        /// <summary>
+        /// Which session this is, counting from one. The window opens once per session: a number it
+        /// has already opened for is never opened again, however long <see cref="Ready"/> stays true.
+        /// </summary>
+        public readonly int Session;
+
+        /// <summary>The gold the trader carries.</summary>
+        public readonly int Purse;
+
+        /// <summary>The gold the colony can spend here: stored, and loose beside the trader.</summary>
+        public readonly int ColonyGold;
+
+        /// <summary>Ticks of the stay still to run.</summary>
+        public readonly int StayLeftTicks;
+
+        /// <summary>It is on its way out.</summary>
+        public readonly bool Leaving;
+
+        public TradeView(int visit, PawnId trader, PawnId negotiator, bool ready, int session, int purse,
+            int colonyGold, int stayLeftTicks, bool leaving)
+        {
+            Visit = visit;
+            Trader = trader;
+            Negotiator = negotiator;
+            Ready = ready;
+            Session = session;
+            Purse = purse;
+            ColonyGold = colonyGold;
+            StayLeftTicks = stayLeftTicks;
+            Leaving = leaving;
+        }
+    }
+
+    /// <summary>
+    /// One item a visit's ledger can move (design 57 §3–§4): how many each side holds and the two
+    /// prices. <b>The prices are the simulation's</b>, made by <c>TradePricing</c>; the interface
+    /// shows them and never works one out. Published only while a session is ready.
+    /// </summary>
+    public readonly struct TradeRowView
+    {
+        public readonly int Visit;
+
+        /// <summary>The item def.</summary>
+        public readonly int Item;
+
+        /// <summary>How many the colony can trade: stored, and loose beside the trader.</summary>
+        public readonly int ColonyCount;
+
+        /// <summary>How many the trader has.</summary>
+        public readonly int TraderCount;
+
+        /// <summary>The gold the trader pays for one.</summary>
+        public readonly int BuyPrice;
+
+        /// <summary>The gold one costs the colony.</summary>
+        public readonly int SellPrice;
+
+        /// <summary>
+        /// The quality of the one the colony would sell first — its worst — or nought for a thing with
+        /// no quality. A <see cref="QualityHandle"/> value.
+        /// </summary>
+        public readonly byte ColonyQuality;
+
+        /// <summary>The quality of what the trader sells, or nought for a thing with no quality.</summary>
+        public readonly byte TraderQuality;
+
+        public TradeRowView(int visit, int item, int colonyCount, int traderCount, int buyPrice, int sellPrice,
+            byte colonyQuality, byte traderQuality)
+        {
+            Visit = visit;
+            Item = item;
+            ColonyCount = colonyCount;
+            TraderCount = traderCount;
+            BuyPrice = buyPrice;
+            SellPrice = sellPrice;
+            ColonyQuality = colonyQuality;
+            TraderQuality = traderQuality;
+        }
+    }
+
+    /// <summary>
     /// A bullet in flight (design 47 §2c): the skyfaller's shape, sideways. The simulation owns the
     /// flight — who fired it, where it started and ends, when it left and when it lands — and
     /// presentation draws the streak wherever along that line the frame falls. <b>The hit, the
@@ -1672,6 +1769,8 @@ namespace Odyssey.Sim.Contracts
         FallingView[] _falling = Array.Empty<FallingView>();
         ProjectileView[] _projectiles = Array.Empty<ProjectileView>();
         RaidView[] _raids = Array.Empty<RaidView>();
+        TradeView[] _trades = Array.Empty<TradeView>();
+        TradeRowView[] _tradeRows = Array.Empty<TradeRowView>();
         ConduitView[] _conduits = Array.Empty<ConduitView>();
         HomeCellView[] _homeCells = Array.Empty<HomeCellView>();
         PowerDeviceView[] _powerDevices = Array.Empty<PowerDeviceView>();
@@ -1766,6 +1865,8 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>How many raids are on the board. Nearly always zero.</summary>
         public int RaidCount { get; private set; }
+        public int TradeCount { get; private set; }
+        public int TradeRowCount { get; private set; }
 
         /// <summary>How many line cells this frame carries — see <see cref="ConduitView"/> for which.</summary>
         public int ConduitCount { get; private set; }
@@ -1900,6 +2001,12 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>Every raid on the board, oldest first. See <see cref="RaidView"/>.</summary>
         public ReadOnlySpan<RaidView> Raids => new ReadOnlySpan<RaidView>(_raids, 0, RaidCount);
+
+        /// <summary>Every trader on the board and its negotiation (design 57). See <see cref="TradeView"/>.</summary>
+        public ReadOnlySpan<TradeView> Trades => new ReadOnlySpan<TradeView>(_trades, 0, TradeCount);
+
+        /// <summary>The ledger's rows for every ready session (design 57). See <see cref="TradeRowView"/>.</summary>
+        public ReadOnlySpan<TradeRowView> TradeRows => new ReadOnlySpan<TradeRowView>(_tradeRows, 0, TradeRowCount);
 
         public ReadOnlySpan<PawnView> Pawns => new ReadOnlySpan<PawnView>(_pawns, 0, PawnCount);
         public ReadOnlySpan<ThingView> Things => new ReadOnlySpan<ThingView>(_things, 0, ThingCount);
@@ -2180,6 +2287,8 @@ namespace Odyssey.Sim.Contracts
             FallingCount = 0;
             ProjectileCount = 0;
             RaidCount = 0;
+            TradeCount = 0;
+            TradeRowCount = 0;
             ConduitCount = 0;
             PowerDeviceCount = 0;
             PowerNetCount = 0;
@@ -2279,6 +2388,18 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _raids, RaidCount + 1);
             _raids[RaidCount++] = view;
+        }
+
+        internal void AddTrade(in TradeView view)
+        {
+            Grow(ref _trades, TradeCount + 1);
+            _trades[TradeCount++] = view;
+        }
+
+        internal void AddTradeRow(in TradeRowView view)
+        {
+            Grow(ref _tradeRows, TradeRowCount + 1);
+            _tradeRows[TradeRowCount++] = view;
         }
 
         internal void AddPawn(in PawnView view)

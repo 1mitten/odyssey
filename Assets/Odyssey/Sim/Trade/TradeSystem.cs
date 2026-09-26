@@ -68,7 +68,7 @@ namespace Odyssey.Sim.Trade
     /// <para><b>Hashed and saved only while a visit exists</b>, the pattern the raids set, so a colony
     /// no trader ever visited hashes as it did before trading and no golden moved.</para>
     /// </summary>
-    public sealed class TradeSystem : IWorldSystem, IStateHashable, ISaveable
+    public sealed class TradeSystem : IWorldSystem, IStateHashable, ISaveable, ISnapshotContributor
     {
         /// <summary>How often visitors without a visit are looked for, in ticks.</summary>
         public const int AdoptTicks = 30;
@@ -79,6 +79,16 @@ namespace Odyssey.Sim.Trade
         readonly PawnContext _ctx;
         readonly List<Visit> _visits = new List<Visit>();
         int _nextId = 1;
+
+        // The deal being described (design 57 §6): the TradeLines since the last commit, for one
+        // trader. Never saved or hashed — it lives from one intent drain to the commit in the same
+        // drain, and is thrown away by the commit, by a line for another trader and by the tick.
+        readonly List<(int Item, int Count)> _lines = new List<(int Item, int Count)>();
+        int _linesFor;
+
+        int[] _colony = Array.Empty<int>();
+        byte[] _worst = Array.Empty<byte>();
+        readonly List<TradeDrops.Drop> _plan = new List<TradeDrops.Drop>();
 
         public TradeSystem(PawnContext ctx)
         {
@@ -149,6 +159,8 @@ namespace Odyssey.Sim.Trade
 
         public void Tick(SimWorld world)
         {
+            _lines.Clear();
+            _linesFor = 0;
             int tick = world.CurrentTick;
             if (tick % AdoptTicks == 0) Adopt(tick);
             if (_visits.Count == 0) return;
@@ -227,6 +239,162 @@ namespace Odyssey.Sim.Trade
         }
 
         TraderKind[] Kinds() => _ctx.Incidents?.Content.Traders ?? Array.Empty<TraderKind>();
+
+        // ---- the deal (design 57 §6) -------------------------------------------------------------
+
+        /// <summary>The kind of trader a visit is.</summary>
+        public TraderKind KindOf(Visit visit) => Kinds()[visit.Kind];
+
+        /// <summary>What the trader pays for one of <paramref name="item"/>.</summary>
+        public int BuyPrice(Visit visit, int item) => TradePricing.Buy(_ctx.Content.Items[item], KindOf(visit).Def);
+
+        /// <summary>What one of <paramref name="item"/> costs the colony.</summary>
+        public int SellPrice(Visit visit, int item) => TradePricing.Sell(_ctx.Content.Items[item], KindOf(visit).Def);
+
+        /// <summary><c>TradeLine(A = trader, B = item, C = signed count)</c>: buffered for the commit.</summary>
+        public IntentRejection HandleLine(Intent intent)
+        {
+            Visit? visit = VisitOf(intent.A);
+            if (visit == null) return IntentRejection.OutOfBounds;
+            if (intent.B < 0 || intent.B >= _ctx.Content.Items.Length || intent.B == ItemIndex.Gold) return IntentRejection.OutOfBounds;
+            if (intent.C == 0) return IntentRejection.AlreadyInThatState;
+            if (_linesFor != intent.A)
+            {
+                _lines.Clear();
+                _linesFor = intent.A;
+            }
+            _lines.Add((intent.B, intent.C));
+            return IntentRejection.None;
+        }
+
+        /// <summary>
+        /// <c>TradeCommit(A = trader, B = balance)</c>: the lines since the last commit, applied whole
+        /// or refused whole. Refused unless the session is ready, something moves, every count is one
+        /// the side holds, the balance is the one the ledger showed, the side that pays can pay, and
+        /// every bought stack has somewhere to land.
+        /// </summary>
+        public IntentRejection HandleCommit(Intent intent)
+        {
+            bool mine = _linesFor == intent.A;
+            var lines = new List<(int Item, int Count)>(mine ? _lines : new List<(int, int)>());
+            _lines.Clear();
+            _linesFor = 0;
+
+            Visit? visit = VisitOf(intent.A);
+            if (visit == null) return IntentRejection.OutOfBounds;
+            Pawn? trader = _ctx.Pawns.Get(new PawnId(visit.Pawn));
+            if (trader == null || !visit.InSession || !visit.Ready) return IntentRejection.NotPermitted;
+
+            int items = _ctx.Content.Items.Length;
+            var net = new int[items];
+            for (int i = 0; i < lines.Count; i++) net[lines[i].Item] += lines[i].Count;
+
+            Ensure(items);
+            ColonyTradeStock.Count(_ctx, trader.Cell, _colony);
+            long balance = 0;
+            bool moving = false;
+            for (int item = 0; item < items; item++)
+            {
+                int n = net[item];
+                if (n == 0) continue;
+                moving = true;
+                if (_ctx.Content.Items[item].marketValue <= 0) return IntentRejection.NotPermitted;
+                if (n > 0)
+                {
+                    if (n > visit.Stock[item]) return IntentRejection.NotPermitted;
+                    balance += (long)n * SellPrice(visit, item);
+                }
+                else
+                {
+                    if (-n > _colony[item]) return IntentRejection.NotPermitted;
+                    balance -= (long)-n * BuyPrice(visit, item);
+                }
+            }
+            if (!moving) return IntentRejection.AlreadyInThatState;
+            if (balance != intent.B) return IntentRejection.NotPermitted;
+            if (balance > 0 && balance > _colony[ItemIndex.Gold]) return IntentRejection.NotPermitted;
+            if (balance < 0 && -balance > visit.Purse) return IntentRejection.NotPermitted;
+
+            var goods = new List<(int Item, int Count)>();
+            for (int item = 0; item < items; item++) if (net[item] > 0) goods.Add((item, net[item]));
+            if (balance < 0) goods.Add((ItemIndex.Gold, (int)-balance));
+            if (!TradeDrops.TryPlan(_ctx, trader.Cell, goods, _plan)) return IntentRejection.NotPermitted;
+
+            // Everything checked: now it happens, all of it.
+            for (int item = 0; item < items; item++)
+            {
+                int n = net[item];
+                if (n < 0)
+                {
+                    ColonyTradeStock.Take(_ctx, trader.Cell, item, -n);
+                    visit.Stock[item] += -n;
+                }
+                else if (n > 0) visit.Stock[item] -= n;
+            }
+            if (balance > 0) ColonyTradeStock.Take(_ctx, trader.Cell, ItemIndex.Gold, (int)balance);
+            visit.Purse += (int)balance;
+            TradeDrops.Apply(_ctx, _plan);
+            return IntentRejection.None;
+        }
+
+        /// <summary><c>TradeCancel(A = trader)</c>: the negotiation ends; the negotiator's job sees it and stops.</summary>
+        public IntentRejection HandleCancel(Intent intent)
+        {
+            Visit? visit = VisitOf(intent.A);
+            if (visit == null) return IntentRejection.OutOfBounds;
+            if (!visit.InSession) return IntentRejection.AlreadyInThatState;
+            EndSession(visit);
+            return IntentRejection.None;
+        }
+
+        void Ensure(int items)
+        {
+            if (_colony.Length != items) _colony = new int[items];
+            if (_worst.Length != items) _worst = new byte[items];
+        }
+
+        // ---- publish -------------------------------------------------------------------------------
+
+        /// <summary>
+        /// A <see cref="TradeView"/> for every visit and, for a ready session only, a row for every
+        /// item either side holds. The colony's stock is counted only then: a trader standing by the
+        /// fire with nobody negotiating costs one view a publish.
+        /// </summary>
+        public void Contribute(SimWorld world, SnapshotWriter writer)
+        {
+            for (int v = 0; v < _visits.Count; v++)
+            {
+                Visit visit = _visits[v];
+                Pawn? trader = _ctx.Pawns.Get(new PawnId(visit.Pawn));
+                if (trader == null) continue;
+
+                int items = _ctx.Content.Items.Length;
+                Ensure(items);
+                bool rows = visit.InSession && visit.Ready;
+                int gold = 0;
+                if (rows)
+                {
+                    ColonyTradeStock.Count(_ctx, trader.Cell, _colony, _worst);
+                    gold = _colony[ItemIndex.Gold];
+                }
+
+                writer.AddTrade(new TradeView(visit.Id, new PawnId(visit.Pawn), new PawnId(visit.Negotiator), visit.Ready,
+                    visit.Session, visit.Purse, gold, visit.StayLeft, trader.Leaving));
+                if (!rows) continue;
+
+                for (int item = 0; item < items; item++)
+                {
+                    if (item == ItemIndex.Gold) continue;
+                    ItemDef def = _ctx.Content.Items[item];
+                    if (def.marketValue <= 0) continue;
+                    int colony = _colony[item], stock = item < visit.Stock.Length ? visit.Stock[item] : 0;
+                    if (colony == 0 && stock == 0) continue;
+                    byte traderQuality = def.weapon != null && stock > 0 ? (byte)QualityHandle.Normal : (byte)0;
+                    writer.AddTradeRow(new TradeRowView(visit.Id, item, colony, stock, BuyPrice(visit, item),
+                        SellPrice(visit, item), _worst[item], traderQuality));
+                }
+            }
+        }
 
         // ---- hash --------------------------------------------------------------------------------
 

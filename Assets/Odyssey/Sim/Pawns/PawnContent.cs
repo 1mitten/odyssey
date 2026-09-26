@@ -189,6 +189,7 @@ namespace Odyssey.Sim.Pawns
         public const int Forage = JobHandle.Forage;
         public const int Cook = JobHandle.Cook;
         public const int AttackRanged = JobHandle.AttackRanged;
+        public const int Trade = JobHandle.Trade;
         public const int Count = JobHandle.Count;
     }
 
@@ -1585,7 +1586,9 @@ namespace Odyssey.Sim.Pawns
                 // The kitchen (design 48 §5).
                 "Job_Cook",
                 // The ranged attack (design 47 §2d).
-                "Job_AttackRanged");
+                "Job_AttackRanged",
+                // The negotiator (design 57 §6), appended.
+                "Job_Trade");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",

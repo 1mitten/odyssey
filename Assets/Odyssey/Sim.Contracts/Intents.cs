@@ -364,6 +364,36 @@ namespace Odyssey.Sim.Contracts
         /// <c>ShotReportView</c> on the next publish while it stands. What the hover readout reads.
         /// </summary>
         QueryShot,
+
+        /// <summary>
+        /// Send one colonist to trade with a trader (design 57 §6): <c>A</c> is the negotiator's
+        /// <c>PawnId</c> value and <c>B</c> the trader's. The colonist walks beside the trader and
+        /// opens a session, and the ledger opens when the session is ready. Handler:
+        /// <c>JobSystem.HandleOrderTrade</c>. Appended.
+        /// </summary>
+        OrderTrade,
+
+        /// <summary>
+        /// One row of a deal (design 57 §6): <c>A</c> is the trader's <c>PawnId</c> value, <c>B</c> the
+        /// item def, <c>C</c> the signed count — above nought the colony buys, below it the colony
+        /// sells. Buffered, never applied alone: a <see cref="TradeCommit"/> after it applies the
+        /// whole deal or none of it. Handler: <c>TradeSystem.HandleLine</c>. Appended.
+        /// </summary>
+        TradeLine,
+
+        /// <summary>
+        /// Close the deal the <see cref="TradeLine"/>s before it describe (design 57 §6): <c>A</c> is the
+        /// trader's <c>PawnId</c> value and <c>B</c> the balance the ledger showed, in gold the colony
+        /// pays (below nought, gold it receives). Re-validated whole; refused whole. Handler:
+        /// <c>TradeSystem.HandleCommit</c>. Appended.
+        /// </summary>
+        TradeCommit,
+
+        /// <summary>
+        /// End the negotiation with a trader (design 57 §6): <c>A</c> is the trader's <c>PawnId</c>
+        /// value. The ledger's Cancel. Handler: <c>TradeSystem.HandleCancel</c>. Appended.
+        /// </summary>
+        TradeCancel,
     }
 
     /// <summary>What an <see cref="IntentKind.EditBill"/> does, as its <c>A</c> carries it.</summary>
@@ -493,6 +523,14 @@ namespace Odyssey.Sim.Contracts
             IntentKind.EditBill => true,
             // A view question, like QueryCell: the readout answers paused as well as running.
             IntentKind.QueryShot => true,
+            // The trade window is a modal that pauses the game (design 57 §6): its Confirm and its
+            // Cancel are the whole of what a player does in it, and a deal that waited for play to
+            // be pressed would leave the ledger reading one thing and the stores another. The order
+            // that sends a negotiator is a colonist's order like any other.
+            IntentKind.OrderTrade => true,
+            IntentKind.TradeLine => true,
+            IntentKind.TradeCommit => true,
+            IntentKind.TradeCancel => true,
             _ => false,
         };
     }

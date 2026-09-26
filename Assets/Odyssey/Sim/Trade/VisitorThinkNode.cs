@@ -13,6 +13,7 @@ namespace Odyssey.Sim.Trade
     /// <list type="bullet">
     /// <item><b>Leaving</b>: walk to the nearest edge it can reach and wait there, where the trade
     /// system takes it off the board.</item>
+    /// <item><b>Held</b> by a negotiation: stand where it is, so the negotiator can reach it.</item>
     /// <item><b>Far from the hearth</b> (else the colony's start): walk there.</item>
     /// <item><b>At the hearth</b>: decline, so the idle node settles it at the fire the way it
     /// settles an idle colonist.</item>
@@ -38,6 +39,9 @@ namespace Odyssey.Sim.Trade
                 if (!WildlifeSystem.IsEdge(ctx.Size, pawn.Cell) && EdgeTarget.Fill(pawn, ctx, job, mode)) return true;
                 return Wait(job, mode);
             }
+
+            // Held by a negotiation (design 57 §6): stand where the negotiator is walking to.
+            if (ctx.Trade?.VisitOf(pawn.Id.Value) is { InSession: true }) return Wait(job, mode);
 
             int anchor = RaidTargets.Resolve(ctx, -1);
             if (anchor < 0) return false;

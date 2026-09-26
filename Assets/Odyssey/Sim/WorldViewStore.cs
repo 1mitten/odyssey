@@ -89,6 +89,12 @@ namespace Odyssey.Sim
         /// <summary>Publish one raid. See <see cref="RaidView"/>.</summary>
         public void AddRaid(in RaidView view) => _target.AddRaid(view);
 
+        /// <summary>Publish one trader and its negotiation (design 57). See <see cref="TradeView"/>.</summary>
+        public void AddTrade(in TradeView view) => _target.AddTrade(view);
+
+        /// <summary>Publish one row of a ready ledger (design 57). See <see cref="TradeRowView"/>.</summary>
+        public void AddTradeRow(in TradeRowView view) => _target.AddTradeRow(view);
+
         /// <summary>Publish one line cell. See <see cref="ConduitView"/> for which are published when.</summary>
         public void AddConduit(in ConduitView view) => _target.AddConduit(view);
 

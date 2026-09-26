@@ -196,6 +196,10 @@ namespace Odyssey.Sim.Pawns
                 .AddSnapshotContributor(raids)
                 .AddSystem(_ => trade)
                 .AddHashable(trade)
+                .AddSnapshotContributor(trade)
+                .AddIntentHandler(IntentKind.TradeLine, trade.HandleLine)
+                .AddIntentHandler(IntentKind.TradeCommit, trade.HandleCommit)
+                .AddIntentHandler(IntentKind.TradeCancel, trade.HandleCancel)
                 // Inside the lambda, not before it: the factory runs during Build(), so a giver
                 // registered after this call is still picked up. Outside it, AddColony would have
                 // had to be the last call on the builder, which is precisely the kind of ordering
@@ -287,6 +291,7 @@ namespace Odyssey.Sim.Pawns
                 .AddIntentHandler(IntentKind.SetPawnArea, pipeline.HandleSetPawnArea)
                 .AddIntentHandler(IntentKind.DebugHealth, pawns.Pawns.HandleDebugHealth)
                 .AddIntentHandler(IntentKind.OrderTend, pipeline.HandleOrderTend)
+                .AddIntentHandler(IntentKind.OrderTrade, pipeline.HandleOrderTrade)
                 // The Work tab's one command (design 27). It belongs to the registry because a
                 // priority is a field on a pawn and the registry is the one owner of those; the
                 // job pipeline only ever reads it.

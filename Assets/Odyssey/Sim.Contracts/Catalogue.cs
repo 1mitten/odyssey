@@ -111,7 +111,14 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int AttackRanged = 27;
 
-        public const int Count = 28;
+        /// <summary>
+        /// Walk beside a trader and negotiate (design 57 §6): the colonist the right-click's Trade
+        /// sends. Its working toil lasts as long as the session. Above <c>JobSystem.HashedAlways</c>,
+        /// so its counters reach the hash only once one has run and no golden moved.
+        /// </summary>
+        public const int Trade = 28;
+
+        public const int Count = 29;
     }
 
     /// <summary>

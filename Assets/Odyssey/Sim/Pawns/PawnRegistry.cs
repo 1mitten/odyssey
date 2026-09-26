@@ -484,6 +484,8 @@ namespace Odyssey.Sim.Pawns
             new Cooking.CookJobDriver(),
             // The ranged attack (design 47 §2d), JobHandle 27, after the kitchen's.
             new AttackRangedJobDriver(),
+            // The negotiator (design 57 §6), JobHandle 28.
+            new Trade.TradeJobDriver(),
         };
 
         /// <summary>
