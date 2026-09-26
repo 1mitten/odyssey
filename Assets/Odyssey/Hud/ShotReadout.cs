@@ -5,7 +5,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// The hit-chance readout at the pointer (design 50 §8b; the owner chose a tooltip at the cursor):
+    /// The hit-chance readout at the pointer (design 53 §8b; the owner chose a tooltip at the cursor):
     /// with a drafted colonist holding a gun selected, hovering a hostile shows what a shot would
     /// come to and why. The numbers are the simulation's <see cref="ShotReportView"/>; this is only
     /// the words, every one from the registry, and ASCII punctuation, because a character the two

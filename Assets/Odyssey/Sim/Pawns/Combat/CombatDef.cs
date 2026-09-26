@@ -279,19 +279,19 @@ namespace Odyssey.Sim.Pawns
         /// <summary>No shot is surer to miss than this, per mille (the reference's 2 %).</summary>
         public int hitFloorPerMille = 20;
 
-        // ── Cover (design 50 §2). The angle bands are geometry and live in `Cover`; these are the
+        // ── Cover (design 53 §2). The angle bands are geometry and live in `Cover`; these are the
         // numbers a play session tunes. ─────────────────────────────────────────────────────────
 
         /// <summary>
         /// What a thing that fills its whole cell — a wall, a closed door, a pillar, a rock face —
-        /// is worth as cover, per mille (design 50 §3). The reference's 75 %: a wall beside you is
+        /// is worth as cover, per mille (design 53 §3). The reference's 75 %: a wall beside you is
         /// not invulnerability, and full cover is not certainty.
         /// </summary>
         public int fullFillCoverPerMille = 750;
 
         /// <summary>
         /// The descent, as a tangent in per mille, below which <b>low</b> cover (sandbags, a
-        /// barricade, a bush, furniture) keeps all of its value (design 50 §2b): about 10°. INVENTED.
+        /// barricade, a bush, furniture) keeps all of its value (design 53 §2b): about 10°. INVENTED.
         /// </summary>
         public int coverLowFullTanPerMille = 176;
 
@@ -306,14 +306,14 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// The chance a stray bullet crossing a cover cell is caught by it, per mille of that
-        /// thing's base cover (design 50 §2e, the owner: "yes, at a fraction"), before the dead
+        /// thing's base cover (design 53 §2e, the owner: "yes, at a fraction"), before the dead
         /// zone's ramp from the shooter. INVENTED: the reference's constant was not recovered.
         /// </summary>
         public int coverInterceptPerMille = 500;
 
         /// <summary>
         /// The cover from its current target at and above which a fighter crouches behind a low
-        /// piece (design 50 §8a), per mille. A pose only; the rule never reads it. INVENTED.
+        /// piece (design 53 §8a), per mille. A pose only; the rule never reads it. INVENTED.
         /// </summary>
         public int coverCrouchPerMille = 200;
 

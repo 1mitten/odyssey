@@ -311,7 +311,7 @@ namespace Odyssey.Presentation.Rendering
         public const int HessianShades = 3;
 
         /// <summary>
-        /// A sandbag's cloth, by shade (design 50 §7a-bis): desert tan, a middle, and hessian —
+        /// A sandbag's cloth, by shade (design 53 §7a-bis): desert tan, a middle, and hessian —
         /// research <c>e-12</c> finding 6, whose hex values are estimates, so these are the numbers to
         /// turn if the wall reads wrong. Three rather than one because identical bags read as tiles
         /// (finding 13); each bag is dealt one by its own hash.

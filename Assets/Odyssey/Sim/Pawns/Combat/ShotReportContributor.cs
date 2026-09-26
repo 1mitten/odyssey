@@ -6,7 +6,7 @@ using Odyssey.Sim.Worldgen;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// The answer to a <c>QueryShot</c> (design 50 §8b): what a shot from one pawn at another would
+    /// The answer to a <c>QueryShot</c> (design 53 §8b): what a shot from one pawn at another would
     /// come to, worked by the very rules that roll it — <see cref="IRangedRules.HitChancePerMille"/>
     /// and <see cref="IRangedRules.CoverPerMille"/> — so the hover readout can never promise odds
     /// the dice do not keep. Published only while the question stands; nothing saved, nothing hashed.

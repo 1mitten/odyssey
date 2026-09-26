@@ -447,7 +447,7 @@ namespace Odyssey.Sim.Pawns
 
         protected JobStatus GotoCell(PawnContext ctx, int dest)
         {
-            // A goal on cover crossed but never stood on (design 50 §5) is the neighbour beside it:
+            // A goal on cover crossed but never stood on (design 53 §5) is the neighbour beside it:
             // the same neighbour every time it is asked, so the walk does not change its mind.
             dest = Standing.Resolve(ctx, dest, Job.Mode);
             if (dest < 0) return JobStatus.Failed;

@@ -13644,7 +13644,7 @@ cost. The rerun repeated both states and added a no-shadow arm, and gave +0.15 a
 0.40. A floor measured on one state only understates the noise at 4K by four to six times, so
 **repeat both states before quoting a 4K difference**.
 
-## 2026-09-25 — Cover: ground, interview, research and design 50
+## 2026-09-25 — Cover: ground, interview, research and design 53
 
 The owner asked for cover in the reference's mould, with sandbags and barricades, built on the ranged
 line. **Grounding came first, and found three things.**
@@ -13674,14 +13674,14 @@ here" (`Standing.CanStandAt`), asked by every picker, plus an audit of thirty-on
 and a sweep as the safety net. It is designed as a unit of its own (CV4) with a Long-tier property
 test, because a missed caller fails silently.
 
-**Numbering and branching.** Design 50: `main` holds 47 (ranged), 48 (cooking) and 49 (the bill
+**Numbering and branching.** Design 53: `main` holds 47 (ranged), 48 (cooking) and 49 (the bill
 list), and no open branch claims 50. The code will stack on `claude/ranged-combat`. The owner asked
 whether ranged was merged, and it is not: only its design merged (PR #220). The merge order is
-therefore ranged, then cover. **Next:** the owner's approval of design 50 (§10 lists five points).
+therefore ranged, then cover. **Next:** the owner's approval of design 53 (§10 lists five points).
 
 ## 2026-09-25 — Cover built (CV1–CV9), and the dance an old test caught
 
-The owner approved design 50 with one word, and the nine units went in the same day on this
+The owner approved design 53 with one word, and the nine units went in the same day on this
 branch, with `claude/ranged-combat` merged in first because nothing about cover means anything
 without its line of sight and its bullet.
 
@@ -13736,4 +13736,4 @@ revetment is laid — stretchers in running bond, two rows deep, under a header 
 thing that made it cheap to get right is that 2.5 m is exactly three stretchers: the bond repeats per
 cell, so a dragged line is continuous without any piece knowing its place in the line, and "the
 cell a bag starts in draws it" gives every straddling bag exactly one owner. The Blender set the
-design planned is not needed unless the owner's eye says otherwise. Design 50 §7a-bis and §13.
+design planned is not needed unless the owner's eye says otherwise. Design 53 §7a-bis and §13.

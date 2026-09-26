@@ -5,7 +5,7 @@ using Odyssey.Sim.Pathing;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// <b>May a pawn end up here?</b> (design 50 §5) — the one owner of the question, which is not
+    /// <b>May a pawn end up here?</b> (design 53 §5) — the one owner of the question, which is not
     /// the same question as "may a pawn walk through here". Sandbags and a barricade are crossed and
     /// never stood on: a pawn may climb over one on the way somewhere, and may never stop on one to
     /// rest, work, wait, aim or fight. Cover is then always <i>beside</i> a pawn and never under

@@ -10,7 +10,7 @@ using static Odyssey.Tests.Sim.CombatFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The two pieces of cover as buildings (design 50 §4): what they are made of, what crossing
+    /// The two pieces of cover as buildings (design 53 §4): what they are made of, what crossing
     /// one costs and that the path search and the mover agree on it, that neither blocks a shot or
     /// a walk, what they are worth as cover, and what one leaves when a fight destroys it.
     /// </summary>

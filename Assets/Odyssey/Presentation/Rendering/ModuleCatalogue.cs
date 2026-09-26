@@ -102,7 +102,7 @@ namespace Odyssey.Presentation.Rendering
         Pillow = 13,
 
         /// <summary>
-        /// One filled sandbag (design 50 §7a-bis): a flattened pillow with a tied end, spanning the
+        /// One filled sandbag (design 53 §7a-bis): a flattened pillow with a tied end, spanning the
         /// unit box. <see cref="CoverShape"/> lays a wall of them; see <see cref="SandbagMesh"/>.
         /// </summary>
         Sandbag = 14,
@@ -722,7 +722,7 @@ namespace Odyssey.Presentation.Rendering
         public const string Shelf = Prefix + "shelf";
 
         /// <summary>
-        /// Sandbags (design 50 §7a-bis). No catalogue row: the id resolves to
+        /// Sandbags (design 53 §7a-bis). No catalogue row: the id resolves to
         /// <see cref="ModuleShape.Sandbag"/>, our own bag mesh, and <c>CoverShape</c> lays a wall of
         /// them bag by bag in hessian and desert tan. Ours, so a clone without the packs draws it too.
         /// </summary>

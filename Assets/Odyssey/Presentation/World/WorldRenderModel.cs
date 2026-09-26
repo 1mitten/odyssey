@@ -229,7 +229,7 @@ namespace Odyssey.Presentation.World
             // whatever the bed's frame is made of (BedShape, PillowMesh).
             _bedPillowModule = library.Resolve(ModuleIds.BedPillow, ModuleShape.Pillow);
             _shelfModule = library.Resolve(ModuleIds.Shelf, ModuleShape.SolidBlock);
-            // Cover (design 50 §7a-bis): one bag, laid as a wall by CoverShape.
+            // Cover (design 53 §7a-bis): one bag, laid as a wall by CoverShape.
             _sandbagModule = library.Resolve(ModuleIds.Sandbags, ModuleShape.Sandbag);
             _storeEdgeModule = library.Resolve(ModuleIds.StoreEdge, ModuleShape.FloorSlab);
         }
@@ -925,7 +925,7 @@ namespace Odyssey.Presentation.World
             // CampfirePickTests. FireDirector draws the flames at this height; one number.
             if (_edifice[index] == CoreContent.EdificeCampfire) return FireDirector.FlameHeight;
 
-            // Cover (design 50 §7): the top of the bags or the rail, which is what is clicked and
+            // Cover (design 53 §7): the top of the bags or the rail, which is what is clicked and
             // what a deconstruct mark sits on.
             if (CoverShape.Draws(_edifice[index])) return CoverShape.Top(_edifice[index]);
             return 0f;
@@ -1052,7 +1052,7 @@ namespace Odyssey.Presentation.World
             if (def == CoreContent.EdificeHeater) return _heaterModule;
             // The galley (design 48), above the trees' range for the same reason.
             if (def == CoreContent.EdificeGalley) return _galleyModule;
-            // Cover (design 50), above the trees' range for the same reason.
+            // Cover (design 53), above the trees' range for the same reason.
             if (def == CoreContent.EdificeSandbags) return _sandbagModule;
             // The natural table continues CoreContent's numbering, as terrain does. A tree is not
             // a kind of wall: before this branch existed every tree fell through the switch below

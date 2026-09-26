@@ -53,7 +53,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public static bool CanShootFrom(PawnContext ctx, int cell) =>
             ctx.Nav.Grid.CostClass[cell] != NaturalContent.CostClassShallowWater
-            // Nor from on top of cover (design 50 §5): she climbs over it and fires from beside it.
+            // Nor from on top of cover (design 53 §5): she climbs over it and fires from beside it.
             && Standing.CanStandAt(ctx, cell);
 
         /// <summary>

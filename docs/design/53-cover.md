@@ -1,16 +1,17 @@
-# 50: Cover, sandbags and the barricade
+# 53: Cover and sandbags
 
-**Status (2026-09-25): approved (owner: *"implement"*) and built, CV1–CV9, on
-`claude/cool-darwin-akh02q` — not yet run in Unity.** The simulation half (the rule, the shot, the
-pieces, pass-through, the AI, the crouch's aspect, the shot report) is proven in the fast and Long
-tiers; the Presentation half (drawing, the crouch pose, the building bars, the floater, the readout)
-compiles only in Unity and has not been compiled. §12 records what was built and where it departs
-from this document. The interview is `docs/research/cover-interview.md`, the research
-`docs/research/a-10-cover.md`, the plan `docs/plans/cover.md`.
+**Status (2026-09-26): built CV1–CV9, merged with `main`, compiled and tested in Unity, first look
+taken — PR #232, branch `claude/cool-darwin-akh02q`.** §12 records what was built and where it departs
+from this document; §13 is the owner's first look, which **took the barricade out** and had the
+sandbags **drawn as bags** (§7a-bis). The interview is `docs/research/cover-interview.md`, the
+research `docs/research/a-10-cover.md` and `e-12-sandbag-appearance.md`, the plan `docs/plans/cover.md`.
 
-It sits on **design 47 (ranged combat)**, whose code is on `claude/ranged-combat` and not yet on
-`main` (only the design merged, PR #220). The build therefore stacks on that branch, and **the merge
-order is ranged first, then cover**. Every file reference to `Combat/…` below is on that branch.
+**Numbered 53, not 50.** It was written as design 50 and renumbered on 2026-09-26, before merging,
+because the birds reached `main` first as `50-ambient-birds.md` and open PRs held 50 (raids), 51
+(traits) and 52 (butterflies). Every "design 50" written by this line now reads 53; the birds'
+references are theirs.
+
+It sits on **design 47 (ranged combat)**, which is on `main` (PR #225).
 
 ## 1. What is being built
 

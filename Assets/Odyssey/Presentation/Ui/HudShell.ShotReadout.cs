@@ -5,7 +5,7 @@ using UnityEngine.UIElements;
 
 namespace Odyssey.Presentation.Ui
 {
-    // The hit-chance readout at the pointer (design 50 §8b): one line beside the cursor while a
+    // The hit-chance readout at the pointer (design 53 §8b): one line beside the cursor while a
     // drafted colonist with a gun is selected and a hostile is under the pointer. The words are
     // ShotReadout's and the numbers the simulation's; this only puts them beside the cursor.
     public sealed partial class HudShell

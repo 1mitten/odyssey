@@ -580,7 +580,7 @@ namespace Odyssey.Sim.Contracts
         Shot = 13,
 
         /// <summary>
-        /// Cover took a bullet (design 50 §2e): a shot the cover roll defeated, fired into the piece
+        /// Cover took a bullet (design 53 §2e): a shot the cover roll defeated, fired into the piece
         /// it picked, or a stray caught by cover it crossed. <see cref="CombatEventView.Cell"/> is the
         /// cover's cell, <see cref="CombatEventView.Target"/> whom the shot was at (or <c>default</c>)
         /// and <see cref="CombatEventView.Amount"/> the damage the cover took, nought for a thing with
@@ -591,7 +591,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// What one shot would come to (design 50 §8b): the answer to a <c>QueryShot</c>, published
+    /// What one shot would come to (design 53 §8b): the answer to a <c>QueryShot</c>, published
     /// while the question stands and never saved or hashed. Every number is the simulation's own —
     /// the rule that rolls the shot is the rule that fills this — so the readout and the dice
     /// cannot disagree.
@@ -2042,7 +2042,7 @@ namespace Odyssey.Sim.Contracts
         ShotReportView _shotReport;
         bool _hasShotReport;
 
-        /// <summary>The answer to the standing <c>QueryShot</c>, if there is one (design 50 §8b).</summary>
+        /// <summary>The answer to the standing <c>QueryShot</c>, if there is one (design 53 §8b).</summary>
         public bool TryGetShotReport(out ShotReportView report)
         {
             report = _shotReport;

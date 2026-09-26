@@ -1969,7 +1969,7 @@ namespace Odyssey.Presentation.Rendering
         readonly int[] _coverShades = new int[CoverShape.MaxParts];
 
         /// <summary>
-        /// Sandbags (design 50 §7a-bis): a wall of bags laid along each axis the piece is joined on,
+        /// Sandbags (design 53 §7a-bis): a wall of bags laid along each axis the piece is joined on,
         /// so a dragged line is drawn joined. Each bag wears one of the cloths whatever stone filled
         /// it, so a chunk's sandbags are one bucket per cloth. A neighbour raised or taken down
         /// re-meshes this chunk too (<c>MarkChunksAround</c>), so the join follows.

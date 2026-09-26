@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Odyssey.Presentation.Rendering
 {
     /// <summary>
-    /// One filled sandbag (design 50 §7a-bis, research <c>e-12</c>): a tamped, flattened pillow with
+    /// One filled sandbag (design 53 §7a-bis, research <c>e-12</c>): a tamped, flattened pillow with
     /// one sewn end and one choked, tied end, spanning the −0.5..0.5 unit box every primitive
     /// stand-in does. X is the bag's length, Y its height and Z its width; the caller scales the box
     /// to the bag's size in metres, so the proportions here are only the <em>shape</em>.

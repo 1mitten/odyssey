@@ -310,7 +310,7 @@ namespace Odyssey.Tests.Sim
         // Medicine rows were dropped for design 37's (design 43 §15), so no handle moved. No golden
         // moved: the ledger is hashed only while a pawn has anything on it. Re-taken from the
         // merged pack.
-        // 2026-09-25, design 50 §2-§3 (cover, CV1): CombatDef's coverPerMille slot deleted, and the cover
+        // 2026-09-25, design 53 §2-§3 (cover, CV1): CombatDef's coverPerMille slot deleted, and the cover
         // numbers added — fullFillCoverPerMille 750, the low and tall descent tangents 176/700 and 577/1732,
         // coverInterceptPerMille 500, coverCrouchPerMille 200; WildPlantDef coverPerMille and coverTall
         // (trees 250 tall, bushes 150 low).

@@ -213,7 +213,7 @@ namespace Odyssey.Sim.Construction
 
         /// <summary>
         /// What the finished thing is worth as cover to a pawn standing beside it, per mille
-        /// (design 50 §3): the base the angle, the shooter's distance and the descent then scale.
+        /// (design 53 §3): the base the angle, the shooter's distance and the descent then scale.
         /// Nought for a thing that is not cover, or whose cover is the full-fill rule's (a wall is
         /// worth <c>CombatDef.fullFillCoverPerMille</c> because it fills its cell, and says nothing
         /// here). Read only through <c>Cover.BaseAt</c>, the one owner. INVENTED per thing.
@@ -222,12 +222,12 @@ namespace Odyssey.Sim.Construction
 
         /// <summary>
         /// Is it <b>tall</b> cover — a shot has to come down steeply to get over it — rather than
-        /// low? Design 50 §2b's two classes. False for every piece of furniture so far.
+        /// low? Design 53 §2b's two classes. False for every piece of furniture so far.
         /// </summary>
         public bool coverTall;
 
         /// <summary>
-        /// Crossed but never stood on (design 50 §5, the owner): a pawn may walk over it at
+        /// Crossed but never stood on (design 53 §5, the owner): a pawn may walk over it at
         /// <see cref="crossCost"/> and may never stop in its cell — rest, work, wait and aim all
         /// happen beside it. The sandbag's and the barricade's rule, so cover is always beside a
         /// pawn and never under her, and a line of it seals nobody in.
@@ -241,7 +241,7 @@ namespace Odyssey.Sim.Construction
         public int crossCost;
 
         /// <summary>
-        /// The share of its cost left on the cell when fighting destroys it, per mille (design 50
+        /// The share of its cost left on the cell when fighting destroys it, per mille (design 53
         /// §2e, the owner: a quarter). Nought for everything built before cover, which keeps
         /// design 33's "a building destroyed in combat leaves nothing" for them.
         /// </summary>
@@ -250,7 +250,7 @@ namespace Odyssey.Sim.Construction
         /// <summary>
         /// The one material it is always built of, as a <see cref="StuffHandle"/>, or
         /// <see cref="StuffHandle.None"/> for "the one the player chose". The sandbags' rule
-        /// (design 50 §4): filled bags are not a choice of wood or stone, and the placeholder
+        /// (design 53 §4): filled bags are not a choice of wood or stone, and the placeholder
         /// recipe is five stone. <c>ConstructionGrid.Place</c> takes this over whatever the order
         /// named, so the palette need not offer a material at all.
         /// </summary>
@@ -511,8 +511,8 @@ namespace Odyssey.Sim.Construction
             "Building_Bed", "Building_Door", "Building_Shelf", "Building_Campfire",
             "Building_Conduit", "Building_Generator", "Building_Heater",
             "Building_Galley",
-            // Cover (design 50 §4), BuildingHandle 13. The barricade that followed it was taken
-            // out on the owner's first look (design 50 §13) and may come back as 14.
+            // Cover (design 53 §4), BuildingHandle 13. The barricade that followed it was taken
+            // out on the owner's first look (design 53 §13) and may come back as 14.
             "Building_Sandbags",
         };
 
@@ -703,7 +703,7 @@ namespace Odyssey.Sim.Construction
                     iconKey = "ui.arch.tool.galley", maxHitPoints = 100, coverPerMille = 500,
                 },
 
-                // Sandbags (design 50 §4): the cheap, quick cover. One cell, dragged as a line like a
+                // Sandbags (design 53 §4): the cheap, quick cover. One cell, dragged as a line like a
                 // wall, crossed at +150 and never stood on, 55 % low cover. Always stone — five, the
                 // placeholder the owner asked for until the recipes are decided — so the palette
                 // offers no material. The shelf's work; a quarter left behind when fighting destroys

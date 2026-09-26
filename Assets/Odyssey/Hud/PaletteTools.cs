@@ -139,7 +139,7 @@ namespace Odyssey.Hud
         /// <summary>The galley (design 48 §5): the electric cooker, where bills are worked.</summary>
         public const string Galley = "ui.arch.tool.galley";
 
-        /// <summary>Sandbags (design 50 §4): cheap low cover, always stone, dragged as a line.</summary>
+        /// <summary>Sandbags (design 53 §4): cheap low cover, always stone, dragged as a line.</summary>
         public const string Sandbag = "ui.arch.tool.sandbag";
 
         public const string Mine = "ui.arch.tool.mine";
@@ -201,7 +201,7 @@ namespace Odyssey.Hud
             // Power (design 32): the line and its undoing, then what makes power and what spends
             // it. Battery and reactor stay drawn and disabled — the shape of what is coming.
             ("ui.arch.category.power", new[] { Conduit, Unwire, Generator, Heater, "ui.arch.tool.battery", "ui.arch.tool.reactor" }),
-            // Security (design 50): cover first, because it is what exists; the turret and the trap
+            // Security (design 53): cover first, because it is what exists; the turret and the trap
             // stay drawn and disabled.
             ("ui.arch.category.security", new[] { Sandbag, "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
             ("ui.arch.category.floors", new[] { Paving, "ui.arch.tool.grating", "ui.arch.tool.tile" }),
@@ -374,8 +374,8 @@ namespace Odyssey.Hud
                 d => d.ArmBuild(BuildingHandle.Galley),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Galley,
                 wantsMaterial: true),
-            // Cover (design 50 §4). Sandbags are always stone, so they offer no material. The
-            // barricade is dim again, beside the turret and the trap (design 50 §13).
+            // Cover (design 53 §4). Sandbags are always stone, so they offer no material. The
+            // barricade is dim again, beside the turret and the trap (design 53 §13).
             new PaletteTool(Sandbag,
                 d => d.ArmBuild(BuildingHandle.Sandbags),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Sandbags),

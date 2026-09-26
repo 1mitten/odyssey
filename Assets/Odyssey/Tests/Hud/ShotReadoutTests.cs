@@ -6,7 +6,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// The hover readout's words (design 50 §8b): the chance first, then what moved it, cover only
+    /// The hover readout's words (design 53 §8b): the chance first, then what moved it, cover only
     /// when there is some, the descent only when it cost something, and every character one the two
     /// shipped fonts can draw.
     /// </summary>

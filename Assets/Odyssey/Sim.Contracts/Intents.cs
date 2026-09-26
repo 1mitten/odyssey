@@ -358,7 +358,7 @@ namespace Odyssey.Sim.Contracts
         OrderTend,
 
         /// <summary>
-        /// Ask what a shot would come to (design 50 §8b): <c>A</c> is the shooter's pawn id and
+        /// Ask what a shot would come to (design 53 §8b): <c>A</c> is the shooter's pawn id and
         /// <c>B</c> the target's; <c>A</c> of nought or less withdraws the question. A question like
         /// <see cref="QueryCell"/>: it changes nothing the simulation owns, and the answer is a
         /// <c>ShotReportView</c> on the next publish while it stands. What the hover readout reads.

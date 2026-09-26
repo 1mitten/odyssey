@@ -9,7 +9,7 @@ using UnityEngine;
 namespace Odyssey.Tests.Presentation
 {
     /// <summary>
-    /// The sandbag and the wall it is laid in (design 50 §7a-bis). A mis-wound mesh and a bag drawn
+    /// The sandbag and the wall it is laid in (design 53 §7a-bis). A mis-wound mesh and a bag drawn
     /// twice both render without complaint, so both are asserted here rather than looked for.
     /// </summary>
     public class SandbagShapeTests

@@ -1125,7 +1125,7 @@ namespace Odyssey.Sim.Construction
 
             if (def.edifice == CoreContent.EdificeDoor) ctx.Nav.SetDoor(cell, isDoor: true, open: false);
             if (def.edifice == CoreContent.EdificeBed) _items.AddBed(cell);
-            // Cover that is crossed but never stood on (design 50 §5): the crossing's price.
+            // Cover that is crossed but never stood on (design 53 §5): the crossing's price.
             if (def.passThrough) ctx.Nav.SetPassThrough(cell, def.crossCost);
 
             // 1b. A thing that makes or spends power has a switch and a hopper the world does not,
@@ -1465,14 +1465,14 @@ namespace Odyssey.Sim.Construction
                 if (placed.Removed) continue;
                 if (placed.Def == CoreContent.EdificeDoor)
                     ctx.Nav.SetDoor(placed.CellIndex, isDoor: true, open: false);
-                // And the cover crossed but never stood on (design 50 §5), derived the same way.
+                // And the cover crossed but never stood on (design 53 §5), derived the same way.
                 int building = ConstructionContent.BuildingForEdifice(placed.Def);
                 if (building != BuildingHandle.None && ConstructionContent.BuildingAt(building).passThrough)
                     ctx.Nav.SetPassThrough(placed.CellIndex, ConstructionContent.BuildingAt(building).crossCost);
             }
         }
 
-        /// <summary>Is this edifice something crossed but never stood on (design 50 §5)?</summary>
+        /// <summary>Is this edifice something crossed but never stood on (design 53 §5)?</summary>
         public static bool IsPassThrough(ushort edifice)
         {
             int building = ConstructionContent.BuildingForEdifice(edifice);
@@ -1696,7 +1696,7 @@ namespace Odyssey.Sim.Construction
         bool BlocksTheCell(int cell)
         {
             int building = _building[cell];
-            // Cover crossed but never stood on counts too (design 50 §5): nobody may be left
+            // Cover crossed but never stood on counts too (design 53 §5): nobody may be left
             // standing in a sandbag the instant it goes up, and somebody climbing over waits.
             return building != BuildingHandle.None
                    && (ConstructionContent.BuildingAt(building).blocking || ConstructionContent.BuildingAt(building).passThrough);

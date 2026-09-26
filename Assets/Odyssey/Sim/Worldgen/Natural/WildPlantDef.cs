@@ -42,13 +42,13 @@ namespace Odyssey.Sim.Worldgen.Natural
         public int fruitRegrowTicks;
 
         /// <summary>
-        /// What it is worth as cover to a pawn standing beside it, per mille (design 50 §3): a
+        /// What it is worth as cover to a pawn standing beside it, per mille (design 53 §3): a
         /// tree 250, the reference's number; a bush 150, ours. Read only through
         /// <c>Cover.BaseAt</c>.
         /// </summary>
         public int coverPerMille;
 
-        /// <summary>Tall cover (a tree) rather than low (a bush): design 50 §2b's two classes.</summary>
+        /// <summary>Tall cover (a tree) rather than low (a bush): design 53 §2b's two classes.</summary>
         public bool coverTall;
 
         /// <summary>Does this kind bear anything to pick?</summary>

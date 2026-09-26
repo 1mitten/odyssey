@@ -124,7 +124,7 @@ namespace Odyssey.Presentation.World
             /// <summary>How far into low ready — drawn, nothing to shoot — eased 0 to 1.</summary>
             public float LowReadyWeight;
 
-            /// <summary>How far down behind cover (design 50 §8a), eased 0 to 1 from the published crouch.</summary>
+            /// <summary>How far down behind cover (design 53 §8a), eased 0 to 1 from the published crouch.</summary>
             public float CoverCrouchWeight;
 
             /// <summary>The point the aim is on, followed through a critically damped spring so a walking target does not snap it.</summary>

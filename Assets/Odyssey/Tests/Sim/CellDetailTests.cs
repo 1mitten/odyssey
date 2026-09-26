@@ -109,7 +109,7 @@ namespace Odyssey.Tests.Sim
             // And the galley after them (design 48): 22, the Electric Cooker.
             Assert.That(NaturalContent.EdificeLimit, Is.EqualTo(CoreContent.EdificeGalley));
             Assert.That(EdificeHandle.Galley, Is.EqualTo(CoreContent.EdificeGalley));
-            // Cover's sandbags (design 50 §4) after the galley.
+            // Cover's sandbags (design 53 §4) after the galley.
             Assert.That(EdificeHandle.Sandbags, Is.EqualTo(CoreContent.EdificeSandbags));
             Assert.That(EdificeHandle.Count, Is.EqualTo(CoreContent.EdificeSandbags + 1));
             Assert.That(EdificeHandle.TreeFruit, Is.EqualTo(NaturalContent.EdificeTreeFruit));

@@ -69,7 +69,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// What a building destroyed in a fight leaves (design 50 §2e, the owner: a quarter of its
+        /// What a building destroyed in a fight leaves (design 53 §2e, the owner: a quarter of its
         /// cost for cover): its row's <see cref="Construction.BuildingDef.wreckRefundPerMille"/> of
         /// the material it was built of, the fraction settled by a seeded draw so it is neither
         /// always lost nor always kept. Nought for every building older than cover, which keeps

@@ -201,7 +201,7 @@
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.bed</iconKey>
     <maxHitPoints>120</maxHitPoints>
-    <!-- Cover beside it (design 50 section 3), low. INVENTED. -->
+    <!-- Cover beside it (design 53 section 3), low. INVENTED. -->
     <coverPerMille>300</coverPerMille>
   </BuildingDef>
 
@@ -244,7 +244,7 @@
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.shelf</iconKey>
     <maxHitPoints>100</maxHitPoints>
-    <!-- Cover beside it (design 50 section 3), low. INVENTED. -->
+    <!-- Cover beside it (design 53 section 3), low. INVENTED. -->
     <coverPerMille>500</coverPerMille>
   </BuildingDef>
 
@@ -289,7 +289,7 @@
     <iconKey>ui.arch.tool.campfire</iconKey>
     <!-- C6 (design 33 section 13c), INVENTED: kindling and a ring of stones, the cheapest thing in the table. -->
     <maxHitPoints>60</maxHitPoints>
-    <!-- Cover beside it (design 50 section 3), low. INVENTED. -->
+    <!-- Cover beside it (design 53 section 3), low. INVENTED. -->
     <coverPerMille>250</coverPerMille>
   </BuildingDef>
 
@@ -345,7 +345,7 @@
     <iconKey>ui.arch.tool.generator</iconKey>
     <!-- C6, INVENTED: the first expensive thing, a wall's worth. -->
     <maxHitPoints>300</maxHitPoints>
-    <!-- Cover beside it (design 50 section 3), low. INVENTED. -->
+    <!-- Cover beside it (design 53 section 3), low. INVENTED. -->
     <coverPerMille>500</coverPerMille>
   </BuildingDef>
 
@@ -371,7 +371,7 @@
     <iconKey>ui.arch.tool.heater</iconKey>
     <!-- C6, INVENTED: a shelf's worth. -->
     <maxHitPoints>100</maxHitPoints>
-    <!-- Cover beside it (design 50 section 3), low. INVENTED. -->
+    <!-- Cover beside it (design 53 section 3), low. INVENTED. -->
     <coverPerMille>400</coverPerMille>
   </BuildingDef>
 
@@ -490,12 +490,12 @@
     <iconKey>ui.arch.tool.galley</iconKey>
     <!-- INVENTED: the heater's worth. -->
     <maxHitPoints>100</maxHitPoints>
-    <!-- Cover beside it (design 50 section 3), low. INVENTED. -->
+    <!-- Cover beside it (design 53 section 3), low. INVENTED. -->
     <coverPerMille>500</coverPerMille>
   </BuildingDef>
 
   <!--
-    SANDBAGS (design 50 section 4). edifice 23 is CoreContent.EdificeSandbags. Low cover, 55 per cent
+    SANDBAGS (design 53 section 4). edifice 23 is CoreContent.EdificeSandbags. Low cover, 55 per cent
     (the reference's), crossed at +150 and never stood on (passThrough). Always stone - fixedStuff
     5 is StuffHandle.Stone - five of it, the owner's placeholder until the recipes are decided. The
     shelf's work; a quarter of the cost is left when fighting destroys one. INVENTED but the 55.

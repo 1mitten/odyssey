@@ -148,7 +148,7 @@
     </shootingPerCell>
     <hitFloorPerMille>20</hitFloorPerMille>
     <!--
-      Cover (design 50 sections 2 and 3). A thing that fills its cell is worth 75 per cent, the
+      Cover (design 53 sections 2 and 3). A thing that fills its cell is worth 75 per cent, the
       reference's number. Low cover keeps all its value against a shot coming down at under about
       10 degrees and none past about 35; tall cover the same between about 30 and 60 - tangents in
       per mille, linear between. A stray crossing a cover cell is caught at half that thing's cover,

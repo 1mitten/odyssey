@@ -29,13 +29,13 @@ namespace Odyssey.Sim.Pawns
         public readonly int FlightTicks;
 
         /// <summary>
-        /// The cover the target had from this shot, per mille (design 50 §2): what the cover roll
+        /// The cover the target had from this shot, per mille (design 53 §2): what the cover roll
         /// was made against, nought in the open or when the aim roll already missed.
         /// </summary>
         public readonly int CoverPerMille;
 
         /// <summary>
-        /// The piece of cover a shot the cover roll defeated is fired into (design 50 §2d), or -1.
+        /// The piece of cover a shot the cover roll defeated is fired into (design 53 §2d), or -1.
         /// When set, <see cref="Aimed"/> is false and <see cref="EndCell"/> is this cell.
         /// </summary>
         public readonly int CoverCell;
@@ -52,7 +52,7 @@ namespace Odyssey.Sim.Pawns
             CoverCell = coverCell;
         }
 
-        /// <summary>The chance the player is told, per mille: the aim times what the cover leaves (design 50 §2d).</summary>
+        /// <summary>The chance the player is told, per mille: the aim times what the cover leaves (design 53 §2d).</summary>
         public int TotalPerMille => HitPerMille * (1_000 - CoverPerMille) / 1_000;
     }
 
@@ -75,14 +75,14 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// How well a target in <paramref name="targetCell"/> is covered from a shot out of
-        /// <paramref name="shooterCell"/>, per mille (design 50 §2): <see cref="Cover.Evaluate"/>,
+        /// <paramref name="shooterCell"/>, per mille (design 53 §2): <see cref="Cover.Evaluate"/>,
         /// with the contributors written into <paramref name="report"/> when one is given.
         /// </summary>
         int CoverPerMille(int shooterCell, int targetCell, PawnContext ctx, CoverReport? report = null);
 
         /// <summary>
         /// The chance, per mille, that a stray crossing a cell whose cover is
-        /// <paramref name="basePerMille"/> is caught by it (design 50 §2e): half the base (the
+        /// <paramref name="basePerMille"/> is caught by it (design 53 §2e): half the base (the
         /// combat Def's <c>coverInterceptPerMille</c>) times the dead zone's ramp from the shooter,
         /// so a colonist's own sandbags never take her outgoing shots.
         /// </summary>
@@ -108,7 +108,7 @@ namespace Odyssey.Sim.Pawns
     /// and hashes exactly; public, unsealed and virtual, per the code conventions.
     ///
     /// <para><b>The hit</b> is <c>pow(perCell(level), distance in cells) × the gun's accuracy at the
-    /// distance</c>, floored. Cover is a second roll after this one (design 50 §2d), so this is
+    /// distance</c>, floored. Cover is a second roll after this one (design 53 §2d), so this is
     /// the aim alone. The power is a loop over whole 2.5 m cells with the fraction
     /// of a cell interpolated linearly, so a shot up a layer — longer, because a layer is 3 m —
     /// is harder than one along it by exactly its extra length, and by nothing else.</para>
@@ -165,7 +165,7 @@ namespace Odyssey.Sim.Pawns
             var hit = DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.RangedHit ^ who);
             bool aimed = hit.NextInt(1_000) < hitPerMille;
 
-            // Cover is the second roll (design 50 §2d), made only after an aim that was true: the
+            // Cover is the second roll (design 53 §2d), made only after an aim that was true: the
             // reference's order, and why a miss never wears a sandbag down by the roll — only by
             // crossing it (§2e). A shot the cover wins is fired into one piece, chosen in
             // proportion to what each gave.

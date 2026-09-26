@@ -216,7 +216,7 @@ namespace Odyssey.Sim.Pawns
         bool MayFightFrom(PawnContext ctx, Pawn target, int tick)
         {
             if (Pawn.Cell == target.Cell) return false;
-            // Never from on top of cover (design 50 §5): she climbs over and fights from beside it.
+            // Never from on top of cover (design 53 §5): she climbs over and fights from beside it.
             if (!Standing.CanStandAt(ctx, Pawn.Cell)) return false;
             // Standing on a side she took, waiting for her swing clock: nobody else chooses a cell
             // a fighter holds, so it is still hers. Job.WorkTicks is set from the first stop.

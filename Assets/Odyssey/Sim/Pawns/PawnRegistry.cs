@@ -600,7 +600,7 @@ namespace Odyssey.Sim.Pawns
                 // The response (design 33 §18c), at anything but the default.
                 if (pawn.Response != HostilityResponse.FightBack)
                     writer.AddPawnAspect(pawn.Id, CombatAspects.Response, (int)pawn.Response);
-                // Crouched behind cover (design 50 §8a), derived here and never kept.
+                // Crouched behind cover (design 53 §8a), derived here and never kept.
                 int crouch = CoverCrouchOf(pawn);
                 if (crouch > 0) writer.AddPawnAspect(pawn.Id, CombatAspects.CoverCrouch, crouch);
                 // Where she may work (design 43 §4a), at anything but the default.
@@ -811,7 +811,7 @@ namespace Odyssey.Sim.Pawns
         readonly CoverReport _crouchCover = new CoverReport();
 
         /// <summary>
-        /// Is she crouched behind cover (design 50 §8a), and how well covered: a person standing
+        /// Is she crouched behind cover (design 53 §8a), and how well covered: a person standing
         /// still in a ranged attack whose cover from her target is at least the combat Def's
         /// <c>coverCrouchPerMille</c> with a low piece among it; or drafted, standing still with no
         /// target, beside a piece of low cover — the most any one neighbour gives. Nought for

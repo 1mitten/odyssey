@@ -279,7 +279,7 @@ namespace Odyssey.Presentation.World
                 // order, for ever.
                 if (figure.WorkWeight <= 0.001f)
                 {
-                    // Down behind cover first (design 50 §8a): the hips and legs only, so the aim
+                    // Down behind cover first (design 53 §8a): the hips and legs only, so the aim
                     // laid on below takes the arms and the spine from a crouched body. Not over a
                     // pose that already owns the legs or the root — lying, swimming, climbing, or a
                     // stoop of its own.
@@ -1055,7 +1055,7 @@ namespace Odyssey.Presentation.World
         }
 
         /// <summary>
-        /// Down behind cover (design 50 §8a): the gesture stoop's own method — the pelvis down and a
+        /// Down behind cover (design 53 §8a): the gesture stoop's own method — the pelvis down and a
         /// little back, each leg solved back to the foot the gait put down — held rather than
         /// played, and nothing done to the back or the arms, which are the aim's or the rest's.
         /// </summary>

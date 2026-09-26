@@ -10,7 +10,7 @@ using Odyssey.Sim.World;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// What protected a target from one shot (design 50 §2): up to eight neighbouring cells, what
+    /// What protected a target from one shot (design 53 §2): up to eight neighbouring cells, what
     /// each was worth after the angle, the shooter's distance and the descent, and the whole. A
     /// scratch object the caller keeps and reuses, so a shot allocates nothing.
     /// </summary>
@@ -28,7 +28,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The cover cell of each contributor.</summary>
         public readonly int[] Cells = new int[Capacity];
 
-        /// <summary>Its base value before any factor, per mille (design 50 §3).</summary>
+        /// <summary>Its base value before any factor, per mille (design 53 §3).</summary>
         public readonly int[] Bases = new int[Capacity];
 
         /// <summary>What it gave this shot, per mille: base × angle × shooter's distance × descent.</summary>
@@ -59,7 +59,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// The contributor a cover roll lands on (design 50 §2d): <paramref name="pick"/> in
+        /// The contributor a cover roll lands on (design 53 §2d): <paramref name="pick"/> in
         /// <c>[0, sum of PerMille)</c> walked along the contributors, so each is chosen in
         /// proportion to what it gave. -1 if nothing gave anything.
         /// </summary>
@@ -86,7 +86,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// Partial cover (design 50): how much the things beside a target protect it from one shot.
+    /// Partial cover (design 53): how much the things beside a target protect it from one shot.
     /// The reference's rule in integers, with a descent term of our own because our world has
     /// layers.
     ///
@@ -113,7 +113,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// What the thing in <paramref name="cell"/> is worth as cover before any factor, per mille,
-        /// and whether it is tall (design 50 §3). In order: a rock face (solid terrain) is full fill;
+        /// and whether it is tall (design 53 §3). In order: a rock face (solid terrain) is full fill;
         /// a door is full fill shut and nothing open; a building row that names its cover gives that;
         /// a tree or a bush gives its plant's; anything else that fills its cell (a wall, a pillar, a
         /// window, a vault wall) is full fill; everything else, nothing. An unbuilt site is not an
@@ -179,7 +179,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// What the angle at the target leaves of a neighbour's cover, per mille (design 50 §2b).
+        /// What the angle at the target leaves of a neighbour's cover, per mille (design 53 §2b).
         /// <paramref name="ux"/>, <paramref name="uz"/> run from the target to the shooter and
         /// <paramref name="vx"/>, <paramref name="vz"/> from the target to the neighbour, in cells.
         /// A band edge <c>B</c> is passed when <c>dot² × 10⁶ > cos²B × |u|² × |v|²</c> with the dot
@@ -201,7 +201,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// What the shooter's own nearness to the cover leaves of it, per mille (design 50 §2b): a
+        /// What the shooter's own nearness to the cover leaves of it, per mille (design 53 §2b): a
         /// third under 1.9 cells, two thirds under 2.9, all of it beyond. Horizontal cells from the
         /// shooter to the <b>cover</b>, not to the target.
         /// </summary>
@@ -214,7 +214,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// What a shot's descent leaves of cover of one class, per mille (design 50 §2b): the rise
+        /// What a shot's descent leaves of cover of one class, per mille (design 53 §2b): the rise
         /// from the target up to the shooter over the horizontal distance, as a tangent in per mille,
         /// graded linearly between the class's two tangents. A shot from level or below leaves all
         /// of it; one from straight overhead leaves none.

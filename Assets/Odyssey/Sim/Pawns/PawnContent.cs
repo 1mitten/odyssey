@@ -1929,11 +1929,11 @@ namespace Odyssey.Sim.Pawns
         /// <summary>How a fall's damage is split into hits and spread (design 43 §7). The twenty-first.</summary>
         public const uint FallSplit = 0x2DE9_2C6F;
 
-        // Cover's three (design 50 §2d, §2e). SHA-256's twenty-second, twenty-third and
+        // Cover's three (design 53 §2d, §2e). SHA-256's twenty-second, twenty-third and
         // twenty-fourth round constants. Built on the twentieth to the twenty-second, moved when
         // health (design 43) shipped first on the twentieth and twenty-first.
 
-        /// <summary>Whether cover defeats a shot whose aim roll hit (design 50 §2d).</summary>
+        /// <summary>Whether cover defeats a shot whose aim roll hit (design 53 §2d).</summary>
         public const uint RangedCover = 0x4A74_84AA;
 
         /// <summary>Which piece of cover a defeated shot is fired into, weighted by what each gave.</summary>

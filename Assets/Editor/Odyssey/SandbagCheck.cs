@@ -1,5 +1,5 @@
 #nullable enable
-// Design 50 §7a-bis: photograph sandbags laid by CoverShape — a straight run, a corner, a T and a
+// Design 53 §7a-bis: photograph sandbags laid by CoverShape — a straight run, a corner, a T and a
 // lone piece — beside a post the height of a drawn colonist, so "do they look like sandbags" is
 // answered by looking rather than by reading the layout code.
 //

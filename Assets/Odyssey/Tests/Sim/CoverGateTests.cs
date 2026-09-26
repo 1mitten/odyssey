@@ -10,7 +10,7 @@ using static Odyssey.Tests.Sim.CombatFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The cover line's gate (design 50 §11, CV9): a skirmish on three seeds — two drafted colonists
+    /// The cover line's gate (design 53 §11, CV9): a skirmish on three seeds — two drafted colonists
     /// with pistols behind a line of sandbags against three pistol bandits, and the same fight on
     /// open ground — run beside a lockstep twin, saved mid-fight and resumed. The colonists behind
     /// the bags take markedly fewer bullets, the bags take the difference and wear, the twin never

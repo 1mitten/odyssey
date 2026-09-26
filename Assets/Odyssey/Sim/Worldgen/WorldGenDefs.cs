@@ -427,7 +427,7 @@ namespace Odyssey.Sim.Worldgen
         /// <summary>The galley (design 48 §5): the electric cooker, where meals are cooked from bills.</summary>
         public const ushort EdificeGalley = 22;
 
-        /// <summary>Sandbags (design 50 §4): low cover, crossed but never stood on. 23, after the galley.</summary>
+        /// <summary>Sandbags (design 53 §4): low cover, crossed but never stood on. 23, after the galley.</summary>
         public const ushort EdificeSandbags = 23;
 
         /// <summary>

@@ -193,7 +193,7 @@ namespace Odyssey.Presentation.Bootstrap
         WorldRenderModel? _model;
         ChunkRenderer? _renderer;
 
-        /// <summary>Scratch for a cover piece's ghost boxes (design 50 §7); drawn and forgotten each frame.</summary>
+        /// <summary>Scratch for a cover piece's ghost boxes (design 53 §7); drawn and forgotten each frame.</summary>
         readonly Matrix4x4[] _coverGhost = new Matrix4x4[CoverShape.MaxParts];
         readonly int[] _coverGhostShades = new int[CoverShape.MaxParts];
         PawnContext? _pawns;
@@ -2323,7 +2323,7 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
-            // Cover's ghost (design 50 §7a-bis), from the same bags the mesher draws: a lone piece,
+            // Cover's ghost (design 53 §7a-bis), from the same bags the mesher draws: a lone piece,
             // the way a line of them looks before its neighbours stand. A ghost has one colour, so
             // the cloths are ignored.
             if (CoverShape.Draws(what.edifice))
@@ -3309,7 +3309,7 @@ namespace Odyssey.Presentation.Bootstrap
                     _renderer.DrawMarker(feet + Vector3.up * (top + DraftMarkerLift), DraftMarkerSize, hostileInk);
             }
 
-            // A struck building's bar (design 33 §13k, built with cover, design 50 §7d): one row per
+            // A struck building's bar (design 33 §13k, built with cover, design 53 §7d): one row per
             // building something has hit, none for a whole one, so a sandbag line worn down in a
             // fight shows how much is left of each piece. Over the thing's top, the order mark's own
             // height, and the same pieces and inks as a pawn's bar.
@@ -3340,7 +3340,7 @@ namespace Odyssey.Presentation.Bootstrap
         PawnId _shotShooter, _shotTarget;
 
         /// <summary>
-        /// The hit-chance readout (design 50 §8b): with one drafted colonist selected and a hostile
+        /// The hit-chance readout (design 53 §8b): with one drafted colonist selected and a hostile
         /// under the pointer, ask the simulation what her shot would come to and show its answer
         /// beside the cursor. The question is sent only when the pair changes; the answer is the
         /// published <see cref="ShotReportView"/>, so the words can never promise odds the dice do

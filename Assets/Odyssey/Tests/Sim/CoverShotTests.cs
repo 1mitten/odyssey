@@ -11,7 +11,7 @@ using static Odyssey.Tests.Sim.CombatFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// Cover in the shot (design 50 §2d, §2e): the second roll after a true aim, the defeated shot
+    /// Cover in the shot (design 53 §2d, §2e): the second roll after a true aim, the defeated shot
     /// fired into the cover and striking it, a stray caught by cover it crosses, the dead zone that
     /// keeps a shooter's own sandbags out of it, and a covered bullet surviving a save.
     /// </summary>
@@ -193,7 +193,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(b.Value, Is.EqualTo(a.Value));
         }
 
-        /// <summary>A cover cell moves the hash; a flight with none adds nothing for it (design 50 §11).</summary>
+        /// <summary>A cover cell moves the hash; a flight with none adds nothing for it (design 53 §11).</summary>
         [Test]
         public void ACoverCellIsHashedOnlyWhenSet()
         {
@@ -208,7 +208,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(b.Value, Is.Not.EqualTo(a.Value));
         }
 
-        // ---- the readout's numbers (design 50 §8b) --------------------------------------------
+        // ---- the readout's numbers (design 53 §8b) --------------------------------------------
 
         /// <summary>
         /// Asked about a shot at a target behind sandbags, the world publishes the rule's own

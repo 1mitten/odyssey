@@ -599,7 +599,7 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         void ResolvePointer()
         {
-            // The plain hover the readout asks for (design 50 §8b), resolved here with every other
+            // The plain hover the readout asks for (design 53 §8b), resolved here with every other
             // pick, after the camera has moved this frame.
             _hasPointerCell = WantsPointerCell && _pointerKnown && !PointerWasOverInterface
                 && CellAt(_pointerNow, out _pointerCell);
@@ -714,7 +714,7 @@ namespace Odyssey.Presentation.CameraRig
         /// <summary>
         /// The cell under the mouse now, on a drawn layer, and where the mouse is — false when the
         /// pointer is over the interface or the ray misses. What the hit-chance readout asks
-        /// (design 50 §8b); it resolves a pick exactly as a click would.
+        /// (design 53 §8b); it resolves a pick exactly as a click would.
         /// </summary>
         public bool CellUnderPointer(out CellRef cell, out Vector2 screenPosition)
         {
@@ -725,7 +725,7 @@ namespace Odyssey.Presentation.CameraRig
 
         /// <summary>
         /// Should the cell under the pointer be resolved every frame, tool or no tool? Set by the
-        /// hit-chance readout while it could show (design 50 §8b), so a colony with nobody drafted
+        /// hit-chance readout while it could show (design 53 §8b), so a colony with nobody drafted
         /// pays for no pick. Resolved in <see cref="ResolvePointer"/> like every other pick — after
         /// the camera has moved, never before (design 28, P15).
         /// </summary>

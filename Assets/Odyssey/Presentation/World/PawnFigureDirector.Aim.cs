@@ -39,7 +39,7 @@ namespace Odyssey.Presentation.World
         /// <summary>How long low ready takes to come and go.</summary>
         public const float LowReadyEaseSeconds = 0.25f;
 
-        /// <summary>How long going down behind cover, or coming up from it, takes, in seconds (design 50 §8a).</summary>
+        /// <summary>How long going down behind cover, or coming up from it, takes, in seconds (design 53 §8a).</summary>
         public const float CoverCrouchEaseSeconds = 0.2f;
 
         /// <summary>
@@ -47,7 +47,7 @@ namespace Odyssey.Presentation.World
         /// (<see cref="Figure.LegLength"/>, a real length — never <c>StandingHipHeight</c>, which is
         /// not one). A third of the leg puts a head just over a 1.3 m wall of bags on a figure
         /// drawn about 2.5 m tall, and stays well inside what a two-bone solve can deliver. INVENTED;
-        /// the owner judges it at the keyboard (design 50 §10).
+        /// the owner judges it at the keyboard (design 53 §10).
         /// </summary>
         public const float CoverCrouchLegFraction = 0.33f;
 
@@ -158,7 +158,7 @@ namespace Odyssey.Presentation.World
             float readyStep = LowReadyEaseSeconds > 1e-4f ? deltaTime / LowReadyEaseSeconds : 1f;
             figure.LowReadyWeight = Mathf.MoveTowards(figure.LowReadyWeight, ready ? 1f : 0f, readyStep);
 
-            // Down behind cover (design 50 §8a): the simulation says when, from the cover rule, and
+            // Down behind cover (design 53 §8a): the simulation says when, from the cover rule, and
             // the figure eases into it and out again when she walks.
             bool crouch = _frame != null && !pawn.IsDowned
                 && _frame.TryGetPawnAspect(pawn.Id, Odyssey.Sim.Pawns.CombatAspects.CoverCrouch, out int _);

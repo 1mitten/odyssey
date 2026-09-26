@@ -260,7 +260,7 @@ namespace Odyssey.Sim
                     return IntentRejection.None;
 
                 case IntentKind.QueryShot:
-                    // A question about a shot (design 50 §8b), the QueryCell shape.
+                    // A question about a shot (design 53 §8b), the QueryCell shape.
                     Views.QueryShotShooter = intent.A > 0 ? intent.A : 0;
                     Views.QueryShotTarget = intent.A > 0 ? intent.B : 0;
                     return IntentRejection.None;

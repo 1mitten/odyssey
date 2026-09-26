@@ -51,7 +51,7 @@ namespace Odyssey.Sim.Pawns
         public int Freed { get; private set; }
 
         /// <summary>
-        /// How many times a pawn found at rest on cover was stepped off it (design 50 §5). Every
+        /// How many times a pawn found at rest on cover was stepped off it (design 53 §5). Every
         /// picker refuses such a cell, so this counts the misses; the Long tier holds it low.
         /// </summary>
         public int SteppedOffCover { get; private set; }
@@ -85,7 +85,7 @@ namespace Odyssey.Sim.Pawns
                 // cell is the only case this exists for, and a door the pawn can open is not it.
                 Pathing.NavFlags flags = _pawns.Nav.Grid.Flags[pawn.Cell];
 
-                // **At rest on cover crossed but never stood on** (design 50 §5): stepped off to the
+                // **At rest on cover crossed but never stood on** (design 53 §5): stepped off to the
                 // nearest cell she may stand in. Only at rest — somebody climbing over has a path —
                 // and only a moment into the job she is in, so a job that ends mid-crossing and a new
                 // one that walks on in the next tick never see the shove. Every picker already refuses such

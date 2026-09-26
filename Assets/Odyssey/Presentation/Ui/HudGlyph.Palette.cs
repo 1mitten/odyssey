@@ -313,7 +313,7 @@ namespace Odyssey.Presentation.Ui
                     Polyline(painter, true, p(17, 5), p(17, 20));
                     return;
 
-                // Sandbags (design 50 §4): bags laid like bricks, three below and two above.
+                // Sandbags (design 53 §4): bags laid like bricks, three below and two above.
                 case HudGlyphKind.ToolSandbag:
                     Rect(painter, p(2.5f, 14), p(8.5f, 19.5f));
                     Rect(painter, p(9, 14), p(15, 19.5f));

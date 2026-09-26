@@ -13,7 +13,7 @@ using static Odyssey.Tests.Sim.CombatFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The cover rule (design 50 §2): the angle bands and the diagonal penalty, the shooter's
+    /// The cover rule (design 53 §2): the angle bands and the diagonal penalty, the shooter's
     /// distance, the descent, noisy-OR, and what each thing is worth. Each factor is tested alone
     /// against the number the design writes down, then together on a board, with the control
     /// beside every claim — the same wall from the side, the same sandbag from above.
@@ -121,7 +121,7 @@ namespace Odyssey.Tests.Sim
 
         // ---- the descent -----------------------------------------------------------------------
 
-        /// <summary>Design 50 §2b's worked table, one layer (3 m) above.</summary>
+        /// <summary>Design 53 §2b's worked table, one layer (3 m) above.</summary>
         [TestCase(25_000, false, 1000)]
         [TestCase(12_500, false, 877)]
         [TestCase(7_500, false, 572)]

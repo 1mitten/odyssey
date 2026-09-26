@@ -129,7 +129,7 @@ namespace Odyssey.Sim.Pawns
                 if (!boundary) return LandTheStep(ctx);
 
                 // A bandit, or a colonist fighting back undrafted, looks for cover before she shoots
-                // (design 50 §6). A drafted colonist holds where the player put her, and an order the
+                // (design 53 §6). A drafted colonist holds where the player put her, and an order the
                 // player gave is carried out from where it finds her.
                 if (!Pawn.Drafted && !Job.PlayerForced && tick - Pawn.JobStartTick < CoverPosition.SeekWindowTicks)
                 {
@@ -208,7 +208,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// Where a fighter who takes cover should be going, with her line open from where she stands
-        /// (design 50 §6): on to the cell she is already walking to while it has more cover from the
+        /// (design 53 §6): on to the cell she is already walking to while it has more cover from the
         /// target than this one; else, with this cell barely covered, the best cell
         /// <see cref="CoverPosition.Find"/> gives, which may be this one. -1 or her own cell: shoot
         /// from here.

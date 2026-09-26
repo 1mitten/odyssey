@@ -113,7 +113,7 @@ namespace Odyssey.Tests.Sim
                     || kind == IntentKind.WatchPower
                     // The sixth, the same question about the home (design 43 §5c).
                     || kind == IntentKind.WatchHome
-                    // The seventh, the hit-chance readout's question (design 50 §8b).
+                    // The seventh, the hit-chance readout's question (design 53 §8b).
                     || kind == IntentKind.QueryShot) continue;
 
                 Assert.That(colony.World.HandlesIntent(kind), Is.True,

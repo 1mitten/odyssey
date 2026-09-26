@@ -29,7 +29,7 @@ namespace Odyssey.Hud
         public const string MissKey = "ui.combat.miss";
         public const string DodgeKey = "ui.combat.dodge";
 
-        /// <summary>The word over cover that took a bullet (design 50 §7e).</summary>
+        /// <summary>The word over cover that took a bullet (design 53 §7e).</summary>
         public const string CoverKey = "ui.combat.cover";
         public const string StunnedKey = "ui.combat.stunned";
         public const string DownedKey = "ui.status.downed";

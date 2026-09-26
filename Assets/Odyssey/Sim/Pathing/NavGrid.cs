@@ -53,7 +53,7 @@ namespace Odyssey.Sim.Pathing
         BuildSite = 1 << 10,
 
         /// <summary>
-        /// Something that is crossed but never stood on stands here (design 50 §5): sandbags or a
+        /// Something that is crossed but never stood on stands here (design 53 §5): sandbags or a
         /// barricade. The cell stays walkable — a line of cover seals nobody in — and costs its
         /// own crossing price (<see cref="NavGrid.PassCostAt"/>) to enter. Whether a pawn may
         /// <i>stop</i> here is <c>Standing.CanStandAt</c>'s, which reads this flag. Registered by
@@ -580,7 +580,7 @@ namespace Odyssey.Sim.Pathing
                 if (diagonal) siteCost = (siteCost * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
                 cost += siteCost;
             }
-            // Climbing over cover (design 50 §4). NavGraph.StepCost charges the same, and
+            // Climbing over cover (design 53 §4). NavGraph.StepCost charges the same, and
             // CrossingHasOneOwnerTests holds the two together.
             if ((f & NavFlags.PassThrough) != 0)
             {

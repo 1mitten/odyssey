@@ -30,7 +30,7 @@ the next session learns to ignore.
   visible hitch when a setting changes, or chunks of old grass visibly swapping to new a few at a time.
 
 - **Do the sandbags look like sandbags, and does cover change a fight?** (`claude/cool-darwin-akh02q`,
-  PR #232, design 50 §7a-bis and §13; worktree `D:\code\odyssey-cover`.) Build → Security: drag a line
+  PR #232, design 53 §7a-bis and §13; worktree `D:\code\odyssey-cover`.) Build → Security: drag a line
   of **Sandbags**, then an L and a T. The barricade chip is dim again, beside the turret and the trap.
   Walk a colonist across: she climbs over slowly and never stops on top. Draft two colonists with
   pistols behind the bags and use the debug menu's *Spawn pistol bandit* ten cells away: they crouch

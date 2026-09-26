@@ -120,7 +120,7 @@ namespace Odyssey.Tests.Sim
             // runs one past their limit and the galley is not natural.
             Assert.That(CoreContent.EdificeGalley, Is.EqualTo(NaturalContent.EdificeLimit));
             Assert.That(NaturalContent.IsNatural(CoreContent.EdificeGalley), Is.False);
-            // Cover's sandbags (design 50 §4) follow the galley.
+            // Cover's sandbags (design 53 §4) follow the galley.
             Assert.That(CoreContent.EdificeSandbags, Is.EqualTo(NaturalContent.EdificeLimit + 1));
             Assert.That(EdificeHandle.Count, Is.EqualTo(NaturalContent.EdificeLimit + 2));
         }

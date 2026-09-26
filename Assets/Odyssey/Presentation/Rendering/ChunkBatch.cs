@@ -220,7 +220,7 @@ namespace Odyssey.Presentation.Rendering
         public static int Linen() => LinenBase;
 
         /// <summary>
-        /// A sandbag's cloth (design 50 §7a-bis): bit 13 again, because it is cloth for the same
+        /// A sandbag's cloth (design 53 §7a-bis): bit 13 again, because it is cloth for the same
         /// reason bedding is — a colour of its own whatever stuff filled it — with one of
         /// <see cref="StuffPalette.HessianShades"/> in the value. The value is 0 for linen, so
         /// the two never share a code, and the shade costs a bucket per shade in use and no more.

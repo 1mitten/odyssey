@@ -17,7 +17,7 @@ conjunction with this - suggest items,, animations and placements that make sens
 clarify every detail"*
 
 **Read next:**
-- `docs/design/50-cover.md` — the design these answers decide.
+- `docs/design/53-cover.md` — the design these answers decide.
 - `docs/plans/cover.md`
 - `docs/research/a-10-cover.md`
 
@@ -73,7 +73,7 @@ Recommended options are marked ★. The answer is the owner's, verbatim where it
 | 20 | Can cover catch a stray bullet flying past? | ★ yes, at half its cover value · no | **Yes, at a fraction** |
 | 21 | What does destroyed cover leave? | ★ a quarter of its cost · nothing · half | **A quarter of the cost** |
 | 22 | When to crouch | while aiming or firing · drafted and waiting · bandits too | **All three** |
-| 23 | Default cover values | ★ accept the table · change some | **Accept** (design 50 §3) |
+| 23 | Default cover values | ★ accept the table · change some | **Accept** (design 53 §3) |
 | 24 | Barricade art | ★ wood → Western Frontier timber, stone → Meadow low stone wall · stone → Sci-Fi City concrete barrier · custom | **Wood → timber, stone → low stone wall** |
 | 25 | Crossing cost (a step is 100, a bush +50) | ★ sandbags +150, barricade +250 · both +150 · +300 / +500 | **+150 / +250** |
 | 26 | Placeholder recipe (no sand exists) | ★ sandbags 5 stone fixed, barricade 5 wood or stone · scrap · a new sand item | **Sandbags: stone; barricade: wood or stone** |

@@ -10,7 +10,7 @@ using static Odyssey.Tests.Sim.CombatFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// Cover is crossed and never stood on (design 50 §5): a pawn sent there stops beside it, a pawn
+    /// Cover is crossed and never stood on (design 53 §5): a pawn sent there stops beside it, a pawn
     /// found resting on it is stepped off, nobody is left inside one as it goes up, a ring of it
     /// seals nobody in, and a colony living inside a ring does not keep coming to rest on it.
     /// </summary>

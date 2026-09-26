@@ -139,7 +139,7 @@ namespace Odyssey.Tests.Hud
                 Is.EqualTo(Registry.Label("ui.status.downed")));
             Assert.That(CombatFeedbackModel.FloatingText(Event(CombatEventKind.Died)),
                 Is.EqualTo(Registry.Label("ui.combat.dead")));
-            // Cover that took a bullet (design 50 §7e), the word and no number, whatever it took.
+            // Cover that took a bullet (design 53 §7e), the word and no number, whatever it took.
             Assert.That(CombatFeedbackModel.FloatingText(Event(CombatEventKind.Covered, 7_000)),
                 Is.EqualTo(Registry.Label("ui.combat.cover")));
             Assert.That(Registry.Label("ui.combat.cover"), Is.EqualTo("Cover"));

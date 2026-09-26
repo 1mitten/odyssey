@@ -1,6 +1,6 @@
 # a-10 (cover) — how the reference game's partial cover works
 
-**Lane A, item 10 (the cover half).** Asked 2026-09-25 for the cover line (design 50). One subagent,
+**Lane A, item 10 (the cover half).** Asked 2026-09-25 for the cover line (design 53). One subagent,
 one question, capped at 14 searches and 10 fetches. **Every wiki and Steam page was refused by the
 proxy** (rimworldwiki.com, rimworld.fandom.com, steamcommunity.com, the Wayback Machine), so the
 findings come from search extracts plus community analyses of how the game behaves, and the numbers

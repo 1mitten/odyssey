@@ -8,7 +8,7 @@ using static Odyssey.Tests.Sim.CombatFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// Fighters with guns taking cover (design 50 §6): a bandit steps behind the sandbags beside it
+    /// Fighters with guns taking cover (design 53 §6): a bandit steps behind the sandbags beside it
     /// before it shoots; the same bandit with no sandbags shoots from where it stands; a drafted
     /// colonist holds where she was put; nobody backs off more than two cells to find cover; and the
     /// search is asked now and then, not every tick.
@@ -132,7 +132,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(searches, Is.LessThan(60));
         }
 
-        // ---- the crouch (design 50 §8a) --------------------------------------------------------
+        // ---- the crouch (design 53 §8a) --------------------------------------------------------
 
         static bool Crouched(ColonyWorld colony, Pawn pawn, out int value) =>
             colony.World.Views.Current.TryGetPawnAspect(pawn.Id, CombatAspects.CoverCrouch, out value);

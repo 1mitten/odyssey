@@ -1,6 +1,6 @@
 # e-12 — What a sandbag wall looks like
 
-**Asked 2026-09-25** by the owner on the first look at design 50's placeholder boxes: *"the sandbags
+**Asked 2026-09-25** by the owner on the first look at design 53's placeholder boxes: *"the sandbags
 need to look like sandbags. Please search the internet to understand how a sandbag looks."* One
 subagent, capped at 8 searches and 10 reads.
 
@@ -68,7 +68,7 @@ model it procedurally as a low-poly mesh in the Synty style?
 
 ## Recommendation
 
-Draw the bags, not a wall. Adopted in design 50 §7a-bis:
+Draw the bags, not a wall. Adopted in design 53 §7a-bis:
 
 - **One procedural bag mesh**, `SandbagMesh`, beside `PillowMesh`: a flattened rounded pillow at
   2 : 3 : 1, with a pinched, tied end.

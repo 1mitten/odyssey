@@ -116,14 +116,14 @@ namespace Odyssey.Tests.Sim
         // XML and the code oracle together. Nothing else in the table moved.
         // Moved on merging main (design 45): the galley's edifice renumbered 17 -> 22, after the
         // wild things, which reached main first. Re-taken from the merged table.
-        // Moved once, deliberately, 2026-09-25, cover (design 50 §3): BuildingDef gained coverPerMille,
+        // Moved once, deliberately, 2026-09-25, cover (design 53 §3): BuildingDef gained coverPerMille,
         // coverTall, passThrough, crossCost and wreckRefundPerMille; the bed 300, shelf 500, campfire 250,
         // generator 500, heater 400 and galley 500 cover, all INVENTED, in the XML and the code oracle together.
-        // Moved once, deliberately, 2026-09-25, cover (design 50 §4): Building_Sandbags (handle 13, edifice 23:
+        // Moved once, deliberately, 2026-09-25, cover (design 53 §4): Building_Sandbags (handle 13, edifice 23:
         // 5 stone fixed, 180 work, 300 hp, 550 low cover, pass-through at +150, a quarter left as wreck) and
         // Building_Barricade (14, 24: 5 wood or stone, 320 work, 300 hp, 550, +250) appended, and BuildingDef
         // gained fixedStuff. In the XML and the code oracle together.
-        // Moved once, deliberately, 2026-09-25, design 50 §13: Building_Barricade taken out again on the
+        // Moved once, deliberately, 2026-09-25, design 53 §13: Building_Barricade taken out again on the
         // owner's first look; the table is the sandbags' alone. Re-taken.
         const ulong BuildingFingerprint = 12857519967509301005UL;
 

@@ -5,7 +5,7 @@ using Odyssey.Sim.Pathing;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// Where a fighter with a gun should stand to shoot from (design 50 §6): a cell near her with a
+    /// Where a fighter with a gun should stand to shoot from (design 53 §6): a cell near her with a
     /// line to her target and as much cover from it as she can get, not so far that she walks the
     /// fight away. The reference's ranged raiders do this; its drafted colonists do not, and neither
     /// do ours — a drafted colonist holds where the player put her.
@@ -18,7 +18,7 @@ namespace Odyssey.Sim.Pawns
     ///
     /// <para><b>Score</b> = <c>4 × the cover the cell has from the target + her hit chance from it / 2
     /// − 60 × the cells to walk</c>, all per mille; the cell she is on wins a tie, then the lower
-    /// index. INVENTED weights, the owner's to tune (design 50 §10).</para>
+    /// index. INVENTED weights, the owner's to tune (design 53 §10).</para>
     ///
     /// <para><b>Asked rarely</b>: when her line first opens with no cover to speak of, and again only
     /// when her job is chosen afresh — never per tick. A call is at most 169 candidates, each a

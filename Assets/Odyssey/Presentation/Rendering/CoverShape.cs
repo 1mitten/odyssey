@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Odyssey.Presentation.Rendering
 {
     /// <summary>
-    /// What a wall of sandbags looks like (design 50 §7a-bis, research <c>e-12</c>), in one place:
+    /// What a wall of sandbags looks like (design 53 §7a-bis, research <c>e-12</c>), in one place:
     /// the mesher draws the built piece and the ghost draws the piece being placed, from the same
     /// bags.
     ///

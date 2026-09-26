@@ -193,7 +193,7 @@ namespace Odyssey.Sim.Pawns
                     return;
                 }
 
-                // The piece of cover the cover roll fired it into (design 50 §2d): it takes the bullet,
+                // The piece of cover the cover roll fired it into (design 53 §2d): it takes the bullet,
                 // wall or sandbag alike, and reports it as cover.
                 if (cell == bullet.CoverCell)
                 {
@@ -232,7 +232,7 @@ namespace Odyssey.Sim.Pawns
                     return;
                 }
 
-                // Cover it crosses (design 50 §2e): a stray is caught at half the thing's cover, past
+                // Cover it crosses (design 53 §2e): a stray is caught at half the thing's cover, past
                 // the dead zone. Not a shot whose cover roll has already spoken — one aimed true
                 // crossing its target's own neighbours, or one already fired into a piece.
                 if (CatchesStray(bullet, homing ? end : -1, cell, tick))
@@ -249,7 +249,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Does the cover in <paramref name="cell"/> catch this bullet (design 50 §2e)? Rolled on
+        /// Does the cover in <paramref name="cell"/> catch this bullet (design 53 §2e)? Rolled on
         /// <see cref="PawnPurpose.RangedCoverIntercept"/> salted by the shooter and the cell, against
         /// <see cref="IRangedRules.CoverInterceptPerMille"/>. Never for a bullet already fired into
         /// cover, and never in the eight neighbours of <paramref name="aimedAt"/> (a shot aimed true:
@@ -277,7 +277,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Cover took the bullet (design 50 §2e): <see cref="CombatEventKind.Covered"/> reported at
+        /// Cover took the bullet (design 53 §2e): <see cref="CombatEventKind.Covered"/> reported at
         /// the cover's cell with the damage it took, the thing there struck through
         /// <see cref="StrikeBuilding"/> when it has hit points (a sandbag, a wall, a shelf; not a tree
         /// or a rock face), and the shot heard as an attack by whom it was at, as a miss is.
