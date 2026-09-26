@@ -57,7 +57,7 @@ that runs ahead of the code (or behind it) fails the fast tier.
 
 ## 3. FA1 — art and roster (PR 1)
 
-**Built 2026-09-26, in review** — PR to follow, stacked on #248. What was built and measured, and where it departed from design 66, is design 66 §14.
+**Built 2026-09-26, in review** — **PR #255**, stacked on #248. What was built and measured, and where it departed from design 66, is design 66 §14.
 
 The animals exist, wander as today, are drawn at life size in their colourways and forms, and are
 named. **No new behaviour.**
