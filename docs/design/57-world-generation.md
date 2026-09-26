@@ -364,7 +364,7 @@ Taken as each unit lands, with the machine and date.
 | What | Number |
 |---|---|
 | planet generation (64 × 32) | **2.1 ms median, 2.45 worst**, over 20 seeds (fast tier, CoreCLR, the build container, 2026-09-26): a twenty-fifth of the 50 ms budget. Two sample planets hold 13–17 % Meadow, 19–21 % Ice and 37 % Ocean, with a dry-scrub belt round the equator, since the six biomes have no tropical forest. |
-| map paint at 2× | *WG3a* |
+| map paint at 2× (2,374 × 1,031) | **31 ms median in a Release build, 87 ms in Debug** (fast tier, CoreCLR, the build container, 2026-09-26), into a reused buffer. The first version cost **447 ms**, a per-pixel cube-rounding pick through a float buffer. Three changes brought it down, measured each time: a scanline nearest-centre fill (447 → 215 Debug); fill and finish in one pass, with the finish as one affine map per pixel, marks stamped from a mask, and the buffer reused (→ 115 Debug / 58 Release); and the sheen and vignette tabulated, with no square root per pixel (→ 87 / 31). A player build compiles Release. The editor defaults to Debug, so a reroll there hitches for about a tenth of a second. **The Unity (Mono) figure is owed** from the owner's machine; if it is over 60 ms in a player build, `WorldLayout.PaintScale` drops to 1.5. |
 | board memory per hill band | *WG4* |
 
 ## 10. Seams recorded, not built

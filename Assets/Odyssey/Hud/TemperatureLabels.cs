@@ -31,10 +31,16 @@ namespace Odyssey.Hud
         /// Centi-degrees as the interface reads them: signed, one decimal, with the unit.
         /// 1,250 is "12.5 °C" and −1,250 is "-12.5 °C".
         /// </summary>
-        public static string Describe(int centiC)
+        public static string Describe(int centiC) => Number(centiC) + Unit;
+
+        /// <summary>
+        /// The same figure without the unit, for a range that says it once: the World screen's
+        /// "2.5 to 26.0 °C" (design 57 §9a).
+        /// </summary>
+        public static string Number(int centiC)
         {
             int magnitude = centiC < 0 ? -centiC : centiC;
-            return (centiC < 0 ? "-" : "") + magnitude / 100 + "." + magnitude % 100 / 10 + Unit;
+            return (centiC < 0 ? "-" : "") + magnitude / 100 + "." + magnitude % 100 / 10;
         }
     }
 }
