@@ -998,16 +998,8 @@ namespace Odyssey.Presentation.Rendering
         {
             if (_treeVariants.TryGetValue(module, out int[]? known)) return known;
 
-            var variants = new List<int> { module };
-            string baseId = _model.Library[module].Id;
-            for (int v = 1; v < ModuleIds.MaxTreeVariants; v++)
-            {
-                string id = ModuleIds.TreeVariant(baseId, v);
-                if (_model.Library.Catalogue == null || _model.Library.Catalogue.Find(id) == null) continue;
-                int resolved = _model.Library.Resolve(id, ModuleShape.Pillar);
-                if (_model.Library[resolved].UsesArt && !_model.Library[resolved].IsEmpty) variants.Add(resolved);
-            }
-            int[] result = variants.ToArray();
+            // The list itself is TreeArt's, which the birds' perches ask too (design 50 §6).
+            int[] result = TreeArt.VariantsOf(_model.Library, module);
             _treeVariants[module] = result;
             foreach (int m in result)
             {
