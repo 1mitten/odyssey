@@ -31,29 +31,18 @@ namespace Odyssey.Tests.Hud
             return frame;
         }
 
-        static InspectCommand ResponseButton(InspectModel pane) =>
-            pane.Commands.Find(c => ResponseModel.IsResponseKey(c.IconKey));
-
         /// <summary>
-        /// The three faces, each the registry's name for the response she has, and live. The
+        /// The response reads off the frame as the number she has, each the registry's name. The
         /// numbers are the simulation's (<c>HostilityResponse</c>), held on the other side by
         /// <c>ResponseTests.TheNumbersAreTheInterfaces</c>.
         /// </summary>
         [TestCase(0, ResponseModel.FightBackKey)]
         [TestCase(1, ResponseModel.DefendKey)]
         [TestCase(2, ResponseModel.FleeKey)]
-        public void ThePaneShowsTheResponseSheHas(int response, string key)
+        public void TheFrameSaysTheResponseSheHas(int response, string key)
         {
-            var pane = new InspectModel();
-            pane.SetColonist(Ada);
-            pane.Refresh(Frame(ada: response));
-
-            InspectCommand button = ResponseButton(pane);
-            Assert.That(button.IconKey, Is.EqualTo(key));
-            Assert.That(button.Label, Is.EqualTo(Registry.Label(key)));
-            Assert.That(button.Enabled, Is.True);
-            Assert.That(pane.Response, Is.EqualTo(response));
-            Assert.That(button.Reason, Is.EqualTo(ResponseModel.Describe(response)));
+            Assert.That(ResponseModel.Of(Frame(ada: response), Ada), Is.EqualTo(response));
+            Assert.That(ResponseModel.KeyOf(response), Is.EqualTo(key));
         }
 
         /// <summary>The registry's three names, as the owner will read them on the button.</summary>
@@ -65,31 +54,21 @@ namespace Odyssey.Tests.Hud
             Assert.That(Registry.Label(ResponseModel.FleeKey), Is.EqualTo("Flee"));
         }
 
-        /// <summary>It sits after Draft, and a colonist gone from the frame cannot be given one.</summary>
+        /// <summary>
+        /// The pane's header no longer carries the response (design 61): it left for the Assign
+        /// tab's Response column, which sets it for every colonist from one table. The control is
+        /// Draft, which the header still carries.
+        /// </summary>
         [Test]
-        public void ItSitsAfterDraftAndIsOffForAColonistWhoHasGone()
+        public void TheHeaderNoLongerCarriesTheResponse()
         {
             var pane = new InspectModel();
             pane.SetColonist(Ada);
             pane.Refresh(Frame(ada: 1));
-            int draft = pane.Commands.FindIndex(c => c.IconKey == InspectModel.DraftKey);
-            int respond = pane.Commands.FindIndex(c => ResponseModel.IsResponseKey(c.IconKey));
-            Assert.That(respond, Is.EqualTo(draft + 1), "not beside Draft");
-
-            WorldSnapshot gone = Odyssey.Tests.Hud.Frame.Write();
-            pane.Refresh(gone);
-            Assert.That(pane.Tombstoned, Is.True, "the control: she has gone");
-            Assert.That(ResponseButton(pane).Enabled, Is.False, "a colonist who has gone could be given a response");
-        }
-
-        /// <summary>A bandit has no commands, so no response either (design 33 §6C).</summary>
-        [Test]
-        public void ABanditHasNoResponseButton()
-        {
-            var pane = new InspectModel();
-            pane.SetColonist(Raider);
-            pane.Refresh(Frame());
-            Assert.That(pane.Commands.FindIndex(c => ResponseModel.IsResponseKey(c.IconKey)), Is.EqualTo(-1));
+            Assert.That(pane.Commands.FindIndex(c => c.IconKey == InspectModel.DraftKey), Is.Not.EqualTo(-1),
+                "the control: Draft is on the header");
+            Assert.That(pane.Commands.FindIndex(c => ResponseModel.IsResponseKey(c.IconKey)), Is.EqualTo(-1),
+                "the response came back to the header");
         }
 
         /// <summary>A press moves her round the three: Fight back, Defend, Flee, Fight back.</summary>

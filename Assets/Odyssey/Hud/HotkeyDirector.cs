@@ -123,6 +123,14 @@ namespace Odyssey.Hud
 
         /// <summary>Open or close the Assign tab (design 43 §6), on F4. Appended, so no stored binding shifts.</summary>
         AssignTab,
+
+        /// <summary>
+        /// Ride along with the one selected colonist, or leave the ride (design 57, design 61 §3), on
+        /// Z. <b>Not the mockup's V</b>, which is the cutaway cycle here; Z sits on the same row
+        /// beside it. Appended, so no stored binding shifts. Read by the ride itself while one runs,
+        /// since the ride holds every other game key.
+        /// </summary>
+        FirstPerson,
     }
 
     /// <summary>What came of offering a key to a listening slot.</summary>
@@ -206,6 +214,7 @@ namespace Odyssey.Hud
             (HotkeyAction.ToolCancel, HudKey.X, HudKey.None),
             (HotkeyAction.ToolGrowZone, HudKey.G, HudKey.None),
             (HotkeyAction.Draft,        HudKey.T, HudKey.None),
+            (HotkeyAction.FirstPerson,  HudKey.Z, HudKey.None),
 
             (HotkeyAction.BuildPalette,     HudKey.B,         HudKey.None),
             (HotkeyAction.DebugMenu,        HudKey.Backquote, HudKey.None),
@@ -423,6 +432,7 @@ namespace Odyssey.Hud
             HotkeyAction.ResearchTab => "ui.keys.research",
             HotkeyAction.AssignTab => "ui.keys.assign",
             HotkeyAction.WallsDown => "ui.keys.wallsdown",
+            HotkeyAction.FirstPerson => "ui.keys.firstperson",
             _ => KeysKey,
         };
 
