@@ -137,7 +137,10 @@ namespace Odyssey.Hud
 
             new Entry("ui.work.cleaning",     NotSimulated, NoSkill, "filth arrives with M5"),
             new Entry("ui.work.research",     NotSimulated, NoSkill, "research arrives with M7"),
-            new Entry("ui.work.crafting",     NotSimulated, NoSkill, "benches arrive with M5"),
+            // Live with the smelter (design 62 §9): the Craft giver works the bills at a crafting
+            // station, and Construction buys speed at it — there is no Crafting skill yet, and the
+            // column's borders say so by showing construction's.
+            new Entry("ui.work.crafting",     "crafting",     "construction", "", WorkHandle.Crafting),
             new Entry("ui.work.tailoring",    NotSimulated, NoSkill, "apparel arrives with M6"),
             new Entry("ui.work.fabrication",  NotSimulated, NoSkill, "advanced production arrives with M8"),
             new Entry("ui.work.art",          NotSimulated, NoSkill, "decoration arrives with M6"),

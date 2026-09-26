@@ -128,7 +128,12 @@ namespace Odyssey.Tests.Sim
         // Moved once, deliberately, 2026-09-26, U44 stairs (design 63): Building_Stair appended at handle
         // 14, edifice 24 — two cells, rotatable, not blocking, a clear cell, 8 stuff, 180 work, 160 hp,
         // no quality — in the XML and the code oracle together. Nothing else in the table moved.
-        const ulong BuildingFingerprint = 6762346294805219882UL;
+        // Moved once, deliberately, 2026-09-26, DM8 the smelter (design 62 §9): Building_Smelter appended
+        // at handle 15, edifice 25 (one cell, blocking, rotatable, a clear cell, 15 stuff, 300 work,
+        // 150 hp, 500 cover, a 75 hopper taking coal at 3 and wood at 1); BuildingDef gained
+        // hopperFuels, hopperCapacity and partAltItem, and the conduit's partAltItem is the copper
+        // bar (23). In the XML and the code oracle together.
+        const ulong BuildingFingerprint = 7084793364821783940UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone
@@ -139,8 +144,13 @@ namespace Odyssey.Tests.Sim
         /// stone, sharp against wood): <c>sharpDamagePerMille</c> and <c>bluntDamagePerMille</c>,
         /// wood 1,250 and 1,000, stone 500 and 1,250, the city's four and nothing at the default
         /// 1,000 — all INVENTED, in the XML and the code oracle together. Nothing else moved.</para>
+        ///
+        /// <para>Moved once, deliberately, 2026-09-26 (DM8, design 62 §9): steel became buildable
+        /// with the iron bar (item 22) as its item, and took a row of its own — work 1,400 per mille
+        /// and a 20-tick offset, hit points 2,000, sharp 400 and blunt 750, the key ui.res.steel.
+        /// Its conductance is unchanged. INVENTED, in the XML and the code oracle together.</para>
         /// </summary>
-        const ulong StuffFingerprint = 3846353424243238969UL;
+        const ulong StuffFingerprint = 1944195347692882933UL;
 
         /// <summary>
         /// The quality tiers as they stand: Poor 85, Normal 100, Decent 112, Uber 125, Epic 140

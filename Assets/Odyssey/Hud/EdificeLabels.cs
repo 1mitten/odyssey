@@ -39,6 +39,8 @@ namespace Odyssey.Hud
             "ui.arch.tool.sandbag",
             // The built stair (design 63), edifice 24: one record, two cells, the city's own key.
             "ui.arch.tool.stair",
+            // The smelter (design 62 §9), edifice 25.
+            "ui.arch.tool.smelter",
         };
 
         public static string IconKey(int edifice) =>

@@ -119,7 +119,16 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Prospect = 28;
 
-        public const int Count = 29;
+        /// <summary>
+        /// Work a bill at a crafting station (design 62 §9): fetch what the recipe takes into the
+        /// station, then work the batch into its products. The smelter is the first station; the
+        /// kitchen keeps its own job (<see cref="Cook"/>) because a pan of food is a different
+        /// thing from a list of ingredients. 29, after the prospect; above
+        /// <c>JobSystem.HashedAlways</c>, so its counters reach the hash only once one has run.
+        /// </summary>
+        public const int Craft = 29;
+
+        public const int Count = 30;
     }
 
     /// <summary>
@@ -178,7 +187,10 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Working the bills at a galley or a campfire (design 48 §5): the ui.work.cooking column.</summary>
         public const int Cooking = 7;
 
-        public const int Count = 8;
+        /// <summary>Working the bills at a crafting station: the smelter, today (design 62 §9).</summary>
+        public const int Crafting = 8;
+
+        public const int Count = 9;
 
         /// <summary>What a work type the simulation does not run answers to. Never sent.</summary>
         public const int None = -1;
@@ -301,7 +313,13 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Emberquartz: the deepest find, one oval cluster at a time. Stored.</summary>
         public const int Emberquartz = 21;
 
-        public const int Count = 22;
+        /// <summary>Smelted iron (design 62 §9): what steel is built of.</summary>
+        public const int IronBar = 22;
+
+        /// <summary>Smelted copper (design 62 §9): lays a power line in place of scrap metal.</summary>
+        public const int CopperBar = 23;
+
+        public const int Count = 24;
     }
 
     /// <summary>
@@ -313,7 +331,13 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Any raw food, 500 of it by nutrition, into one meal.</summary>
         public const int Meal = 0;
 
-        public const int Count = 1;
+        /// <summary>Iron ore into iron bars, at the smelter (design 62 §9).</summary>
+        public const int SmeltIron = 1;
+
+        /// <summary>Copper ore into copper bars, at the smelter.</summary>
+        public const int SmeltCopper = 2;
+
+        public const int Count = 3;
     }
 
     /// <summary>How a bill decides it is finished (design 48 §5, a-14's three modes).</summary>
@@ -579,7 +603,10 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Stair = 24;
 
-        public const int Count = 25;
+        /// <summary>The smelter (design 62 §9): a crafting station with a coal-or-wood hopper. See <c>CoreContent.EdificeSmelter</c>.</summary>
+        public const int Smelter = 25;
+
+        public const int Count = 26;
     }
 
     /// <summary>
@@ -680,7 +707,13 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Stair = 14;
 
-        public const int Count = 15;
+        /// <summary>
+        /// The smelter (design 62 §9): one cell, built of any material, with a hopper that takes
+        /// coal or wood; iron and copper ore go in by bill and bars come out. No power.
+        /// </summary>
+        public const int Smelter = 15;
+
+        public const int Count = 16;
     }
 
     /// <summary>

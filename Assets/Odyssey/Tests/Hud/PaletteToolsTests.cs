@@ -383,6 +383,8 @@ namespace Odyssey.Tests.Hud
                 // Cover (design 53 §4): sandbags are always stone and ask nothing.
                 // The stair (design 63): wood or stone, like the ladder.
                 PaletteTools.Stair,
+                // The smelter (design 62 §9): wood, stone or steel, like the galley.
+                PaletteTools.Smelter,
             };
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(tool.WantsMaterial, Is.EqualTo(System.Array.IndexOf(built, tool.Key) >= 0),

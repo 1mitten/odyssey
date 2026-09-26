@@ -113,7 +113,9 @@ namespace Odyssey.Tests.Sim
             Assert.That(EdificeHandle.Sandbags, Is.EqualTo(CoreContent.EdificeSandbags));
             // The built stair (design 63) after the sandbags.
             Assert.That(EdificeHandle.Stair, Is.EqualTo(CoreContent.EdificeStair));
-            Assert.That(EdificeHandle.Count, Is.EqualTo(CoreContent.EdificeStair + 1));
+            // The smelter (design 62 §9) after the stair.
+            Assert.That(EdificeHandle.Smelter, Is.EqualTo(CoreContent.EdificeSmelter));
+            Assert.That(EdificeHandle.Count, Is.EqualTo(CoreContent.EdificeSmelter + 1));
             Assert.That(EdificeHandle.TreeFruit, Is.EqualTo(NaturalContent.EdificeTreeFruit));
             Assert.That(EdificeHandle.TreeGiant, Is.EqualTo(NaturalContent.EdificeTreeGiant));
             Assert.That(EdificeHandle.Bush, Is.EqualTo(NaturalContent.EdificeBush));

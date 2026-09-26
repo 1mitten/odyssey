@@ -125,7 +125,10 @@ namespace Odyssey.Tests.Sim
             // And the built stair (design 63) after them.
             Assert.That(CoreContent.EdificeStair, Is.EqualTo(NaturalContent.EdificeLimit + 2));
             Assert.That(NaturalContent.IsNatural(CoreContent.EdificeStair), Is.False);
-            Assert.That(EdificeHandle.Count, Is.EqualTo(NaturalContent.EdificeLimit + 3));
+            // And the smelter (design 62 §9) after the stair.
+            Assert.That(CoreContent.EdificeSmelter, Is.EqualTo(NaturalContent.EdificeLimit + 3));
+            Assert.That(NaturalContent.IsNatural(CoreContent.EdificeSmelter), Is.False);
+            Assert.That(EdificeHandle.Count, Is.EqualTo(NaturalContent.EdificeLimit + 4));
         }
 
         // ---------------------------------------------------------------- species

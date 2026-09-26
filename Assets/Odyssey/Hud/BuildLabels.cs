@@ -34,21 +34,24 @@ namespace Odyssey.Hud
             "ui.arch.tool.sandbag",
             // The stair (design 63), BuildingHandle 14.
             "ui.arch.tool.stair",
+            // The smelter (design 62 §9), BuildingHandle 15.
+            "ui.arch.tool.smelter",
         };
 
         /// <summary>
         /// Parallel to <see cref="StuffHandle"/>: None, Concrete, Steel, Composite, Wood, Stone.
         ///
-        /// <para>The first four are blank on purpose. They are what the ruined city is <i>made
-        /// of</i>, not what a colony builds with — <c>ConstructionContent.IsBuildable</c> keeps them
-        /// off the menu, so none can ever reach a published site and none needs a name here. Two of
-        /// them do not even have registry keys: concrete was struck out with alloy and water
-        /// (owner, 2026-09-16) and steel never had one. Naming them would mean inventing content to
-        /// describe something the player cannot ask for.</para>
+        /// <para>Concrete and composite are blank on purpose. They are what the ruined city is
+        /// <i>made of</i>, not what a colony builds with — <c>ConstructionContent.IsBuildable</c>
+        /// keeps them off the menu, so neither can ever reach a published site and neither needs a
+        /// name here; concrete was struck out with alloy and water (owner, 2026-09-16). <b>Steel
+        /// has a name since the smelter</b> (design 62 §9): iron bars made it buildable, and its key
+        /// is a material's, <c>ui.res.steel</c>, because "wall of iron bar" is not what a player
+        /// calls a steel wall.</para>
         /// </summary>
         public static readonly string[] StuffKeys =
         {
-            "", "", "", "", "ui.res.wood", "ui.res.stone",
+            "", "", "ui.res.steel", "", "ui.res.wood", "ui.res.stone",
         };
 
         /// <summary>

@@ -35,8 +35,7 @@ namespace Odyssey.Sim.Pawns
 
             // The scrap metal is the nearest to the colonist whichever line she lays, so it is found
             // once: none anywhere reachable is no line anywhere, and the scan stops before it starts.
-            ColonyItem? load = DeliverWorkGiver.NearestLoad(
-                pawn, ctx, ConstructionContent.BuildingAt(BuildingHandle.Conduit).partItem);
+            ColonyItem? load = LineLoad(pawn, ctx);
             if (load == null) return false;
 
             int bestSite = -1, bestStand = -1, bestDistance = int.MaxValue;
@@ -72,10 +71,30 @@ namespace Odyssey.Sim.Pawns
             job.WorkTicks = bestStand;
             return true;
         }
+
+        /// <summary>
+        /// What a line is laid with: the nearer of the nearest scrap metal and the nearest copper
+        /// bar (design 62 §9, <see cref="BuildingDef.partAltItem"/>), scrap on a tie. A colony
+        /// with no copper bars asks exactly what it asked before there were any, and gets the
+        /// same answer.
+        /// </summary>
+        public static ColonyItem? LineLoad(Pawn pawn, PawnContext ctx)
+        {
+            BuildingDef conduit = ConstructionContent.BuildingAt(BuildingHandle.Conduit);
+            ColonyItem? scrap = DeliverWorkGiver.NearestLoad(pawn, ctx, conduit.partItem);
+            if (conduit.partAltItem < 0) return scrap;
+            ColonyItem? copper = DeliverWorkGiver.NearestLoad(pawn, ctx, conduit.partAltItem);
+            if (copper == null) return scrap;
+            if (scrap == null) return copper;
+            return ctx.Distance(pawn.Cell, ctx.WhereIs(copper)) < ctx.Distance(pawn.Cell, ctx.WhereIs(scrap))
+                ? copper : scrap;
+        }
     }
 
     /// <summary>
     /// Fetch the line's scrap metal, carry it to an ordered line, and work until the line is in.
+    /// Or a copper bar in its place (design 62 §9): the driver spends whatever it carried, and
+    /// the giver chose it (<see cref="LayConduitWorkGiver.LineLoad"/>).
     ///
     /// <para>Toils: walk to the scrap metal, take it up, carry it to the stance, work, settle. Whatever is
     /// left of the stack after the one piece the line takes is put down by <see cref="Cleanup"/>
@@ -317,18 +336,19 @@ namespace Odyssey.Sim.Pawns
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
             PowerGrid? power = ctx.Power;
-            if (power == null) return false;
+            Crafting.Workshop? shop = ctx.Workshop;
+            if (power == null && shop == null) return false;
 
-            var devices = power.Devices;
             var edifices = ctx.Construction?.Edifices.Records;
             if (edifices == null) return false;
 
             int best = -1, bestStand = -1, bestDistance = int.MaxValue;
             ColonyItem? bestLoad = null;
-            for (int i = 0; i < devices.Count; i++)
+            var devices = power?.Devices;
+            for (int i = 0; devices != null && i < devices.Count; i++)
             {
                 int edifice = devices[i].Edifice;
-                if (!power.NeedsRefuel(edifice)) continue;
+                if (!power!.NeedsRefuel(edifice)) continue;
                 if ((uint)edifice >= (uint)edifices.Count) continue;
 
                 int head = edifices[edifice].CellIndex;
@@ -346,6 +366,37 @@ namespace Odyssey.Sim.Pawns
                 int fuel = FuelItemOf(edifices[edifice].Def);
                 if (fuel < 0) continue;
                 ColonyItem? load = DeliverWorkGiver.NearestLoad(pawn, ctx, fuel);
+                if (load == null) continue;
+
+                bestDistance = distance;
+                best = head;
+                bestStand = stand;
+                bestLoad = load;
+            }
+
+            // A crafting station's hopper (design 62 §9), on the same terms and in the same race by
+            // distance: a smelter with a bill to work and its hopper below half. None exists in a
+            // colony that has never smelted, so the scan above answers exactly as it did before.
+            var stations = shop?.Stations;
+            for (int i = 0; stations != null && i < stations.Count; i++)
+            {
+                Crafting.CraftStation station = stations[i];
+                if (!shop!.NeedsRefuel(station)) continue;
+                if ((uint)station.Edifice >= (uint)edifices.Count) continue;
+
+                int head = edifices[station.Edifice].CellIndex;
+                if (ctx.Designations?.At(head) == Designations.DesignationKind.Deconstruct) continue;
+
+                int distance = ctx.Distance(pawn.Cell, head);
+                if (distance >= bestDistance) continue;
+
+                long key = ReservationManager.Key(ReservationTargetKind.Device, station.Edifice);
+                if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
+
+                int stand = StandToFeed(ctx, pawn, edifices[station.Edifice]);
+                if (stand < 0) continue;
+
+                ColonyItem? load = shop.FuelLoad(pawn, station);
                 if (load == null) continue;
 
                 bestDistance = distance;
@@ -383,16 +434,25 @@ namespace Odyssey.Sim.Pawns
     /// <summary>
     /// Fetch a stack of fuel, carry it to a generator, and tip in as much as it will take. What
     /// is left is put down beside it by <see cref="Cleanup"/>.
+    ///
+    /// <para><b>Or to a crafting station's hopper</b> (design 62 §9): the smelter's coal or wood.
+    /// The destination is a power building first — a generator is never a crafting station — and
+    /// the workshop's otherwise, so a generator's refuel runs exactly as it did before.</para>
     /// </summary>
     public class RefuelJobDriver : JobDriver
     {
         public override int WorkType => WorkTypeIndex.Haul;
 
+        /// <summary>The power building at the destination, or -1.</summary>
+        int GeneratorAt(PawnContext ctx) => ctx.Power?.EdificeAt(Job.DestCell) ?? -1;
+
+        /// <summary>The crafting station at the destination, or null. Asked only where no power building stands.</summary>
+        Crafting.CraftStation? HopperAt(PawnContext ctx) => ctx.Workshop?.AtCell(Job.DestCell);
+
         public override bool TryMakeReservations(PawnContext ctx)
         {
-            PowerGrid? power = ctx.Power;
-            if (power == null) return false;
-            int edifice = power.EdificeAt(Job.DestCell);
+            int edifice = GeneratorAt(ctx);
+            if (edifice < 0) edifice = HopperAt(ctx)?.Edifice ?? -1;
             if (edifice < 0) return false;
 
             var item = ctx.Items.Get(Job.TargetItem);
@@ -412,14 +472,24 @@ namespace Odyssey.Sim.Pawns
         public override JobStatus Tick(PawnContext ctx)
         {
             PowerGrid? power = ctx.Power;
-            if (power == null) return JobStatus.Failed;
+            Crafting.CraftStation? hopper = null;
 
             // The generator was taken down, or somebody else has filled it.
-            int edifice = power.EdificeAt(Job.DestCell);
-            if (edifice < 0 || power.RoomForFuel(edifice) <= 0) return JobStatus.Failed;
+            int edifice = GeneratorAt(ctx);
+            if (edifice >= 0)
+            {
+                if (power!.RoomForFuel(edifice) <= 0) return JobStatus.Failed;
+            }
+            else
+            {
+                hopper = HopperAt(ctx);
+                if (hopper == null) return JobStatus.Failed;
+            }
 
             var item = ctx.Items.Get(Job.TargetItem);
             if (item == null) return JobStatus.Failed;
+            // The same question of a hopper, which needs to know what is being carried to it.
+            if (hopper != null && ctx.Workshop!.RoomFor(hopper, item.DefIndex) <= 0) return JobStatus.Failed;
 
             switch (ToilIndex)
             {
@@ -446,7 +516,9 @@ namespace Odyssey.Sim.Pawns
                 default:
                 {
                     if (Job.CarriedItem < 0) return JobStatus.Failed;
-                    int put = power.AddFuel(edifice, item.Stack);
+                    int put = hopper != null
+                        ? ctx.Workshop!.AddFuel(hopper, item.DefIndex, item.Stack)
+                        : power!.AddFuel(edifice, item.Stack);
                     if (put <= 0) return JobStatus.Failed;
                     item.Stack -= put;
                     Pawn.BeginGesture(PawnGesture.Stow);

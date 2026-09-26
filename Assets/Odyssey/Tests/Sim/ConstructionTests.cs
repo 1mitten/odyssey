@@ -200,11 +200,12 @@ namespace Odyssey.Tests.Sim
         {
             Assert.That(ConstructionContent.IsBuildable(StuffHandle.Wood), Is.True);
             Assert.That(ConstructionContent.IsBuildable(StuffHandle.Stone), Is.True);
+            // Steel since the smelter gave it an item, the iron bar (design 62 §9).
+            Assert.That(ConstructionContent.IsBuildable(StuffHandle.Steel), Is.True);
 
-            // The three the generator stamps: nothing produces them and nobody can pick one up, so
-            // an order made of one could never be filled.
+            // The two the generator stamps that nothing produces and nobody can pick up, so an
+            // order made of one could never be filled.
             Assert.That(ConstructionContent.IsBuildable(StuffHandle.Concrete), Is.False);
-            Assert.That(ConstructionContent.IsBuildable(StuffHandle.Steel), Is.False);
             Assert.That(ConstructionContent.IsBuildable(StuffHandle.Composite), Is.False);
             Assert.That(ConstructionContent.IsBuildable(StuffHandle.None), Is.False);
         }

@@ -216,6 +216,9 @@ namespace Odyssey.Sim.Pawns
                 // no format bump. A save from before has no section and loads with none kept —
                 // which is what a cancel then left.
                 designations.PartMined,
+                // The crafting stations (design 62 §9): the smelter's bills, batch and hopper.
+                // Appended, no format bump; a save from before has no section and loads with none.
+                pawns.Workshop!,
             };
         }
 

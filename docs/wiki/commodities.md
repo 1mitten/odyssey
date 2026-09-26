@@ -2,11 +2,11 @@
 
 What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the ore classes a wilderness colony sim would have, because the setting is a dead city and the ground is already full of manufactured things. These names appear in the resource ledger, in every bill and in every trade, so they are the names worth arguing about first.
 
-58 entries, 13 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+61 entries, 16 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
-| **Scrap metal** | `ui.res.scrap` | Salvaged metal. Power lines and machines are built from it | sheet 04 (manufactured), med | M1 |
+| **Scrap metal** | `ui.res.scrap` | Salvaged metal. Power lines and machines are built from it; a copper bar lays a line as well | sheet 04 (manufactured), med | M1 |
 | **Rubble** | `ui.res.rubble` | Broken concrete and masonry. Cleared, not mined | sheet 01 (raw materials), high | M1 |
 | **Girder** | `ui.res.girder` | Structural steel cut from a shell. Heavy, valuable | sheet 04 (manufactured), med | M1 |
 | **Hull panel** | `ui.res.panel` | Flat salvaged plating. The cheapest wall material | sheet 04 (manufactured), high | M1 |
@@ -38,9 +38,12 @@ What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the o
 | **Produce** | `ui.res.produce` | Grown food, uncooked | sheet 02 (food), high | M1 |
 | **Wood** | `ui.res.wood` | Felled timber. The first thing the colony builds with <br>**Needs:** a short stack of logs, cut ends showing | no art | M3 |
 | **Stone** | `ui.res.stone` | Broken rock from a mined face. Heavy, and there is always more <br>**Needs:** a few angular grey rocks with fresh broken faces | no art | M3 |
-| **Iron ore** | `ui.res.ironore` | Raw ore. Worthless until something smelts it <br>**Needs:** dark rock flecked with rust-orange | no art | M3 |
+| **Iron ore** | `ui.res.ironore` | Raw ore. A smelter makes it into iron bars <br>**Needs:** dark rock flecked with rust-orange | no art | M3 |
 | **Coal** | `ui.res.coal` | Burns hot. Found deeper than iron, and for that reason <br>**Needs:** glossy black lumps | no art | M3 |
 | **Copper ore** | `ui.res.copperore` | Raw ore. The commonest find in the first few layers down <br>**Needs:** rock flecked with green and a coppery sheen | no art | M3 |
+| **Iron bar** | `ui.res.ironbar` | Smelted iron. What steel is built of: walls, doors and floors that stand longest <br>**Needs:** a dull grey ingot, stepped at the ends | no art | DM |
+| **Copper bar** | `ui.res.copperbar` | Smelted copper. Lays a power line in place of scrap metal <br>**Needs:** a reddish-orange ingot, stepped at the ends | no art | DM |
+| **Steel** | `ui.res.steel` | Iron bars, as a building material. Slower to put up than wood, and twice as hard to knock down <br>**Needs:** a grey girder section, in plan. Our own concept | no art | DM |
 | **Gold ore** | `ui.res.goldore` | Small clusters deep down, most often in deep stone or on a cave wall. Stored; nothing uses it yet <br>**Needs:** pale rock threaded with gold | no art | M3 |
 | **Gems** | `ui.res.gems` | A few stones at a time, often on a cave wall. Stored; nothing uses them yet <br>**Needs:** two or three rough coloured stones | no art | M3 |
 | **Emberquartz** | `ui.res.emberquartz` | The deepest find, and it glows once a face exposes it. Stored; nothing uses it yet <br>**Needs:** a warm orange crystal glowing from within. Our own concept | no art | M3 |

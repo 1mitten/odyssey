@@ -31,6 +31,9 @@ namespace Odyssey.Hud
         /// <summary>What it makes, in the registry's words.</summary>
         public string Recipe = string.Empty;
 
+        /// <summary>What it makes, as a <see cref="Odyssey.Sim.Contracts.RecipeHandle"/> value.</summary>
+        public int RecipeHandle;
+
         /// <summary>The storage category of what it makes, for the hue under its tile (<see cref="HudTheme.ItemCategoryHues"/>).</summary>
         public int ProductCategory;
 
@@ -87,12 +90,40 @@ namespace Odyssey.Hud
         /// </summary>
         public readonly string NeedsKey;
 
-        public BillStation(int edifice, bool needsPower, int defaultRecipe, string needsKey)
+        /// <summary>
+        /// Everything it can be told to make, <see cref="RecipeHandle"/> values, the default first.
+        /// One entry for a cooker; the smelter's two (design 62 §9) are why a row's recipe can be
+        /// changed with a press (<see cref="BillsModel.PressRecipe"/>).
+        /// </summary>
+        public readonly int[] Recipes;
+
+        /// <summary>
+        /// A station that burns fuel from a hopper (design 62 §9): the supply line carries the
+        /// fuel as well as the stock, and the status strip says <i>No fuel</i> when the hopper
+        /// cannot pay for the next batch, as a cooker's says <i>No power</i>.
+        /// </summary>
+        public readonly bool Burns;
+
+        /// <summary>The registry keys of the supply line: what the stock would make, and that there is none.</summary>
+        public readonly string SupplyKey, NoSupplyKey;
+
+        /// <summary>What to do about an empty supply line, as its tooltip says.</summary>
+        public readonly string SupplyHint;
+
+        public BillStation(int edifice, bool needsPower, int defaultRecipe, string needsKey,
+            int[]? recipes = null, bool burns = false, string supplyKey = "ui.bill.supply",
+            string noSupplyKey = "ui.bill.nosupply",
+            string supplyHint = "Grow carrots, or use the debug menu's Give carrots")
         {
             Edifice = edifice;
             NeedsPower = needsPower;
             DefaultRecipe = defaultRecipe;
             NeedsKey = needsKey;
+            Recipes = recipes ?? new[] { defaultRecipe };
+            Burns = burns;
+            SupplyKey = supplyKey;
+            NoSupplyKey = noSupplyKey;
+            SupplyHint = supplyHint;
         }
     }
 
@@ -122,13 +153,19 @@ namespace Odyssey.Hud
         {
             new BillStation(EdificeHandle.Galley, needsPower: true, RecipeHandle.Meal, "ui.bill.needs"),
             new BillStation(EdificeHandle.Campfire, needsPower: false, RecipeHandle.Meal, "ui.bill.needs.fire"),
+            // The smelter (design 62 §9): the first crafting station, a row here as design 49 §2
+            // said a bench would be. Two recipes, a hopper, no power.
+            new BillStation(EdificeHandle.Smelter, needsPower: false, RecipeHandle.SmeltIron, "ui.bill.needs.smelter",
+                recipes: new[] { RecipeHandle.SmeltIron, RecipeHandle.SmeltCopper }, burns: true,
+                supplyKey: "ui.bill.supply.ore", noSupplyKey: "ui.bill.noore",
+                supplyHint: "Mine iron or copper ore, and keep coal or wood where a hauler can reach it"),
         };
 
         /// <summary>The recipes' names, in <see cref="RecipeHandle"/> order.</summary>
-        public static readonly string[] RecipeKeys = { "ui.recipe.meal" };
+        public static readonly string[] RecipeKeys = { "ui.recipe.meal", "ui.recipe.smelt.iron", "ui.recipe.smelt.copper" };
 
-        /// <summary>What each recipe makes, as a storage category (0 is food), in <see cref="RecipeHandle"/> order.</summary>
-        public static readonly int[] RecipeCategories = { 0 };
+        /// <summary>What each recipe makes, as a storage category (0 is food, 2 materials), in <see cref="RecipeHandle"/> order.</summary>
+        public static readonly int[] RecipeCategories = { 0, (int)ItemCategory.Materials, (int)ItemCategory.Materials };
 
         /// <summary>The modes' names, in <see cref="BillModeHandle"/> order.</summary>
         public static readonly string[] ModeKeys = { "ui.bill.mode.until", "ui.bill.mode.times", "ui.bill.mode.forever" };
@@ -158,6 +195,16 @@ namespace Odyssey.Hud
         public CellRef Cell { get; private set; }
 
         int _defaultRecipe;
+        int[] _recipes = Array.Empty<int>();
+
+        /// <summary>This kind of station burns fuel from a hopper (design 62 §9).</summary>
+        public bool Burns { get; private set; }
+
+        /// <summary>A row's recipe can be changed with a press: the station makes more than one thing.</summary>
+        public bool CanChangeRecipe => Showing && _recipes.Length > 1;
+
+        /// <summary>What to do about an empty supply line: the supply line's tooltip.</summary>
+        public string SupplyHint { get; private set; } = string.Empty;
 
         /// <summary>What one product takes here (design 48 §14): raw food, and a campfire's wood.</summary>
         public string Needs { get; private set; } = string.Empty;
@@ -174,11 +221,15 @@ namespace Odyssey.Hud
         /// <summary>One more bill would be refused: the list is full.</summary>
         public bool Full => Rows.Count >= MaxRows;
 
-        /// <summary>The status strip is up: a station that needs power and has none.</summary>
-        public bool HasProblem => Showing && NeedsPower && !Ready;
+        /// <summary>
+        /// The status strip is up: a station that needs power and has none, or one that burns fuel
+        /// and cannot pay for its next batch (design 62 §9).
+        /// </summary>
+        public bool HasProblem => Showing && (NeedsPower || Burns) && !Ready;
 
         /// <summary>The strip's one word (no explanation under it: the switch beside it is the explanation).</summary>
-        public string ProblemLabel => HasProblem ? Registry.Label("ui.bill.unpowered") : string.Empty;
+        public string ProblemLabel => !HasProblem ? string.Empty
+            : Registry.Label(Burns ? "ui.bill.nofuel" : "ui.bill.unpowered");
 
         /// <summary>The switch's words: what pressing it will do.</summary>
         public string SwitchLabel => Registry.Label(SwitchOn ? "ui.command.switchoff" : "ui.command.switchon");
@@ -214,7 +265,10 @@ namespace Odyssey.Hud
             Cell = cell;
             Showing = TryStation(edifice, out BillStation kind);
             NeedsPower = kind.NeedsPower;
+            Burns = kind.Burns;
             _defaultRecipe = kind.DefaultRecipe;
+            _recipes = kind.Recipes ?? Array.Empty<int>();
+            SupplyHint = kind.SupplyHint ?? string.Empty;
             Ready = true;
             HasSwitch = false;
             SwitchOn = false;
@@ -235,28 +289,40 @@ namespace Odyssey.Hud
                 if (stations[s].CellIndex != cellIndex) continue;
                 StationView station = stations[s];
                 Ready = station.Ready;
-                NoSupply = station.RawMeals <= 0;
-                Supply = NoSupply ? Registry.Label("ui.bill.nosupply")
-                    : Registry.Label("ui.bill.supply").Replace("{n}", station.RawMeals.ToString(CultureInfo.InvariantCulture));
+                bool noStock = station.RawMeals <= 0;
+                Supply = noStock ? Registry.Label(kind.NoSupplyKey)
+                    : Registry.Label(kind.SupplyKey).Replace("{n}", station.RawMeals.ToString(CultureInfo.InvariantCulture));
+                NoSupply = noStock;
+
+                // A hopper's fuel rides on the same line (design 62 §9): "Ore for 3 batches · Fuel for 12".
+                if (Burns && station.FuelBatches >= 0)
+                {
+                    bool noFuel = station.FuelBatches == 0;
+                    Supply += " · " + (noFuel ? Registry.Label("ui.bill.hopperempty")
+                        : Registry.Label("ui.bill.fuel").Replace("{n}", station.FuelBatches.ToString(CultureInfo.InvariantCulture)));
+                    NoSupply = noStock || noFuel;
+                }
 
                 ReadOnlySpan<BillView> bills = snapshot.Bills;
+                string waiting = Burns ? "ui.bill.waitingfuel" : "ui.bill.waiting";
                 for (int b = 0; b < station.BillCount; b++)
                 {
                     int at = station.FirstBill + b;
                     if ((uint)at >= (uint)bills.Length) break;
-                    Rows.Add(RowFor(bills[at], b, station.BillCount, NeedsPower && !Ready));
+                    Rows.Add(RowFor(bills[at], b, station.BillCount, (NeedsPower || Burns) && !Ready, waiting));
                 }
                 return;
             }
         }
 
-        static BillRow RowFor(in BillView bill, int index, int count, bool unpowered)
+        static BillRow RowFor(in BillView bill, int index, int count, bool unpowered, string waitingKey = "ui.bill.waiting")
         {
             var row = new BillRow
             {
                 Index = index,
                 Number = (index + 1).ToString(CultureInfo.InvariantCulture),
                 Recipe = (uint)bill.Recipe < (uint)RecipeKeys.Length ? Registry.Label(RecipeKeys[bill.Recipe]) : string.Empty,
+                RecipeHandle = bill.Recipe,
                 ProductCategory = (uint)bill.Recipe < (uint)RecipeCategories.Length ? RecipeCategories[bill.Recipe] : -1,
                 Mode = bill.Mode,
                 ModeLabel = bill.Mode < ModeKeys.Length ? Registry.Label(ModeKeys[bill.Mode]) : string.Empty,
@@ -282,9 +348,10 @@ namespace Odyssey.Hud
             }
 
             // Power first: a paused bill at a dark cooker is still waiting for power when it is resumed.
+            // A smelter's hopper stands where the power does (design 62 §9): "Waiting for fuel".
             if (unpowered)
             {
-                row.State = Registry.Label("ui.bill.waiting");
+                row.State = Registry.Label(waitingKey);
                 row.Tone = BillTone.Warn;
             }
             else if (bill.Suspended)
@@ -313,11 +380,46 @@ namespace Odyssey.Hud
 
         Intent Edit(int op, int b = 0, int c = 0) => new Intent(IntentKind.EditBill, Cell, op, b, c);
 
-        /// <summary>Add a bill for the station's recipe at the bottom of the list, or nothing when the list is full.</summary>
+        /// <summary>
+        /// Add a bill at the bottom of the list, or nothing when the list is full. For a station
+        /// that makes one thing, that thing; for one that makes several (design 62 §9), the one the
+        /// list holds fewest bills for, the first on a tie — so the smelter's first press adds
+        /// iron and its second copper, and neither needs a menu.
+        /// </summary>
         public bool PressAdd(out Intent command)
         {
-            command = Edit(BillEdit.Add, _defaultRecipe);
+            command = Edit(BillEdit.Add, NextRecipeToAdd());
             return Showing && !Full;
+        }
+
+        int NextRecipeToAdd()
+        {
+            if (_recipes.Length <= 1) return _defaultRecipe;
+            int best = _recipes[0], bestCount = int.MaxValue;
+            for (int r = 0; r < _recipes.Length; r++)
+            {
+                int count = 0;
+                for (int i = 0; i < Rows.Count; i++)
+                    if (Rows[i].RecipeHandle == _recipes[r]) count++;
+                if (count < bestCount)
+                {
+                    bestCount = count;
+                    best = _recipes[r];
+                }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// The row's next recipe round (design 62 §9): iron, copper, and back. Refused at a station
+        /// that makes one thing. The bill keeps its mode and target; its count starts again.
+        /// </summary>
+        public bool PressRecipe(BillRow row, out Intent command)
+        {
+            int at = Array.IndexOf(_recipes, row.RecipeHandle);
+            int next = _recipes.Length == 0 ? row.RecipeHandle : _recipes[(at + 1) % _recipes.Length];
+            command = Edit(BillEdit.SetRecipe, row.Index, next);
+            return CanChangeRecipe && next != row.RecipeHandle;
         }
 
         /// <summary>The next mode round: until you have, make, forever, and back.</summary>

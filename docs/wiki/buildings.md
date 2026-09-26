@@ -2,7 +2,7 @@
 
 Everything on the architect menu: what can be built, and the one-off orders that can be given to things that already exist. The vertical connectors matter more here than in a flat colony sim, because a stair occupies two cells and a ladder one.
 
-85 entries, 26 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+86 entries, 27 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Architect categories
 
@@ -62,6 +62,7 @@ Everything on the architect menu: what can be built, and the one-off orders that
 | **Reactor** | `ui.arch.tool.reactor` | Late, enormous, dangerous | sheet 08 (salvage gear), med | M3 |
 | **Fabricator** | `ui.arch.tool.fabricator` | Makes refined materials and components | sheet 06 (action tiles), med | M3 |
 | **Electric Cooker** | `ui.arch.tool.galley` | Cooks meals from bills. Needs power | sheet 03 (camp and crafting), high | M3 |
+| **Smelter** | `ui.arch.tool.smelter` | Smelts iron and copper ore into bars from bills. Burns coal or wood, coal the better <br>**Needs:** a squat brick furnace with a glowing mouth | no art | DM |
 | **Reclaimer** | `ui.arch.tool.reclaimer` | Sorts scrap into usable material <br>**Needs:** a machine that sorts scrap. Our own invention | no art | M3 |
 | **Hydroponics basin** | `ui.arch.tool.hydroponics` | Grows without soil, needs power <br>**Needs:** a hydroponic basin. Central to food in a ruined city | no art | M3 |
 | **Crafting bench** | `ui.arch.tool.bench` | General making | sheet 03 (camp and crafting), high | M3 |

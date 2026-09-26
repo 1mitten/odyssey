@@ -160,6 +160,17 @@ namespace Odyssey.Sim.Construction
         /// <summary>Does this thing take a second, fixed payment besides its material?</summary>
         public bool HasParts => partItem >= 0 && partCount > 0;
 
+        /// <summary>
+        /// An item accepted <b>in place of</b> <see cref="partItem"/>, unit for unit, or -1 (design
+        /// 62 §9): a copper bar lays a power line where a scrap metal would. <b>Honoured by the line
+        /// layer only</b> — a power line is all part and is laid by one colonist carrying one unit,
+        /// so which item paid is never banked anywhere. A building site banks its parts by count
+        /// and gives back <see cref="partItem"/> on a cancel, so nothing but the conduit carries
+        /// one; <c>ConstructionContentDefTests</c> holds it there. Taking a line up gives back
+        /// scrap metal whichever paid, because the line does not remember.
+        /// </summary>
+        public int partAltItem = -1;
+
         /// <summary>Watts this makes while it runs, or 0 for anything that is not a generator (design 32 §5).</summary>
         public int powerOutputW;
 
@@ -180,6 +191,31 @@ namespace Odyssey.Sim.Construction
 
         /// <summary>Does a power net care about this — does it make power or spend it?</summary>
         public bool IsPowered => powerOutputW > 0 || powerDrawW > 0;
+
+        /// <summary>
+        /// What a <b>hopper</b> on this thing takes, and what each unit is worth (design 62 §9): the
+        /// smelter's coal at 3 and wood at 1, in that order, which is also the order a hauler
+        /// looks for them in. Empty for everything without one. <b>A different thing from
+        /// <see cref="fuelItem"/></b>, which is the generator's one fuel burnt by load and owned by
+        /// the power grid; this is burnt by the batch, by the recipe's
+        /// <c>RecipeStation.fuelPerBatch</c>, and owned by the workshop. The worth is said once,
+        /// here, so "coal is the better fuel" is one number.
+        /// </summary>
+        public List<HopperFuel> hopperFuels = new List<HopperFuel>();
+
+        /// <summary>How much the hopper holds, in the worth units of <see cref="hopperFuels"/>. Nought for none.</summary>
+        public int hopperCapacity;
+
+        /// <summary>Does this thing have a hopper a hauler keeps fed (design 62 §9)?</summary>
+        public bool HasHopper => hopperCapacity > 0 && hopperFuels.Count > 0;
+
+        /// <summary>What one unit of this item is worth in this thing's hopper, or 0 where it takes none.</summary>
+        public int HopperWorth(int item)
+        {
+            for (int i = 0; i < hopperFuels.Count; i++)
+                if (hopperFuels[i].item == item) return hopperFuels[i].worth;
+            return 0;
+        }
         /// How much warmer the thing's <b>own cell</b> is than the air around it, in
         /// centi-degrees (design 36). Zero for everything that is not a heat source.
         ///
@@ -255,6 +291,16 @@ namespace Odyssey.Sim.Construction
         /// named, so the palette need not offer a material at all.
         /// </summary>
         public int fixedStuff;
+    }
+
+    /// <summary>One fuel a hopper takes, and what a unit of it is worth there (design 62 §9).</summary>
+    public class HopperFuel
+    {
+        /// <summary>An <see cref="ItemHandle"/> value.</summary>
+        public int item = -1;
+
+        /// <summary>What one unit is worth, in the hopper's own units: the smelter's coal 3, wood 1.</summary>
+        public int worth = 1;
     }
 
     /// <summary>
@@ -371,12 +417,12 @@ namespace Odyssey.Sim.Construction
         /// <summary>
         /// Whether this material may be built with at all.
         ///
-        /// <para>Concrete, steel and composite are what the ruined city is <i>made of</i>, not what
-        /// a colony builds with: nothing produces them, no colonist can carry one, and offering
-        /// them would be offering an order that can never be filled. They keep their stuff indices,
-        /// because every stamped wall in the city carries one; they are simply not on the menu. A
-        /// salvage line that turns rubble into steel is what would give one an item and put it
-        /// there, and it would need no other change.</para>
+        /// <para>Concrete and composite are what the ruined city is <i>made of</i>, not what a
+        /// colony builds with: nothing produces them, no colonist can carry one, and offering them
+        /// would be offering an order that can never be filled. They keep their stuff indices,
+        /// because every stamped wall in the city carries one; they are simply not on the menu.
+        /// <b>Steel was the third until the smelter</b> (design 62 §9) gave it an item, the iron
+        /// bar — and, as this comment had promised, that needed no other change here.</para>
         /// </summary>
         /// <summary>
         /// Is this slab kind one the colony laid, rather than one the generator stamped?
@@ -516,6 +562,8 @@ namespace Odyssey.Sim.Construction
             "Building_Sandbags",
             // The stair (design 63), BuildingHandle 14: the way up a hauler can use.
             "Building_Stair",
+            // The smelter (design 62 §9), BuildingHandle 15.
+            "Building_Smelter",
         };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
@@ -660,6 +708,8 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Conduit", label = "conduit", edifice = CoreContent.EdificeNone,
                     conduit = true, blocking = false, costCount = 0,
                     partItem = ItemHandle.Salvage, partCount = 1, workToBuild = 40, minSkill = 0,
+                    // A copper bar in place of the scrap metal (design 62 §9).
+                    partAltItem = ItemHandle.CopperBar,
                     iconKey = "ui.arch.tool.conduit", maxHitPoints = 40,
                 },
 
@@ -730,6 +780,27 @@ namespace Odyssey.Sim.Construction
                     costCount = 8, workToBuild = 180, minSkill = 0,
                     iconKey = "ui.arch.tool.stair", maxHitPoints = 160,
                 },
+
+                // The smelter (design 62 §9): iron and copper ore into bars by bill, on coal or
+                // wood from a hopper a hauler keeps fed. One cell, blocking, rotating (it is worked
+                // from the front, as the galley is), wanting a clear cell; no power and no parts, so
+                // a colony can build one before it has either. The galley's 15 stuff and its 300
+                // ticks. Coal is worth three wood in the hopper; 75 is one stack of wood, or 25
+                // coal. It gives off no heat yet — a burning smelter warming its room is a recorded
+                // hook. INVENTED.
+                new BuildingDef
+                {
+                    defName = "Building_Smelter", label = "smelter", edifice = CoreContent.EdificeSmelter,
+                    blocking = true, rotates = true, needsClearCell = true,
+                    hopperCapacity = 75,
+                    hopperFuels = new List<HopperFuel>
+                    {
+                        new HopperFuel { item = ItemHandle.Coal, worth = 3 },
+                        new HopperFuel { item = ItemHandle.Wood, worth = 1 },
+                    },
+                    costCount = 15, workToBuild = 300, minSkill = 0,
+                    iconKey = "ui.arch.tool.smelter", maxHitPoints = 150, coverPerMille = 500,
+                },
             };
         }
 
@@ -739,7 +810,19 @@ namespace Odyssey.Sim.Construction
             {
                 new StuffDef { defName = "Stuff_None", label = "nothing", stuff = CoreContent.StuffNone },
                 new StuffDef { defName = "Stuff_Concrete", label = "concrete", stuff = CoreContent.StuffConcrete, thermalConductancePerMille = 1100 },
-                new StuffDef { defName = "Stuff_Steel", label = "steel", stuff = CoreContent.StuffSteel, thermalConductancePerMille = 1400 },
+                // Steel (design 62 §9): the ruined city's material, buildable since the smelter gave
+                // it an item — the iron bar — which is the whole of what IsBuildable asks. The rest
+                // of its row is the colony's: slower to fit than wood, quicker than stone, and twice
+                // a wooden wall's punishment; an edge barely marks it and a club does less than it
+                // does to stone. INVENTED. The conductance is the city's own, unchanged.
+                new StuffDef
+                {
+                    defName = "Stuff_Steel", label = "steel", stuff = CoreContent.StuffSteel,
+                    item = ItemHandle.IronBar, workFactorPerMille = 1400, workOffsetTicks = 20,
+                    hitPointsFactorPerMille = 2000, iconKey = "ui.res.steel",
+                    thermalConductancePerMille = 1400,
+                    sharpDamagePerMille = 400, bluntDamagePerMille = 750,
+                },
                 new StuffDef { defName = "Stuff_Composite", label = "composite", stuff = CoreContent.StuffComposite, thermalConductancePerMille = 800 },
 
                 // Wood carries no offset: nailing and lashing a plank into place has no separate

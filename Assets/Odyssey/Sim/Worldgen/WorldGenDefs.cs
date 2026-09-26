@@ -438,6 +438,9 @@ namespace Odyssey.Sim.Worldgen
         /// </summary>
         public const ushort EdificeStair = 24;
 
+        /// <summary>The smelter (design 62 §9): a crafting station with a coal-or-wood hopper. 25, after the stair.</summary>
+        public const ushort EdificeSmelter = 25;
+
         /// <summary>
         /// The city's ten, which are the first ten of the one table. Loaded from
         /// <c>Defs/Core/World/Terrain.xml</c> like everything else: this class used to build them

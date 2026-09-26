@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-65 entries, 47 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+66 entries, 48 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -58,7 +58,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Sowing** | `ui.status.sowing` | Breaking ground and planting a zone cell | no art | M3 |
 | **Harvesting** | `ui.status.harvesting` | Cutting a ripe crop and gathering it | no art | M3 |
 | **Picking** | `ui.status.foraging` | Picking the berries off a wild bush <br>**Needs:** a hand picking a berry | no art | M3 |
-| **Refuelling** | `ui.status.refuelling` | Carrying fuel to a generator and filling it | no art | M3 |
+| **Refuelling** | `ui.status.refuelling` | Carrying fuel to a generator or a smelter and filling it | no art | M3 |
 | **Sleeping** | `ui.status.sleeping` | Asleep, and should stay that way | sheet 08 (salvage gear), high | M2 |
 | **Eating** | `ui.status.eating` | Taking a meal | sheet 02 (food), high | M2 |
 | **Idle** | `ui.status.idle` | Nothing to do. Usually a priorities problem | sheet 06 (action tiles), med | M2 |
@@ -78,6 +78,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Treating** | `ui.status.treating` | Tending the hurt, or herself <br>**Needs:** hands dressing a wound. Blocked on the missing human figure | no art | M3 |
 | **Resting as a patient** | `ui.status.patient` | In bed until the wound allows getting up <br>**Needs:** a figure lying in bed. Blocked on the missing human figure | no art | M3 |
 | **Cooking** | `ui.status.cooking` | At an electric cooker or a campfire, or fetching food for the pan <br>**Needs:** a figure stirring a pan. Blocked on the missing human figure | no art | M3 |
+| **Crafting** | `ui.status.crafting` | At a smelter, or fetching ore for it <br>**Needs:** a figure at a furnace mouth. Blocked on the missing human figure | no art | DM |
 | **Sheltering** | `ui.status.sheltering` | An animal waiting out the rain under a roof or a tree, or walking to one | no art | WE |
 | **In the rain** | `ui.status.inrain` | A colonist under open sky while it rains, and walking slower for it. Said beside her pace | no art | WE |
 | **Shooting** | `ui.status.shooting` | Standing where the line is open and firing at a target | no art | RC |

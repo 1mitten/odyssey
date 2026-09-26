@@ -336,7 +336,13 @@ namespace Odyssey.Tests.Sim
         // Mining at 55 a tick, revealRadius 3 and bands 6/12/18), and JobDef gained revealRadius and
         // revealRadiusBands, nought and empty on every other job. Taken from a freshly loaded pack.
         // Both merged, 2026-09-26: re-taken from the merged pack.
-        const ulong ContentFingerprint = 818070778475891789UL;
+        // 2026-09-26, the smelter (design 62 §9, DM8): Job_Craft appended at 29, Work_Crafting at 8
+        // (order 5, on Construction's curve; hauling, rescue and doctor one rank down), Item_IronBar
+        // and Item_CopperBar at 22 and 23, Recipe_SmeltIron and Recipe_SmeltCopper at 1 and 2 (ten
+        // ore into five bars, 450 ticks, fuelPerBatch 3 at the smelter); RecipeDef gained ingredients
+        // and products, RecipeStation fuelPerBatch, empty and nought on the meal. Taken from a freshly
+        // loaded pack.
+        const ulong ContentFingerprint = 7180944426631285374UL;
 
 
         [Test]

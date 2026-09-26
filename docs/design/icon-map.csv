@@ -34,6 +34,9 @@ ui.res.stone,-,,,"a few angular grey rocks with fresh broken faces",-,gap
 ui.res.ironore,-,,,"dark rock flecked with rust-orange",-,gap
 ui.res.coal,-,,,"glossy black lumps",-,gap
 ui.res.copperore,-,,,"rock flecked with green and a coppery sheen",-,gap
+ui.res.ironbar,-,,,"a dull grey ingot, stepped at the ends",-,gap
+ui.res.copperbar,-,,,"a reddish-orange ingot, stepped at the ends",-,gap
+ui.res.steel,-,,,"a grey girder section, in plan. Our own concept",-,gap
 ui.res.goldore,-,,,"pale rock threaded with gold",-,gap
 ui.res.gems,-,,,"two or three rough coloured stones",-,gap
 ui.res.emberquartz,-,,,"a warm orange crystal glowing from within. Our own concept",-,gap
@@ -127,6 +130,7 @@ ui.work.rescue,-,,,carrying a casualty. Blocked on the missing human figure,-,ga
 ui.status.treating,-,,,"hands dressing a wound. Blocked on the missing human figure",-,gap
 ui.status.patient,-,,,"a figure lying in bed. Blocked on the missing human figure",-,gap
 ui.status.cooking,-,,,"a figure stirring a pan. Blocked on the missing human figure",-,gap
+ui.status.crafting,-,,,"a figure at a furnace mouth. Blocked on the missing human figure",-,gap
 ui.health.brain,07,,,brain,high,mapped
 ui.health.head,07,,,skull,high,shared
 ui.health.eye,07,,,eyeball,high,mapped
@@ -233,6 +237,7 @@ ui.arch.tool.switch,-,,,a power switch or breaker,-,gap
 ui.arch.tool.reactor,08,,,radiation canister,med,mapped
 ui.arch.tool.fabricator,06,,,gears tile,med,shared
 ui.arch.tool.galley,03,,,cauldron over a fire,high,mapped
+ui.arch.tool.smelter,-,,,"a squat brick furnace with a glowing mouth",-,gap
 ui.arch.tool.reclaimer,-,,,a machine that sorts scrap. Our own invention,-,gap
 ui.arch.tool.hydroponics,-,,,a hydroponic basin. Central to food in a ruined city,-,gap
 ui.arch.tool.bench,03,,,workbench,high,mapped
@@ -461,6 +466,8 @@ ui.res.category.weapons,-,,,"a knife crossed over a rifle barrel",-,gap
 ui.tab.storage,-,,,"an open crate seen from above",-,gap
 ui.tab.tile,-,,,"a single square of ground, in plan",-,gap
 ui.recipe.meal,-,,,"a pan with food in it. Our own concept",-,gap
+ui.recipe.smelt.iron,-,,,"a grey ingot over a flame. Our own concept",-,gap
+ui.recipe.smelt.copper,-,,,"an orange ingot over a flame. Our own concept",-,gap
 ui.bill.heading,-,,,"a list of orders pinned up. Our own concept",-,gap
 ui.bill.add,-,,,"a plus. Interface furniture drawn as a HudGlyph",-,gap
 ui.bill.none,-,,,"an empty list. Interface words, no icon wanted",-,gap
@@ -475,3 +482,10 @@ ui.bill.needs,-,,,"Interface words, no icon wanted",-,gap
 ui.bill.needs.fire,-,,,"Interface words, no icon wanted",-,gap
 ui.bill.supply,-,,,"Interface words, no icon wanted",-,gap
 ui.bill.nosupply,-,,,"an empty basket. Our own concept",-,gap
+ui.bill.needs.smelter,-,,,"Interface words, no icon wanted",-,gap
+ui.bill.supply.ore,-,,,"Interface words, no icon wanted",-,gap
+ui.bill.noore,-,,,"an empty ore cart. Our own concept",-,gap
+ui.bill.fuel,-,,,"Interface words, no icon wanted",-,gap
+ui.bill.hopperempty,-,,,"Interface words, no icon wanted",-,gap
+ui.bill.nofuel,-,,,"a cold grate. Our own concept",-,gap
+ui.bill.waitingfuel,-,,,"Interface words, no icon wanted",-,gap
