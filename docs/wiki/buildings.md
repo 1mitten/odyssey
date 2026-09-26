@@ -84,7 +84,7 @@ Everything on the architect menu: what can be built, and the one-off orders that
 | **Trap** | `ui.arch.tool.trap` | One-shot, cheap, forgettable by your own colonists | sheet 03 (camp and crafting), high | M3 |
 | **Barricade** | `ui.arch.tool.barricade` | Cover without blocking sight | sheet 08 (salvage gear), high | M3 |
 | **Blast door** | `ui.arch.tool.blastdoor` | Slow, strong, holds a breach <br>**Needs:** a heavy blast door, distinct from a normal door | no art | M3 |
-| **Sandbags** | `ui.arch.tool.sandbag` | Fast cover from salvage | sheet 08 (salvage gear), high | M3 |
+| **Sandbags** | `ui.arch.tool.sandbag` | Cheap, quick low cover. Climbed over, never stood on | sheet 08 (salvage gear), high | M3 |
 | **Searchlight** | `ui.arch.tool.searchlight` | Light where you need to shoot | sheet 08 (salvage gear), med | M3 |
 | **Floor** | `ui.arch.tool.deckplate` | Laid on ground you already walk on | sheet 04 (manufactured), high | M3 |
 | **Grating** | `ui.arch.tool.grating` | See and fall through. Light passes | sheet 04 (manufactured), med | M3 |

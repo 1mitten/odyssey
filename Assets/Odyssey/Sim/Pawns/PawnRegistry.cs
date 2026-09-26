@@ -631,6 +631,9 @@ namespace Odyssey.Sim.Pawns
                 // The response (design 33 §18c), at anything but the default.
                 if (pawn.Response != HostilityResponse.FightBack)
                     writer.AddPawnAspect(pawn.Id, CombatAspects.Response, (int)pawn.Response);
+                // Crouched behind cover (design 53 §8a), derived here and never kept.
+                int crouch = CoverCrouchOf(pawn);
+                if (crouch > 0) writer.AddPawnAspect(pawn.Id, CombatAspects.CoverCrouch, crouch);
                 // Where she may work (design 43 §4a), at anything but the default.
                 if (pawn.Area != PawnArea.Anywhere)
                     writer.AddPawnAspect(pawn.Id, AreaAspects.Area, (int)pawn.Area);
@@ -836,6 +839,41 @@ namespace Odyssey.Sim.Pawns
         /// Defend join (§18) are unforced, and answer 0; so does a building, which has no pawn id
         /// and rides the order cell (<see cref="OrderCellOf"/>).
         /// </summary>
+        readonly CoverReport _crouchCover = new CoverReport();
+
+        /// <summary>
+        /// Is she crouched behind cover (design 53 §8a), and how well covered: a person standing
+        /// still in a ranged attack whose cover from her target is at least the combat Def's
+        /// <c>coverCrouchPerMille</c> with a low piece among it; or drafted, standing still with no
+        /// target, beside a piece of low cover — the most any one neighbour gives. Nought for
+        /// anything else. A pose only, published and never kept.
+        /// </summary>
+        public int CoverCrouchOf(Pawn pawn)
+        {
+            if (!pawn.IsPerson || pawn.Downed || pawn.CarriedBy != 0 || pawn.HasPath || pawn.PathPending) return 0;
+            Job? job = pawn.CurrentJob;
+            if (job != null && job.DefIndex == JobIndex.AttackRanged && pawn.CombatTarget != 0)
+            {
+                Pawn? target = Get(new PawnId(pawn.CombatTarget));
+                if (target == null) return 0;
+                int cover = Cover.Evaluate(_ctx, target.Cell, pawn.Cell, _crouchCover);
+                return cover >= _ctx.Content.Combat.coverCrouchPerMille && _crouchCover.HasLow ? cover : 0;
+            }
+            if (!pawn.Drafted || pawn.CombatTarget != 0) return 0;
+
+            GridSize size = _ctx.Size;
+            CellRef at = size.FromIndex(pawn.Cell);
+            int best = 0;
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if ((dx == 0 && dz == 0) || !size.Contains(at.X + dx, at.Z + dz, at.Y)) continue;
+                int value = Cover.BaseAt(_ctx, size.Index(at.X + dx, at.Z + dz, at.Y), out bool tall);
+                if (!tall && value > best) best = value;
+            }
+            return best;
+        }
+
         public static int OrderTargetOf(Pawn pawn)
         {
             Job? job = pawn.CurrentJob;

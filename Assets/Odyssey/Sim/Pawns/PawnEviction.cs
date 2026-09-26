@@ -103,6 +103,7 @@ namespace Odyssey.Sim.Pawns
 
                     int cell = size.Index(x, z, y);
                     if (!nav.Grid.CanEnter(cell, mode)) continue;
+                    if (!Standing.CanStandAt(ctx, cell)) continue;
                     if (Occupant(ctx, cell) != null) continue;
                     return cell;
                 }
