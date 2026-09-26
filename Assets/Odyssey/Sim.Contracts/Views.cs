@@ -1621,6 +1621,17 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly int AmbientTempC;
 
+        /// <summary>
+        /// What the bed standing here is for (design 58 §5b): <see cref="BedForColony"/> — every
+        /// cell with no bed says the same — <see cref="BedForPrisoners"/>, or
+        /// <see cref="BedShackles"/> for a prison bed with no room around it.
+        /// </summary>
+        public readonly byte BedPurpose;
+
+        public const byte BedForColony = 0;
+        public const byte BedForPrisoners = 1;
+        public const byte BedShackles = 2;
+
         public CellDetail(int cellIndex, byte terrain, byte edifice, byte floorStuff, byte support,
             ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0,
             byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue, byte zoneYield = 0,
@@ -1628,8 +1639,9 @@ namespace Odyssey.Sim.Contracts
             int storageCells = 0, int storageOrdinal = 0,
             byte storeKind = StoreNone, byte storedStacks = 0, byte storeSlots = 0,
             byte storedDef = 255, int storedUnits = 0, int storeCellIndex = -1,
-            int ambientTempC = int.MinValue)
+            int ambientTempC = int.MinValue, byte bedPurpose = BedForColony)
         {
+            BedPurpose = bedPurpose;
             StoreCellIndex = storeCellIndex;
             StorageZone = storageZone;
             StoragePriority = storagePriority;

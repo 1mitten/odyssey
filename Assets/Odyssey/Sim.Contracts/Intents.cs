@@ -372,6 +372,14 @@ namespace Odyssey.Sim.Contracts
         /// <c>JobSystem.HandleDebugImprison</c>. Appended, so no recorded intent renumbers.
         /// </summary>
         DebugImprison,
+
+        /// <summary>
+        /// Say what the bed in <see cref="Intent.Cell"/> is for (design 58 §5b): <c>A</c> 1 marks it
+        /// and every bed in its room for prisoners, 0 unmarks them. A bed in no room marked for
+        /// prisoners holds its prisoner shackled. An owner of the wrong kind loses the bed at once.
+        /// Handler: <c>ConstructionGrid.HandleSetBedPurpose</c>. Appended.
+        /// </summary>
+        SetBedPurpose,
     }
 
     /// <summary>What an <see cref="IntentKind.EditBill"/> does, as its <c>A</c> carries it.</summary>
@@ -501,6 +509,10 @@ namespace Odyssey.Sim.Contracts
             IntentKind.EditBill => true,
             // A view question, like QueryCell: the readout answers paused as well as running.
             IntentKind.QueryShot => true,
+            // What a bed is for (design 58 §5b): a setting on a bed's pane, which is a thing opened
+            // while paused, and a row that read "yes" while no colonist had heard would be the slab
+            // fault again.
+            IntentKind.SetBedPurpose => true,
             _ => false,
         };
     }

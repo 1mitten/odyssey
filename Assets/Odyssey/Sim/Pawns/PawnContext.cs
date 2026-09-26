@@ -142,6 +142,9 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public World.EnclosureGrid? Enclosure { get; set; }
 
+        /// <summary>What every bed is for (design 58 §5b): the prison beds and the cells they make.</summary>
+        public BedPurposes? BedPurposes { get; set; }
+
         /// <summary>
         /// The thermal pass (design 28), when the world has one. Null in a bare pawn fixture,
         /// exactly as <see cref="Enclosure"/> is — a fixture that never meant to be cold reads

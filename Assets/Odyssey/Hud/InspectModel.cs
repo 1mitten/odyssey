@@ -1149,6 +1149,7 @@ namespace Odyssey.Hud
         int _cellRowsCropGrowth;
         bool _cellRowsIndoors;
         int _cellRowsTemp;
+        byte _cellRowsBedPurpose;
 
         /// <summary>
         /// Whether the tile under the pane is a bed whose owner row can be pressed — the pane's
@@ -1159,6 +1160,12 @@ namespace Odyssey.Hud
         public bool BedUnderPane => _bedUnderPane;
 
         bool _bedUnderPane;
+
+        /// <summary>The bed under the pane is for prisoners (design 58 §5b): what a press on its purpose row reverses.</summary>
+        public bool BedForPrisoners { get; private set; }
+
+        /// <summary>The row that says what a bed is for, and toggles it when pressed (design 58 §11a).</summary>
+        public const string BedPurposeRow = "for prisoners";
 
         /// <summary>
         /// Whether the tile under the pane is a power building whose switch row can be pressed
@@ -1334,6 +1341,7 @@ namespace Odyssey.Hud
             // piece of quality-bearing furniture would, and the row it grew would open the *bed*
             // picker over it. Three characters against a report.
             _bedUnderPane = detail.EdificeQuality > 0 && detail.Edifice == EdificeHandle.Bed;
+            BedForPrisoners = _bedUnderPane && detail.BedPurpose != CellDetail.BedForColony;
             TileEdifice = detail.Edifice;
             TileCellIndex = detail.CellIndex;
             if (snapshot.TryGetPowerDevice(detail.CellIndex, out PowerDeviceView switchable))
@@ -1378,6 +1386,7 @@ namespace Odyssey.Hud
                 && _cellRowsStoredDef == detail.StoredDef
                 && _cellRowsIndoors == detail.IsIndoors
                 && _cellRowsTemp == detail.AmbientTempC
+                && _cellRowsBedPurpose == detail.BedPurpose
                 && _cellRowsPower == powerSignature) return;
 
             _cellRowsFor = detail.CellIndex;
@@ -1400,6 +1409,7 @@ namespace Odyssey.Hud
             _cellRowsStoredDef = detail.StoredDef;
             _cellRowsIndoors = detail.IsIndoors;
             _cellRowsTemp = detail.AmbientTempC;
+            _cellRowsBedPurpose = detail.BedPurpose;
             _cellRowsPower = powerSignature;
 
             // Written in place, like the skills list: the count is a handful and changes rarely,
@@ -1428,6 +1438,16 @@ namespace Odyssey.Hud
                 Row(n++, "owner", detail.EdificeOwner > 0
                     ? ColonistNames.Of(snapshot, new PawnId(detail.EdificeOwner))
                     : "Assign…");
+
+                // What the bed is for (design 58 §5b, §11a), the pane's second press on a bed:
+                // marking one bed marks every bed in its room, and a bed with no room around it
+                // holds its prisoner shackled, which the value says rather than leaving it to be
+                // found out.
+                Row(n++, BedPurposeRow,
+                    detail.BedPurpose == CellDetail.BedShackles ? "Yes, shackled"
+                    : detail.BedPurpose == CellDetail.BedForPrisoners ? "Yes"
+                    : "No",
+                    detail.BedPurpose == CellDetail.BedForColony ? (HudColour?)null : HudTheme.Warn);
             }
 
             // A power building's own facts (design 32 §10), beside what it is: what it is doing —

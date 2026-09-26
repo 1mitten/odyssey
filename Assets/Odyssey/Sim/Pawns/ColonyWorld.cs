@@ -215,6 +215,9 @@ namespace Odyssey.Sim.Pawns
                 // Who the colony holds (design 58 §4a): appended, no format bump. A save from
                 // before prisoners has no section and loads with nobody in custody.
                 new Saving.PrisonSection(pawns.Pawns),
+                // Which beds are for prisoners (design 58 §5b): appended, no format bump. A save
+                // from before prisoners has none, and every bed is a colony bed.
+                pawns.BedPurposes!,
             };
         }
 

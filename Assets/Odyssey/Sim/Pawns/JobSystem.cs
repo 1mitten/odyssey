@@ -198,6 +198,9 @@ namespace Odyssey.Sim.Pawns
         {
             _ctx.Sync(world);
             _hostilityKnown = false;
+            // A bed that changed purpose, or a room that merged into a cell, loses an owner of the
+            // wrong kind first (design 58 §5b), so the sweep below wakes whoever is lying in it.
+            _ctx.Construction?.SweepBedPurposes();
             GetOutOfTheWrongBed(world.CurrentTick);
             var pawns = _ctx.Pawns.All;
             for (int i = 0; i < pawns.Count; i++) TickPawn(pawns[i], world.CurrentTick);

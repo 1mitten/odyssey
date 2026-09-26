@@ -1574,6 +1574,7 @@ namespace Odyssey.Sim.Construction
             if (was.Def == CoreContent.EdificeBed)
             {
                 _items.RemoveBed(was.CellIndex);
+                Purposes?.Forget(was.CellIndex);
                 ReleasePatientsBed(ctx, was.CellIndex);
             }
 
@@ -1913,10 +1914,66 @@ namespace Odyssey.Sim.Construction
         }
 
         /// <summary>
-        /// What the bed at this cell is for (design 58 §5b). Every bed is a colony bed until a bed
-        /// is marked for prisoners; a cell with no bed answers <see cref="BedPurpose.Colony"/>.
+        /// What the bed at this cell is for (design 58 §5b), asked of <see cref="Purposes"/>, the
+        /// one owner. A cell with no bed, and every bed in a fixture with no purposes, answers
+        /// <see cref="BedPurpose.Colony"/>.
         /// </summary>
-        public BedPurpose BedPurposeAt(int cell) => BedPurpose.Colony;
+        public BedPurpose BedPurposeAt(int cell) => Purposes?.PurposeAt(cell) ?? BedPurpose.Colony;
+
+        /// <summary>What every bed is for (design 58 §5b). Set by the composition root.</summary>
+        public Pawns.BedPurposes? Purposes { get; set; }
+
+        /// <summary>
+        /// <c>SetBedPurpose(cell, A = purpose)</c> (design 58 §5b): mark the bed at the cell and its
+        /// room for prisoners, or unmark them. Here because this class is the one owner of who owns a
+        /// bed, and a bed that changes purpose loses an owner of the wrong kind in the same breath.
+        /// </summary>
+        public IntentRejection HandleSetBedPurpose(Intent intent)
+        {
+            if (Purposes == null) return IntentRejection.NotPermitted;
+            if (!_grid.Contains(intent.Cell.X, intent.Cell.Z, intent.Cell.Y)) return IntentRejection.OutOfBounds;
+            IntentRejection answer = Purposes.SetPurpose(_grid.Index(intent.Cell), intent.A);
+            if (answer == IntentRejection.None) SweepBedPurposes();
+            return answer;
+        }
+
+        long _sweptPurposes = -1;
+        bool _sweptNone, _everMarked;
+
+        /// <summary>
+        /// Clear every owner who may not own her bed any more (design 58 §5b): a colonist whose bed
+        /// became a prison bed — marked, or its room merged into a cell — and a prisoner whose bed
+        /// stopped being one. Raises <see cref="BedOwnershipChanged"/>, so the job system wakes a
+        /// sleeper in a bed that is no longer hers. Costs one comparison unless the purposes or the
+        /// rooms have changed since it last looked, and nothing at all on a board with no prison bed.
+        /// </summary>
+        public void SweepBedPurposes()
+        {
+            if (Purposes == null) return;
+            // A board with no prison bed, having been swept once with none, has nothing to find:
+            // the only thing that can make a colonist's bed wrong for her is a mark.
+            bool none = !Purposes.Any;
+            if (none && _sweptNone) return;
+            long key = Purposes.StateKey;
+            if (key == _sweptPurposes && none == _sweptNone) return;
+            _sweptNone = none;
+            if (none && !_everMarked) return;
+            _everMarked = true;
+
+            for (int i = 0; i < _edifices.Count; i++)
+            {
+                PlacedEdifice bed = _edifices[i];
+                if (bed.Def != CoreContent.EdificeBed || bed.Removed || bed.Owner == 0) continue;
+                Pawns.Pawn? owner = _pawns.Get(new PawnId(bed.Owner));
+                if (owner != null && BedRule.MayOwn(BedRules.UserOf(owner), BedPurposeAt(bed.CellIndex)))
+                    continue;
+                bed.Owner = 0;
+                _edifices[i] = bed;
+                BedOwnershipChanged = true;
+            }
+            // Asking may have solved the rooms; the key is what they are now.
+            _sweptPurposes = Purposes.StateKey;
+        }
 
         /// <summary><see cref="BedPurposeAt(int)"/> by cell reference, which is how the pane holds one.</summary>
         public BedPurpose BedPurposeAt(CellRef cell) =>

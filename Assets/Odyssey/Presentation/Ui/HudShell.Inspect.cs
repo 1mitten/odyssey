@@ -997,6 +997,7 @@ namespace Odyssey.Presentation.Ui
                     if (!captured.IsPick) return;
                     if (captured.IsSwitch) ThrowPowerSwitch();
                     else if (captured.IsOrderAction) ActOnOrder();
+                    else if (captured.IsBedPurpose) ToggleBedPurpose();
                     else ToggleBedPicker(captured.Root);
                 });
 
@@ -1031,7 +1032,8 @@ namespace Odyssey.Presentation.Ui
                     ? DisplayStyle.None : DisplayStyle.Flex;
                 if (view.Root.style.display.value != shown) view.Root.style.display = shown;
                 bool linePick = row.Name == InspectModel.OrderActionRow && _inspect.OrderActionUnderPane;
-                bool pick = (row.Name == "owner" && _inspect.BedUnderPane) || switchPick || linePick;
+                bool purposePick = row.Name == InspectModel.BedPurposeRow && _inspect.BedUnderPane;
+                bool pick = (row.Name == "owner" && _inspect.BedUnderPane) || switchPick || linePick || purposePick;
                 // The pickable row's value is set in the heavier Row role, which is where weight
                 // lives: the stylesheet may not set type (TheSheetSetsNoTypeAtAll), so "make the
                 // assign button bolder" is a role here rather than a font-style there.
@@ -1067,17 +1069,20 @@ namespace Odyssey.Presentation.Ui
                 view.Root.EnableInClassList("inspect__row--danger", danger);
                 view.Root.EnableInClassList("inspect__row--warn", warn);
 
-                if (view.IsPick != pick || view.IsSwitch != switchPick || view.IsOrderAction != linePick)
+                if (view.IsPick != pick || view.IsSwitch != switchPick || view.IsOrderAction != linePick
+                    || view.IsBedPurpose != purposePick)
                 {
                     view.IsPick = pick;
                     view.IsSwitch = switchPick;
                     view.IsOrderAction = linePick;
+                    view.IsBedPurpose = purposePick;
                     view.Root.EnableInClassList("inspect__row--pick", pick);
                     view.Chevron.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
                     // The bed's glyph is a bed: the switch and line rows wear the chevron alone.
                     view.Glyph.style.display = pick && !switchPick && !linePick ? DisplayStyle.Flex : DisplayStyle.None;
                     view.Root.tooltip = switchPick ? "Switch it on or off — at once, nobody is sent"
                         : linePick ? row.Value + " — at once, nobody is sent"
+                        : purposePick ? "Mark this bed, and every bed in its room, for prisoners — or back for the colony"
                         : pick ? "Choose whose bed this is" : null;
                 }
             }
@@ -1149,6 +1154,17 @@ namespace Odyssey.Presentation.Ui
         /// Throw the switch of the power building under the pane (design 32 §5): an intent, like
         /// every command, applied while paused and at once — no colonist walks over to do it.
         /// </summary>
+        /// <summary>
+        /// Mark the bed under the pane for prisoners, or back for the colony (design 58 §5b). An
+        /// intent, like the owner's pick: the simulation marks the whole room and takes the bed
+        /// from an owner of the wrong kind, paused or not.
+        /// </summary>
+        void ToggleBedPurpose()
+        {
+            _boot?.World?.Intents.Submit(new Intent(IntentKind.SetBedPurpose, _inspect.Cell,
+                _inspect.BedForPrisoners ? (int)BedPurpose.Colony : (int)BedPurpose.Prison));
+        }
+
         void ThrowPowerSwitch()
         {
             _boot?.World?.Intents.Submit(new Intent(IntentKind.SetPowerSwitch, _inspect.Cell,

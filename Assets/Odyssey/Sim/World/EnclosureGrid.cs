@@ -78,6 +78,24 @@ namespace Odyssey.Sim.World
         /// </summary>
         public event Action<ThermalRoom>? RoomResolved;
 
+        /// <summary>
+        /// Moves every time a solve changes which room any cell is in. Not saved and not hashed: a
+        /// counter for caches built over the rooms (the prison's cells, design 58 §5b) to know when
+        /// to look again, so they never re-walk the rooms on a query.
+        /// </summary>
+        public int Generation
+        {
+            get
+            {
+                // Solved first, as every other question here is: a counter read before a pending
+                // solve would call rooms current that are about to change.
+                EnsureSolved();
+                return _generation;
+            }
+        }
+
+        int _generation;
+
         public EnclosureGrid(CellGrid cells, IReadOnlyList<PlacedEdifice> edifices)
         {
             _cells = cells;
@@ -214,6 +232,7 @@ namespace Odyssey.Sim.World
             {
                 if (!_dirtyLayers[y]) continue;
                 bool changed = FillLayer(y);
+                if (changed) _generation++;
                 _dirtyLayers[y] = false;
                 _surfaceDirty[y] = true;
                 if (y + 1 < _dirtyLayers.Length) _surfaceDirty[y + 1] = true;
