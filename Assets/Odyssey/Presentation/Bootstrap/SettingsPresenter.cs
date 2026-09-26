@@ -109,6 +109,10 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
+            // The wake into a world has the keys (design 56 §7): any press is a skip, and Escape
+            // must not also open the settings over a colony the player cannot see yet.
+            if (_shell != null && _shell.WakeHoldsInput) return;
+
             // The leave prompt is modal and has no text field to own the key, so it is answered
             // here, above everything else Escape could mean. Escape over a modal means the modal
             // (`17-start-flow.md` §13), and cancelling is its safe answer: a key press must never
@@ -131,6 +135,8 @@ namespace Odyssey.Presentation.Bootstrap
             // One key, one rule, one place. The order itself is the director's and is tested
             // without an engine; all that happens here is the doing of it.
             switch (_director.Escape(
+                        // A ride holds the view until Escape (design 57 §5), so it is asked first.
+                        _bootstrap?.Directors?.Ride.Riding == true,
                         _shell != null && _shell.ContextMenuOpen,
                         _designate != null && _designate.ToolArmed,
                         _shell != null && _shell.BuildPaletteOpen,
@@ -145,6 +151,9 @@ namespace Odyssey.Presentation.Bootstrap
                         // halves of a session's life and only one of them is ever up.
                         _shell != null && _shell.Menu.Showing ? _shell.Menu.Screen : null))
             {
+                case EscapeAction.LeaveRide:
+                    if (_bootstrap?.World != null) _bootstrap.Directors?.EndRide(_bootstrap.World.Views.Current);
+                    break;
                 case EscapeAction.CloseContextMenu:
                     // The menu a right-click raised at the pointer (design 33 §7a): the last thing
                     // raised, so the first thing Escape puts away.

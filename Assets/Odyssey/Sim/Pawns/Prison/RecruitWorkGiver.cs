@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// A warden talks to the nearest prisoner in Recruit mode who is due a chat (design 58 §8): once
+    /// A warden talks to the nearest prisoner in Recruit mode who is due a chat (design 59 §8): once
     /// every six game hours each, four a day. <b>Nobody held, nothing touched</b>: custody is asked
     /// first, so a colony with no prisoner pays one comparison a pawn.
     ///

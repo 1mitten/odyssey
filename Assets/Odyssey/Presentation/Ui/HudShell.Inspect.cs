@@ -238,7 +238,7 @@ namespace Odyssey.Presentation.Ui
                     ? _inspect.Pawn.ToString() + (_inspect.Drafted ? ":drafted" : string.Empty)
                         + (_inspect.ShowsColonistBody ? string.Empty : ":bare")
                         + (_inspect.ShowsTabBox ? ":tabs" : string.Empty)
-                        // A prisoner's pane carries her rows (design 58 §11b): taking her is structure.
+                        // A prisoner's pane carries her rows (design 59 §11b): taking her is structure.
                         + (_inspect.IsPrisoner ? ":held" : string.Empty)
                  : _inspect.Subject == InspectSubject.Item ? _inspect.Thing.ToString()
                  : _inspect.Subject == InspectSubject.Corpse ? _inspect.Corpse.ToString()
@@ -936,7 +936,7 @@ namespace Odyssey.Presentation.Ui
 
             if (_inspect.Subject == InspectSubject.Colonist && _inspect.IsPrisoner)
             {
-                // A prisoner's facts (design 58 §11b) in the tile's rows: the same grid, the same
+                // A prisoner's facts (design 59 §11b) in the tile's rows: the same grid, the same
                 // reuse, and the mode row a control the way the bed's purpose row is.
                 _cellRowsGrid = new VisualElement();
                 _cellRowsGrid.AddToClassList("inspect__rows");
@@ -1172,7 +1172,7 @@ namespace Odyssey.Presentation.Ui
         /// every command, applied while paused and at once — no colonist walks over to do it.
         /// </summary>
         /// <summary>
-        /// Mark the bed under the pane for prisoners, or back for the colony (design 58 §5b). An
+        /// Mark the bed under the pane for prisoners, or back for the colony (design 59 §5b). An
         /// intent, like the owner's pick: the simulation marks the whole room and takes the bed
         /// from an owner of the wrong kind, paused or not.
         /// </summary>
@@ -1182,7 +1182,7 @@ namespace Odyssey.Presentation.Ui
                 _inspect.BedForPrisoners ? (int)BedPurpose.Colony : (int)BedPurpose.Prison));
         }
 
-        /// <summary>The prisoner's mode moves on one (design 58 §11b): an intent, applied while paused.</summary>
+        /// <summary>The prisoner's mode moves on one (design 59 §11b): an intent, applied while paused.</summary>
         void CyclePrisonMode()
         {
             _boot?.World?.Intents.Submit(new Intent(IntentKind.SetPrisonMode, default, _inspect.Pawn.Value,
@@ -1258,7 +1258,7 @@ namespace Odyssey.Presentation.Ui
             {
                 // Only those who sleep from this bed's pool: colonists for a colony bed. The picker
                 // listed every pawn on the board until 2026-09-26, hogs and bandits included, and
-                // the simulation would have taken the gift (design 58 §5a).
+                // the simulation would have taken the gift (design 59 §5a).
                 if (!BedRule.MayOwn(BedRule.UserOf(pawns[i]), purpose)) continue;
                 int id = pawns[i].Id.Value;
                 BedPickerMark mark =
@@ -2214,6 +2214,14 @@ namespace Odyssey.Presentation.Ui
             return row;
         }
 
+        /// <summary>Ride along with the colonist on the pane (design 57).</summary>
+        void BeginRide()
+        {
+            var world = _boot?.World;
+            if (world == null || _directors == null || _inspect.Subject != InspectSubject.Colonist) return;
+            _directors.BeginRide(_inspect.Pawn, world.Views.Current);
+        }
+
         VisualElement ActionButton(InspectCommand command)
         {
             var button = new VisualElement();
@@ -2233,10 +2241,14 @@ namespace Odyssey.Presentation.Ui
             // The response beside it (design 33 §18e): the model decides, this carries its intents.
             if (command.Enabled && ResponseModel.IsResponseKey(command.IconKey))
                 button.RegisterCallback<ClickEvent>(_ => CycleResponse());
-            // Arrest (design 58 §10): A of nought asks the simulation for the nearest able colonist.
+            // Arrest (design 59 §10): A of nought asks the simulation for the nearest able colonist.
             if (command.Enabled && command.IconKey == InspectModel.ArrestKey)
                 button.RegisterCallback<ClickEvent>(_ =>
                     _boot?.World?.Intents.Submit(new Intent(IntentKind.OrderArrest, default, 0, _inspect.Pawn.Value)));
+            // First Person (design 57): watching, not commanding, so no intent — the directors take
+            // the view and the rig and this shell follow them on the next frame.
+            if (command.Enabled && command.IconKey == InspectModel.RideKey)
+                button.RegisterCallback<ClickEvent>(_ => BeginRide());
             return button;
         }
 

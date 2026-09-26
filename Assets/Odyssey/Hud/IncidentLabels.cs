@@ -29,7 +29,7 @@ namespace Odyssey.Hud
             "ui.bulletin.medicaldrop",
             // A band walking in from one edge (design 55): its Events row is the warning.
             "ui.bulletin.raidincoming",
-            // The prison's four (design 58), recorded when they happen.
+            // The prison's four (design 59), recorded when they happen.
             "ui.bulletin.recruited",
             "ui.bulletin.escaped",
             "ui.bulletin.surrendered",

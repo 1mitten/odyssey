@@ -8,7 +8,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// The right-click on a downed enemy (design 58 §7, the owner's ruling): a menu of Capture then
+    /// The right-click on a downed enemy (design 59 §7, the owner's ruling): a menu of Capture then
     /// Finish off, where it used to be an instant attack that killed. Nothing is sent until a row is
     /// chosen; Capture sends the primary colonist, drafted or not; Finish off is the old attack, dim
     /// with its reason when nobody selected is drafted; a downed prisoner is offered Capture alone.

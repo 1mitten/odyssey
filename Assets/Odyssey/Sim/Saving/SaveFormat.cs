@@ -271,7 +271,7 @@ namespace Odyssey.Sim.Saving
         /// idempotent. <b>Do not tidy the guard away</b>: without the version it would re-deal
         /// Shooting on every load of a colonist who has never fired.</para>
         ///
-        /// <para>11 (design 58, prisoners): <b>no layout changed</b>, for 10's reason — the tenth
+        /// <para>11 (design 59, prisoners): <b>no layout changed</b>, for 10's reason — the tenth
         /// skill, Social, reads from a nine-skill file as nought, and the same guard deals it once
         /// to a colonist from a file below 11 (<c>BackfillSkills</c>). Custody and the prison's
         /// records went into sections of their own, which needed no bump.</para>

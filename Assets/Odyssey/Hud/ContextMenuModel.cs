@@ -181,14 +181,14 @@ namespace Odyssey.Hud
         /// <summary>The Tend row's verb (design 43 §11): "Tend", "Treat this patient".</summary>
         public const string TendKey = "ui.command.tend";
 
-        /// <summary>The two rows on a downed enemy (design 58 §7): bring her in, or kill her.</summary>
+        /// <summary>The two rows on a downed enemy (design 59 §7): bring her in, or kill her.</summary>
         public const string CaptureKey = "ui.command.capture", FinishOffKey = "ui.command.finishoff";
 
         /// <summary>Why Finish off is dim: nobody selected is drafted, and only the drafted fight.</summary>
         public const string NeedsDraftKey = "ui.menu.needsdraft";
 
         /// <summary>
-        /// Capture, then Finish off, on a downed person who is not ours (design 58 §7, the owner's
+        /// Capture, then Finish off, on a downed person who is not ours (design 59 §7, the owner's
         /// ruling of 2026-09-26: "Menu: Capture / Finish off"). The right-click that used to kill a
         /// downed bandit outright opens this instead, so nothing happens by accident.
         ///

@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// <b>Arresting one of the colony's own</b> (design 58 §10; owner's ruling 8). Any colonist, at
+    /// <b>Arresting one of the colony's own</b> (design 59 §10; owner's ruling 8). Any colonist, at
     /// any time, by another's hand. At the touch she may resist — more likely the unhappier she is —
     /// and a colonist who resists is an escapee: she runs, and is brought down and carried in like
     /// any other. One who comes quietly is given a prison bed and walks there herself. <b>Either

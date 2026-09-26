@@ -3,7 +3,7 @@ using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Sim.Pawns
 {
-    // Taking a pawn into custody and letting her out of it (design 58 §4). In the job system for
+    // Taking a pawn into custody and letting her out of it (design 59 §4). In the job system for
     // the reason the draft gives: a change of custody ends the job in hand, and ending jobs is what
     // the pipeline is — a second path out of a job is where a reservation leak comes from.
     public sealed partial class JobSystem
@@ -22,7 +22,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// <c>SetPrisonMode(A = pawn, B = mode)</c> (design 58 §8, §13): Hold, Recruit, Release or
+        /// <c>SetPrisonMode(A = pawn, B = mode)</c> (design 59 §8, §13): Hold, Recruit, Release or
         /// Exile. Refused for anybody the colony does not hold, for a value that is not a mode, and
         /// for Ransom, which is a seam until factions exist (M7). A change of mode keeps her
         /// willingness: a prisoner put back on Hold does not forget what she was told.
@@ -41,7 +41,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// <c>SetCaptureMark(A = pawn, B = 1 mark / 0 clear)</c> (design 58 §7): ask a warden to
+        /// <c>SetCaptureMark(A = pawn, B = 1 mark / 0 clear)</c> (design 59 §7): ask a warden to
         /// bring this person in once she is down. Refused for a colonist, an animal, the dead and
         /// anybody already held; <c>AlreadyInThatState</c> for a no-op. A standing setting: the
         /// warden's giver reads it, and it is spent when she is taken.
@@ -66,7 +66,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// <c>OrderCapture(A = colonist, B = target)</c> (design 58 §7): send this colonist, drafted
+        /// <c>OrderCapture(A = colonist, B = target)</c> (design 59 §7): send this colonist, drafted
         /// or not, to carry the downed target to a prison bed now. Marks the target first, so a
         /// refused or interrupted order still leaves the warden's giver to finish it. Refused for a
         /// colonist who cannot act, a target nobody means to hold, one somebody is already coming
@@ -104,7 +104,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// <c>OrderArrest(A = colonist, B = target)</c> (design 58 §10): send this colonist to arrest
+        /// <c>OrderArrest(A = colonist, B = target)</c> (design 59 §10): send this colonist to arrest
         /// another, now — or, with <c>A</c> of nought (the pane's button), the nearest colonist on
         /// her feet who can reach her. Refused for an arrester who cannot act, a target who is not one of ours on
         /// her feet, one out of reach, and when there is no free prison bed to put her in.
@@ -152,7 +152,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// <c>DebugImprison(cell, A = pawn, B = 0 take / 1 free / 2 break out)</c> (design 58 §4): take the pawn
+        /// <c>DebugImprison(cell, A = pawn, B = 0 take / 1 free / 2 break out)</c> (design 59 §4): take the pawn
         /// named by <c>A</c> — or, with <c>A</c> of nought, the person nearest the cell who is not
         /// already held — into custody, or set a held one free. Debug-menu only, so the whole
         /// prisoner model can be played before capture exists. Freeing drops the record, joined
@@ -167,7 +167,7 @@ namespace Odyssey.Sim.Pawns
             if (take)
                 return TakeIntoCustody(pawn) ? IntentRejection.None : IntentRejection.AlreadyInThatState;
 
-            // B = 2: break out now, rather than waiting days on the roll (design 58 §9).
+            // B = 2: break out now, rather than waiting days on the roll (design 59 §9).
             if (intent.B == 2)
             {
                 if (pawn.Custody != PawnCustody.Prisoner || pawn.Downed) return IntentRejection.NotPermitted;
@@ -184,7 +184,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// The prison's own clock (design 58 §9), before any pawn thinks: an escapee brought down
+        /// The prison's own clock (design 59 §9), before any pawn thinks: an escapee brought down
         /// is a prisoner again, for the warden's capture to carry back; and each held prisoner
         /// rolls, once a game hour and staggered by id, whether she breaks out. A colony holding
         /// nobody pays one comparison a pawn.
@@ -207,7 +207,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// She breaks out (design 58 §9c): whatever she was doing stops, and she is an escapee —
+        /// She breaks out (design 59 §9c): whatever she was doing stops, and she is an escapee —
         /// hostile, still in the jumpsuit, still owning her bed so that a recapture takes her back
         /// to it.
         /// </summary>

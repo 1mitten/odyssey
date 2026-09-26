@@ -7,7 +7,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Sim.Saving
 {
     /// <summary>
-    /// Every pawn the colony holds, held, or means to take (design 58 §4a), as a save section of
+    /// Every pawn the colony holds, held, or means to take (design 59 §4a), as a save section of
     /// its own: keyed by pawn id, absent from an older save — which then loads with nobody in
     /// custody — and <b>no world format bump</b>, because a reader skips a section it does not know.
     ///

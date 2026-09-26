@@ -7,7 +7,7 @@ using Odyssey.Sim.Worldgen;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The prison bed in a whole colony (design 58 §5): the order through the intent, the owner of
+    /// The prison bed in a whole colony (design 59 §5): the order through the intent, the owner of
     /// the wrong kind losing the bed at once, and every chooser reading the one rule. The bed stands
     /// in the open, so it is a shackle bed — the rooms themselves are <c>PrisonBedTests</c>'.
     /// </summary>

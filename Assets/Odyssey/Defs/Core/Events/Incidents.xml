@@ -157,7 +157,7 @@
   </IncidentDef>
 
   <!--
-    The prison (docs/design/58-prisoners.md), four things the world writes down when they happen
+    The prison (docs/design/59-prisoners.md), four things the world writes down when they happen
     and nothing fires: a prisoner talked round and joining, a prisoner breaking out and getting
     away, a raider giving up, a colonist arrested. Recorded workers, so the debug menu's Events tab
     leaves them off its list; the gates are the defaults and read by nothing.

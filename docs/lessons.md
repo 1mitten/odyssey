@@ -2740,6 +2740,21 @@ coroutine and assert in the outer method, and give a file that builds worlds a `
 destroys them by name.** The symptom is a failure in a *different* test that only appears once the
 new file is in the run.
 
+## Setting up a machine: what the first open quietly changes
+
+**`SyntyImport.UpgradeBuiltInMaterials` converted a committed material** (2026-09-26, the
+`D:\dev\odyssey` machine). URP's `UpgradeProjectFolder` walks the whole of `Assets/`, and
+`Assets/Resources/OdysseyKeepAlive/Standard.mat` exists precisely to keep the built-in *Standard*
+shader alive in a player build — so the converter rewrote it to URP Lit and `git status` showed it
+modified. Nothing failed; the next commit would have carried it. The upgrade is scoped to
+`Assets/Synty` now. The general rule: **after any first open or pack import, `git status` must show
+nothing but `.vsconfig`** (Visual Studio's workload hint, generated, harmless), and anything else is
+restored with `git checkout --` before it can be swept into a commit. A `ProjectSettings/*.asset`
+that differs only in line endings is the same case.
+
+**Hub's headless install fails without saying so.** Twice on that machine: once at a UAC prompt
+nobody saw (the log ends at *"Install … started"*), once because the installer unpacks into
+`%TEMP%` on C: whatever the destination. `docs/setup/local-dev.md` §8a.
 ## An allocation test that fails only in the full run: find the phase before blaming the code (2026-09-26)
 
 `AspectScaleTests.RepeatedFramesStopAllocating` measures `GC.GetAllocatedBytesForCurrentThread`

@@ -142,7 +142,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public World.EnclosureGrid? Enclosure { get; set; }
 
-        /// <summary>What every bed is for (design 58 §5b): the prison beds and the cells they make.</summary>
+        /// <summary>What every bed is for (design 59 §5b): the prison beds and the cells they make.</summary>
         public BedPurposes? BedPurposes { get; set; }
 
         /// <summary>

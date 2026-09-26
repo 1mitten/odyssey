@@ -125,7 +125,7 @@
   </ThoughtDef>
 
   <!--
-    The prisoner line (design 58 sections 6 and 10), appended: a thought index rides every saved
+    The prisoner line (design 59 sections 6 and 10), appended: a thought index rides every saved
     memory. All three numbers are proposals the owner confirms at the first play.
 
     Thought_Imprisoned is felt by a held prisoner and renewed while she is held, so it lasts as

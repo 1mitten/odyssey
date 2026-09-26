@@ -12,7 +12,7 @@ using Odyssey.Sim.Worldgen;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The prisoner line's contracts step (design 58 P3): the Social skill and its backfill, the
+    /// The prisoner line's contracts step (design 59 P3): the Social skill and its backfill, the
     /// Warden work type, the eight job handles and the prison's random streams. Each table is a
     /// save contract, so what these hold is that it was extended and nothing else moved.
     /// </summary>

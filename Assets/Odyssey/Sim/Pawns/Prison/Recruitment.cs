@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// Why a prisoner is being talked round slowly, as bits (design 58 §8). Published as one number
+    /// Why a prisoner is being talked round slowly, as bits (design 59 §8). Published as one number
     /// so the prisoner's pane can say it in words.
     /// </summary>
     [System.Flags]
@@ -39,7 +39,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// <b>The one owner of how fast a prisoner is talked round</b> (design 58 §8). The chat driver
+    /// <b>The one owner of how fast a prisoner is talked round</b> (design 59 §8). The chat driver
     /// and the pane's readout both call <see cref="Factors"/>, so the ETA a player reads is the
     /// arithmetic that runs — no hidden roll, and no second copy to drift.
     ///
@@ -152,7 +152,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// She joins the colony (design 58 §8): free, her side the colony's for good, her kind
+        /// She joins the colony (design 59 §8): free, her side the colony's for good, her kind
         /// unchanged. A raider is dealt the passions and skills a raid never gave her — from the
         /// streams a new colonist of her seed would use, keeping anything she has trained — and
         /// every work priority at 3. Her prison bed goes back, her jumpsuit comes off, and the

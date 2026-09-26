@@ -5,7 +5,7 @@ using Odyssey.Sim.Pathing;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// Who is to be brought in, and to which bed (design 58 §7). The capture's own questions, in the
+    /// Who is to be brought in, and to which bed (design 59 §7). The capture's own questions, in the
     /// shape of <see cref="RescueRules"/>, whose carry, keys and set-down it shares.
     /// </summary>
     public static class CaptureRules

@@ -122,7 +122,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Ate food raw: carrots from the pile, or worse.</summary>
         public const int AteRaw = 10;
 
-        // The prisoner line (design 58 §10, §6), appended.
+        // The prisoner line (design 59 §10, §6), appended.
 
         /// <summary>Held by the colony: felt by a prisoner, refreshed while she is held.</summary>
         public const int Imprisoned = 11;
@@ -231,7 +231,11 @@ namespace Odyssey.Sim.Pawns
         /// The bandit with a pistol (design 55 §8): its own kind so a raid mix can name it. Appended.
         /// </summary>
         public const int Gunman = 4;
-        public const int Count = 5;
+
+        /// <summary>The frog of the banks (design 30 §8): kind 5, species 3. Appended after the gunman.</summary>
+        public const int CulvertFrog = 5;
+
+        public const int Count = 6;
     }
 
     /// <summary>
@@ -368,7 +372,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Working the bills at a galley or a campfire (design 48 §5).</summary>
         public const int Cooking = WorkHandle.Cooking;
 
-        /// <summary>Feeding, talking to and bringing in prisoners (design 58 §7).</summary>
+        /// <summary>Feeding, talking to and bringing in prisoners (design 59 §7).</summary>
         public const int Warden = WorkHandle.Warden;
 
         public const int Count = WorkHandle.Count;
@@ -424,7 +428,7 @@ namespace Odyssey.Sim.Pawns
         public const int Shooting = 8;
 
         /// <summary>
-        /// Talking people round (design 58 §8): the warden's level is the recruitment gain's
+        /// Talking people round (design 59 §8): the warden's level is the recruitment gain's
         /// <c>S</c>, and every chat trains it. Claimed by the prisoner line's contracts step; a
         /// colonist from a save older than format 11 is dealt it once on load
         /// (<see cref="PawnRegistry.BackfillSkills"/>).
@@ -944,6 +948,30 @@ namespace Odyssey.Sim.Pawns
         /// 06:00. A rat is nocturnal; a hog is not.
         /// </summary>
         public bool nocturnal;
+
+        /// <summary>
+        /// Keeps within this many cells of water, Chebyshev, or 0 for anywhere (design 30 §8): the
+        /// frog's bank. Every leg its mind picks ends this close to a water cell on its own layer
+        /// or the one below, and an animal that finds itself further out heads back to the
+        /// nearest bank it can reach. A world seeds it on the bank habitat.
+        /// </summary>
+        public int bankRadius;
+
+        /// <summary>
+        /// Stays out in the rain rather than heading for cover (design 43 §6, design 30 §8). The
+        /// shelter node's own flag, named in its summary for the day a species wanted it: a frog.
+        /// </summary>
+        public bool ignoresRain;
+
+        /// <summary>
+        /// Cells within which a new leg is turned away from its own kind's (design 30 §8e), or 0
+        /// for no such rule. A frog picking where to hop next looks at every other frog this close
+        /// that is already hopping somewhere and prefers a heading at least 60 degrees from all of
+        /// theirs (owner, 2026-09-26: a group's frogs "jump in different directions as some were
+        /// very similar"). A preference, never a refusal: where every open cell lies the same way,
+        /// the least alike is taken.
+        /// </summary>
+        public int divergeRadius;
 
         /// <summary>The figure catalogue entry presentation draws this species with. Not read by the simulation.</summary>
         public string figureKey = string.Empty;
@@ -1553,7 +1581,7 @@ namespace Odyssey.Sim.Pawns
                 "Thought_AttackedByColonist", "Thought_ColonistDied",
                 // The kitchen (design 48 §4): what each food is thought of.
                 "Thought_AteRation", "Thought_AteBurnt", "Thought_AteRaw",
-                // The prisoner line (design 58 §6, §10).
+                // The prisoner line (design 59 §6, §10).
                 "Thought_Imprisoned", "Thought_ColonistArrested", "Thought_WasArrested");
             content.Jobs = ByName<JobDef>(defs,
                 "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine",
@@ -1577,7 +1605,7 @@ namespace Odyssey.Sim.Pawns
                 "Job_Cook",
                 // The ranged attack (design 47 §2d).
                 "Job_AttackRanged",
-                // The prisoner line (design 58 §7), claimed together by its contracts step.
+                // The prisoner line (design 59 §7), claimed together by its contracts step.
                 "Job_Capture", "Job_FeedPrisoner", "Job_Chat", "Job_Escort", "Job_GoToCell",
                 "Job_Escape", "Job_LeaveFree", "Job_Arrest");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
@@ -1590,7 +1618,7 @@ namespace Odyssey.Sim.Pawns
                 "Work_Doctor",
                 // The kitchen (design 48 §5).
                 "Work_Cooking",
-                // The prisoner line (design 58 §7).
+                // The prisoner line (design 59 §7).
                 "Work_Warden");
             content.Skills = ByName<SkillDef>(defs,
                 "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction",
@@ -1603,7 +1631,7 @@ namespace Odyssey.Sim.Pawns
                 "Skill_Cooking",
                 // Appended with the ranged line (design 47 §3a).
                 "Skill_Shooting",
-                // Appended with the prisoner line (design 58 §8).
+                // Appended with the prisoner line (design 59 §8).
                 "Skill_Social");
             content.Items = ByName<ItemDef>(defs,
                 "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal",
@@ -1644,9 +1672,11 @@ namespace Odyssey.Sim.Pawns
                 // The debug-spawned hostile person (design 33 §1), appended.
                 "PawnKind_Bandit",
                 // The bandit with a pistol, a raid's second kind (design 55 §8), appended.
-                "PawnKind_Gunman");
+                "PawnKind_Gunman",
+                // The frog of the banks (design 30 §8), appended after the gunman.
+                "PawnKind_CulvertFrog");
             content.Species = ByName<SpeciesDef>(defs,
-                "Species_Person", "Species_MiddenHog", "Species_DuctRat");
+                "Species_Person", "Species_MiddenHog", "Species_DuctRat", "Species_CulvertFrog");
             content.KindSpecies = new int[content.Kinds.Length];
             for (int k = 0; k < content.Kinds.Length; k++)
             {

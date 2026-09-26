@@ -9,7 +9,7 @@ using static Odyssey.Tests.Sim.PrisonFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The ways out of custody and the two new ways in (design 58 §10): release and exile, where a
+    /// The ways out of custody and the two new ways in (design 59 §10): release and exile, where a
     /// warden opens the door and she walks off the board — or, for an arrested colonist released,
     /// back to work; surrender, where a badly hurt raider gives up and walks to a cell; and arrest,
     /// where a colonist is taken by another's hand and the colony minds.

@@ -7,7 +7,7 @@ using static Odyssey.Tests.Sim.CombatFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// What the prison's tests share (design 58): a cell built as a player builds one — walls, a
+    /// What the prison's tests share (design 59): a cell built as a player builds one — walls, a
     /// door, a roof, a bed marked for prisoners — a prisoner held in it, and a shackle bed in the
     /// open. Test code only.
     /// </summary>

@@ -90,10 +90,22 @@ namespace Odyssey.EditorTools
             // The butterflies (design 52): wings and glow, drawn procedurally from a buffer.
             "Odyssey/Butterfly",
 
+            // The dream's blur on the way into a colony (design 56 §4), found by name by WakeBlur.
+            // Without it a player wakes with the warmth and the muffle but in focus.
+            "Odyssey/WakeBlur",
+
             // A bullet's streak and a muzzle's flash (design 47 §4c), drawn instanced by
             // ProjectileDirector. The shader reads its shape out of the instance matrix, so there
             // is no fallback that draws it: without this row a player fires invisible bullets.
             "Odyssey/Tracer",
+
+            // Cracks on a struck wall and a face being mined (design 58), found by name by the
+            // chunk renderer. Without it a player keeps the mining cut slab and walls never crack.
+            "Odyssey/Crack",
+
+            // The pieces a cracked wall or mined face breaks into (design 58 §7), found by name by
+            // the chunk renderer. Without it a player's walls and rock vanish whole, as before.
+            "Odyssey/Shard",
 
             // The sky, and it was not on the first draft of this list — `ShaderInclusionTests`
             // found it on the run that was meant to confirm the fix, along with `Standard` below.

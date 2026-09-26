@@ -189,10 +189,10 @@ namespace Odyssey.Hud
         /// <summary>The corpse's registry key: its badge, and the first word of its title.</summary>
         public const string CorpseKey = "ui.pawn.corpse";
 
-        /// <summary>A held pawn's word under her name (design 58 §11b).</summary>
+        /// <summary>A held pawn's word under her name (design 59 §11b).</summary>
         public const string PrisonerKey = "ui.pawn.prisoner";
 
-        // ---- the prisoner's rows (design 58 §11b) ---------------------------------------------
+        // ---- the prisoner's rows (design 59 §11b) ---------------------------------------------
 
         /// <summary>The row that says what the colony means to do with her, and cycles it when pressed.</summary>
         public const string PrisonModeRow = "mode";
@@ -209,7 +209,7 @@ namespace Odyssey.Hud
         /// <summary>Present while her bed is a shackle bed.</summary>
         public const string ShackledRow = "shackled";
 
-        /// <summary>Her chance of breaking out in a day, as a percentage (design 58 §9a).</summary>
+        /// <summary>Her chance of breaking out in a day, as a percentage (design 59 §9a).</summary>
         public const string EscapeRow = "escape risk";
 
         /// <summary>What is raising or lowering her escape risk, in words.</summary>
@@ -226,7 +226,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// The mode a press on the mode row asks for: Hold, Recruit, Release, Exile and round again.
-        /// Ransom is a seam (design 58 §13) and is never offered.
+        /// Ransom is a seam (design 59 §13) and is never offered.
         /// </summary>
         public static PrisonMode NextPrisonMode(PrisonMode mode) => mode switch
         {
@@ -351,7 +351,7 @@ namespace Odyssey.Hud
         public bool IsHostile;
 
         /// <summary>
-        /// The selected pawn is held by the colony (design 58 §4b): neither ours nor an enemy. Its
+        /// The selected pawn is held by the colony (design 59 §4b): neither ours nor an enemy. Its
         /// pane is a bandit's shape — face, name, activity, where — under the word "Prisoner".
         /// Set from the view on every refresh.
         /// </summary>
@@ -1224,10 +1224,10 @@ namespace Odyssey.Hud
 
         bool _bedUnderPane;
 
-        /// <summary>The bed under the pane is for prisoners (design 58 §5b): what a press on its purpose row reverses.</summary>
+        /// <summary>The bed under the pane is for prisoners (design 59 §5b): what a press on its purpose row reverses.</summary>
         public bool BedForPrisoners { get; private set; }
 
-        /// <summary>The row that says what a bed is for, and toggles it when pressed (design 58 §11a).</summary>
+        /// <summary>The row that says what a bed is for, and toggles it when pressed (design 59 §11a).</summary>
         public const string BedPurposeRow = "for prisoners";
 
         /// <summary>
@@ -1502,7 +1502,7 @@ namespace Odyssey.Hud
                     ? ColonistNames.Of(snapshot, new PawnId(detail.EdificeOwner))
                     : "Assign…");
 
-                // What the bed is for (design 58 §5b, §11a), the pane's second press on a bed:
+                // What the bed is for (design 59 §5b, §11a), the pane's second press on a bed:
                 // marking one bed marks every bed in its room, and a bed with no room around it
                 // holds its prisoner shackled, which the value says rather than leaving it to be
                 // found out.
@@ -1709,7 +1709,7 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// A held prisoner's facts, one row each, in the tile's rows (design 58 §11b): the mode, how
+        /// A held prisoner's facts, one row each, in the tile's rows (design 59 §11b): the mode, how
         /// willing she is, and in Recruit mode how long until she joins and what is slowing it.
         /// Every number is a published aspect the simulation's own arithmetic wrote, so the pane
         /// cannot say one thing while the chat does another. Rewritten only when a number moves.
@@ -1719,7 +1719,7 @@ namespace Odyssey.Hud
             bool escaping = custody == PawnCustody.Escaping;
             if (custody == PawnCustody.Released)
             {
-                // Let go and walking off the board (design 58 §10): nothing to set.
+                // Let go and walking off the board (design 59 §10): nothing to set.
                 _cellRowsFor = -1;
                 _prisonRowsFor = default;
                 Row(0, LeavingRow, "let go");
@@ -1755,7 +1755,7 @@ namespace Odyssey.Hud
             int n = 0;
             if (escaping)
             {
-                // Out of her cell: nothing to set until she is brought back down (design 58 §9c).
+                // Out of her cell: nothing to set until she is brought back down (design 59 §9c).
                 Row(n++, EscapingRow, "breaking out", HudTheme.Bad);
                 while (CellRows.Count > n) CellRows.RemoveAt(CellRows.Count - 1);
                 return;
@@ -1953,6 +1953,12 @@ namespace Odyssey.Hud
         /// </summary>
         public const string DraftKey = "ui.command.draft", UndraftKey = "ui.command.undraft";
 
+        /// <summary>
+        /// First Person (design 57): the view locked behind her shoulder until Escape. Public for the
+        /// same reason as the draft's keys: the shell that draws the button has to know it is live.
+        /// </summary>
+        public const string RideKey = "ui.command.ride";
+
         /// <summary>Whether the colonist on the pane is drafted: which face the Draft button shows.</summary>
         public bool Drafted { get; private set; }
 
@@ -1972,11 +1978,11 @@ namespace Odyssey.Hud
                 IconKey = "ui.command.inspect", Label = "Inspect",
                 Enabled = false, Reason = "the record view arrives with the log (M6)",
             });
-            Commands.Add(new InspectCommand
-            {
-                IconKey = "ui.command.prioritise", Label = "Prioritise",
-                Enabled = false, Reason = "job priorities arrive with the work grid (M7)",
-            });
+            // Prioritise stood here, dimmed, promising "job priorities arrive with the work grid
+            // (M7)". The work grid has arrived and holds the priorities; a forced "do this next" is
+            // the right-click menu's. Taken out when First Person needed its room (design 57 §6), on
+            // the rule the store's dead Rename went by: an affordance for something that does not
+            // exist is worse than a gap.
             // Live since the draft (design 33 §2f). One button with two faces, as the reference
             // has it: it says what pressing it will do, and a tombstoned colonist has nothing to
             // command.
@@ -1996,7 +2002,7 @@ namespace Odyssey.Hud
                 Enabled = !Tombstoned,
                 Reason = ResponseModel.Describe(response),
             });
-            // Arrest (design 58 §10): on her own pane rather than a right-click on her, because a
+            // Arrest (design 59 §10): on her own pane rather than a right-click on her, because a
             // right-click that touches a colonist is a move (design 33 §2f) and must stay one. The
             // nearest colonist who can reach her is sent; with no free prison bed it is refused.
             Commands.Add(new InspectCommand
@@ -2005,9 +2011,17 @@ namespace Odyssey.Hud
                 Enabled = !Tombstoned,
                 Reason = "the nearest colonist takes her into custody; needs a free prison bed",
             });
+            // First Person (design 57), after the three that command her: this one only watches. Last,
+            // so the response keeps its place beside Draft.
+            Commands.Add(new InspectCommand
+            {
+                IconKey = RideKey, Label = Registry.Label(RideKey),
+                Enabled = !Tombstoned,
+                Reason = "watch from behind her shoulder; the wheel goes in to her eyes, Esc leaves",
+            });
         }
 
-        /// <summary>The colonist pane's arrest command (design 58 §10).</summary>
+        /// <summary>The colonist pane's arrest command (design 59 §10).</summary>
         public const string ArrestKey = "ui.command.arrest";
     }
 }

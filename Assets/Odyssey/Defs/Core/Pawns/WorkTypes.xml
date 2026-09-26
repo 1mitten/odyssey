@@ -152,7 +152,7 @@
   </WorkTypeDef>
 
   <!--
-    The warden (design 58 section 7): bringing in the downed, feeding the held, talking to them.
+    The warden (design 59 section 7): bringing in the downed, feeding the held, talking to them.
     Scanned last, after the doctor: its capture giver is an emergency one, because a captured
     raider is bleeding, so it goes ahead of everything at its priority regardless of this rank.
     No rateSkill: Social buys how far a chat moves a prisoner (the recruitment gain), not how

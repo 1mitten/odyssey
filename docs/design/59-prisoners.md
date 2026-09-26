@@ -1,4 +1,4 @@
-# 58 — Prisoners
+# 59 — Prisoners
 
 **Written 2026-09-26**, from the owner's request and a four-round interview the same day.
 Branch `claude/prisoner-bed-assignment-98afc0`. Plan: `docs/plans/prisoners.md`. Interview:

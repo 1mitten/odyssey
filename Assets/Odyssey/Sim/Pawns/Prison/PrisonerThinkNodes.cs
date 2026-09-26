@@ -7,7 +7,7 @@ using Odyssey.Sim.World;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// The minds of a pawn the colony holds (design 58 §6), chosen by custody ahead of the hostile
+    /// The minds of a pawn the colony holds (design 59 §6), chosen by custody ahead of the hostile
     /// tree: an escapee is hostile, but she is not a raider and must not ask a band what to do.
     /// Shared arrays; the nodes hold no state.
     ///
@@ -27,7 +27,7 @@ namespace Odyssey.Sim.Pawns
         };
 
         /// <summary>
-        /// A prisoner breaking out (design 58 §6, §9c): down, else strike back at whoever laid hands on
+        /// A prisoner breaking out (design 59 §6, §9c): down, else strike back at whoever laid hands on
         /// her while he is beside her, else out by any way open — a door held open included — else
         /// break the door, else wait for one to open.
         /// </summary>
@@ -37,7 +37,7 @@ namespace Odyssey.Sim.Pawns
             new PrisonerWaitThinkNode(),
         };
 
-        /// <summary>A pawn let go (design 58 §10): down, else walk off the board, else wait.</summary>
+        /// <summary>A pawn let go (design 59 §10): down, else walk off the board, else wait.</summary>
         static readonly ThinkNode[] Released = { new DownedThinkNode(), new LeaveFreeThinkNode(), new PrisonerWaitThinkNode() };
 
         /// <summary>The tree for this custody. Never asked for <see cref="PawnCustody.Free"/>.</summary>
@@ -90,7 +90,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// A held prisoner's own needs (design 58 §6): eat what is in her cell, sleep in her prison bed.
+    /// A held prisoner's own needs (design 59 §6): eat what is in her cell, sleep in her prison bed.
     /// Never food or a bed outside the room she is kept in; a shackled prisoner, or one in no cell,
     /// eats only what a warden brings her and sleeps where she is kept.
     /// </summary>
@@ -174,7 +174,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// A shackled prisoner (design 58 §5b, §6) stays on her bed: walks to it if she is not on it,
+    /// A shackled prisoner (design 59 §5b, §6) stays on her bed: walks to it if she is not on it,
     /// and waits there. Declines for anybody whose own bed is not a shackle bed.
     /// </summary>
     public sealed class ShackledThinkNode : ThinkNode
@@ -202,7 +202,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// A prisoner walks her cell by day (design 58 §6): a cell of her room chosen by a draw of her
+    /// A prisoner walks her cell by day (design 59 §6): a cell of her room chosen by a draw of her
     /// own, never a door — doors are the room's boundary, so they are not in its cells at all.
     /// Declines for a prisoner who is not standing in a cell.
     /// </summary>
@@ -237,7 +237,7 @@ namespace Odyssey.Sim.Pawns
     /// <summary>
     /// A prisoner on her feet who owns a prison bed in a cell but stands outside that cell — a
     /// raider who surrendered, a colonist arrested, or anybody who strayed — walks herself to the
-    /// bed (design 58 §10), in a colonist's mode for the walk so the cell door lets her in. A
+    /// bed (design 59 §10), in a colonist's mode for the walk so the cell door lets her in. A
     /// shackle bed is the shackles' node's; a prisoner with no bed has nowhere to go.
     /// </summary>
     public sealed class ToMyCellThinkNode : ThinkNode
@@ -262,7 +262,7 @@ namespace Odyssey.Sim.Pawns
 
     /// <summary>
     /// An escapee strikes back at the one she holds a grudge against — the colonist who tried to
-    /// arrest her (design 58 §10) — while he stands beside her and the grudge lasts. Only beside
+    /// arrest her (design 59 §10) — while he stands beside her and the grudge lasts. Only beside
     /// her: she is running, and does not chase him.
     /// </summary>
     public sealed class FightBackThinkNode : ThinkNode
@@ -280,7 +280,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// An escapee runs for the nearest edge she can reach in her own mode (design 58 §9c) — which
+    /// An escapee runs for the nearest edge she can reach in her own mode (design 59 §9c) — which
     /// cannot open a door, so while her cell is shut this declines and the door is broken instead.
     /// </summary>
     public sealed class EscapeRunThinkNode : ThinkNode
@@ -300,7 +300,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// An escapee with no way out breaks one (design 58 §9c): the nearest door of the room she is
+    /// An escapee with no way out breaks one (design 59 §9c): the nearest door of the room she is
     /// in that she can get at, with the fight's own building attack — so how long a door holds is
     /// its hit points against a bare fist, and <b>what a cell door is built of now matters</b>.
     /// With no door to break (a room walled all round) she breaks the nearest colony building
@@ -338,7 +338,7 @@ namespace Odyssey.Sim.Pawns
         }
     }
 
-    /// <summary>A pawn released or exiled walks to the nearest edge she can reach, and leaves (design 58 §10).</summary>
+    /// <summary>A pawn released or exiled walks to the nearest edge she can reach, and leaves (design 59 §10).</summary>
     public sealed class LeaveFreeThinkNode : ThinkNode
     {
         public override string Name => "LeaveFree";

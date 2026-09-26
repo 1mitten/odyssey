@@ -48,7 +48,7 @@ namespace Odyssey.Tests.Sim
             // item's ContainerId, and the zones leaving the items section for two of their own;
             // 9 design 28's TemperatureSeverity, appended to the pawn record after the
             // starvation bar; 10 design 47's Shooting, no layout change, a guard that deals the
-            // seventh skill once to a colonist from an older file; 11 design 58's Social, the same
+            // seventh skill once to a colonist from an older file; 11 design 59's Social, the same
             // guard for the tenth. See WorldSave.CurrentFormatVersion.
             Assert.That(WorldSave.CurrentFormatVersion, Is.EqualTo(11));
         }

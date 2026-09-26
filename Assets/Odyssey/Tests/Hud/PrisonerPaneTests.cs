@@ -7,7 +7,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// A prisoner's pane (design 58 §11b): her mode, how willing she is, and in Recruit mode how
+    /// A prisoner's pane (design 59 §11b): her mode, how willing she is, and in Recruit mode how
     /// long until she joins and what is slowing it — every number read from the aspects the
     /// simulation's own arithmetic published, and the mode row the control that moves it on.
     /// </summary>

@@ -441,11 +441,11 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.Tabs.Single(t => t.Name == "Health").Enabled, Is.True);
 
             Assert.That(pane.Commands, Is.Not.Empty);
-            // The draft, the response (design 33 §2f, §18e) and the arrest (design 58 §10) are the
-            // commands wired; the rest may not pretend to be.
+            // The draft, the response (design 33 §2f, §18e), the arrest (design 59 §10) and First
+            // Person (design 57) are the commands wired; the rest may not pretend to be.
             Assert.That(pane.Commands.Where(c => c.Enabled).Select(c => c.IconKey),
-                Is.EqualTo(new[] { InspectModel.DraftKey, ResponseModel.FightBackKey, InspectModel.ArrestKey }),
-                "only Draft, the response and Arrest are wired, and none of the others may pretend to be");
+                Is.EqualTo(new[] { InspectModel.DraftKey, ResponseModel.FightBackKey, InspectModel.ArrestKey, InspectModel.RideKey }),
+                "only Draft, the response, Arrest and First Person are wired, and none of the others may pretend to be");
         }
 
         /// <summary>
@@ -562,7 +562,7 @@ namespace Odyssey.Tests.Hud
                     "ui.skill.cooking",
                     // And since the ranged line's (design 47 §3a).
                     "ui.skill.shooting",
-                    // And since the prisoner line's (design 58 §8).
+                    // And since the prisoner line's (design 59 §8).
                     "ui.skill.social",
                 }),
                 "the live rows are the simulation's own skills, each under its own name");

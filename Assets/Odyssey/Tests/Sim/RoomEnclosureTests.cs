@@ -118,7 +118,7 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// <b>A fill that outgrows the room limit must not wall in the next one</b> (design 58
+        /// <b>A fill that outgrows the room limit must not wall in the next one</b> (design 59
         /// §15d). The fill used to stop the moment a region passed 2,500 cells, leaving the cells
         /// it had queued marked visited and never processed; a later fill that reached one took it
         /// for a wall. So a room whose doorway gave on to that frontier stayed a room with its door

@@ -34,7 +34,7 @@ namespace Odyssey.Presentation.CameraRig
     /// setting.
     /// </summary>
     [RequireComponent(typeof(UnityEngine.Camera))]
-    public sealed class SliceCameraRig : MonoBehaviour
+    public sealed partial class SliceCameraRig : MonoBehaviour
     {
         [Header("Slice")]
         public SliceSettings slice = new SliceSettings();
@@ -287,6 +287,9 @@ namespace Odyssey.Presentation.CameraRig
 
         public void Bind(WorldRenderModel model, ChunkRenderer renderer, HudDirectors directors)
         {
+            // A session that ended mid-ride hands the next one the colony view's drawing and the
+            // pointer back, not the ride's (design 57 §5).
+            RestoreFromRide();
             _model = model;
             _renderer = renderer;
             _directors = directors;
@@ -303,6 +306,15 @@ namespace Odyssey.Presentation.CameraRig
         {
             if (_model == null || _directors == null) return;
             float dt = Mathf.Max(Time.unscaledDeltaTime, 1e-4f);
+
+            // Riding along with a colonist (design 57): the view is hers until Escape, so none of
+            // the colony view's input is read and nothing is picked. The camera is stood in
+            // LateUpdate by the composition root, where her figure has a position (PlaceRide).
+            if (SyncRide())
+            {
+                ReadRide();
+                return;
+            }
 
             ReadKeyboard(dt);
             ReadMouse(dt);
@@ -956,8 +968,30 @@ namespace Odyssey.Presentation.CameraRig
                 }
             }
 
-            var rotation = Quaternion.Euler(pitch, yaw, 0f);
-            transform.SetPositionAndRotation(_focus - rotation * Vector3.forward * distance, rotation);
+            // The wake's settle (design 56 §6) is added to what is drawn and never to the rig's
+            // own state: the targets, the smoothing and a restored pose all go on meaning what
+            // they meant, and at a settle of nought the camera is exactly where it would have been.
+            var rotation = Quaternion.Euler(
+                Mathf.Clamp(pitch + _settlePitch, 20f, 85f), yaw + _settleYaw, 0f);
+            float drawnDistance = distance * (1f + _settleDistance);
+            transform.SetPositionAndRotation(_focus - rotation * Vector3.forward * drawnDistance, rotation);
         }
+
+        float _settlePitch, _settleYaw, _settleDistance;
+
+        /// <summary>
+        /// How far the drawn camera still is from the rig's own pose, on the way into a colony
+        /// (design 56 §6): higher by <paramref name="pitchDeg"/>, round by <paramref name="yawDeg"/>
+        /// and further out by <paramref name="distanceFactor"/> of its distance. Nought is the pose.
+        /// </summary>
+        public void SetSettle(float pitchDeg, float yawDeg, float distanceFactor)
+        {
+            _settlePitch = pitchDeg;
+            _settleYaw = yawDeg;
+            _settleDistance = Mathf.Max(0f, distanceFactor);
+        }
+
+        /// <summary>Whether a settle is being drawn, for a test that wants it gone afterwards.</summary>
+        public bool Settling => _settlePitch != 0f || _settleYaw != 0f || _settleDistance != 0f;
     }
 }

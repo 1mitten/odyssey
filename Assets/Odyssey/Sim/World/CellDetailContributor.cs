@@ -234,7 +234,7 @@ namespace Odyssey.Sim.World
                 storeKind, storedStacks, storeSlots, storedDef, storedUnits,
                 storeKind == CellDetail.StoreNone ? -1 : storeCell,
                 ambientTempC,
-                // What the bed is for (design 58 §5b), beside who owns it.
+                // What the bed is for (design 59 §5b), beside who owns it.
                 quality == 0 || _purposes == null ? CellDetail.BedForColony
                 : _purposes.PurposeAt(cell) != BedPurpose.Prison ? CellDetail.BedForColony
                 : _purposes.IsShackled(cell) ? CellDetail.BedShackles

@@ -83,7 +83,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(JobHandle.Cook, Is.EqualTo(26));
             // And the ranged line's (design 47 §3a), 27 after the kitchen's.
             Assert.That(JobHandle.AttackRanged, Is.EqualTo(27));
-            // And the prisoner line's eight (design 58 §7), 28 to 35.
+            // And the prisoner line's eight (design 59 §7), 28 to 35.
             Assert.That(new[] { JobHandle.Capture, JobHandle.FeedPrisoner, JobHandle.Chat, JobHandle.Escort,
                     JobHandle.GoToCell, JobHandle.Escape, JobHandle.LeaveFree, JobHandle.Arrest },
                 Is.EqualTo(new[] { 28, 29, 30, 31, 32, 33, 34, 35 }));
@@ -103,7 +103,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(WorkHandle.Doctor, Is.EqualTo(6));
             // 8 since the kitchen appended Work_Cooking at 7 (design 48).
             Assert.That(WorkHandle.Cooking, Is.EqualTo(7));
-            // 9 since the prisoner line appended Work_Warden at 8 (design 58 §7).
+            // 9 since the prisoner line appended Work_Warden at 8 (design 59 §7).
             Assert.That(WorkHandle.Warden, Is.EqualTo(8));
             Assert.That(WorkHandle.Count, Is.EqualTo(9));
             Assert.That(SkillIndex.Melee, Is.EqualTo(5));
@@ -113,13 +113,15 @@ namespace Odyssey.Tests.Sim
             Assert.That(SkillIndex.Cooking, Is.EqualTo(7));
             // And Shooting at 8 (design 47), after the kitchen: nine.
             Assert.That(SkillIndex.Shooting, Is.EqualTo(8));
-            // And Social at 9 (design 58 §8), after Shooting: ten.
+            // And Social at 9 (design 59 §8), after Shooting: ten.
             Assert.That(SkillIndex.Social, Is.EqualTo(9));
             Assert.That(SkillIndex.Count, Is.EqualTo(10));
             Assert.That(PawnKindIndex.Bandit, Is.EqualTo(3));
             // 5 since the raid appended the gunman at 4 (design 55 §8).
             Assert.That(PawnKindIndex.Gunman, Is.EqualTo(4));
-            Assert.That(PawnKindIndex.Count, Is.EqualTo(5));
+            // And the culvert frog at 5, after the gunman (design 30 §8): six.
+            Assert.That(PawnKindIndex.CulvertFrog, Is.EqualTo(5));
+            Assert.That(PawnKindIndex.Count, Is.EqualTo(6));
 
             // IntentKind is an enum whose numbers an intent log carries: the three orders are
             // together and after everything main shipped first (power's four, since the merge of

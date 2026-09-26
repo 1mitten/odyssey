@@ -388,6 +388,16 @@ namespace Odyssey.Presentation.Rendering
         public bool quadrupedGait;
 
         /// <summary>
+        /// This row's fastest locomotion clip is a <b>hop</b>, drawn in place (design 30 §8): the
+        /// figure's drawn position is paced to the clip's own flight, held still while it crouches
+        /// and lands and carried forward while it is in the air, so a frog hops rather than gliding
+        /// along the ground with its legs going. On for the frog, whose only way of moving is its
+        /// Jump clip; see <c>PawnFigureDirector.HopSurge</c>.
+        /// </summary>
+        [Tooltip("The fastest gait is a hop drawn in place: pace the figure's position to the clip's flight.")]
+        public bool hopGait;
+
+        /// <summary>
         /// Which parts of this body's atlas are its skin, its hair and its clothes, so a colonist
         /// can be recoloured. Empty on everything that is not a colonist.
         /// </summary>
@@ -762,11 +772,14 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const string AnimalBase = Prefix + "pawn.animal";
 
-        public static readonly string[] AnimalNames = { string.Empty, "hog", "rat" };
+        /// <remarks>Kinds 3 and 4 are the bandit and the gunman, people, and have no row; the frog is kind 5
+        /// (design 30 §8).</remarks>
+        public static readonly string[] AnimalNames = { string.Empty, "hog", "rat", string.Empty, string.Empty, "frog" };
 
-        /// <summary>The row for a kind, or empty for the colonist and for a kind past the table.</summary>
+        /// <summary>The row for a kind, or empty for a person and for a kind past the table.</summary>
         public static string Animal(int kind) =>
-            kind > 0 && kind < AnimalNames.Length ? AnimalBase + "." + AnimalNames[kind] : string.Empty;
+            kind > 0 && kind < AnimalNames.Length && AnimalNames[kind].Length > 0
+                ? AnimalBase + "." + AnimalNames[kind] : string.Empty;
 
         /// <summary>
         /// The fight's clip rows (design 33 §1, <c>docs/research/synty-sword-combat.md</c>), one

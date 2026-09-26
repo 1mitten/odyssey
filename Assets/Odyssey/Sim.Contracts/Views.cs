@@ -332,14 +332,14 @@ namespace Odyssey.Sim.Contracts
         public readonly PawnFlags Flags;
 
         /// <summary>
-        /// Whether the colony holds this pawn (design 58 §4). A byte beside <see cref="Flags"/>
+        /// Whether the colony holds this pawn (design 59 §4). A byte beside <see cref="Flags"/>
         /// rather than a bit in it, because that byte is full and belongs to the fight. Derived each
         /// publish from the pawn's saved custody, so neither saved nor hashed here.
         /// </summary>
         public readonly PawnCustody Custody;
 
         /// <summary>
-        /// Wearing the prison jumpsuit (design 58 §11d): she has been laid in a prison bed and is
+        /// Wearing the prison jumpsuit (design 59 §11d): she has been laid in a prison bed and is
         /// not free again. Read by the one outfit owner, <c>PawnOutfits</c>, and by nothing else.
         /// </summary>
         public readonly bool Dressed;
@@ -352,7 +352,7 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>
         /// One of ours: a person who is not hostile and nobody's prisoner. The roster, the Work tab
-        /// and the draft. A prisoner is neither ours nor an enemy (design 58 §4b).
+        /// and the draft. A prisoner is neither ours nor an enemy (design 59 §4b).
         /// </summary>
         public bool IsColonist =>
             (Flags & (PawnFlags.Person | PawnFlags.Hostile)) == PawnFlags.Person && Custody == PawnCustody.Free;
@@ -1115,6 +1115,30 @@ namespace Odyssey.Sim.Contracts
 
 
     /// <summary>
+    /// Rock somebody started to mine and then took the order off (design 58 §3): no order stands
+    /// on it, but the cut is kept, so the face stays cracked. One row per such cell, and none while
+    /// every started cut is either ordered or finished — the published face of the simulation's
+    /// <c>PartMinedRock</c>.
+    ///
+    /// <para>Sparse, a report of saved and hashed state and neither itself. Progress is quantised
+    /// as <see cref="OrderView.Progress"/> is, for the same reason: it is drawn, not counted.</para>
+    /// </summary>
+    public readonly struct PartMinedView
+    {
+        /// <summary>The cell, as a whole-world index. <c>GridSize.FromIndex</c> unpacks it.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>How far through the cut the cell is, 0 for untouched and 255 for finished.</summary>
+        public readonly byte Progress;
+
+        public PartMinedView(int cellIndex, byte progress)
+        {
+            CellIndex = cellIndex;
+            Progress = progress;
+        }
+    }
+
+    /// <summary>
     /// A building site: something the player has asked for that is not there yet.
     ///
     /// <para>Its own channel rather than a sixth <c>DesignationKind</c>, because an order is a
@@ -1622,7 +1646,7 @@ namespace Odyssey.Sim.Contracts
         public readonly int AmbientTempC;
 
         /// <summary>
-        /// What the bed standing here is for (design 58 §5b): <see cref="BedForColony"/> — every
+        /// What the bed standing here is for (design 59 §5b): <see cref="BedForColony"/> — every
         /// cell with no bed says the same — <see cref="BedForPrisoners"/>, or
         /// <see cref="BedShackles"/> for a prison bed with no room around it.
         /// </summary>
@@ -1683,6 +1707,7 @@ namespace Odyssey.Sim.Contracts
         ThingView[] _things = Array.Empty<ThingView>();
         byte[] _sliceCells = Array.Empty<byte>();
         OrderView[] _orders = Array.Empty<OrderView>();
+        PartMinedView[] _partMined = Array.Empty<PartMinedView>();
         SiteView[] _sites = Array.Empty<SiteView>();
         ZoneView[] _zones = Array.Empty<ZoneView>();
         StoreView[] _stores = Array.Empty<StoreView>();
@@ -1942,6 +1967,13 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public ReadOnlySpan<OrderView> Orders => new ReadOnlySpan<OrderView>(_orders, 0, OrderCount);
 
+        /// <summary>How many part-mined cells with no order on them this frame carries.</summary>
+        public int PartMinedCount { get; private set; }
+
+        /// <summary>Rock started on and left, by cell ascending. See <see cref="PartMinedView"/>.</summary>
+        public ReadOnlySpan<PartMinedView> PartMined =>
+            new ReadOnlySpan<PartMinedView>(_partMined, 0, PartMinedCount);
+
         /// <summary>Every building site in the world, in cell-index order. See <see cref="SiteView"/>.</summary>
         public ReadOnlySpan<SiteView> Sites => new ReadOnlySpan<SiteView>(_sites, 0, SiteCount);
 
@@ -2187,6 +2219,7 @@ namespace Odyssey.Sim.Contracts
             ThingCount = 0;
             SliceCellCount = 0;
             OrderCount = 0;
+            PartMinedCount = 0;
             SiteCount = 0;
             ZoneCount = 0;
             StoreCount = 0;
@@ -2329,6 +2362,12 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _orders, OrderCount + 1);
             _orders[OrderCount++] = view;
+        }
+
+        internal void AddPartMined(in PartMinedView view)
+        {
+            Grow(ref _partMined, PartMinedCount + 1);
+            _partMined[PartMinedCount++] = view;
         }
 
         internal void AddSite(in SiteView view)

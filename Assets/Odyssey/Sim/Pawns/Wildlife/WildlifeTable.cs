@@ -1,5 +1,7 @@
 #nullable enable
 using System;
+using Odyssey.Sim.Contracts;
+using Odyssey.Sim.World;
 
 namespace Odyssey.Sim.Pawns.Wildlife
 {
@@ -14,6 +16,45 @@ namespace Odyssey.Sim.Pawns.Wildlife
 
         /// <summary>Beside solid terrain on its own layer: an outcrop's side, a rock face, a cut.</summary>
         Rock = 2,
+
+        /// <summary>
+        /// Within <see cref="WaterBank.SeedRadius"/> of water — a stream's, a pond's or a lake's
+        /// bank (design 30 §8). The one habitat whose members are scattered on it as well as
+        /// centred on it, and which arrives only where the water reaches the board's edge.
+        /// </summary>
+        Bank = 3,
+    }
+
+    /// <summary>
+    /// Where the water is, for the animals that keep to it (design 30 §8): a cell is on a bank when
+    /// a water cell, shallow or deep, lies within a Chebyshev radius of it on its own layer or the
+    /// one below — a stream is cut a layer into the meadow as often as not, and its bank stands
+    /// above it. The one owner of the question, asked by the census at seeding and by the frog's
+    /// mind on every leg it picks.
+    /// </summary>
+    public static class WaterBank
+    {
+        /// <summary>How near water a cell must be to count as bank when a world is seeded.</summary>
+        public const int SeedRadius = 2;
+
+        public static bool Near(CellGrid grid, int cell, int radius)
+        {
+            GridSize size = grid.Size;
+            CellRef c = size.FromIndex(cell);
+            for (int dy = -1; dy <= 0; dy++)
+            {
+                int y = c.Y + dy;
+                if (y < 0 || y >= size.SizeY) continue;
+                for (int dz = -radius; dz <= radius; dz++)
+                for (int dx = -radius; dx <= radius; dx++)
+                {
+                    int x = c.X + dx, z = c.Z + dz;
+                    if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
+                    if (Worldgen.Natural.NaturalContent.IsWater(grid.Terrain[size.Index(x, z, y)])) return true;
+                }
+            }
+            return false;
+        }
     }
 
     /// <summary>

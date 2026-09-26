@@ -1,7 +1,7 @@
 namespace Odyssey.Sim.Contracts
 {
     /// <summary>
-    /// Whether the colony holds a pawn (design 58 §4a). Saved on the pawn and hashed in bits 28–29
+    /// Whether the colony holds a pawn (design 59 §4a). Saved on the pawn and hashed in bits 28–29
     /// of its word, nought while <see cref="Free"/>, so a colony that never takes a prisoner saves
     /// and hashes as it always did.
     ///
@@ -25,7 +25,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// What the colony means to do with a prisoner (design 58 §8, §13), set on the prisoner tab.
+    /// What the colony means to do with a prisoner (design 59 §8, §13), set on the prisoner tab.
     /// Saved in the prisoner's record. Appended only: the numbers are saved.
     /// </summary>
     public enum PrisonMode : byte

@@ -3,7 +3,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// The prison's pawn aspects as the interface reads them (design 58 §11): the simulation's
+    /// The prison's pawn aspects as the interface reads them (design 59 §11): the simulation's
     /// <c>PrisonAspects</c> names, copied because this assembly cannot see that one, and held to
     /// agree by spelling.
     /// </summary>

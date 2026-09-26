@@ -272,7 +272,7 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// <b>A bed says what it is for</b> (design 58 §11a): the pane's second press on a bed, and a
+        /// <b>A bed says what it is for</b> (design 59 §11a): the pane's second press on a bed, and a
         /// prison bed with no room round it says it shackles rather than leaving it to be found out.
         /// </summary>
         [TestCase(CellDetail.BedForColony, "No", false)]

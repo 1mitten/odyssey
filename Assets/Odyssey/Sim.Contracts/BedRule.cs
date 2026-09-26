@@ -1,7 +1,7 @@
 namespace Odyssey.Sim.Contracts
 {
     /// <summary>
-    /// Who a bed is for (design 58 §5). A colony bed is the default; a prison bed is one the player
+    /// Who a bed is for (design 59 §5). A colony bed is the default; a prison bed is one the player
     /// marked, or one standing in a room with a marked bed in it.
     /// </summary>
     public enum BedPurpose : byte
@@ -11,7 +11,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// Which pool of beds a pawn sleeps from (design 58 §5a). <see cref="None"/> is everybody who
+    /// Which pool of beds a pawn sleeps from (design 59 §5a). <see cref="None"/> is everybody who
     /// never sleeps in a bed: an animal, a bandit at large, a pawn leaving the board.
     /// </summary>
     public enum BedUser : byte
@@ -22,7 +22,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// <b>The one rule for who may use and own a bed</b> (design 58 §5a).
+    /// <b>The one rule for who may use and own a bed</b> (design 59 §5a).
     ///
     /// <para>Before it there were four near-copies of "my own bed, else the nearest bed nobody
     /// owns" in the simulation — the sleep chooser, the patient's, the rescue's and the sleeper's

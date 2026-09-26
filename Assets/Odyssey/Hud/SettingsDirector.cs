@@ -241,6 +241,13 @@ namespace Odyssey.Hud
         /// tool down instead. Appended rather than placed by rung so no value moves.
         /// </summary>
         CloseContextMenu,
+
+        /// <summary>
+        /// Leave the ride (design 57 §5): the view is locked to a colonist "until they push Esc"
+        /// (owner, 2026-09-26), so while one runs this is the only thing the key means. Appended
+        /// so no member moves.
+        /// </summary>
+        LeaveRide,
     }
 
     /// <summary>
@@ -372,6 +379,10 @@ namespace Odyssey.Hud
         /// <summary>The registry key naming the selection-style row, and the key it is stored under.</summary>
         public const string SelectionStyleKey = "ui.settings.selectionstyle";
 
+        /// <summary>The registry key naming the wake-up row, and the key it is stored under
+        /// (design 56 §9).</summary>
+        public const string WakeUpKey = "ui.settings.wake";
+
         /// <summary>The registry key naming the exit row.</summary>
         /// <summary>The heading over the levers that decide how the frame is paced and drawn.</summary>
         public const string DisplayGroupKey = "ui.settings.display";
@@ -446,6 +457,7 @@ namespace Odyssey.Hud
             DeveloperKey,
             BuildLayoutKey,
             SelectionStyleKey,
+            WakeUpKey,
             ExitKey,
             "ui.settings.shadows",
             "ui.settings.surround",
@@ -1067,6 +1079,17 @@ namespace Odyssey.Hud
 
         public const SelectionStyle DefaultSelectionStyle = SelectionStyle.Highlight;
 
+        /// <summary>
+        /// Whether a colony is entered by waking into it — blurred, warm and muffled, clearing over
+        /// five seconds — or by a plain fade (design 56). On unless the player turned it off: it is
+        /// the way the owner asked for the game to open, and the switch is for the player who has
+        /// seen it enough times.
+        /// </summary>
+        public bool WakeUp { get; private set; } = true;
+
+        /// <summary>The wake-up's two rungs, in the order they are drawn.</summary>
+        public static readonly bool[] WakeUpRungs = { true, false };
+
         /// <summary>The two rungs, in the order they are drawn.</summary>
         public static readonly SelectionStyle[] SelectionStyles = { SelectionStyle.Highlight, SelectionStyle.Brackets };
 
@@ -1120,6 +1143,9 @@ namespace Odyssey.Hud
 
         /// <summary>Raised when the selection style changes.</summary>
         public event Action<SelectionStyle>? SelectionStyleChanged;
+
+        /// <summary>Raised when the wake-up is switched, with its new state.</summary>
+        public event Action<bool>? WakeUpChanged;
 
         /// <summary>Raised when one bus's volume changes, with the bus that changed.</summary>
         public event Action<SettingsBus>? BusDbChanged;
@@ -1255,6 +1281,7 @@ namespace Odyssey.Hud
                     SetCameraSpeed(100);
                     SetBuildPaletteLayout(BuildPaletteModel.Default);
                     SetSelectionStyle(DefaultSelectionStyle);
+                    SetWakeUp(true);
                     break;
                 case SettingsTab.Graphics:
                     foreach (GraphicsLadder ladder in LadderOrder) SetValue(ladder, DefaultOf(ladder));
@@ -1526,6 +1553,15 @@ namespace Odyssey.Hud
             DeveloperOverlayChanged?.Invoke();
         }
 
+        /// <summary>Switch the wake into a world on or off, and write it down.</summary>
+        public void SetWakeUp(bool on)
+        {
+            if (WakeUp == on) return;
+            WakeUp = on;
+            _store?.Write(WakeUpKey, on);
+            WakeUpChanged?.Invoke(on);
+        }
+
         /// <summary>
         /// Choose a Build-palette layout, from either of the two controls that offer one, and
         /// write the choice down. Stored as the enum's ordinal, which is the one place this
@@ -1700,6 +1736,9 @@ namespace Odyssey.Hud
             int? autosave = store.ReadInt(AutosaveKey);
             if (autosave.HasValue) SetAutosaveDays(autosave.Value);
 
+            bool? wake = store.Read(WakeUpKey);
+            if (wake.HasValue) SetWakeUp(wake.Value);
+
             int? style = store.ReadInt(SelectionStyleKey);
             if (style.HasValue && IsSelectionStyle(style.Value))
                 SetSelectionStyle((SelectionStyle)style.Value);
@@ -1822,8 +1861,22 @@ namespace Odyssey.Hud
                 inventoryOpen, researchOpen, assignOpen: false, startScreen);
 
         /// <summary>
+        /// The same rule with a ride in it (design 57 §5), above everything: while the view rides
+        /// with a colonist nothing else is on screen, so there is nothing else for Escape to close,
+        /// and the owner's words were that the view is kept "until they push Esc". The one the
+        /// presenter calls.
+        /// </summary>
+        public EscapeAction Escape(bool riding, bool contextMenuOpen, bool toolArmed, bool paletteOpen,
+            bool menuOpen, bool workOpen, bool almanacOpen, bool animalsOpen, bool inventoryOpen,
+            bool researchOpen, bool assignOpen, MenuScreen? startScreen) =>
+            riding
+                ? EscapeAction.LeaveRide
+                : Escape(contextMenuOpen, toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
+                    inventoryOpen, researchOpen, assignOpen, startScreen);
+
+        /// <summary>
         /// The same rule with the Assign tab in it (design 43 §6), which docks in the Work tab's
-        /// corner beside the others and unwinds at their rung. The one the presenter calls.
+        /// corner beside the others and unwinds at their rung.
         /// </summary>
         public EscapeAction Escape(bool contextMenuOpen, bool toolArmed, bool paletteOpen, bool menuOpen,
             bool workOpen, bool almanacOpen, bool animalsOpen, bool inventoryOpen, bool researchOpen,

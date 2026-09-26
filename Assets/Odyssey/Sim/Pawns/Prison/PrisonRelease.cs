@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// <b>Letting a prisoner go</b> (design 58 §10): the one owner of what release and exile do.
+    /// <b>Letting a prisoner go</b> (design 59 §10): the one owner of what release and exile do.
     /// A warden asks <see cref="Wanted"/> and, beside her, calls <see cref="Let"/>.
     /// <list type="bullet">
     /// <item><b>An arrested colonist released goes back to work</b> (ruling 8): free, out of the

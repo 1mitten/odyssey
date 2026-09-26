@@ -9,7 +9,7 @@ using static Odyssey.Tests.Sim.PrisonFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// Recruitment (design 58 §8): a warden talks a prisoner in Recruit mode round, a visible bar
+    /// Recruitment (design 59 §8): a warden talks a prisoner in Recruit mode round, a visible bar
     /// filled by a deterministic gain from the warden's Social, the prisoner's mood and how she is
     /// kept. No hidden roll: the hours the pane shows are the hours the chats take, and when the bar
     /// is full she joins — free, dealt a colonist's skills, her prison bed given back.

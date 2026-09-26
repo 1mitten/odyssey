@@ -212,10 +212,14 @@ namespace Odyssey.Sim.Pawns
                 // The raids on the board (design 55 §10): appended, no format bump. A save from
                 // before raids has no section and loads with no band.
                 pawns.Raids!,
-                // Who the colony holds (design 58 §4a): appended, no format bump. A save from
+                // The work kept in rock whose mining order was taken off (design 58 §3): appended,
+                // no format bump. A save from before has no section and loads with none kept —
+                // which is what a cancel then left.
+                designations.PartMined,
+                // Who the colony holds (design 59 §4a): appended, no format bump. A save from
                 // before prisoners has no section and loads with nobody in custody.
                 new Saving.PrisonSection(pawns.Pawns),
-                // Which beds are for prisoners (design 58 §5b): appended, no format bump. A save
+                // Which beds are for prisoners (design 59 §5b): appended, no format bump. A save
                 // from before prisoners has none, and every bed is a colony bed.
                 pawns.BedPurposes!,
             };

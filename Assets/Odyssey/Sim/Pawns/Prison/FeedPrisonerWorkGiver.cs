@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// A warden feeds a hungry prisoner who cannot feed herself (design 58 §7): one who is
+    /// A warden feeds a hungry prisoner who cannot feed herself (design 59 §7): one who is
     /// shackled, down, kept in no cell, or in a cell with nothing to eat in it. The nearest such
     /// prisoner, and the best food nearest the warden — the eater's own rule, best tier first —
     /// never food lying in a cell, which is somebody's already.

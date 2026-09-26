@@ -4,12 +4,12 @@ using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Sim.Pawns
 {
-    // The prisoner line's drivers (design 58 §7), JobHandle 28 to 35, claimed together by the
+    // The prisoner line's drivers (design 59 §7), JobHandle 28 to 35, claimed together by the
     // contracts step (P3) so that every table a save depends on is extended once. Each is a stub
     // that fails the tick it starts until its own unit writes it, so nothing can run one yet.
 
     /// <summary>
-    /// <c>Job_Capture</c> (design 58 §7): the rescue's walk, lift, carry and lay — the same stoop,
+    /// <c>Job_Capture</c> (design 59 §7): the rescue's walk, lift, carry and lay — the same stoop,
     /// the same cradle, the same set-down on every other end — to a prison bed rather than a
     /// colony one, and on the lay she is taken: into custody, given the bed, dressed for the cell.
     /// A subclass rather than a copy, so the carry has one owner.
@@ -31,7 +31,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// <c>Job_FeedPrisoner</c> (design 58 §7): fetch one portion of food, carry it to a prisoner and
+    /// <c>Job_FeedPrisoner</c> (design 59 §7): fetch one portion of food, carry it to a prisoner and
     /// feed her there — through her door, to her bed if she is shackled or down. The doctor's shape
     /// (<see cref="TreatJobDriver"/>): one unit off the pile, not the pile, and a carried thing is
     /// put down by <see cref="JobDriver.DropCarried"/> on every other end. <see cref="Job.WorkTicks"/>
@@ -145,7 +145,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// A warden's visit to a prisoner (design 58 §8, §10): walk to her, stand beside her — following
+    /// A warden's visit to a prisoner (design 59 §8, §10): walk to her, stand beside her — following
     /// her if she walks off mid-sentence rather than starting over — and spend <see cref="Ticks"/>
     /// there, then <see cref="Finish"/>. <see cref="Job.WorkTicks"/> names the prisoner, as the
     /// feeding's does. The chat and the escort differ only in how long and what happens at the end.
@@ -221,7 +221,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// <c>Job_Chat</c> (design 58 §8): talk to a prisoner in Recruit mode for the job's work ticks,
+    /// <c>Job_Chat</c> (design 59 §8): talk to a prisoner in Recruit mode for the job's work ticks,
     /// training Social as any working job trains its skill; at the end the bar fills by
     /// <see cref="Recruitment.Factors"/>'s gain, and she joins if it is full.
     /// </summary>
@@ -234,7 +234,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// <c>Job_Escort</c> (design 58 §10): a warden goes to a prisoner the player has chosen to
+    /// <c>Job_Escort</c> (design 59 §10): a warden goes to a prisoner the player has chosen to
     /// release or exile, opens her way out, and lets her go — <see cref="PrisonRelease.Let"/>.
     /// A short visit: the door is opened, a word is said, and she is on her way.
     /// </summary>
@@ -249,7 +249,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// <c>Job_GoToCell</c> (design 58 §10): a prisoner on her feet walks herself to her prison bed
+    /// <c>Job_GoToCell</c> (design 59 §10): a prisoner on her feet walks herself to her prison bed
     /// — a raider who surrendered, a colonist who came quietly. She walks in a colonist's mode for
     /// the length of this job, so the doors on the way in open for her; once she is there she is
     /// dressed for the cell, and her own mode, which opens nothing, holds her.
@@ -270,7 +270,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// <c>Job_Escape</c> (design 58 §9c): an escapee runs for the edge of the board, and at it she
+    /// <c>Job_Escape</c> (design 59 §9c): an escapee runs for the edge of the board, and at it she
     /// is gone. The door is not this job's: bashing one is the fight's own building attack, chosen
     /// by the escape tree when no path out is open.
     /// </summary>
@@ -281,7 +281,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// <c>Job_LeaveFree</c> (design 58 §6, §10): a pawn let go — released or exiled — walks to the
+    /// <c>Job_LeaveFree</c> (design 59 §6, §10): a pawn let go — released or exiled — walks to the
     /// edge of the board and is gone. Nobody is told; the player chose it.
     /// </summary>
     public class LeaveFreeJobDriver : WalkOffJobDriver
@@ -291,7 +291,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// The walk off the board both ways out share (design 58 §9c, §10): to <c>Job.DestCell</c> on
+    /// The walk off the board both ways out share (design 59 §9c, §10): to <c>Job.DestCell</c> on
     /// the edge, then gone at the end of the tick — the thief's shape, deferred for death's reason
     /// (a despawn shifts the list every pawn loop walks). The custody is asked every tick, so a
     /// runner downed and taken back mid-walk stops at once.
@@ -323,7 +323,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// <c>Job_Arrest</c> (design 58 §10): walk to a colonist, following her if she walks on, and at
+    /// <c>Job_Arrest</c> (design 59 §10): walk to a colonist, following her if she walks on, and at
     /// her side take her — <see cref="Arrest.Contact"/>, which rolls whether she resists.
     /// </summary>
     public class ArrestJobDriver : BesidePrisonerJobDriver

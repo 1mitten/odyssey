@@ -199,7 +199,7 @@ namespace Odyssey.Sim.Pawns
             _ctx.Sync(world);
             _hostilityKnown = false;
             // A bed that changed purpose, or a room that merged into a cell, loses an owner of the
-            // wrong kind first (design 58 §5b), so the sweep below wakes whoever is lying in it.
+            // wrong kind first (design 59 §5b), so the sweep below wakes whoever is lying in it.
             _ctx.Construction?.SweepBedPurposes();
             GetOutOfTheWrongBed(world.CurrentTick);
             TickCustody(world.CurrentTick);
@@ -274,7 +274,7 @@ namespace Odyssey.Sim.Pawns
 
                 int bed = pawn.CurrentJob.TargetCell;
                 int owner = sites.BedOwnerAt(bed);
-                // Still the right kind of bed for her (design 58 §5a): a bed turned into a prison
+                // Still the right kind of bed for her (design 59 §5a): a bed turned into a prison
                 // bed under a sleeping colonist wakes her like a bed given away does. A target
                 // that is no bed at all (the ground, a fireside) answers as a colony bed nobody
                 // owns, so it passes exactly as it did.
@@ -517,7 +517,7 @@ namespace Odyssey.Sim.Pawns
             // that returned false for a person would be a node every colonist evaluated on
             // every think, and the animal's whole mind is one node anyway.
             // A hostile person consults the hostile tree (design 33 §5), for the same reason, and a
-            // prisoner the prisoner's (design 58 §6) — custody first, because an escapee is hostile
+            // prisoner the prisoner's (design 59 §6) — custody first, because an escapee is hostile
             // but is not a raider.
             ThinkNode[] tree = !pawn.IsPerson ? AnimalTree
                 : pawn.Custody != PawnCustody.Free ? PrisonerTrees.For(pawn.Custody)
@@ -764,7 +764,7 @@ namespace Odyssey.Sim.Pawns
                 // this scan is not optional once a shelf accepts food.
                 int at = ctx.WhereIs(item);
                 if (at < 0) continue;
-                // A prisoner's meal is hers (design 58 §14): food in a cell is not a colonist's.
+                // A prisoner's meal is hers (design 59 §14): food in a cell is not a colonist's.
                 if (PrisonCells.Holds(ctx, at)) continue;
 
                 int distance = ctx.Distance(pawn.Cell, at);
@@ -826,7 +826,7 @@ namespace Odyssey.Sim.Pawns
 
                 // A bed that is somebody's is theirs and nobody else checks in: no colonist
                 // sleeps in another's bed, which is the whole of what ownership is (design 20
-                // §7), and nobody sleeps in the wrong kind of bed (design 58 §5a). The
+                // §7), and nobody sleeps in the wrong kind of bed (design 59 §5a). The
                 // scenario's own spots answer 0 — nobody's, as they always were.
                 if (!BedRules.CanUse(pawn, cell, ctx)) continue;
                 int owner = BedRules.OwnerAt(ctx, cell);
@@ -1115,10 +1115,21 @@ namespace Odyssey.Sim.Pawns
                 if (EdgeTarget.Fill(pawn, ctx, job, pawn.OwnMode)) return true;
             }
 
+            // A bank animal off its bank goes back to it before anything else (design 30 §8):
+            // spawned in a dry field, or run off by a fight. Where no water is near enough to
+            // find, it wanders like anyone rather than standing still for ever.
+            int bank = species.bankRadius;
+            if (bank > 0 && !Wildlife.WaterBank.Near(ctx.Cells, pawn.Cell, bank))
+            {
+                if (BankTarget.Fill(pawn, ctx, job, bank, pawn.OwnMode)) return true;
+                bank = 0;
+            }
+
             bool active = IsNight(ctx) == species.nocturnal;
             int legPerCent = active ? LegPerCent : LegPerCent / OffHoursFactor;
             if (rng.NextInt(100) < legPerCent &&
-                WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, pawn.OwnMode, avoidSlopes: true))
+                WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, pawn.OwnMode, avoidSlopes: true, bankRadius: bank,
+                    divergeRadius: species.divergeRadius))
                 return true;
 
             int span = species.restTicksMax > species.restTicksMin
@@ -1184,7 +1195,7 @@ namespace Odyssey.Sim.Pawns
         public static bool Minds(Pawn pawn, PawnContext ctx)
         {
             Weather.WeatherSystem? weather = ctx.Weather;
-            return weather != null && ctx.Sky != null && !pawn.Leaving
+            return weather != null && ctx.Sky != null && !pawn.Leaving && !pawn.Species.ignoresRain
                 && weather.RainPerMille(weather.Now) >= RainGatePerMille;
         }
 
@@ -1600,15 +1611,27 @@ namespace Odyssey.Sim.Pawns
         /// and a body resting in it is drawn on the ramp and then snaps to the floor when it sets
         /// off). Walking <i>through</i> one is unchanged. Animals only, for now: a colonist's
         /// wander is the mental break's, and moving it would move every golden.</para>
-        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, int radius, TraverseMode mode, bool avoidSlopes)
+        /// <para><paramref name="bankRadius"/>, when above nought, refuses any destination further
+        /// than that from water (design 30 §8): the frog's legs all end on its bank.</para>
+        /// <para><paramref name="divergeRadius"/>, when above nought, prefers a destination whose
+        /// heading is at least 60 degrees from that of every other pawn of the same kind within
+        /// that many cells that is already walking a leg (design 30 §8e), so a group does not set
+        /// off the same way together. Twelve tries rather than eight; the first that clears every
+        /// neighbour wins, and failing that the least alike of the tries that were otherwise good.
+        /// Integer arithmetic throughout, so the choice hashes the same on every runtime.</para>
+        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, int radius, TraverseMode mode, bool avoidSlopes, int bankRadius = 0,
+            int divergeRadius = 0)
         {
             var rng = DeterministicRandom.ForTick(
                 ctx.Seed, ctx.CurrentTick, PawnPurpose.Wander ^ (uint)pawn.Id.Value);
 
             GridSize size = ctx.Size;
             CellRef from = size.FromIndex(pawn.Cell);
+            bool diverging = divergeRadius > 0;
+            int best = -1;
+            long bestScore = long.MaxValue;
 
-            for (int attempt = 0; attempt < 8; attempt++)
+            for (int attempt = 0, tries = diverging ? 12 : 8; attempt < tries; attempt++)
             {
                 int x = from.X + rng.NextInt(-radius, radius + 1);
                 int z = from.Z + rng.NextInt(-radius, radius + 1);
@@ -1617,11 +1640,22 @@ namespace Odyssey.Sim.Pawns
                 int cell = size.Index(x, z, from.Y);
                 if (cell == pawn.Cell) continue;
                 if (avoidSlopes && ctx.Nav.Grid.CostClass[cell] == Worldgen.Natural.NaturalContent.CostClassSlope) continue;
+                if (bankRadius > 0 && !Wildlife.WaterBank.Near(ctx.Cells, cell, bankRadius)) continue;
                 if (!ctx.Reachable(pawn, cell, mode)) continue;
                 // Not where another pawn stands or is heading (owner, 2026-09-25: never exactly
                 // over each other). Last, because it is the one test that walks the pawns; a
                 // taken draw is simply another of the eight attempts. Design 31 §20.
                 if (ctx.Pawns.IsClaimedByOther(pawn, cell)) continue;
+
+                if (diverging)
+                {
+                    long score = Likeness(pawn, ctx, x - from.X, z - from.Z, divergeRadius);
+                    if (score >= Alike)
+                    {
+                        if (score < bestScore) { bestScore = score; best = cell; }
+                        continue;
+                    }
+                }
 
                 job.Reset(JobIndex.Wander);
                 job.TargetCell = cell;
@@ -1629,7 +1663,122 @@ namespace Odyssey.Sim.Pawns
                 return true;
             }
 
+            if (best >= 0)
+            {
+                job.Reset(JobIndex.Wander);
+                job.TargetCell = best;
+                job.Mode = mode;
+                return true;
+            }
             return false;
+        }
+
+        /// <summary>
+        /// A <see cref="Likeness"/> at or above this is two headings under 60 degrees apart: the
+        /// squared cosine, signed, in 1,024ths, and cos² 60° is a quarter.
+        /// </summary>
+        const long Alike = 256;
+
+        /// <summary>
+        /// How alike a heading (<paramref name="dx"/>, <paramref name="dz"/>) is to the most
+        /// alike leg another pawn of this one's kind within <paramref name="radius"/> is walking:
+        /// the signed squared cosine in 1,024ths, 1,024 for the same way, nought or less for at
+        /// right angles or beyond, and <see cref="long.MinValue"/> when nobody near is walking.
+        /// </summary>
+        static long Likeness(Pawn pawn, PawnContext ctx, int dx, int dz, int radius)
+        {
+            GridSize size = ctx.Size;
+            CellRef at = size.FromIndex(pawn.Cell);
+            long mine = (long)dx * dx + (long)dz * dz;
+            if (mine == 0) return long.MinValue;
+            long worst = long.MinValue;
+            IReadOnlyList<Pawn> all = ctx.Pawns.All;
+            for (int i = 0; i < all.Count; i++)
+            {
+                Pawn other = all[i];
+                if (ReferenceEquals(other, pawn) || other.Kind != pawn.Kind) continue;
+                Job? leg = other.CurrentJob;
+                if (leg == null || leg.DefIndex != JobIndex.Wander || leg.TargetCell < 0) continue;
+                CellRef o = size.FromIndex(other.Cell);
+                if (System.Math.Max(System.Math.Abs(o.X - at.X), System.Math.Abs(o.Z - at.Z)) > radius) continue;
+                CellRef t = size.FromIndex(leg.TargetCell);
+                long ox = t.X - o.X, oz = t.Z - o.Z;
+                long theirs = ox * ox + oz * oz;
+                if (theirs == 0) continue;
+                long dot = dx * ox + dz * oz;
+                long score = (dot >= 0 ? 1 : -1) * dot * dot * 1024 / (mine * theirs);
+                if (score > worst) worst = score;
+            }
+            return worst;
+        }
+    }
+
+    /// <summary>
+    /// The way back to the water for an animal that keeps to a bank and has strayed from it
+    /// (design 30 §8). Looks outward ring by ring for the nearest water cell on the animal's own
+    /// layer or the one below, up to <see cref="SearchRadius"/>, and walks to the reachable cell
+    /// round it nearest the animal. Asked only while the animal is off its bank, so its cost —
+    /// a few thousand reads at worst — is paid by a stray and never by a frog at home.
+    /// </summary>
+    static class BankTarget
+    {
+        /// <summary>How far a stray looks for water before it gives up and wanders.</summary>
+        public const int SearchRadius = 20;
+
+        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, int bankRadius, TraverseMode mode)
+        {
+            GridSize size = ctx.Size;
+            Odyssey.Sim.World.CellGrid grid = ctx.Cells;
+            CellRef from = size.FromIndex(pawn.Cell);
+            for (int ring = 1; ring <= SearchRadius; ring++)
+            {
+                for (int dz = -ring; dz <= ring; dz++)
+                for (int dx = -ring; dx <= ring; dx++)
+                {
+                    if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dz)) != ring) continue;
+                    int x = from.X + dx, z = from.Z + dz;
+                    if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
+                    for (int y = from.Y; y >= from.Y - 1 && y >= 0; y--)
+                    {
+                        if (!Worldgen.Natural.NaturalContent.IsWater(grid.Terrain[size.Index(x, z, y)])) continue;
+                        int target = NearestBankCell(pawn, ctx, x, z, y, bankRadius, mode);
+                        if (target < 0) continue;
+                        job.Reset(JobIndex.Wander);
+                        job.TargetCell = target;
+                        job.Mode = mode;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Of the cells round a water cell at (<paramref name="wx"/>, <paramref name="wz"/>) on its
+        /// layer or the one above — the bank stands a layer over a cut stream — the one nearest
+        /// the animal that it may enter and can reach, or −1.
+        /// </summary>
+        static int NearestBankCell(Pawn pawn, PawnContext ctx, int wx, int wz, int wy, int bankRadius, TraverseMode mode)
+        {
+            GridSize size = ctx.Size;
+            CellRef from = size.FromIndex(pawn.Cell);
+            int best = -1, bestDistance = int.MaxValue;
+            for (int y = wy; y <= wy + 1 && y < size.SizeY; y++)
+            for (int dz = -bankRadius; dz <= bankRadius; dz++)
+            for (int dx = -bankRadius; dx <= bankRadius; dx++)
+            {
+                int x = wx + dx, z = wz + dz;
+                if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
+                int cell = size.Index(x, z, y);
+                if (!ctx.Nav.Grid.CanEnter(cell, mode)) continue;
+                if (ctx.Nav.Grid.CostClass[cell] == Worldgen.Natural.NaturalContent.CostClassSlope) continue;
+                int distance = System.Math.Abs(x - from.X) + System.Math.Abs(z - from.Z);
+                if (distance >= bestDistance) continue;
+                if (!ctx.Reachable(pawn, cell, mode)) continue;
+                best = cell;
+                bestDistance = distance;
+            }
+            return best;
         }
     }
 
@@ -1744,7 +1893,7 @@ namespace Odyssey.Sim.Pawns
                 // it.
                 int at = ctx.WhereIs(item);
                 if (at < 0) continue;
-                // Food in a prison cell stays there (design 58 §14): a hauler carrying a prisoner's
+                // Food in a prison cell stays there (design 59 §14): a hauler carrying a prisoner's
                 // meal back out through the door is the warden's work undone.
                 if (ctx.Content.Items[item.DefIndex].nutrition > 0 && PrisonCells.Holds(ctx, at)) continue;
                 if (!ctx.Content.Items[item.DefIndex].haulable) continue;

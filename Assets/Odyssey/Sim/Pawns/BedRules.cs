@@ -3,7 +3,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// The simulation's side of <see cref="BedRule"/> (design 58 §5a): which pool a live pawn
+    /// The simulation's side of <see cref="BedRule"/> (design 59 §5a): which pool a live pawn
     /// sleeps from, and whether a given bed is one it may use. Every bed chooser — the sleep's
     /// (<c>CriticalNeedsThinkNode.TrySleep</c>), the patient's (<see cref="Medical.BedFor"/>), the
     /// rescue's (<c>RescueRules.BedFor</c>), the sleeper's claim

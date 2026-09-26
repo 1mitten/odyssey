@@ -124,7 +124,7 @@ namespace Odyssey.Sim.Pawns
             pawns.Doors = doors;
             var enclosure = new World.EnclosureGrid(pawns.Cells, edifices);
             pawns.Enclosure = enclosure;
-            // What every bed is for (design 58 §5b): the prison bed and the cell it makes. Built
+            // What every bed is for (design 59 §5b): the prison bed and the cell it makes. Built
             // here, where the rooms it reads and the grid whose owners it sweeps both are.
             var purposes = new BedPurposes(pawns.Cells, edifices) { Enclosure = enclosure };
             pawns.BedPurposes = purposes;
@@ -287,13 +287,13 @@ namespace Odyssey.Sim.Pawns
                 .AddIntentHandler(IntentKind.SetPawnArea, pipeline.HandleSetPawnArea)
                 .AddIntentHandler(IntentKind.DebugHealth, pawns.Pawns.HandleDebugHealth)
                 .AddIntentHandler(IntentKind.OrderTend, pipeline.HandleOrderTend)
-                // Custody (design 58 §4), on the pipeline because taking a pawn ends her job.
+                // Custody (design 59 §4), on the pipeline because taking a pawn ends her job.
                 .AddIntentHandler(IntentKind.DebugImprison, pipeline.HandleDebugImprison)
                 .AddIntentHandler(IntentKind.SetCaptureMark, pipeline.HandleSetCaptureMark)
                 .AddIntentHandler(IntentKind.OrderCapture, pipeline.HandleOrderCapture)
                 .AddIntentHandler(IntentKind.SetPrisonMode, pipeline.HandleSetPrisonMode)
                 .AddIntentHandler(IntentKind.OrderArrest, pipeline.HandleOrderArrest)
-                // What a bed is for (design 58 §5b), on the grid that owns who owns a bed.
+                // What a bed is for (design 59 §5b), on the grid that owns who owns a bed.
                 .AddIntentHandler(IntentKind.SetBedPurpose, construction.HandleSetBedPurpose)
                 // The Work tab's one command (design 27). It belongs to the registry because a
                 // priority is a field on a pawn and the registry is the one owner of those; the

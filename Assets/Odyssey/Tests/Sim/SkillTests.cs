@@ -93,7 +93,7 @@ namespace Odyssey.Tests.Sim
                     // The ranged line's contracts step (design 47 §3a): SkillCatalogue's shooting
                     // row went live in the same commit, and SkillCatalogueTests with it.
                     "shooting",
-                    // The prisoner line's contracts step (design 58 §8): SkillCatalogue's social
+                    // The prisoner line's contracts step (design 59 §8): SkillCatalogue's social
                     // row went live in the same commit, and SkillCatalogueTests with it.
                     "social",
                 }),

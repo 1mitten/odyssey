@@ -320,10 +320,20 @@ namespace Odyssey.Tests.Sim
         // armed from a table of one, Item_Pistol, with the bandit's traverse mode and motive. No
         // golden moved: no golden spawns a hostile.
         // Raids merged onto cover, 2026-09-26: re-taken from the merged pack.
-        // 2026-09-26, prisoners (design 58 P3, the contracts step): Skill_Social, Work_Warden
+        // 2026-09-25, the culvert frog (design 30 §8): Species_CulvertFrog and PawnKind_CulvertFrog
+        // appended (kind 4, species 3; kind 5 since the merge with raids), and SpeciesDef gained bankRadius and ignoresRain, both
+        // nought/false on every other species. Taken from a freshly loaded pack.
+        // 2026-09-26, the owner's first ask on the frog: bodyLengthMm 400 -> 870 and movePerMille
+        // 800 -> 1,000, so the bigger frog hops a body and a half. Taken from a freshly loaded pack.
+        // And SpeciesDef gained divergeRadius (frog 6; design 30 §8e), the same day.
+        // The frog merged with cover, 2026-09-26: re-taken from the merged pack.
+        // The frog merged with raids, 2026-09-26: the gunman keeps kind 4 and the frog moves to 5;
+        // re-taken from the merged pack.
+        // 2026-09-26, prisoners (design 59 P3, the contracts step): Skill_Social, Work_Warden
         // (order 8), Job_Capture to Job_Arrest (drivers 28 to 35) and Thought_Imprisoned,
         // Thought_ColonistArrested and Thought_WasArrested appended.
-        const ulong ContentFingerprint = 1100361368154067690UL;
+        // Merged with main (the frog), 2026-09-26: re-taken from the merged pack.
+        const ulong ContentFingerprint = 10777248070777323500UL;
 
 
         [Test]
