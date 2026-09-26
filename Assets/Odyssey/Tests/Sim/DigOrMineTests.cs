@@ -287,6 +287,13 @@ namespace Odyssey.Tests.Sim
             Assert.That(saidDigging, Is.EqualTo(onTheJob), "a frame of a grass dig read as mining");
         }
 
+        /// <summary>The twin of the interface's <c>DigOrMine.DiggingAspect</c>: the two sides agree by string alone.</summary>
+        [Test]
+        public void TheAspectNameIsTheOneTheInterfaceReads()
+        {
+            Assert.That(MineJobDriver.DiggingName, Is.EqualTo("odyssey.pawn.digging"));
+        }
+
         [Test]
         public void AColonistMiningRockPublishesNothing()
         {

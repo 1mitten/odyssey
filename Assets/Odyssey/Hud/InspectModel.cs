@@ -450,6 +450,10 @@ namespace Odyssey.Hud
         // nothing about her changes for thirty seconds together.
         int _jobFor = int.MinValue, _carriedFor = int.MinValue, _stackFor;
 
+        // And whether that job was a dig rather than a mine (design 62 §4): one job, two words, so
+        // the job alone no longer says which line was built.
+        bool _diggingFor;
+
         /// <summary>
         /// What this colonist is doing, and what she is carrying while she does it. Design 24 §8.
         ///
@@ -459,13 +463,16 @@ namespace Odyssey.Hud
         void SetJob(WorldSnapshot snapshot, in PawnView pawn)
         {
             JobLabels.CarriedBy(snapshot, pawn.Id, out int carried, out int stack);
+            bool digging = pawn.JobDef == JobHandle.Mine && DigOrMine.IsDigging(snapshot, pawn.Id);
 
-            if (_jobFor == pawn.JobDef && _carriedFor == carried && _stackFor == stack) return;
+            if (_jobFor == pawn.JobDef && _carriedFor == carried && _stackFor == stack
+                && _diggingFor == digging) return;
 
             _jobFor = pawn.JobDef;
             _carriedFor = carried;
             _stackFor = stack;
-            Job = JobLabels.Carrying(pawn.JobDef, carried, stack);
+            _diggingFor = digging;
+            Job = JobLabels.Carrying(digging ? DigOrMine.DiggingKey : JobLabels.IconKey(pawn.JobDef), carried, stack);
         }
 
         /// <summary>
@@ -1111,6 +1118,7 @@ namespace Odyssey.Hud
         int _cellRowsEdifice;
         int _cellRowsSupport;
         int _cellRowsWork;
+        int _cellRowsTerrain = -1;
         int _cellRowsOrderKind;
         int _cellRowsOrderPercent;
         int _cellRowsQuality;
@@ -1351,6 +1359,7 @@ namespace Odyssey.Hud
                 && _cellRowsEdifice == detail.Edifice
                 && _cellRowsSupport == detail.Support
                 && _cellRowsWork == detail.WorkToClear
+                && _cellRowsTerrain == detail.Terrain
                 && _cellRowsOrderKind == (ordered ? kind : 0)
                 && _cellRowsOrderPercent == (ordered ? orderPercent : 0)
                 && _cellRowsQuality == detail.EdificeQuality
@@ -1373,6 +1382,7 @@ namespace Odyssey.Hud
             _cellRowsEdifice = detail.Edifice;
             _cellRowsSupport = detail.Support;
             _cellRowsWork = detail.WorkToClear;
+            _cellRowsTerrain = detail.Terrain;
             _cellRowsOrderKind = ordered ? kind : 0;
             _cellRowsOrderPercent = ordered ? orderPercent : 0;
             _cellRowsQuality = detail.EdificeQuality;
@@ -1392,10 +1402,14 @@ namespace Odyssey.Hud
             // Written in place, like the skills list: the count is a handful and changes rarely,
             // so the list never churns while a tile is held.
             int n = 0;
+            // A Mine order on soft ground reads Dig (design 62 §4), in the colonist's own word
+            // for it — the activity key, lowered to sit as this row's verb beside "chopping".
             if (ordered)
-                Row(n++, OrderVerb(kind), orderPercent + "% done");
+                Row(n++, kind == 1 ? Registry.Label(DigOrMine.ActivityKey(detail.Terrain)).ToLowerInvariant()
+                                   : OrderVerb(kind), orderPercent + "% done");
             else if (detail.WorkToClear > 0)
-                Row(n++, "minable", "about " + Seconds(detail.WorkToClear) + " of work");
+                Row(n++, DigOrMine.IsDig(detail.Terrain) ? "diggable" : "minable",
+                    "about " + Seconds(detail.WorkToClear) + " of work");
 
             // A bed's own two facts, beside what it is (design 20 §8): how well it was made, and
             // whose it is. The owner row is the pane's first interactive row — the shell turns a
