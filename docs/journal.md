@@ -14455,3 +14455,45 @@ around"* — a bush had a picture on its page and a placeholder square when clic
 paths moved into one table, `IconGlyphs`, keyed by registry key, and `IconBadge` — every icon slot
 in the game — falls back to it where there is no pixel art. The Almanac now draws an `IconBadge`
 like everything else, so there is one place to change a picture (design 64 §2a).
+
+## 2026-09-26 — the architecture review: the monoliths doubled, and a ratchet
+
+The owner asked for a review of the code for readability, for composition and inheritance so it
+can be componentised, for a layout a session can work in every time with the docs to match, and
+for scale and the ways systems collide. `docs/audit/2026-09-26-architecture-review.md` is the
+review; `docs/code-map.md` and `docs/plans/refactoring.md` are what it produced. Three things are
+worth keeping here.
+
+**The finding is size, and the cause is that growth was never a decision.** Every file the
+baseline audit named on 09-19 is between 1.8× and 3× larger seven days later — the composition
+root 2,408 → 4,655 lines, `ChunkRenderer` 1,848 → 5,590, `HudShell` about 6,300 → 16,257 across
+twenty-two partials, `PawnFigureDirector` 4,414 → 7,953 — and HT5, the cut, never started. Not one
+of those steps was chosen: each feature added its method to the file that already held the field
+it needed, and no review saw a diff large enough to say "beside, not inside". The architecture
+underneath is sound and held — the seams, the registration lists, the goldens, the one-owner
+tests, the Model/Director/Layout/Labels convention in `Hud`, and a comment culture that explains
+nearly every non-obvious line. So the review asks for no comment to be rewritten and no pattern
+to be replaced; it asks for the paragraphs to become classes and rows, and for something to make
+the next growth visible.
+
+**The something is a ratchet, and it is in the content gates from this commit.**
+`tools/ci/size_ratchet.py` lists every production file at or over 800 lines (38 today) with a
+ceiling 25–74 lines above its size; a listed file may not grow past its ceiling and an unlisted
+one may not reach the threshold, and a PR that must do either raises the number in
+`tools/ci/size-ceilings.json` in the same diff. Standard library, twelve unit tests, verified in
+the container. The four open PRs that grow the root, the renderer or the shell will meet it on
+rebase and bump a number — one visible line where there was none.
+
+**The cuts wait for the batch, by rule.** The collision map (twelve open PRs, 336 files) puts every
+monolith in three to six of them and `PawnRegistry` in six, `CLAUDE.md` and the journal in eight.
+A cut landed into that conflicts with all of them on moved code, which git cannot resolve. So the
+plan's standing rule is one cut per gap: when the batch on a file has merged, the next thing that
+opens on it is its cut, and the cut merges before the next feature. R0 is the cheapest and the
+most contended — `CLAUDE.md` is 149 KB and 60 per cent of it is the status table, the failure the
+file itself warns about, back within ten days of the last split — and it waits for the eight PRs
+that edit that table.
+
+**What this session could not do.** The container's proxy refuses the dotnet SDK's download hosts,
+so no C# test could run here and no C# was changed. The review is honest about that (§0 row 11):
+a container session can ship documents, Python tooling and plans, and must leave a code change to
+a machine that can prove it. Whether to open that host for the remote environment is the owner's.

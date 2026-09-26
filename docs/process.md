@@ -54,6 +54,12 @@ than with what is happening on it. These rules stop the next one landing unnotic
   Publish it as a view field or an aspect.
 - **Presentation per-frame work scales with what is visible**, never with the board: chunks in
   frustum, figures on drawn layers.
+- **A file does not grow past its ceiling unnoticed** (2026-09-26). `tools/ci/size_ratchet.py`
+  lists every production file over 800 lines with a ceiling; a PR that grows one past it either
+  moves the new code into a file of its own (`docs/code-map.md` says where) or raises the number
+  in the same diff and says why. A new feature on a file at its ceiling adds a class and a row,
+  not a method — the review of 2026-09-26 found every monolith doubled in a week because nothing
+  made that a decision.
 
 ## 4. What the owner does and what the agents do
 

@@ -163,8 +163,14 @@ jobs:
       - name: Trace reader tests
         run: python3 -m unittest discover -s tools/perf -t tools/perf
 
-      - name: Tier selector tests
+      - name: Tier selector and size ratchet tests
         run: python3 -m unittest discover -s tools/ci -t tools/ci
+
+      # No production source file grows past its ceiling unnoticed (docs/code-map.md, the
+      # ratchet). A file that must grow raises its number in tools/ci/size-ceilings.json in the
+      # same pull request, which is the one visible line this gate exists to produce.
+      - name: Source files are under their ceilings
+        run: python3 tools/ci/size_ratchet.py
 
   # The required check. It waits for the hosted jobs and fails if any failed, or if the selector
   # did -- a job skipped because the selector said so is fine; one skipped because the selector

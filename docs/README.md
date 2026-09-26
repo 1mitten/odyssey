@@ -10,12 +10,13 @@ concept has one authoritative document, that document is named and wins over any
 | Where | What it holds |
 |---|---|
 | [`brief.md`](brief.md) | The governing brief: vision, agreed decisions, working agreement. Everything else descends from it. |
+| [`code-map.md`](code-map.md) | **Where things live and how to add one of each**: the tick and the frame as built, every seam with its counts, the folders, a recipe per kind of addition, and the guards that fail far from the edit. Read it second. |
 | [`design/`](design/) | One document per mechanic — the decisions, the measurements that decided them, and what not to undo by tidying. `00-vision.md` is the pitch; `03-systems-catalogue.md` is the no-drop contract listing every system with its milestone. |
 | [`adr/`](adr/) | Ten short records of the irreversible decisions: engine and version, cell size, layer model, UI framework, the sim/UI contract, simulation architecture, layer visibility, the icon pipeline, water and the impassable bit, audio playback. |
 | [`wiki/`](wiki/README.md) | The **generated** content wiki — every player-facing name with its stable key. Never hand-edit; edit the CSVs in `design/` and rebuild. |
 | [`research/`](research/INDEX.md) | Research files, one question each, with sources and confidence. `INDEX.md` is the map. |
-| [`plans/`](plans/) | Execution plans. `vertical-slice.md` is the ordered unit list; `playtest-queue.md` is what is waiting for a person at the keyboard. |
-| [`audit/`](audit/) | Baseline audits of the whole project — what is slow, what is missing, what is next. |
+| [`plans/`](plans/) | Execution plans. `vertical-slice.md` is the ordered unit list; `refactoring.md` the cuts and the order they land in; `playtest-queue.md` is what is waiting for a person at the keyboard. |
+| [`audit/`](audit/) | Audits of the whole project: `2026-09-19-baseline.md` (the tick, the monoliths, the process) and `2026-09-26-architecture-review.md` (shape, composition, what a session needs, the collision map). |
 | [`milestones/`](milestones/) | Per-milestone reports (M1 world, M2 pawns, soak runs). |
 | [`process.md`](process.md) | The cycle one unit of work goes through: ground → design → test → measure → hand over → merge → play → record. |
 | [`journal.md`](journal.md) | The narrative record: every decision, measurement and reversal, in order. Append here; never rewrite. |
