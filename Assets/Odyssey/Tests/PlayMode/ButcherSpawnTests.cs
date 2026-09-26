@@ -103,6 +103,10 @@ namespace Odyssey.Tests.PlayMode
 #if UNITY_EDITOR
                 if (boot.moduleCatalogue == null)
                     boot.moduleCatalogue = UnityEditor.AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);
+                // And its sounds, so the fight can be listened to (design 62 §8d).
+                if (boot.audioCatalogue == null)
+                    boot.audioCatalogue = UnityEditor.AssetDatabase.LoadAssetAtPath<Odyssey.Presentation.Audio.AudioCatalogue>(
+                        "Assets/Odyssey/Presentation/Audio/AudioCatalogue.asset");
 #endif
                 for (int i = 0; i < 8; i++) yield return null;
                 shell.Menu.Choose(SessionCommands.NewGameKey);
@@ -134,6 +138,7 @@ namespace Odyssey.Tests.PlayMode
                 var heard = new System.Collections.Generic.SortedDictionary<string, int>();
                 if (boot.Audio != null)
                     boot.Audio.Played += id => heard[id] = heard.TryGetValue(id, out int n) ? n + 1 : 1;
+                else TestContext.WriteLine("heard nothing: no audio director in this rig");
                 for (int frame = 0; frame < 3_000 && !(telegraphed && flung && swingFrames >= 40 && frame >= 600); frame++)
                 {
                     world.Tick();
