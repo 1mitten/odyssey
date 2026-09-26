@@ -646,6 +646,12 @@ page did nothing to the bed under it. The store is now written whether or not a 
   going and the outdoor bed's first birds is a hole. The two overlap by design; only an ear can say
   whether the overlap is enough.
 
+**Amended 2026-09-26 (design 56 §5).** The bed now leaves **at the press** of Start or Load, with
+the menu fading to black, rather than when the world exists a second later
+(`OdysseyBootstrap.MenuLeaving`); its fade step is clamped to 0.1 s, so the build frame can no
+longer cut it; and in the wake it is heard through the dream's muffle as it goes. The outdoor bed's
+arrival still crosses it rather than queueing after it.
+
 ## 13. Escape on the main screen (2026-09-21)
 
 Owner: *"On the main menu when I go to load game or character screen and push escape — it doesn't

@@ -24,12 +24,19 @@ namespace Odyssey.Sim.Pawns.Wildlife
         public readonly List<int> Woodland = new List<int>();
         public readonly List<int> Rock = new List<int>();
 
+        /// <summary>Surface cells within <see cref="WaterBank.SeedRadius"/> of water, outside the clearing (design 30 §8).</summary>
+        public readonly List<int> Bank = new List<int>();
+
         /// <summary>Surface cells on the board's outer ring: where an arrival appears and a leaver vanishes.</summary>
         public readonly List<int> Edge = new List<int>();
 
         readonly HashSet<int> _set = new HashSet<int>();
+        readonly HashSet<int> _bank = new HashSet<int>();
 
         public bool Contains(int cell) => _set.Contains(cell);
+
+        /// <summary>Is this census cell on a bank? The clearing is never one.</summary>
+        public bool IsBank(int cell) => _bank.Contains(cell);
 
         /// <summary>
         /// <paramref name="keepClear"/> is a Chebyshev radius round <paramref name="start"/> in
@@ -50,8 +57,10 @@ namespace Odyssey.Sim.Pawns.Wildlife
             census.Cells.Clear();
             census.Woodland.Clear();
             census.Rock.Clear();
+            census.Bank.Clear();
             census.Edge.Clear();
             census._set.Clear();
+            census._bank.Clear();
             GridSize size = grid.Size;
             int startIndex = size.Index(start.X, start.Z, start.Y);
             for (int z = 0; z < size.SizeZ; z++)
@@ -69,6 +78,11 @@ namespace Odyssey.Sim.Pawns.Wildlife
                 int y = size.FromIndex(cell).Y;
                 if (designations != null && NearTree(grid, designations, x, z, y)) census.Woodland.Add(cell);
                 if (BesideRock(grid, x, z, y)) census.Rock.Add(cell);
+                if (WaterBank.Near(grid, cell, WaterBank.SeedRadius))
+                {
+                    census.Bank.Add(cell);
+                    census._bank.Add(cell);
+                }
             }
             return census;
         }
@@ -175,7 +189,8 @@ namespace Odyssey.Sim.Pawns.Wildlife
                 List<int> habitat = HabitatCells(census, entry.habitat, start, keepClear, pawns.Size);
                 if (habitat.Count == 0) continue;
                 int centre = PickCentre(habitat, centres, pawns.Size, ref rng);
-                int put = PlaceGroup(pawns, census, taken, centre, kind, group, ref rng);
+                int put = PlaceGroup(pawns, census, taken, centre, kind, group, ref rng, new List<int>(),
+                    bankOnly: entry.habitat == Habitat.Bank && census.Bank.Count > 0);
                 if (put > 0) centres.Add(centre);
                 placed += put;
             }
@@ -192,6 +207,7 @@ namespace Odyssey.Sim.Pawns.Wildlife
             {
                 Habitat.Woodland => census.Woodland,
                 Habitat.Rock => census.Rock,
+                Habitat.Bank => census.Bank,
                 _ => census.Cells,
             };
             if (list.Count > 0 && habitat != Habitat.Any) return list;
@@ -240,7 +256,12 @@ namespace Odyssey.Sim.Pawns.Wildlife
         internal static int PlaceGroup(PawnContext pawns, SurfaceCensus census, HashSet<int> taken, int centre, int kind, int count, ref DeterministicRandom rng) =>
             PlaceGroup(pawns, census, taken, centre, kind, count, ref rng, new List<int>());
 
-        internal static int PlaceGroup(PawnContext pawns, SurfaceCensus census, HashSet<int> taken, int centre, int kind, int count, ref DeterministicRandom rng, List<int> candidates)
+        /// <summary>
+        /// <paramref name="bankOnly"/> scatters the group over bank cells alone (design 30 §8): a
+        /// frog centred on a stream's edge whose fellows were dealt four cells inland would spend
+        /// its first legs walking back to the water.
+        /// </summary>
+        internal static int PlaceGroup(PawnContext pawns, SurfaceCensus census, HashSet<int> taken, int centre, int kind, int count, ref DeterministicRandom rng, List<int> candidates, bool bankOnly = false)
         {
             GridSize size = pawns.Size;
             CellRef c = size.FromIndex(centre);
@@ -252,6 +273,7 @@ namespace Odyssey.Sim.Pawns.Wildlife
                 if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
                 int cell = SurfaceCensus.Topmost(pawns.Cells, x, z);
                 if (cell < 0 || !census.Contains(cell) || taken.Contains(cell)) continue;
+                if (bankOnly && !census.IsBank(cell)) continue;
                 if (pawns.Pawns.IsCellOccupiedByStandingPawn(cell)) continue;
                 candidates.Add(cell);
             }

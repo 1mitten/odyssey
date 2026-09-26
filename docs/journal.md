@@ -13814,6 +13814,54 @@ brightest, and the wings are drawn to the full zoom at night, a little larger, w
 carried a far night. The research had argued the spectacle into a separate light because the wing
 could not safely cross bloom's threshold; the owner's answer was that the wing was the spectacle all
 along, and the ceiling that argument was about still holds (design 52 §5a).
+
+## 2026-09-25 — The culvert frog: an animal placed by the water
+
+The owner handed over a third Quaternius model, a frog, and asked for it animated, frog-like, and
+living by the streams, ponds and lakes. Design 30 §8 holds the decisions; this is the why.
+
+**The habitat is the new thing, not the frog.** Everything a frog shares with the hog — the mind,
+the save, the hash, the ramp-only hop — was already there. What was not was an animal placed by
+something other than trees or rock, so the bank became a habitat (`WaterBank.Near`, its one owner)
+and, unlike the other two, a tether: a species can say it keeps within so many cells of water, and
+the animal mind holds every leg to it and walks a stray back. It is the first rule in the mind that
+reads the terrain, and it is paid only by frogs that are off their bank.
+
+**Adding a kind moved every other kind's numbers.** A wildlife table divides one target by weight,
+so a third entry would have made the hogs and rats rarer without anyone asking. The density went up
+by exactly the frogs' share (15 → 21) so the old two stay as common as they were.
+
+**It does not swim, on purpose.** A swimming animal is a sixth traverse mode, and every mode is a
+flood on every nav rebuild; the frog sits at the water's edge instead, and that is the owner's call
+to reverse with its cost stated.
+
+**The hop took two measurements.** The first probe of the clip found lift-off and landing at 0.35
+and 0.78 of the Jump and no travel in it, which is what the hop pacing is built from: the drawn
+position holds still on the ground and covers the whole hop in the air, because a looping jump on
+an even pace is a frog on a travelator. The second probe, under the real director, found the jump
+**not looping** — the importer loops clips named Idle, Walk and Run, and the frog's gait is called
+Jump — so the frog took one hop and slid on its last frame. `AnimalImport.Hops` is the fix, and the
+same probe then read a hop every 52 frames: 23 moving, 29 still.
+
+**The catalogue rebuild stripped the colonists' swatches again**, exactly as `docs/lessons.md`
+warns; the frog row was spliced into the committed asset instead, and the diff is the row alone.
+
+## 2026-09-26 — The frog, bigger, commoner and a colour of its own
+
+The owner's first ask before playing: just over double the size, more of them, and a green that
+is not the grass's. ×0.24 (2.2 times), weight 4 in groups of 3–5 with the density raised by the
+frogs' share, and the embedded green remapped to a jade material of our own. Two consequences
+worth writing down. **A bigger frog on the same hop is a shuffling frog**, so its pace went up
+with its size and the hop is a body and a half again. **And "more" stopped at the ceiling**: 24
+is the figure budget's, not the wildlife's, so it was left alone and the played board's 22 pawns
+sit under it. Design 30 §8c-bis.
+
+**Later the same day: greener, and apart.** The jade read as teal, so the hue came back to an
+emerald. And a group's frogs hopped the same way because they were seeded together, thought on the
+same ticks and stood on a bank that ran one way; each new hop now prefers a heading 60 degrees
+from every neighbour already hopping. The control mattered: without the rule 28 % of such hops
+matched a neighbour, with it 6.5 %, and the test's bound sits between them. Design 30 §8e.
+
 ## 2026-09-25 — Raids: a band that stalks, then strikes
 
 The owner asked for a raid: 1 to 200 hostiles from a random edge, a few hours of wandering at the
@@ -13873,6 +13921,42 @@ temperature: the weather's share of the outdoor curve is written by the weather 
 and saved nowhere, so a loaded world stood in its build's sky until the next boundary. That is on
 `main` for every save, and was fixed here because the raid test cannot pass without it. The lesson
 is in `docs/bug-patterns.md`: a value one system writes into another is derived state no section owns.
+
+## 2026-09-26 — Waking into the world
+
+The owner asked for the jump from the menu into a colony to stop feeling like loading: fade the menu
+out, then open on the world as waking from sleep — blurred, the sound closed and distant — coming
+into focus. Asked four things and answered: five seconds, the camera settles, the colony holds until
+the eyes are open, New game and Load alike, soft and warm. Design 56.
+
+**Reading the code first found two faults that were there already**, and they went in as their own
+PR before the feature (`claude/load-curtain`). A load was never covered: `LoadSession` raises
+`SessionChanged` twice in one frame and the second raise asked a question — is the title screen
+showing? — that the first had just answered no to, so it lifted the cover on the build frame. And the
+menu's bed faded on the unclamped real-time delta, so the frame after a one-second build took a
+quarter of its fade in one step. The first is now a bug-patterns row.
+
+**The move that makes it seamless is small**: the world is still built in one frame and still handed
+over in that frame, behind an opaque cover — the order design 38 §25b measured to be the only cheap
+one — but the *request* for the build now waits until the screen has been drawn black twice. The
+freeze is still there; it is black.
+
+**The plan's blur was wrong, and the source said so before any probe.** It proposed URP's Bokeh
+depth of field with a 4K shot against Gaussian as the tie-breaker. URP's own constants settle it:
+Bokeh's radius is capped at twenty pixels of the screen's height and Gaussian's at 1.5, so at 4K both
+are a soft picture rather than sleep, and depth of field has never been used here, so a player build
+would have stripped it. The blur is a small dual-filter pass of our own, injected from
+`beginCameraRendering` for the five seconds and gone after, its depth chosen from the screen height.
+
+**Two decisions to keep.** The hold is a gate on the tick loop and never a speed, so it cannot be
+saved, remembered as the player's pause, or reorder against a load's own speed restore. And the
+dream's volume overrides only the numbers it moves: `Add<T>(overrides: true)`, which the storm's
+volume uses, would have swapped the golden hour's un-blendable bloom and vignette settings for URP's
+defaults the moment the weight left nought.
+
+Written in a container with no Unity: the model and its setting are proven in the fast tier; the
+engine half is uncompiled and owes both Unity tiers, a player build and the hitch tour's mid-wake
+picture before it merges (design 56 §11).
 
 ## 2026-09-26 — A second Windows machine, from nothing (`D:\dev\odyssey`)
 

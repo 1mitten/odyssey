@@ -113,9 +113,25 @@ namespace Odyssey.Sim.Pawns.Wildlife
             if (kind < 0) return;
             int group = Math.Min(WildlifeSeeder.GroupSize(entry, ref rng), Math.Min(target, _gen.wildlifeCeiling) - population);
             if (group <= 0) return;
-            int centre = census.Edge[rng.NextInt(census.Edge.Count)];
+            int centre;
+            bool bank = entry.habitat == Habitat.Bank;
+            if (bank)
+            {
+                // A bank animal walks in only where the water meets the edge (design 30 §8): a
+                // frog arriving in the middle of a dry field is a frog with nowhere to be. No
+                // such edge, no arrival of that kind this time — counted, not listed, so the
+                // rare tick still allocates nothing.
+                int banks = 0;
+                for (int i = 0; i < census.Edge.Count; i++) if (census.IsBank(census.Edge[i])) banks++;
+                if (banks == 0) return;
+                int nth = rng.NextInt(banks);
+                centre = -1;
+                for (int i = 0; i < census.Edge.Count; i++)
+                    if (census.IsBank(census.Edge[i]) && nth-- == 0) { centre = census.Edge[i]; break; }
+            }
+            else centre = census.Edge[rng.NextInt(census.Edge.Count)];
             _taken.Clear();
-            WildlifeSeeder.PlaceGroup(_pawns, census, _taken, centre, kind, group, ref rng, _candidates);
+            WildlifeSeeder.PlaceGroup(_pawns, census, _taken, centre, kind, group, ref rng, _candidates, bankOnly: bank);
         }
 
         /// <summary>On the board's outer ring, whatever the layer.</summary>

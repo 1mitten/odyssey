@@ -54,6 +54,8 @@ namespace Odyssey.Hud
 
         public const string SpawnRatKey = "ui.debug.spawnrat";
 
+        public const string SpawnFrogKey = "ui.debug.spawnfrog";
+
         public const string GiveWoodKey = "ui.debug.givewood";
         public const string GiveStoneKey = "ui.debug.givestone";
         public const string GiveFoodKey = "ui.debug.givefood";
@@ -126,7 +128,7 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly string[] IconKeys =
         {
-            PanelKey, CheatsKey, EventsKey, SpawnTabKey, SpawnPawnKey, SpawnHogKey, SpawnRatKey,
+            PanelKey, CheatsKey, EventsKey, SpawnTabKey, SpawnPawnKey, SpawnHogKey, SpawnRatKey, SpawnFrogKey,
             SpawnBanditKey, SpawnBatKey, SpawnCrowbarKey, SpawnMacheteKey, SpawnArcBladeKey,
             SpawnBanditsKey, ArmColonistsKey, SpawnPistolKey, SpawnGunmanKey, HurtKey, HealKey, KillKey, GiveMedkitsKey,
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
@@ -334,6 +336,8 @@ namespace Odyssey.Hud
                 PawnKindLabels.MiddenHogKind, GroupAnimalsKey),
             Pawn(SpawnRatKey, "Adds a duct rat near the camera. It wanders and rests, and climbs anything",
                 PawnKindLabels.DuctRatKind, GroupAnimalsKey),
+            Pawn(SpawnFrogKey, "Adds a culvert frog near the camera. It heads for the nearest water and keeps to the bank",
+                PawnKindLabels.CulvertFrogKind, GroupAnimalsKey),
             Weapon(SpawnBatKey, "Adds a bat near the camera. Blunt, and now and then it stuns", ItemHandle.Bat),
             Weapon(SpawnCrowbarKey, "Adds a crowbar near the camera. Heavier and slower than a bat, and stuns more often",
                 ItemHandle.Crowbar),
