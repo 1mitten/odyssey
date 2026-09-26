@@ -1537,3 +1537,22 @@ re-meshes a whole board in one frame says so.
   bank and bed checks, the skin-top test, the open-sky column walk, the exposed-face test — each
   cheap, none worth an afternoon alone. The next step there is a profiler, not a guess.
 - The tufts and dressing lift each clump onto the relief at a hashed offset, off the lattice.
+
+## 27. Trees fade for the selection only, by default (2026-09-25)
+
+**Reversal of §19's default.** On 2026-09-24 the owner asked for trees to fade for every colonist on
+screen, and `OdysseyBootstrap.seeThroughToEveryColonist` shipped **on**. Played, the reason to undo it
+was one sentence: **the trees clear with nothing selected** — round a colony going about its day the
+woods thinned wherever anybody stood, which read as the trees going missing rather than as the camera
+helping.
+
+- **Default: selected colonists only.** The field now defaults to `false`; only a selected
+  colonist's line fades anything (and, as before, See-through off fades nothing for anyone).
+- **A Graphics setting brings §19 back**: *Trees fade for every colonist*
+  (`GraphicsOption.FadeForEveryColonist`, registry key `ui.settings.seethroughall`), in the Detail
+  group under *See through to selection*, **off by default**, stored like every other switch and not
+  touched by a quality preset — it is how a player likes to look, not what the machine can afford.
+  `SettingsPresenter` seeds it from the scene field and writes it back; `UpdateSightLines` reads it
+  each frame, so it takes effect on the next frame with no remesh.
+- **The cost numbers in §19 still hold** for a player who turns it on; `FrameTimeTests` sets the
+  field explicitly in both arms and now restores it to the new default.

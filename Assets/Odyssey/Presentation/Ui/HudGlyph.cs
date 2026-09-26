@@ -139,6 +139,7 @@ namespace Odyssey.Presentation.Ui
         ToolTurret,
         ToolTrap,
         ToolBarricade,
+        ToolSandbag,
         ToolDeckplate,
         ToolGrating,
         ToolTile,

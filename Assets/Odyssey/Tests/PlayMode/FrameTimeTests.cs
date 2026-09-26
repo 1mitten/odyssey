@@ -2257,6 +2257,98 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What the butterflies cost (<c>docs/design/52-ambient-butterflies.md</c> §9), rung by rung,
+        /// by day and by night, at the batch view and at 3840 x 2160 — the reading that sets the
+        /// presets' rungs, taken on one board in one run because that is the only comparison this
+        /// machine supports (§6c).
+        ///
+        /// <para><b>Night is its own arm</b> because the lit wings are drawn to the full zoom (design 52
+        /// §5a), so the camera sees more of them than by day; priced where fill is honest, at 4K.</para>
+        ///
+        /// <para>It asserts no times. It asserts the controls: Off drew nothing and stepped
+        /// nothing; each rung drew more than the one below it; day and night alike were one call; the
+        /// 4K arm drew at 4K. The season is held full (<see cref="Odyssey.Hud.ButterflyMeadow.FullSeason"/>)
+        /// so the rung, not the first morning of Larkspur, decides the count.</para>
+        /// </summary>
+        [UnityTest, Category("Measurement")]
+        public IEnumerator TheButterfliesAgainstTheFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            bool previousSeason = Odyssey.Hud.ButterflyMeadow.FullSeason;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            try
+            {
+                Odyssey.Hud.ButterflyMeadow.FullSeason = true;
+                yield return TimeFrames("butterflies/warm", boot, WarmupFrames, _ => { });
+
+                Odyssey.Presentation.World.ButterflyDirector? butterflies = boot.Butterflies;
+                Assert.That(butterflies, Is.Not.Null, "the session built no butterflies");
+                if (!butterflies!.Available) Assert.Ignore("the Odyssey/Butterfly shader did not compile here");
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "butterflies-4k" };
+
+                int[] rungs = Odyssey.Hud.SettingsDirector.RungsOf(Odyssey.Hud.GraphicsLadder.Butterflies);
+                var lines = new List<string>();
+                var drawn = new Dictionary<string, int>();
+
+                foreach (bool night in new[] { false, true })
+                {
+                    // Twelve hours on from noon. The ticks are ordinary ones; the colony lives them.
+                    if (night) boot.DebugSkipTicks(12 * Odyssey.Sim.Contracts.Calendar.TicksPerHour);
+                    foreach (bool big in new[] { false, true })
+                    {
+                        cam.targetTexture = big ? fourK : previousTarget;
+                        string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                        foreach (int rung in rungs)
+                        {
+                            butterflies.Capacity = rung;
+                            float ms = 0f, gpu = 0f;
+                            double section = 0d;
+                            string label = $"{(night ? "midnight" : "noon")}/{resolution}/{rung}";
+                            yield return TimeFrames($"butterflies/{label}", boot, WarmupFrames,
+                                m => ms = m, split => section = Section(split, OdysseyBootstrap.FrameSection.Butterflies),
+                                g => gpu = g);
+
+                            if (big)
+                                Assert.That(cam.pixelWidth, Is.EqualTo(3840),
+                                    "the camera was not drawing at 4K, so this arm measured the batch view");
+                            if (rung == 0)
+                                Assert.That(butterflies.LastDrawCalls, Is.Zero, "the Off rung submitted a call");
+                            else
+                                Assert.That(butterflies.LastDrawCalls, Is.EqualTo(1),
+                                    $"{label} submitted {butterflies.LastDrawCalls} calls");
+
+                            drawn[label] = butterflies.LastDrawn;
+                            lines.Add($"{label}: frame {ms:0.00} ms, gpu " + (gpu > 0f ? $"{gpu:0.00} ms" : "unavailable") +
+                                      $", Butterflies section {section:0.000} ms, {butterflies.LastDrawn} drawn " +
+                                      $"of {butterflies.Meadow.Live} live (target {butterflies.Meadow.Target})");
+                        }
+                    }
+                }
+
+                Debug.Log($"[FrameTime] butterflies ({SystemInfo.graphicsDeviceName}, {SystemInfo.graphicsDeviceType}): " +
+                          string.Join("; ", lines));
+
+                string small = $"{Screen.width}x{Screen.height}";
+                for (int r = 1; r < rungs.Length; r++)
+                    Assert.That(drawn[$"noon/{small}/{rungs[r]}"], Is.GreaterThan(drawn[$"noon/{small}/{rungs[r - 1]}"]),
+                        $"rung {rungs[r]} drew no more than rung {rungs[r - 1]}, so its arm measured nothing new");
+            }
+            finally
+            {
+                Odyssey.Hud.ButterflyMeadow.FullSeason = previousSeason;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// What <c>Odyssey/Foliage</c> costs against the pack's own foliage shader, on the same grass
         /// in the same run (<c>docs/design/38-meadow-overhaul.md</c> §4, M3).
         ///
@@ -2715,7 +2807,7 @@ namespace Odyssey.Tests.PlayMode
 
         /// <summary>
         /// The scenery drawn from GPU buffers looks exactly as the scenery drawn chunk by chunk
-        /// (design 38 §22): tufts, tall-grass stands, flowers, ground cover and bushes, with their
+        /// (design 38 §27): tufts, tall-grass stands, flowers, ground cover and bushes, with their
         /// levels of detail and the distance thinning. Stilled and settled, at three framings — the
         /// start, 70 m and 140 m, where the far field thins and simplifies — and at noon and in the
         /// evening. At each, the chunk path is shot until two shots agree (the floor), then the
@@ -2849,7 +2941,7 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
-        /// What drawing the scenery from GPU buffers is worth (design 38 §22): the chunk path against
+        /// What drawing the scenery from GPU buffers is worth (design 38 §27): the chunk path against
         /// the indirect path, one world per board, on Standard and Huge, at the start zoom and pulled
         /// back to 140 m where the owner saw the drop, at the batch view (CPU-bound) and into a
         /// 3840 x 2160 target. Only differences inside the run are quoted. And the worst regather: a
@@ -3504,6 +3596,95 @@ namespace Odyssey.Tests.PlayMode
                 if (target != null) target.Release();
                 UnityEngine.Object.Destroy(root);
             }
+        }
+
+        /// <summary>
+        /// What the ambient birds cost (<c>docs/design/50-ambient-birds.md</c> §8): the played meadow
+        /// on Standard (18 birds) and Huge (51), at 640 x 480 and into a 3840 x 2160 target, each
+        /// timed with the birds off, on, and off again. The second "off" is the noise floor, so the
+        /// birds' price is read against the spread of two identical arms rather than assumed.
+        ///
+        /// <para>The budget design 50 set is <c>FrameSection.Birds</c> under 0.1 ms; the arm logs it
+        /// and asserts no times. It asserts the controls applied: off drew nothing and ran no
+        /// section, on drew birds in one call a species, and the camera drew at 4K.</para>
+        /// </summary>
+        [UnityTest, Category("Measurement")]
+        public IEnumerator TheBirdsAgainstTheFrame()
+        {
+            var lines = new List<string>();
+            foreach ((string board, int side) in new[] { ("standard", 120), ("huge", 240) })
+            {
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                    out OdysseyBootstrap boot, side, side, 16);
+                UnityEngine.Camera? cam = null;
+                RenderTexture? previousTarget = null;
+                RenderTexture? fourK = null;
+                try
+                {
+                    yield return TimeFrames($"birds/{board}/warm", boot, WarmupFrames, _ => { });
+                    BirdDirector birds = boot.Birds!;
+                    if (!birds.Available) Assert.Ignore("Odyssey/Bird did not load in this editor");
+                    cam = boot.cameraRig!.Camera;
+                    previousTarget = cam.targetTexture;
+                    fourK = new RenderTexture(3840, 2160, 24) { name = "birds-4k" };
+
+                    foreach (bool big in new[] { false, true })
+                    {
+                        cam.targetTexture = big ? fourK : previousTarget;
+                        string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                        var frame = new Dictionary<string, float>();
+                        var gpu = new Dictionary<string, float>();
+                        double section = 0d;
+                        foreach (string arm in new[] { "off", "on", "off again", "on again", "on, no shadows" })
+                        {
+                            bool on = arm.StartsWith("on");
+                            birds.Enabled = on;
+                            birds.CastShadows = arm != "on, no shadows";
+                            float ms = 0f, g = 0f;
+                            double birdMs = 0d;
+                            yield return TimeFrames($"birds/{board}/{resolution}/{arm}", boot, WarmupFrames,
+                                m => ms = m, s => birdMs = s[(int)OdysseyBootstrap.FrameSection.Birds], x => g = x);
+                            frame[arm] = ms;
+                            gpu[arm] = g;
+                            if (on)
+                            {
+                                if (arm == "on") section = birdMs;
+                                Assert.That(birds.LastDrawn, Is.GreaterThan(0), $"{board}: no bird was in the sky to price");
+                                Assert.That(birds.LastDrawCalls, Is.LessThanOrEqualTo(Odyssey.Hud.BirdSpecies.All.Length),
+                                    "more than one call a species");
+                            }
+                            else
+                            {
+                                Assert.That(birds.LastDrawn, Is.Zero, "the birds were still drawn with the switch off");
+                            }
+                            if (big) Assert.That(cam.pixelWidth, Is.EqualTo(3840), "the camera was not drawing at 4K");
+                        }
+                        float off = (frame["off"] + frame["off again"]) * 0.5f;
+                        float onMean = (frame["on"] + frame["on again"]) * 0.5f;
+                        float floor = Math.Max(Math.Abs(frame["off again"] - frame["off"]),
+                                               Math.Abs(frame["on again"] - frame["on"]));
+                        lines.Add($"{board} {resolution}: {birds.Sky.Birds.Length} birds, section {section:0.000} ms, " +
+                                  $"frame off {frame["off"]:0.00} / on {frame["on"]:0.00} / off {frame["off again"]:0.00} / " +
+                                  $"on {frame["on again"]:0.00} / on, no shadows {frame["on, no shadows"]:0.00} ms " +
+                                  $"(birds {onMean - off:+0.00;-0.00} ms, their shadows {onMean - frame["on, no shadows"]:+0.00;-0.00}, " +
+                                  $"noise {floor:0.00}), gpu " +
+                                  (gpu["on"] > 0f ? $"off {gpu["off"]:0.00} / on {gpu["on"]:0.00} ms" : "unavailable"));
+                    }
+                }
+                finally
+                {
+                    if (boot != null && boot.Birds != null)
+                    {
+                        boot.Birds.Enabled = true;
+                        boot.Birds.CastShadows = true;
+                    }
+                    if (cam != null) cam.targetTexture = previousTarget;
+                    if (fourK != null) fourK.Release();
+                    UnityEngine.Object.Destroy(root);
+                }
+                yield return null;
+            }
+            Debug.Log($"[FrameTime] birds ({SystemInfo.graphicsDeviceName}): " + string.Join("; ", lines));
         }
 
         /// <summary>
@@ -4211,7 +4392,7 @@ namespace Odyssey.Tests.PlayMode
                 SkirtLayout.TreeFarDensity = SkirtLayout.DefaultTreeFarDensity;
                 SkirtLayout.FarTreeNearDensity = SkirtLayout.DefaultFarTreeNearDensity;
                 SkirtLayout.FarTreeFarDensity = SkirtLayout.DefaultFarTreeFarDensity;
-                boot.seeThroughToEveryColonist = true;
+                boot.seeThroughToEveryColonist = false; // the default since 2026-09-25 (design 38 §27)
                 if (cam != null) cam.targetTexture = previousTarget;
                 if (fourK != null) fourK.Release();
                 UnityEngine.Object.Destroy(root);
@@ -4311,7 +4492,7 @@ namespace Odyssey.Tests.PlayMode
                 }
                 finally
                 {
-                    boot.seeThroughToEveryColonist = true;
+                    boot.seeThroughToEveryColonist = false; // the default since 2026-09-25 (design 38 §27)
                 }
                 yield break;
             }

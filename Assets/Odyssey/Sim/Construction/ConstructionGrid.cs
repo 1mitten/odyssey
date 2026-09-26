@@ -216,9 +216,12 @@ namespace Odyssey.Sim.Construction
         {
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
             if (!ConstructionContent.IsBuilding(building)) return IntentRejection.NotPermitted;
-            if (!ConstructionContent.IsBuildable(stuff)) return IntentRejection.NotPermitted;
-
             BuildingDef def = ConstructionContent.BuildingAt(building);
+            // A thing always made of one material is made of it whatever the order named (design
+            // 50 §4): the sandbags' five stone. Before the buildable test, so an order that names
+            // no material at all is still good for them.
+            if (def.fixedStuff != StuffHandle.None) stuff = def.fixedStuff;
+            if (!ConstructionContent.IsBuildable(stuff)) return IntentRejection.NotPermitted;
 
             // A line is not a site of this grid: it lives in the power grid's own layer, where a
             // cell can hold a line and a wall at once (design 32 §3). Handed on whole — the lift,
@@ -1122,6 +1125,8 @@ namespace Odyssey.Sim.Construction
 
             if (def.edifice == CoreContent.EdificeDoor) ctx.Nav.SetDoor(cell, isDoor: true, open: false);
             if (def.edifice == CoreContent.EdificeBed) _items.AddBed(cell);
+            // Cover that is crossed but never stood on (design 53 §5): the crossing's price.
+            if (def.passThrough) ctx.Nav.SetPassThrough(cell, def.crossCost);
 
             // 1b. A thing that makes or spends power has a switch and a hopper the world does not,
             //     and joins whatever net a line beside it is on (design 32 §5).
@@ -1457,9 +1462,21 @@ namespace Odyssey.Sim.Construction
             for (int i = 0; i < _edifices.Count; i++)
             {
                 PlacedEdifice placed = _edifices[i];
-                if (placed.Removed || placed.Def != CoreContent.EdificeDoor) continue;
-                ctx.Nav.SetDoor(placed.CellIndex, isDoor: true, open: false);
+                if (placed.Removed) continue;
+                if (placed.Def == CoreContent.EdificeDoor)
+                    ctx.Nav.SetDoor(placed.CellIndex, isDoor: true, open: false);
+                // And the cover crossed but never stood on (design 53 §5), derived the same way.
+                int building = ConstructionContent.BuildingForEdifice(placed.Def);
+                if (building != BuildingHandle.None && ConstructionContent.BuildingAt(building).passThrough)
+                    ctx.Nav.SetPassThrough(placed.CellIndex, ConstructionContent.BuildingAt(building).crossCost);
             }
+        }
+
+        /// <summary>Is this edifice something crossed but never stood on (design 53 §5)?</summary>
+        public static bool IsPassThrough(ushort edifice)
+        {
+            int building = ConstructionContent.BuildingForEdifice(edifice);
+            return building != BuildingHandle.None && ConstructionContent.BuildingAt(building).passThrough;
         }
 
         /// <summary>
@@ -1553,6 +1570,7 @@ namespace Odyssey.Sim.Construction
             _edifices[handle] = gone;
 
             if (was.Def == CoreContent.EdificeDoor) ctx.Nav.SetDoor(was.CellIndex, isDoor: false, open: false);
+            if (IsPassThrough(was.Def)) ctx.Nav.SetPassThrough(was.CellIndex, 0);
             if (was.Def == CoreContent.EdificeBed)
             {
                 _items.RemoveBed(was.CellIndex);
@@ -1678,8 +1696,10 @@ namespace Odyssey.Sim.Construction
         bool BlocksTheCell(int cell)
         {
             int building = _building[cell];
+            // Cover crossed but never stood on counts too (design 53 §5): nobody may be left
+            // standing in a sandbag the instant it goes up, and somebody climbing over waits.
             return building != BuildingHandle.None
-                   && ConstructionContent.BuildingAt(building).blocking;
+                   && (ConstructionContent.BuildingAt(building).blocking || ConstructionContent.BuildingAt(building).passThrough);
         }
 
         /// <summary>The far cell of a two-cell site, or -1. Read from the site as it stands.</summary>

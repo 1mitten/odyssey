@@ -285,3 +285,44 @@ What remains chosen rather than measured:
 5. Invoke, then save within the six seconds. Load. The pack still comes down, on the same cell.
 6. Dismiss the row with its cross; invoke again; the new row arrives and the old does not return.
    Load a save with events in it: the rows are there, and nothing chimes.
+
+## 11. Nothing lands in a tree — 2026-09-25
+
+Owner: *"Drops and spawned items shouldn't land exactly at a tree's trunk — around it or the next
+tile."*
+
+**The comment was wrong.** `CellGrid.SkyLanding` said a tree's cell is met first and is not
+walkable, so a column over a tree is refused. A tree blocks nothing: the fall reaches the ground
+at its foot and the column answers the tree's own cell, and the space test that followed had no
+opinion about trees either. The comment is corrected; the grid still cannot tell a tree from a wall
+by its handle, so the rule does not live there.
+
+**It lives in `ColonyItems.CellHasSpace`, both overloads**, which refuses a cell a tree stands in
+(`ColonyItems.TreeAt`, the grid of standing orders again, wired by `PawnContext.Designations`).
+Every road by which a thing comes to rest asks it — most of them through `NearestCellWithSpace`,
+whose ring search then finds the tile beside the trunk:
+
+| Road | What it does now at a trunk |
+|---|---|
+| Supply drop, column drawn at random | the column is refused and another drawn |
+| Supply drop, column forced (a cell named) | the nearest column round it within two rings (`SupplyDropWorker.BesideTreeRings`); a wall, deep water or rock still refuses as before |
+| Skyfaller landing (something grew there during the fall) | beside it |
+| Debug *Give resource*, debug *Arm colonists* | beside it |
+| Felled wood | at the stump — the tree is gone — else past the neighbouring trunks |
+| Deconstruct and power refunds, mined blocks, harvests, dropped loads, a haul set down on open ground | beside it |
+| A load falling through a hole (design 26-falling-items §4) | beside it |
+| A stockpile cell a tree stands in | not a destination |
+| Mushrooms beside a tree, loose stones at generation, the wreckage scatter | not in a trunk |
+
+**Live, not cached.** `ColonyItems` keeps a set of cells nothing may be put in (a bed's), but a tree
+comes down by more roads than a bed — felling, a site cleared, a collapse — and a cached copy would
+have to hear about every one. The live question is one handle read and one Def read.
+
+**Tests** — `TreeTrunkTests`: the space test and its ring search, a debug grant, a forced drop and
+its open-ground control, forty drops drawn over a board three-quarters forest, felled wood with a
+stone on the stump and trees all round, a load falling onto a tree, and the played board as
+generated (nothing the world starts with lies in a tree). With `TreeAt` switched off every item
+test fails.
+
+**Goldens.** `Generated` moved on no board: nothing the scenario or the generator places was ever
+in a tree. The `Simulated` moves on the played board and the city are the wander's (design 31 §20).

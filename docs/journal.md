@@ -13393,6 +13393,48 @@ therefore peak-normalised on import, undoing the loudness their bakes set. The g
 committed with it off. The fix for the rest changes how loud every blow is, so it is its own PR, and
 it is unverified in Unity until somebody reads `GetData` on `combat-hit`.
 
+## 2026-09-25 — Ambient birds: research, a sketch, three answers, and the build (design 50)
+
+The owner asked whether the environment could have birds, procedural or a low-poly model. Nothing in
+the repository drew one. The day ambience has birdsong and no owned pack has a bird
+(`e-12-bird-models.md`: Meadow Forest has butterflies and two birdhouses). Two research lanes ran:
+technique and prior art (`d-23`) and models and licences (`e-12`). Their field-of-view claims
+disagreed (60° against 40°). The scene settles it at 40° (`Assets/Scenes/Play.unity`), and d-23 was
+corrected. At 40° and 1080p a rook is about 9 px across at 160 m drawn ×1.75, and about 5 px at life
+size.
+
+**The owner asked to see it before deciding** ("we need to be specific"), so the recommendation was
+drawn: a three.js sketch through the game's own camera, with four species and twelve stills
+(`docs/reference/mockups/birds/`). The stills settled two things the prose could not. At life size
+the far zoom loses the birds. A ground-feeding pigeon built in code reads as a dart at 16 m. The
+interview (`birds-interview.md`) then took three answers: **birds grow with zoom**, **fly and perch
+only** (so no model and no licence), and **rooks and the buzzard** first.
+
+**Numbering collided with main twice on the merge.** Main had taken `d-21` and `e-10` for the
+ranged-combat research while this ran (`e-10` is itself doubled there, with the Shops pack), and
+design 47 is ranged combat. The bird files moved to `d-23`, `e-12` and design **50**.
+
+**The build.** The flock is engine-free (`BirdSky` in Odyssey.Hud) so the fast tier drives a dusk, a
+storm and a colonist walking under a tree in seconds. 27 tests cover the shape's symmetry, the zoom
+curve, perching on crowns, the scatter, the rookery, the storm, the buzzard leaving and returning,
+and a board with nowhere to sit. The Unity half is a perch source over the render mirror, the
+director and `Odyssey/Bird`. The perch source reads the sky column rule the rain uses, and takes a
+crown's top from the art's own bounds through `TreeArt.CrownOf`. Which art rows a tree family has is
+now `TreeArt.VariantsOf`, called by the mesher too, so it keeps one owner. Two calls a frame.
+Measured on the build container under .NET 8: 8 µs for Standard's 18 birds, 21 µs for Huge's 51.
+
+**One draft decision reversed before it shipped:** scattering perched birds when a chunk's version
+moved. A chunk is 62.5 m across and moves for any edit in it, so a floor laid on one side of it would
+have put up a flock on the other. The perch's own column is asked twice a second instead
+(design 50 §6).
+
+**How it was proven without Unity.** The container had no .NET SDK and no Unity. The SDK came from
+Ubuntu's archive, which ran the fast tier. Unity 2021.3's reference assemblies from NuGet
+(`UnityEngine.Modules`), with signature stubs for the few project types the new files touch, type-
+checked the director, the perch source, `TreeArt` and the EditMode test against Unity's real API. A
+planted error was caught, so the check is live. It proves the Unity calls and the C#. It does not
+prove the shader or the bootstrap edit, which only Unity compiles.
+
 ## 2026-09-25 — Ranged combat built: the pistol from the contracts to the gunshot
 
 The owner approved design 47 (*"approved - execute"*). Built the same day on `claude/ranged-combat`,
@@ -13574,6 +13616,204 @@ eleventh round constant for a random stream, so where a blow landed would have b
 the stream jump's roll. Neither is a textual conflict; both were found by reading what each side
 had claimed from the shared tables. A test that had passed by luck on the old stream said so the
 moment the stream moved. No golden moved.
+
+## 2026-09-25 — The birds played, measured in Unity, and made ready to merge (design 50 §8a)
+
+The owner played PR #230 on `D:\code\odyssey-birds` and said *"superb - if this is performant -
+get it ready to be merged in"*. It had never been compiled in Unity: the build container had no
+editor. Merging `origin/main` (33 commits behind) gave three conflicts, all additions on both sides
+(the bird and tracer shader rows in `ShaderInclusion`, the journal, the playtest queue). The birds
+touch no simulation file, so the ranged merge's lesson (hash bits and random streams colliding
+with no conflict marker) had nothing to find here.
+
+**EditMode on the merge: 4,152, one failure, and it is `main`'s.**
+`WeaponSheathGapTests.EverySheathedWeaponSitsAgainstTheHip` reads the bat on
+`Character_MilitaryMale_01` 3.2 cm off the body against a 0.8–3.0 window. A clean `origin/main`
+worktree fails the same assertion with the same numbers. The runner has no Synty, so the test
+ignores itself there and CI cannot see it. It needs its own fix.
+
+**The performance question had no Unity answer**, only the fast tier's 8 µs under .NET 8. So
+`BirdDirector` gained `Enabled` (the control, and the seam a settings switch would use) and
+`CastShadows`, and `FrameTimeTests.TheBirdsAgainstTheFrame` times one world per board with the
+birds off and on. The CPU section is 0.018–0.032 ms, and every frame difference is inside its own
+noise.
+
+**The first run lied, and the arm's design is why.** Off / on / off read +1.53 ms at Standard 4K
+against a 0.11 ms floor, while Huge at 4K read −0.23. Two readings that disagree in sign are not a
+cost. The rerun repeated both states and added a no-shadow arm, and gave +0.15 against a floor of
+0.40. A floor measured on one state only understates the noise at 4K by four to six times, so
+**repeat both states before quoting a 4K difference**.
+
+## 2026-09-25 — Cover: ground, interview, research and design 53
+
+The owner asked for cover in the reference's mould, with sandbags and barricades, built on the ranged
+line. **Grounding came first, and found three things.**
+- **The slot was already there.** The ranged hit formula has `CombatDef.coverPerMille` fixed at 1000,
+  so cover is a replacement of one global number with a per-shot value, not a new term.
+- **`LineOfSight.Walk` already lists every cell a shot crosses, in order.** A low, passable thing was
+  never struck because `LandBullet` only reaches a building through the *blocking* branch.
+- **No shooter chooses where to stand.** A shooter stops at the first step from which the line opens.
+
+The research (`a-10-cover.md`) recovered the reference's rule almost whole, despite every wiki page
+being refused: only the eight neighbours count; the angle bands run 15/27/40/52/65° with diagonals
+counted ×1.75; a shooter within 1.9 or 2.9 cells of the cover gets it at a third or two thirds; pieces
+combine by noisy-OR; a full-fill thing is worth 75 %, not 100 %; and a shot the cover wins is fired
+*into* the cover. That last rule is why a sandbag line wears down, and it is the part worth copying
+most.
+
+**The interview's one real design choice was height** (`cover-interview.md` Q9 and Q13). The first
+option offered graded low cover by layer count, and it was wrong once the code was read: a wall is
+one full layer, so from one layer up a shooter genuinely sees over it, and "tall cover keeps its full
+value" would make every wall a bunker against a rooftop. The owner took grading by the **shot's angle
+of descent** instead. It is linear in the tangent so that no `atan` enters the simulation. A shooter
+one layer up and ten cells away still faces the sandbags in full; at two cells they are nearly gone.
+
+**The expensive answer the owner chose knowingly is pass-through-only.** Cover is then always beside a
+pawn and never under her, and no line seals anyone in. The price is one owner for "may a pawn end up
+here" (`Standing.CanStandAt`), asked by every picker, plus an audit of thirty-one walkability callers
+and a sweep as the safety net. It is designed as a unit of its own (CV4) with a Long-tier property
+test, because a missed caller fails silently.
+
+**Numbering and branching.** Design 53: `main` holds 47 (ranged), 48 (cooking) and 49 (the bill
+list), and no open branch claims 50. The code will stack on `claude/ranged-combat`. The owner asked
+whether ranged was merged, and it is not: only its design merged (PR #220). The merge order is
+therefore ranged, then cover. **Next:** the owner's approval of design 53 (§10 lists five points).
+
+## 2026-09-25 — Cover built (CV1–CV9), and the dance an old test caught
+
+The owner approved design 53 with one word, and the nine units went in the same day on this
+branch, with `claude/ranged-combat` merged in first because nothing about cover means anything
+without its line of sight and its bullet.
+
+**The rule is integers or it is nothing.** An angle band is a squared-cosine comparison by
+cross-multiplication, the ×1.75 diagonal penalty is a second table of edges rather than a multiply
+on an angle nobody computed, and the descent is graded in its tangent, so no `atan` enters a thing
+whose output feeds a roll. `CoverTests.TheRuleNeverTouchesAFloat` reads the file.
+
+**The one surprise was behavioural, and an existing test found it.** Cover-seeking as first written
+let a fighter look again whenever her line opened with under 20 % of cover. `APistolBanditShootsAColonist`
+went red: the colonist being shot at fled, each step moved the best cell, and the bandit repositioned
+for four hundred ticks without once firing. The fix is a window — cover is sought only in the first
+240 ticks of an attack, read off the saved tick the job began — and it is the reference's own shape:
+its raiders pick a position when they choose a target, not every step.
+
+**Two things are true only because the save was thought about.** The sweep that steps a pawn off a
+sandbag it came to rest on first kept its own timer; a colony saved and loaded would have stepped her
+off on a different tick from one never saved, and the resume gate would have parted. It reads
+`JobStartTick` now. And a covered bullet's cell rides flag bit 4 of the projectile record, so a file
+written before cover loads unchanged and no format number moved.
+
+**Pass-through-only cost less than feared.** The design braced for thirty-one callers; in practice
+the walk toil is the choke point every destination passes through, so snapping a goal there, plus
+the four pickers that choose where to *stop* (shooting, striking, a side, eviction), was enough. A
+day inside a ring of 48 sandbags: 4,351 pawn-ticks crossing it and the sweep never fired.
+
+**Not proven here:** the Presentation half — the joined boxes, the crouch, the building bars, the
+floater and the readout — has no compiler in a container without Unity. It follows the shelf's and
+the pawn bars' code line for line, and the owner's first Unity run is its test.
+
+## 2026-09-25 — Cover merged with main, the barricade out, and the sandbags drawn as bags
+
+**The merge found a real collision, not a textual one.** Health (design 43) reached `main` first on
+SHA-256's twentieth and twenty-first round constants — the same two cover had taken for
+`RangedCover` and `RangedCoverPick`. Two purposes on one stream would let a shot's cover roll and
+where a blow lands decide each other. Health shipped, so cover moved to the twenty-second to
+twenty-fourth; `QueryShot` appended after health's two intents so `main`'s intent values are
+unchanged. No golden moved. The first Unity compile of the Presentation half passed; the one
+EditMode failure, `WeaponSheathGapTests` (a bat 3.2 cm off the hip against 3.0), is on `main` too —
+three other worktrees fail it with the same number.
+
+**The owner's first look:** *"barricades are odd and buggy so remove them for now and the sandbags
+need to look like sandbags. Please search the internet to understand how a sandbag looks."* The
+barricade went back to what `main` had, a dim chip; it was the last building handle and the last
+edifice, so nothing renumbered. The search is research `e-12`, and the finding that shaped the
+drawing is what reads as sandbags from a distance: the scalloped top, the groove where two rounded
+bags meet, and the half-bag stagger. A scaled box has none of the three, which is why no tuning of
+the placeholder would have answered the report.
+
+**So the bags are drawn one at a time**, `SandbagMesh` beside the pillow, laid by `CoverShape` as a
+revetment is laid — stretchers in running bond, two rows deep, under a header course, battered. The
+thing that made it cheap to get right is that 2.5 m is exactly three stretchers: the bond repeats per
+cell, so a dragged line is continuous without any piece knowing its place in the line, and "the
+cell a bag starts in draws it" gives every straddling bag exactly one owner. The Blender set the
+design planned is not needed unless the owner's eye says otherwise. Design 53 §7a-bis and §13.
+
+## 2026-09-25 — Six polish reports in one PR (`claude/polish-batch`)
+
+The owner sent six reports at once and asked for them in parallel, folded into one PR. Four
+questions were settled first. **Trees fade for the selection only**, with a Graphics switch for
+everyone that starts off: this reverses the 2026-09-24 call (design 38 §17c) because the trees
+cleared round colonists with nothing selected. **The colonist pane at 85%**; roster cards and the
+other panels stay opaque, since the 2026-09-21 call for opacity was about them. **A roster double
+click glides and zooms in close.** And **the no-shared-tile rule goes in both the sim and the
+drawing**.
+
+Three lanes worked in one worktree on files that did not overlap, and each committed by path.
+
+- **Sim.** One predicate for where someone may lie down (`JobSystem.FreeSpot`). The tree rule for
+  landings lives inside `ColonyItems.CellHasSpace`, so every drop, refund, grant and falling load
+  obeys it. A "claimed by another" check covers standing, stepping-into and heading-to;
+  `PawnRegistry.IsClaimedByOther` is asked only when a pawn starts a stay, never per tick. The
+  fireside grew a second ring for when the first is full.
+- **Goldens.** Two moved: the played board and the city. `GoldenColonyProbe` shows every economy
+  number identical. Only positions changed, plus one extra wander per colony, which is the wander
+  now skipping taken tiles.
+- **Drawing.** `PawnPose.StandApart` spreads anyone standing still on a shared cell round a ring,
+  0.7 m apart, in id order. It uses `PawnCrowdIndex.Here` (one bucket), so the cost stays bounded
+  (P12). Six fallback pose calls in the bootstrap and the pick were asking without the crowd, so a
+  pawn past the figure cap had its ring and bracket at the cell centre while the body stood apart.
+  They now pass it.
+
+**Measured, not assumed.** EditMode on the merge: 4,153 tests, one failure,
+`WeaponSheathGapTests`. `origin/main` in the same worktree fails the same assertion (4,152, one
+failure), which agrees with the birds entry above: it is `main`'s and still needs its own fix.
+
+**What the parallel lanes cost.** Two agents' fast-tier runs locked each other's test DLLs, and one
+agent saw the other's half-finished Sim edits fail to compile. Lanes that share a worktree should
+not share a test binary. Next time, give the Sim lane its own worktree.
+
+## 2026-09-26 — Butterflies, and a night that lights up
+
+The owner asked for procedural butterflies that look and move decently, a graphics setting if they
+cost anything, and a night made spectacular by their glowing in varying colours. Interviewed in two
+rounds (`docs/research/butterflies-interview.md`), researched in three capped subagents (`e-13`,
+`d-24`, `e-14`), built on its own worktree as the owner asked: design 52.
+
+**Grounded against `origin/main`, not the checkout.** The local `main` was 47 pull requests behind;
+weather, the flower dressing, the quality presets and the settings window had all landed since. And
+a sibling branch held **ambient birds** (design 50, PR #230) — found by checking which design numbers
+were taken on every remote branch, not just `main`. The butterflies follow the birds' shape on
+purpose: an engine-free model in `Odyssey.Hud` behind a seam the render mirror answers, a frame
+section of its own, the shader kept alive for the player build. Design numbers 50 and 51 and research
+`d-23` and `e-12` were already claimed on branches; this is 52, `d-24`, `e-13`, `e-14`.
+
+**Two research results disagreed and the design sides with the one that measured the engine.** The
+wing research wanted the pattern over bloom's 1.1 threshold for glow; the cost research found that a
+few-pixel region crossing a half-resolution bloom threshold shimmers as it moves, and bloom's clamp
+is global. So the wing stays at or under 1.0 and the spectacle is a halo and a light the pass draws
+itself — the light read off the depth texture, so it falls on a colonist or a wall as well as the
+grass, and is never a URP light (Forward+ caps a camera at 256).
+
+**The one departure from the birds is the clock.** Birds and rain run on game time; a butterfly
+beats ten times a second, so at speed 3 it would strobe. Real seconds while the world runs, none on
+a pause.
+
+**The colour-blind test earned its keep on its first run**: magenta was 17 Lab units from the night
+sky under deuteranopia, and was lifted. And **the rain test found a real bug**: the surplus margin
+that stops the count hunting kept two butterflies alive when the target was nought, so every
+downpour would have left two out in it for ever.
+
+**A debug row, Skip to night**, because Skip to morning lands at four with a minute of dark left —
+too little to judge the one thing the owner asked to be spectacular.
+
+**Then the owner looked (2026-09-26)**: *"the day effect superb, the night effect is odd, it just
+needs to colour the butterflies a illuminating colour and they move around - not those big glowing
+saucers. Also make sure it's performant."* The halo and the pool of light went, and with them the
+second call and every depth-texture read; the whole wing is now lit in its hue, the pattern
+brightest, and the wings are drawn to the full zoom at night, a little larger, where the halos had
+carried a far night. The research had argued the spectacle into a separate light because the wing
+could not safely cross bloom's threshold; the owner's answer was that the wing was the spectacle all
+along, and the ceiling that argument was about still holds (design 52 §5a).
 
 ## 2026-09-25 — The culvert frog: an animal placed by the water
 

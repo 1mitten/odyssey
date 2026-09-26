@@ -998,16 +998,8 @@ namespace Odyssey.Presentation.Rendering
         {
             if (_treeVariants.TryGetValue(module, out int[]? known)) return known;
 
-            var variants = new List<int> { module };
-            string baseId = _model.Library[module].Id;
-            for (int v = 1; v < ModuleIds.MaxTreeVariants; v++)
-            {
-                string id = ModuleIds.TreeVariant(baseId, v);
-                if (_model.Library.Catalogue == null || _model.Library.Catalogue.Find(id) == null) continue;
-                int resolved = _model.Library.Resolve(id, ModuleShape.Pillar);
-                if (_model.Library[resolved].UsesArt && !_model.Library[resolved].IsEmpty) variants.Add(resolved);
-            }
-            int[] result = variants.ToArray();
+            // The list itself is TreeArt's, which the birds' perches ask too (design 50 §6).
+            int[] result = TreeArt.VariantsOf(_model.Library, module);
             _treeVariants[module] = result;
             foreach (int m in result)
             {
@@ -1672,6 +1664,9 @@ namespace Odyssey.Presentation.Rendering
                 case CoreContent.EdificeShelf:
                     EmitShelf(batch, module, tint, index, x, z, y);
                     return;
+                case CoreContent.EdificeSandbags:
+                    EmitCover(batch, module, tint, def, x, z, y);
+                    return;
                 // Power's machines, drawn from pack art once from the head at the middle of their
                 // footprint (design 32 §14). Only when the art resolved: a clone without the packs
                 // has the tinted block, which is drawn per cell below as it always was.
@@ -1968,6 +1963,28 @@ namespace Odyssey.Presentation.Rendering
             Matrix4x4 root = ShelfShape.Root(x, z, y, facing);
             for (int part = 0; part < ShelfShape.PartCount; part++)
                 AddBody(batch, module, tint, ShelfShape.Part(root, facing, part));
+        }
+
+        readonly Matrix4x4[] _coverParts = new Matrix4x4[CoverShape.MaxParts];
+        readonly int[] _coverShades = new int[CoverShape.MaxParts];
+
+        /// <summary>
+        /// Sandbags (design 53 §7a-bis): a wall of bags laid along each axis the piece is joined on,
+        /// so a dragged line is drawn joined. Each bag wears one of the cloths whatever stone filled
+        /// it, so a chunk's sandbags are one bucket per cloth. A neighbour raised or taken down
+        /// re-meshes this chunk too (<c>MarkChunksAround</c>), so the join follows.
+        /// </summary>
+        void EmitCover(ChunkBatch batch, int module, int tint, ushort def, int x, int z, int y)
+        {
+            var size = _model.Size;
+            int joins = 0;
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
+                if (size.Contains(nx, nz, y) && _model.EdificeDef(size.Index(nx, nz, y)) == def) joins |= 1 << dir;
+            }
+            int count = CoverShape.Parts(def, x, z, y, joins, _coverParts, _coverShades);
+            for (int i = 0; i < count; i++) AddBody(batch, module, TintCode.Hessian(_coverShades[i]), _coverParts[i]);
         }
 
         int FirstOpenDirection(int x, int z, int y) => _model.DoorFacing(x, z, y);

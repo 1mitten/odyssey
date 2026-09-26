@@ -128,6 +128,21 @@ namespace Odyssey.Sim.Pawns
                 // Land a step that is well under way; stop on one that has barely begun.
                 if (!boundary) return LandTheStep(ctx);
 
+                // A bandit, or a colonist fighting back undrafted, looks for cover before she shoots
+                // (design 53 §6). A drafted colonist holds where the player put her, and an order the
+                // player gave is carried out from where it finds her.
+                if (!Pawn.Drafted && !Job.PlayerForced && tick - Pawn.JobStartTick < CoverPosition.SeekWindowTicks)
+                {
+                    int cover = CoverDestination(ctx, target);
+                    if (cover >= 0 && cover != Pawn.Cell)
+                    {
+                        JobStatus toCover = GotoCell(ctx, cover);
+                        if (toCover != JobStatus.Failed) return JobStatus.Ongoing;
+                        Pawn.ClearPath();
+                        Pawn.Destination = -1;
+                    }
+                }
+
                 if (MayShootFrom(ctx, target, tick))
                 {
                     Pawn.ClearPath();
@@ -189,6 +204,24 @@ namespace Odyssey.Sim.Pawns
             if (Pawn.HasPath || Pawn.PathPending) return JobStatus.Ongoing;
             if (Pawn.Destination < 0 || GotoCell(ctx, Pawn.Destination) == JobStatus.Failed) Pawn.ClearPath();
             return JobStatus.Ongoing;
+        }
+
+        /// <summary>
+        /// Where a fighter who takes cover should be going, with her line open from where she stands
+        /// (design 53 §6): on to the cell she is already walking to while it has more cover from the
+        /// target than this one; else, with this cell barely covered, the best cell
+        /// <see cref="CoverPosition.Find"/> gives, which may be this one. -1 or her own cell: shoot
+        /// from here.
+        /// </summary>
+        int CoverDestination(PawnContext ctx, Pawn target)
+        {
+            int here = ctx.RangedRules.CoverPerMille(target.Cell, Pawn.Cell, ctx);
+            int going = Pawn.Destination;
+            if (going >= 0 && going != Pawn.Cell && going != target.Cell
+                && ctx.RangedRules.CoverPerMille(target.Cell, going, ctx) > here)
+                return going;
+            if (here >= ctx.Content.Combat.coverCrouchPerMille) return -1;
+            return CoverPosition.Find(ctx, Pawn, target, ctx.WeaponRules.ArmamentOf(Pawn, ctx));
         }
 
         /// <summary>

@@ -33,6 +33,20 @@ the next session learns to ignore.
   hops or lurches backwards at the start of one; frogs far from water; a frog too small to find from
   your normal camera height; a green that still sinks into the grass; or frogs you would rather see swimming, which
   is a cost stated in §8b.
+- **Polish batch: trees, drops, the fire, the roster, the pane, the fade** (`claude/polish-batch`,
+  designs 20 §14, 23 §11, 31 §20, 25 §10, 14 §10–§11, 38 §27).
+  - Gather six or more colonists round a campfire at night. Each should be on their own tile, with
+    the inner ring seated facing the fire. Wrong: two figures clipping into each other, or the
+    second ring reads as a queue.
+  - Halt two drafted colonists on one tile. Wrong: they jitter or swap places when a third
+    arrives.
+  - Single-click a roster card, then double-click it. Wrong: the single click still moves the
+    camera, or 14 m is too close or too far.
+  - Read the colonist pane over bright grass. Wrong: the dim grey lines are hard to read.
+  - With nothing selected, walk a colonist behind trees. Wrong: the trees still fade.
+  - Fire several supply drops into woodland. Wrong: a pallet lands in a trunk.
+
+- **Is the lit-butterfly night right now?** The first look said the day was *"superb"* and the night's halos were *"big glowing saucers"*; they are gone and each butterfly is lit in its own colour instead (design 52 §5a). (`claude/ambient-butterflies`, design 52.) New game on a meadow in Larkspur or Tansy; watch the grass near the camera at the default zoom, then walk a colonist through them, then press the debug menu's new **Skip to night** (22:00, fully dark), then zoom right out. Wrong answers: a lit butterfly reads as a coloured blob rather than a wing; the colours look flat rather than glowing (the lever is `ButterflyPalette.WingGlowCeiling`, held at 1.0 against shimmer); they shimmer or vanish as they move; zoomed out, they are too small to see or too many; a colonist walking through does not scatter them.
 
 - **Does changing a graphics setting still hitch, and is the board seen catching up?**
   (`claude/mesh-cost`, design 38 §26.) Open Settings → Graphics and flick the Grass ladder, then Ground
@@ -40,6 +54,19 @@ the next session learns to ignore.
   spends at most about 2 ms a frame and takes about a third of a second to finish. Wrong answers: a
   visible hitch when a setting changes, or chunks of old grass visibly swapping to new a few at a time.
 
+- **Do the sandbags look like sandbags, and does cover change a fight?** (`claude/cool-darwin-akh02q`,
+  PR #232, design 53 §7a-bis and §13; worktree `D:\code\odyssey-cover`.) Build → Security: drag a line
+  of **Sandbags**, then an L and a T. The barricade chip is dim again, beside the turret and the trap.
+  Walk a colonist across: she climbs over slowly and never stops on top. Draft two colonists with
+  pistols behind the bags and use the debug menu's *Spawn pistol bandit* ten cells away: they crouch
+  behind the bags, the bandits step behind anything nearby before firing, *Cover* floats over a bag
+  that takes a bullet, and a bar appears over each one hit. Select a drafted gun colonist and hover a
+  bandit: the readout beside the pointer gives the chance and what moved it. **Wrong answers:** the
+  wall reads as a striped block rather than bags (the bags too small, or the grooves between them
+  lost); the line visibly restarts at every cell; a corner with a gap or a bag poking through; the
+  colour reads as stone or as plastic; bags so tall the crouched colonist is hidden or so low she
+  towers over them; a colonist standing on top of the bags; bandits that shuffle about without
+  shooting; or a readout that sits under the pointer or flickers.
 - **Does the new bill list read at a glance, and is anything on it in the way?** (`claude/bills-pane`,
   design 49, stacked on `claude/cooking`.) Click an **Electric Cooker** with no power: the pane is
   wider (680), a warn strip reads **No power** with a green **Switch off** beside it, and the tile's
@@ -1335,6 +1362,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-25 | **Ambient birds** (PR #230, `docs/design/50-ambient-birds.md`): rooks and a buzzard, their size at every zoom, perching, the scatter, the rookery, the weather | working — owner: *"superb - if this is performant - get it ready to be merged in"* | measured, then ready to merge: `FrameSection.Birds` 0.018–0.032 ms, and the frame at 640 x 480 and 4K is inside its own noise with the birds on (design 50 §8a) |
 | 2026-09-25 | **Ranged combat, three rounds** (PR #225, `docs/design/47-ranged-combat.md` §10a–§12): the aim, the shot, the tracer, the sound, then accuracy from a height, weapon quality and the reach rule | working — owner, first play: *"it's really decent and everything seemed to work well"*; after the reach rule: *"great job - just played a big battle"* | the first play raised the accuracy, sent a miss past its target into the ground and landed a hit on the body wherever it stands (§10a); asked for weapon quality (§11) and the reach rule (§12), both built and played in the big battle. Ready to merge. The frame with gunfire (P4) is still unmeasured |
 | 2026-09-25 | **The home area, the hearth and the Assign tab** (PR #214, `docs/design/43-home-area.md`), after the review's five fixes | working — owner: *"it all works get ready to merge in"* | none; ready to merge. The house over the hearth, which the frame test logged hidden, is covered by "it all works" |
 | 2026-09-24 | **Walls down, both rounds** (PR #197, `docs/design/42-walls-down.md`) | working — owner, first look: *"works brilliantly but a few things"*; after the second round: *"excellent - get this ready for merge"* | the first look moved two things (the R / F label went; a lower terrace counts as ground and only upper storeys hide, §3a); ready to merge |

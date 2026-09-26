@@ -5,9 +5,9 @@ namespace Odyssey.Hud
 {
     /// <summary>
     /// The interface directors that exist so far, built together so that the rules between them
-    /// live in one place: a layer change clears the selection, and choosing a colonist from the
-    /// roster moves the slice to their layer, selects them, and sends the camera to them, in that
-    /// order. Presenters in the Unity assembly hold one of these and realise what it decides.
+    /// live in one place: a layer change clears the selection, and going to a colonist (an alert,
+    /// a roster card double-clicked) moves the slice to their layer, selects them, and sends the
+    /// camera to them, in that order. Presenters in the Unity assembly hold one of these and realise what it decides.
     ///
     /// Unity-free by construction (ADR 0003): everything here runs in the fast tier.
     /// </summary>
@@ -94,11 +94,13 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// The roster path: a card is clicked for a colonist who may be anywhere, so this takes
-        /// the player to them — their layer first, since the picker will not look through a
-        /// floor, then the selection, then a camera jump to their cell at the current zoom. A
-        /// world click does none of the moving; that colonist is already under the cursor, and a
-        /// view that shifts under a click is the camera fighting the player.
+        /// The go-to-them path (alerts, the Events panel, the Work and Almanac rows): a colonist
+        /// who may be anywhere, so this takes the player to them — their layer first, since the
+        /// picker will not look through a floor, then the selection, then a camera jump to their
+        /// cell at the current zoom. A world click does none of the moving; that colonist is
+        /// already under the cursor, and a view that shifts under a click is the camera fighting
+        /// the player. The roster card no longer comes here on a single click — see
+        /// <see cref="CloseInOnColonist"/>.
         /// </summary>
         public bool ChooseColonist(PawnId id, WorldSnapshot snapshot)
         {
@@ -106,6 +108,21 @@ namespace Odyssey.Hud
             Slice.SetLayer(view.Cell.Y);
             Selection.Choose(id);
             Camera.JumpTo(view.Cell);
+            return true;
+        }
+
+        /// <summary>
+        /// A roster card double-clicked (owner, 2026-09-25; <c>14-hud-layout.md</c> §10): what
+        /// <see cref="ChooseColonist"/> does, and the camera also zooms in close
+        /// (<see cref="CameraDirector.CloseUpMetres"/>) as it glides. A single click on a card only
+        /// selects, and never moves the view.
+        /// </summary>
+        public bool CloseInOnColonist(PawnId id, WorldSnapshot snapshot)
+        {
+            if (!snapshot.TryGetPawn(id, out PawnView view)) return false;
+            Slice.SetLayer(view.Cell.Y);
+            Selection.Choose(id);
+            Camera.JumpTo(view.Cell, CameraDirector.CloseUpMetres);
             return true;
         }
 

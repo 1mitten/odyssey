@@ -291,6 +291,10 @@ namespace Odyssey.Sim.Pawns
             Construction.RebuildLadderConnectors(Pawns);
             Construction.RebuildDoors(Pawns);
 
+            // The weather's temperature offset is derived and written only every weather pass, so
+            // a loaded colony takes it back here or reads the fresh board's until the next pass.
+            Pawns.Weather?.ReapplyOffset(World.CurrentTick);
+
             // And which cells hold furniture nothing may be put down in — derived from the same
             // edifice list, for the same reason.
             Construction.RebuildItemBlocks();

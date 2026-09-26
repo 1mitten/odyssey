@@ -64,6 +64,13 @@ namespace Odyssey.Hud
         public const string GiveCarrotsKey = "ui.debug.givecarrots";
         public const string SkipDayKey = "ui.debug.skipday";
         public const string SkipMorningKey = "ui.debug.skipmorning";
+
+        /// <summary>
+        /// Skip to ten at night, when it is fully dark (design 52 §5). The butterflies' glow is the
+        /// one thing that only exists after dusk, and <see cref="SkipMorningKey"/> lands at four in
+        /// the morning with about a minute of night left — too short to judge a spectacle by.
+        /// </summary>
+        public const string SkipNightKey = "ui.debug.skipnight";
         public const string RipenCropsKey = "ui.debug.ripen";
 
         /// <summary>Completes the project in hand, which is how a Research tab project becomes done until the mechanism exists (design 34).</summary>
@@ -126,7 +133,7 @@ namespace Odyssey.Hud
             SpawnBanditsKey, ArmColonistsKey, SpawnPistolKey, SpawnGunmanKey, HurtKey, HealKey, KillKey, GiveMedkitsKey,
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey, GiveCarrotsKey,
-            SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
+            SkipDayKey, SkipMonthKey, SkipMorningKey, SkipNightKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
             JumpsFailKey,
             WeatherTabKey, WeatherClearKey, WeatherOvercastKey, WeatherDrizzleKey, WeatherRainKey,
             WeatherDownpourKey, WeatherStormKey, RainParticlesKey, WetGlossKey,

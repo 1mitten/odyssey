@@ -125,6 +125,19 @@ namespace Odyssey.Hud
         /// glass laid on the board rather than as a hole cut in it.</summary>
         public static readonly HudColour PanelFill = new HudColour(12, 16, 20, 1f);
 
+        /// <summary>
+        /// The inspect pane's fill: the panel colour at 85% (owner, 2026-09-25: the colonist info
+        /// pane at 85% opacity). <b>The one exception to the opaque panel</b> — the roster cards and
+        /// every other panel stay at <see cref="PanelFill"/>. The pane is one element whatever is
+        /// selected, so a tile, a store or an animal's pane is the same 85%.
+        ///
+        /// <para><b>What it costs.</b> Over pure white terrain the primary ink reads 11.2:1 and the
+        /// meta ink 6.5:1, both above body minimum; the dim ink reads 4.44:1, a hair under it, and
+        /// passes over anything darker than white (4.74:1 over a light grey). <c>HudLayoutTests</c>
+        /// holds all three numbers.</para>
+        /// </summary>
+        public static readonly HudColour InspectFill = new HudColour(12, 16, 20, 0.85f);
+
         /// <summary>The command bar's fill: the same colour, a little more opaque, because the
         /// bar is always on screen and always carries text.</summary>
         public static readonly HudColour BarFill = new HudColour(12, 16, 20, 0.90f);

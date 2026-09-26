@@ -11,8 +11,9 @@ namespace Odyssey.Hud
         None,
 
         /// <summary>
-        /// The press never covered another card: a click. Without Shift it is the roster's old
-        /// click — choose her, put the slice on her layer and take the camera to her.
+        /// The press never covered another card: a click. Without Shift it chooses her and
+        /// nothing more; two of them on one card make a double click, which closes in on her
+        /// (<see cref="DoubleClick"/>, <see cref="HudDirectors.CloseInOnColonist"/>; 2026-09-25).
         /// </summary>
         Clicked,
 

@@ -90,7 +90,28 @@ namespace Odyssey.Sim.Pawns
         public bool DebugJumpsAlwaysFail { get; set; }
 
         /// <summary>The standing orders, when the world has them. Null in a bare pawn fixture.</summary>
-        public DesignationGrid? Designations { get; set; }
+        public DesignationGrid? Designations
+        {
+            get => _designations;
+            set
+            {
+                _designations = value;
+                // The items learn where the trees are from the same place (design 23 §11): nothing
+                // is put down in a cell a tree stands in, and the grid of standing orders is the
+                // one thing that can say which handles are trees.
+                Items.Trees = value;
+            }
+        }
+
+        DesignationGrid? _designations;
+
+        /// <summary>
+        /// Whether a tree stands in the cell — the one question a pawn asks before lying down or
+        /// settling somewhere (owner, 2026-09-25: *"colonists sometimes sleep through trees"*).
+        /// A tree blocks nothing, so walkability cannot answer it. False in a bare fixture, which
+        /// has no trees to ask about.
+        /// </summary>
+        public bool TreeAt(int cell) => _designations != null && _designations.IsTree(cell);
 
         /// <summary>
         /// The building sites, when the world has them. Null in a bare pawn fixture, exactly as
