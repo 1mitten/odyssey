@@ -1092,6 +1092,30 @@ namespace Odyssey.Sim.Contracts
 
 
     /// <summary>
+    /// Rock somebody started to mine and then took the order off (design 57 §3): no order stands
+    /// on it, but the cut is kept, so the face stays cracked. One row per such cell, and none while
+    /// every started cut is either ordered or finished — the published face of the simulation's
+    /// <c>PartMinedRock</c>.
+    ///
+    /// <para>Sparse, a report of saved and hashed state and neither itself. Progress is quantised
+    /// as <see cref="OrderView.Progress"/> is, for the same reason: it is drawn, not counted.</para>
+    /// </summary>
+    public readonly struct PartMinedView
+    {
+        /// <summary>The cell, as a whole-world index. <c>GridSize.FromIndex</c> unpacks it.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>How far through the cut the cell is, 0 for untouched and 255 for finished.</summary>
+        public readonly byte Progress;
+
+        public PartMinedView(int cellIndex, byte progress)
+        {
+            CellIndex = cellIndex;
+            Progress = progress;
+        }
+    }
+
+    /// <summary>
     /// A building site: something the player has asked for that is not there yet.
     ///
     /// <para>Its own channel rather than a sixth <c>DesignationKind</c>, because an order is a
@@ -1648,6 +1672,7 @@ namespace Odyssey.Sim.Contracts
         ThingView[] _things = Array.Empty<ThingView>();
         byte[] _sliceCells = Array.Empty<byte>();
         OrderView[] _orders = Array.Empty<OrderView>();
+        PartMinedView[] _partMined = Array.Empty<PartMinedView>();
         SiteView[] _sites = Array.Empty<SiteView>();
         ZoneView[] _zones = Array.Empty<ZoneView>();
         StoreView[] _stores = Array.Empty<StoreView>();
@@ -1907,6 +1932,13 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public ReadOnlySpan<OrderView> Orders => new ReadOnlySpan<OrderView>(_orders, 0, OrderCount);
 
+        /// <summary>How many part-mined cells with no order on them this frame carries.</summary>
+        public int PartMinedCount { get; private set; }
+
+        /// <summary>Rock started on and left, by cell ascending. See <see cref="PartMinedView"/>.</summary>
+        public ReadOnlySpan<PartMinedView> PartMined =>
+            new ReadOnlySpan<PartMinedView>(_partMined, 0, PartMinedCount);
+
         /// <summary>Every building site in the world, in cell-index order. See <see cref="SiteView"/>.</summary>
         public ReadOnlySpan<SiteView> Sites => new ReadOnlySpan<SiteView>(_sites, 0, SiteCount);
 
@@ -2152,6 +2184,7 @@ namespace Odyssey.Sim.Contracts
             ThingCount = 0;
             SliceCellCount = 0;
             OrderCount = 0;
+            PartMinedCount = 0;
             SiteCount = 0;
             ZoneCount = 0;
             StoreCount = 0;
@@ -2294,6 +2327,12 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _orders, OrderCount + 1);
             _orders[OrderCount++] = view;
+        }
+
+        internal void AddPartMined(in PartMinedView view)
+        {
+            Grow(ref _partMined, PartMinedCount + 1);
+            _partMined[PartMinedCount++] = view;
         }
 
         internal void AddSite(in SiteView view)

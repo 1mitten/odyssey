@@ -51,6 +51,7 @@ namespace Odyssey.Sim.Designations
         readonly byte[] _kinds;
         readonly int[] _work;
         readonly List<int> _cells = new List<int>();
+        readonly PartMinedRock _partMined = new PartMinedRock();
 
         public DesignationGrid(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices)
         {
@@ -61,6 +62,12 @@ namespace Odyssey.Sim.Designations
         }
 
         public GridSize Size => _grid.Size;
+
+        /// <summary>
+        /// The work kept in rock whose mining order was taken off (design 57 §3). Hashed and saved
+        /// on its own terms; registered by <see cref="Attach"/> and listed in the colony's save.
+        /// </summary>
+        public PartMinedRock PartMined => _partMined;
 
         public DesignationKind At(int index) => (DesignationKind)_kinds[index];
 
@@ -76,7 +83,8 @@ namespace Odyssey.Sim.Designations
         /// could never be drawn as half cut.</para>
         ///
         /// <para>Authored state: hashed, saved, and cleared when the order is placed, cancelled or
-        /// carried out.</para>
+        /// carried out — except that a cancelled mining order's work moves to
+        /// <see cref="PartMined"/> and comes back with the next one (design 57 §3).</para>
         /// </summary>
         public int WorkDone(int index) => _work[index];
 
@@ -138,7 +146,14 @@ namespace Odyssey.Sim.Designations
             if (!Allows(index, kind)) return IntentRejection.NotPermitted;
             if (_kinds[index] == (byte)kind) return IntentRejection.AlreadyInThatState;
 
+            // A face somebody started on and left carries on from where the cut stopped (design
+            // 57 §3, owner: "Keep its state"). Taken before Set, which starts every order at nought.
+            int kept = 0;
+            bool resume = kind == DesignationKind.Mine
+                          && _partMined.TryTake(index, _grid.Terrain[index], out kept);
+            LeaveOrder(index);
             Set(index, kind);
+            if (resume) _work[index] = kept;
             return IntentRejection.None;
         }
 
@@ -157,8 +172,22 @@ namespace Odyssey.Sim.Designations
             }
 
             if (_kinds[index] == 0) return IntentRejection.AlreadyInThatState;
+            LeaveOrder(index);
             Set(index, DesignationKind.None);
             return IntentRejection.None;
+        }
+
+        /// <summary>
+        /// A mining order taken off a cell it had started on keeps its work in
+        /// <see cref="PartMined"/> (design 57 §3). Before this the cancel zeroed the ledger and the
+        /// rock healed. Only a cancel or a replacing order comes through here: an order carried out
+        /// goes through <see cref="Clear"/>, and the rock it was cut from is gone.
+        /// </summary>
+        void LeaveOrder(int index)
+        {
+            if (_kinds[index] != (byte)DesignationKind.Mine || _work[index] <= 0) return;
+            _partMined.Keep(index, _grid.Terrain[index], _work[index]);
+            _partMined.DropStale(_grid.Terrain);
         }
 
         /// <summary>
@@ -436,6 +465,8 @@ namespace Odyssey.Sim.Designations
             bool was = _kinds[index] != 0;
             _kinds[index] = (byte)kind;
             // A new order, a cancelled one and a carried-out one all start the next from nothing.
+            // The one exception is a started cut, kept by LeaveOrder and restored by Designate
+            // around this call rather than in it, so Load still gets a clean slate.
             _work[index] = 0;
             bool now = kind != DesignationKind.None;
             if (was == now) return;
@@ -463,6 +494,9 @@ namespace Odyssey.Sim.Designations
             return builder
                 .AddTickable(_ => this)
                 .AddSnapshotContributor(this)
+                // The kept work (design 57 §3) hashes nothing while empty, so registering it moved
+                // no golden. Its save section is listed with the colony's (ColonyWorld).
+                .AddHashable(_partMined)
                 .AddIntentHandler(IntentKind.Designate, HandleDesignate)
                 .AddIntentHandler(IntentKind.CancelDesignation, HandleCancel);
         }
@@ -550,6 +584,22 @@ namespace Odyssey.Sim.Designations
                 byte kind = _kinds[index];
                 if (kind == 0) continue;
                 writer.AddOrder(new OrderView(index, kind, (byte)(Fraction(index) * 255f)));
+            }
+
+            // And the rock somebody started on and then left (design 57 §3), which has no order to
+            // carry its progress but is still cracked. A stale row — its cell holds other terrain
+            // now — is not published; DropStale forgets it the next time a row is kept.
+            for (int i = 0; i < _partMined.Count; i++)
+            {
+                int index = _partMined.CellAt(i);
+                if ((uint)index >= (uint)_kinds.Length || _kinds[index] != 0) continue;
+                ushort terrain = _grid.Terrain[index];
+                if (terrain != _partMined.TerrainAt(i)) continue;
+                int total = NaturalContent.TerrainAt(terrain).workToClear;
+                if (total <= 0) continue;
+                float done = (float)_partMined.WorkAt(i) / (total * Rates.Scale);
+                if (done <= 0f) continue;
+                writer.AddPartMined(new PartMinedView(index, (byte)((done > 1f ? 1f : done) * 255f)));
             }
         }
     }

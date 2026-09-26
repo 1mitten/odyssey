@@ -212,6 +212,10 @@ namespace Odyssey.Sim.Pawns
                 // The raids on the board (design 55 §10): appended, no format bump. A save from
                 // before raids has no section and loads with no band.
                 pawns.Raids!,
+                // The work kept in rock whose mining order was taken off (design 57 §3): appended,
+                // no format bump. A save from before has no section and loads with none kept —
+                // which is what a cancel then left.
+                designations.PartMined,
             };
         }
 
