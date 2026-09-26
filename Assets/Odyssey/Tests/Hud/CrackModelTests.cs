@@ -48,6 +48,23 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
+        public void RockClimbsSixLevelsAndAWallsStagesAreEveryOtherRung()
+        {
+            Assert.That(CrackModel.RockLevelOf(99), Is.Zero, "untouched until a tenth");
+            Assert.That(CrackModel.RockLevelOf(100), Is.EqualTo(1));
+            Assert.That(CrackModel.RockLevelOf(250), Is.EqualTo(2));
+            Assert.That(CrackModel.RockLevelOf(549), Is.EqualTo(3));
+            Assert.That(CrackModel.RockLevelOf(550), Is.EqualTo(4));
+            Assert.That(CrackModel.RockLevelOf(849), Is.EqualTo(5));
+            Assert.That(CrackModel.RockLevelOf(850), Is.EqualTo(CrackModel.Levels));
+            Assert.That(CrackModel.RockLevelOf(1000), Is.EqualTo(CrackModel.Levels));
+
+            Assert.That(CrackModel.LevelOfStage(1), Is.EqualTo(2));
+            Assert.That(CrackModel.LevelOfStage(2), Is.EqualTo(4));
+            Assert.That(CrackModel.LevelOfStage(3), Is.EqualTo(CrackModel.Levels), "a crumbling wall is the top rung");
+        }
+
+        [Test]
         public void GatherListsStruckWallsAndCutRockAndNothingElse()
         {
             WorldSnapshot frame = Frame.Write();
@@ -72,13 +89,13 @@ namespace Odyssey.Tests.Hud
             Assert.That(CrackModel.Gather(frame, cells, 0, 3), Is.EqualTo(3));
 
             Assert.That(cells[0].CellIndex, Is.EqualTo(wall));
-            Assert.That(cells[0].Stage, Is.EqualTo(2), "two thirds gone");
+            Assert.That(cells[0].Level, Is.EqualTo(CrackModel.LevelOfStage(2)), "two thirds gone");
             Assert.That(cells[0].Ground, Is.False);
             Assert.That(cells[1].CellIndex, Is.EqualTo(mining));
-            Assert.That(cells[1].Stage, Is.EqualTo(3));
+            Assert.That(cells[1].Level, Is.EqualTo(5), "200 of 255 is 784 thousandths");
             Assert.That(cells[1].Ground, Is.True);
             Assert.That(cells[2].CellIndex, Is.EqualTo(left));
-            Assert.That(cells[2].Stage, Is.EqualTo(2), "the cut kept after a cancel still shows");
+            Assert.That(cells[2].Level, Is.EqualTo(3), "140 of 255 is 549 thousandths; the cut kept after a cancel still shows");
             Assert.That(cells[2].Ground, Is.True);
 
             // The controls, by name: a scratch under a quarter, a door (walls only for now), a

@@ -13,8 +13,12 @@ namespace Odyssey.Hud
         /// <summary>The cell, as a whole-world index.</summary>
         public readonly int CellIndex;
 
-        /// <summary>1 hairline, 2 cracked, 3 crumbling. Never 0: an intact cell is not listed.</summary>
-        public readonly int Stage;
+        /// <summary>
+        /// How badly, on the drawn ladder of <see cref="CrackModel.Levels"/>: 1 is the first
+        /// hairline and <see cref="CrackModel.Levels"/> is about to come apart. Never 0: an intact
+        /// cell is not listed. A wall's three stages are levels 2, 4 and 6; rock uses all six.
+        /// </summary>
+        public readonly int Level;
 
         /// <summary>
         /// Whether what cracks is the cell's ground — rock being mined — rather than a building
@@ -22,10 +26,10 @@ namespace Odyssey.Hud
         /// </summary>
         public readonly bool Ground;
 
-        public CrackedCell(int cellIndex, int stage, bool ground)
+        public CrackedCell(int cellIndex, int level, bool ground)
         {
             CellIndex = cellIndex;
-            Stage = stage;
+            Level = level;
             Ground = ground;
         }
     }
@@ -33,7 +37,8 @@ namespace Odyssey.Hud
     /// <summary>
     /// How broken a thing looks (design 57): <b>one rule for a struck wall and for rock being
     /// mined</b>, fed by one number — how much of it is gone, in thousandths — and answered in
-    /// three stages at a quarter, a half and three quarters (owner, 2026-09-26). Unity-free, so the
+    /// three stages at a quarter, a half and three quarters for a wall (owner, 2026-09-26) and six
+    /// for rock being mined, which the owner wanted in more steps. Unity-free, so the
     /// fast tier owns the thresholds and the choice of what cracks; presentation only draws them.
     ///
     /// <para><b>Shares of the whole, never hit points.</b> A 300-point wall and a 55-point
@@ -58,8 +63,34 @@ namespace Odyssey.Hud
         /// <summary>Thousandths gone at which it is crumbling.</summary>
         public const int Crumbling = 750;
 
-        /// <summary>How many stages are drawn; 0, intact, is drawn as nothing.</summary>
+        /// <summary>How many stages a wall shows; 0, intact, is drawn as nothing.</summary>
         public const int Stages = 3;
+
+        /// <summary>
+        /// The drawn ladder: how many looks the renderer keeps, one material each. Rock being
+        /// mined climbs all of it (owner, 2026-09-26: <i>"the mine is fine enough but needs more
+        /// stages"</i>); a wall's three stages are every other rung, so a wall and a face at the
+        /// same level look equally broken.
+        /// </summary>
+        public const int Levels = 6;
+
+        /// <summary>
+        /// Thousandths of a cut done at which rock reaches each level, 1 to <see cref="Levels"/>.
+        /// Starts early, at a tenth, so a face shows the pick from almost the first strokes.
+        /// </summary>
+        static readonly int[] RockThresholds = { 100, 250, 400, 550, 700, 850 };
+
+        /// <summary>A wall's stage on the drawn ladder: stage 1, 2, 3 is level 2, 4, 6.</summary>
+        public static int LevelOfStage(int stage) => stage * Levels / Stages;
+
+        /// <summary>Rock's level for this much of the cut done: 0 untouched, then 1 to <see cref="Levels"/>.</summary>
+        public static int RockLevelOf(int brokenPerMille)
+        {
+            int level = 0;
+            for (int i = 0; i < RockThresholds.Length; i++)
+                if (brokenPerMille >= RockThresholds[i]) level = i + 1;
+            return level;
+        }
 
         /// <summary>
         /// <c>DesignationKind.Mine</c>'s value, restated because the enum lives in the simulation
@@ -110,23 +141,23 @@ namespace Odyssey.Hud
                 EdificeDamageView row = struck[i];
                 if (!Cracks(row.Edifice) || !Drawn(size, row.CellIndex, lowest, highest)) continue;
                 int stage = StageOf(BrokenOfHitPoints(row.HpMilli, row.MaxMilli));
-                if (stage > 0) into.Add(new CrackedCell(row.CellIndex, stage, ground: false));
+                if (stage > 0) into.Add(new CrackedCell(row.CellIndex, LevelOfStage(stage), ground: false));
             }
 
             System.ReadOnlySpan<OrderView> orders = snapshot.Orders;
             for (int i = 0; i < orders.Length; i++)
             {
                 if (orders[i].Kind != MineOrderKind || !Drawn(size, orders[i].CellIndex, lowest, highest)) continue;
-                int stage = StageOf(BrokenOfProgress(orders[i].Progress));
-                if (stage > 0) into.Add(new CrackedCell(orders[i].CellIndex, stage, ground: true));
+                int level = RockLevelOf(BrokenOfProgress(orders[i].Progress));
+                if (level > 0) into.Add(new CrackedCell(orders[i].CellIndex, level, ground: true));
             }
 
             System.ReadOnlySpan<PartMinedView> left = snapshot.PartMined;
             for (int i = 0; i < left.Length; i++)
             {
                 if (!Drawn(size, left[i].CellIndex, lowest, highest)) continue;
-                int stage = StageOf(BrokenOfProgress(left[i].Progress));
-                if (stage > 0) into.Add(new CrackedCell(left[i].CellIndex, stage, ground: true));
+                int level = RockLevelOf(BrokenOfProgress(left[i].Progress));
+                if (level > 0) into.Add(new CrackedCell(left[i].CellIndex, level, ground: true));
             }
 
             return into.Count;
