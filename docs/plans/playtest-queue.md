@@ -23,6 +23,19 @@ the next session learns to ignore.
 
 ## Open
 
+- **Waking into the world** (`claude/nice-einstein-cwicw1` on `claude/load-curtain`, design 56 §14).
+  - New game from the menu: a fade to black, a beat, then waking — soft, warm, muffled — in focus at
+    about five seconds. Wrong: the menu freezes before the black, or five seconds feels long enough
+    that you reach for a key every time.
+  - Load a save: the same, landing on the saved view at the saved speed. Wrong: the camera jumps at
+    the end, or the colony wakes paused or at the wrong speed.
+  - The warmth: a glow that belongs with the golden hour. Wrong: it reads as a filter, overexposed or
+    orange.
+  - The sound: the menu drone gone under the muffle, the meadow opening as the blur clears. Wrong: a
+    gap of silence, or both beds loud together.
+  - Click mid-dream: clears in a blink and does nothing else. Wrong: a selection or an order.
+  - Settings → Interface → Wake-up Off: a plain fade from black. Wrong: any blur, muffle or drift.
+
 - **Polish batch: trees, drops, the fire, the roster, the pane, the fade** (`claude/polish-batch`,
   designs 20 §14, 23 §11, 31 §20, 25 §10, 14 §10–§11, 38 §27).
   - Gather six or more colonists round a campfire at night. Each should be on their own tile, with

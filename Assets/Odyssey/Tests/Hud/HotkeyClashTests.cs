@@ -57,6 +57,10 @@ namespace Odyssey.Tests.Hud
             { "backspaceKey", "SettingsPresenter.cs" }, // empties a slot while it listens (design 39 §6); only then
             { "leftShiftKey", "SliceCameraRig.cs" },  // Shift: the fast modifier, deliberately unbindable
             { "rightShiftKey", "SliceCameraRig.cs" },
+            // The wake into a world (design 56 §8): any key at all wakes you. It names no key, so
+            // it binds nothing and clashes with nothing; it is read only while the wake holds the
+            // keys (HotkeyDirector.Suspended), when no binding is live.
+            { "anyKey", "HudShell.Wake.cs" },
         };
 
         [Test]

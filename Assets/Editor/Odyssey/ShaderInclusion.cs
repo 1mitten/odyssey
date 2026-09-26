@@ -90,6 +90,10 @@ namespace Odyssey.EditorTools
             // The butterflies (design 52): wings and glow, drawn procedurally from a buffer.
             "Odyssey/Butterfly",
 
+            // The dream's blur on the way into a colony (design 56 §4), found by name by WakeBlur.
+            // Without it a player wakes with the warmth and the muffle but in focus.
+            "Odyssey/WakeBlur",
+
             // A bullet's streak and a muzzle's flash (design 47 §4c), drawn instanced by
             // ProjectileDirector. The shader reads its shape out of the instance matrix, so there
             // is no fallback that draws it: without this row a player fires invisible bullets.

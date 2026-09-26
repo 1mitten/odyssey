@@ -316,7 +316,9 @@ namespace Odyssey.Hud
         /// <summary>
         /// Whether something that is not a text field has taken the keys for a while — the wake
         /// into a world (design 56), during which a press is a skip and nothing else. Its own flag
-        /// rather than a pretend typist, because a focus change must never clear it.
+        /// rather than a pretend typist, because a focus change must never clear it. While it is set
+        /// the shell reads <c>anyKey</c> by name — the one unbindable read besides Escape, the
+        /// capture and Shift, and harmless because it names no key (<c>HotkeyClashTests</c>).
         /// </summary>
         public bool Suspended { get; set; }
 
