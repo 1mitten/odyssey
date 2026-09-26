@@ -191,6 +191,9 @@
     <deathAtPerMille>-500</deathAtPerMille>
     <interceptPerMille>800</interceptPerMille>
     <unstoppable>true</unstoppable>
+    <!-- The pig's voice (design 62 section 8d): a grunt as it swings, a squeal when it is hit, a
+         bellow when it throws somebody, an oink as it goes down. Presentation only. -->
+    <voice>butcher</voice>
   </SpeciesDef>
 
   <!-- Level 1, the butcher: 4.4 m, five colonists' worth, a veteran's arm. -->
@@ -222,6 +225,8 @@
   <!-- Level 2, the scarred butcher: 4.7 m, half as tough again. -->
   <SpeciesDef ParentName="ButcherBase">
     <defName>Species_ButcherScarred</defName>
+    <!-- A bigger level calls lower. -->
+    <voicePitchPerMille>940</voicePitchPerMille>
     <labelKey>ui.pawn.butcher.scarred</labelKey>
     <figureKey>hostile.butcher.scarred</figureKey>
     <bodyLengthMm>4700</bodyLengthMm>
@@ -248,6 +253,8 @@
   <!-- Level 3, the blood butcher: 5.2 m, twice the first, and a little slower on its feet. -->
   <SpeciesDef ParentName="ButcherBase">
     <defName>Species_ButcherBlood</defName>
+    <!-- A bigger level calls lower. -->
+    <voicePitchPerMille>880</voicePitchPerMille>
     <labelKey>ui.pawn.butcher.blood</labelKey>
     <figureKey>hostile.butcher.blood</figureKey>
     <bodyLengthMm>5200</bodyLengthMm>
@@ -274,6 +281,8 @@
   <!-- Level 4, the butcher king: 5.6 m, nearly three times the first, and it flings three cells. -->
   <SpeciesDef ParentName="ButcherBase">
     <defName>Species_ButcherKing</defName>
+    <!-- A bigger level calls lower. -->
+    <voicePitchPerMille>820</voicePitchPerMille>
     <labelKey>ui.pawn.butcher.king</labelKey>
     <figureKey>hostile.butcher.king</figureKey>
     <bodyLengthMm>5600</bodyLengthMm>

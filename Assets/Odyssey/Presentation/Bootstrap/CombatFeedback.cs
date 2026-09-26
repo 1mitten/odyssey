@@ -77,6 +77,30 @@ namespace Odyssey.Presentation.Bootstrap
         public BloodSides BloodSides { get; set; } = BloodSides.AllBlunt;
 
         /// <summary>
+        /// Each kind's voice (<c>SpeciesDef.voice</c>), or null for a silent one, and the pitch it is
+        /// played at — read once off the content (<see cref="VoicesOf"/>, design 62 §8d).
+        /// </summary>
+        public string?[] Voices { get; set; } = Array.Empty<string?>();
+        public float[] VoicePitch { get; set; } = Array.Empty<float>();
+
+        string? VoiceOf(int kind) => (uint)kind < (uint)Voices.Length ? Voices[kind] : null;
+
+        /// <summary>Every kind's voice and pitch, off the content.</summary>
+        public static (string?[] voices, float[] pitch) VoicesOf(PawnContent? content)
+        {
+            if (content == null) return (Array.Empty<string?>(), Array.Empty<float>());
+            var voices = new string?[content.Kinds.Length];
+            var pitch = new float[content.Kinds.Length];
+            for (int kind = 0; kind < voices.Length; kind++)
+            {
+                SpeciesDef species = content.SpeciesOf(kind);
+                voices[kind] = string.IsNullOrEmpty(species.voice) ? null : species.voice;
+                pitch[kind] = species.voicePitchPerMille / 1000f;
+            }
+            return (voices, pitch);
+        }
+
+        /// <summary>
         /// Which family each item def fights in, read once off the content
         /// (<see cref="CombatPose.StylesOf"/>): what tells a bullet's <c>Hit</c> and <c>Miss</c> from a
         /// blow's (design 47 §4c). Empty until the composition root fills it, and then no weapon is a gun.
@@ -230,12 +254,44 @@ namespace Odyssey.Presentation.Bootstrap
             string? sound = now != CombatCue.None ? SoundIds.ForCue(now) : SoundIds.ForCombat(combatEvent.Kind);
             if (sound != null) audio?.PlayOneShot(sound, at + Vector3.up * (height * 0.5f));
 
+            // A voiced creature calls out (design 62 §8d): a grunt on its swing, a squeal when hit,
+            // a bellow when it throws somebody, an oink going down — from its own place, at its
+            // level's pitch. The loudness of each is the bake's and the catalogue's.
+            Voice(combatEvent, snapshot, figures, audio, attackerKind);
+
             string text = CombatFeedbackModel.FloatingText(combatEvent);
             if (text.Length > 0 && layer >= lowestLayer && layer <= highestLayer)
                 Floaters.Add(text, CombatFeedbackModel.FloatingColour(combatEvent), at + Vector3.up * height,
                     CombatFeedbackModel.FloatingSeconds(combatEvent));
 
             Handed?.Invoke(combatEvent);
+        }
+
+        void Voice(in CombatEventView combatEvent, WorldSnapshot snapshot, PawnFigureDirector? figures,
+            AudioDirector? audio, int attackerKind)
+        {
+            if (audio == null || Voices.Length == 0) return;
+            int targetKind = combatEvent.Target.IsValid && snapshot.TryGetPawn(combatEvent.Target, out PawnView struck)
+                ? struck.Kind : -1;
+            // A pawn that has just died is gone from the frame: its own event's kind is not, so the
+            // death is heard from the corpse's cell.
+            if (targetKind < 0 && combatEvent.Kind == CombatEventKind.Died)
+                for (int i = 0; i < snapshot.Corpses.Length; i++)
+                    if (snapshot.Corpses[i].Pawn == combatEvent.Target) { targetKind = snapshot.Corpses[i].Kind; break; }
+            string? attackerVoice = VoiceOf(attackerKind), targetVoice = VoiceOf(targetKind);
+            VoiceCue cue = CreatureVoice.For(combatEvent.Kind, attackerVoice != null, targetVoice != null, out bool fromAttacker);
+            if (cue == VoiceCue.None) return;
+
+            int kind = fromAttacker ? attackerKind : targetKind;
+            string? sound = SoundIds.Voice(fromAttacker ? attackerVoice : targetVoice, cue);
+            if (sound == null) return;
+            PawnId who = fromAttacker ? combatEvent.Attacker : combatEvent.Target;
+            Vector3 place;
+            if (figures != null && figures.TryGetFeet(who, out Vector3 feet)) place = feet;
+            else if (snapshot.TryGetPawn(who, out PawnView pawn)) place = GroundRelief.Lift(CellMetrics.FloorCentre(pawn.Cell));
+            else place = GroundRelief.Lift(CellMetrics.FloorCentre(combatEvent.Cell));
+            float pitch = (uint)kind < (uint)VoicePitch.Length ? VoicePitch[kind] : 1f;
+            audio.PlayOneShot(sound, place + Vector3.up * 2f, pitch);
         }
 
         /// <summary>
@@ -350,13 +406,16 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             var naturals = new bool?[content.Kinds.Length];
+            var wields = new bool[content.Kinds.Length];
             for (int kind = 0; kind < naturals.Length; kind++)
             {
                 AttackDef? natural = content.SpeciesOf(kind).naturalAttack;
                 naturals[kind] = natural == null ? (bool?)null : natural.damageKind != DamageKind.Blunt;
+                // A weapon of its own — a swung style, not teeth or fists — whooshes (design 62 §8d).
+                wields[kind] = natural != null && (natural.style == AttackStyle.Heavy || natural.style == AttackStyle.Light);
             }
 
-            return new BloodSides(weapons, naturals, content.Combat.fists.damageKind != DamageKind.Blunt);
+            return new BloodSides(weapons, naturals, content.Combat.fists.damageKind != DamageKind.Blunt, wields);
         }
 
         /// <summary>

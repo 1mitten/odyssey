@@ -16,6 +16,13 @@ namespace Odyssey.Hud
 
         /// <summary>A blow landing on somebody: every landed hit, any weapon, fists and bites too.</summary>
         Thud = 3,
+
+        /// <summary>
+        /// A heavy weapon of the swinger's own through the air — the butcher's cleaver (design 62
+        /// §8d): the whoosh eight semitones down. Timed exactly as <see cref="Whoosh"/>, because the
+        /// bake puts its loudest moment at the same 40 ms.
+        /// </summary>
+        HeavyWhoosh = 4,
     }
 
     /// <summary>What a scheduled cue should do this frame.</summary>
@@ -85,16 +92,23 @@ namespace Odyssey.Hud
         /// critical, the slice instead if the weapon is sharp and the whoosh still if it is blunt;
         /// nothing for fists or a natural attack, critical or not.
         /// </summary>
-        public static CombatCue SwingCue(CombatEventKind kind, bool heldWeapon, bool sharp)
+        /// <param name="wieldsNatural">The swinger's species wields a weapon of its own — the butcher's
+        /// cleaver — which whooshes deep (<see cref="CombatCue.HeavyWhoosh"/>, design 62 §8d). A bite or
+        /// a fist is still silent.</param>
+        public static CombatCue SwingCue(CombatEventKind kind, bool heldWeapon, bool sharp, bool wieldsNatural = false)
         {
-            if (!heldWeapon) return CombatCue.None;
+            if (!heldWeapon && !wieldsNatural) return CombatCue.None;
+            CombatCue whoosh = heldWeapon ? CombatCue.Whoosh : CombatCue.HeavyWhoosh;
             return kind switch
             {
-                CombatEventKind.Swing => CombatCue.Whoosh,
-                CombatEventKind.SwingCritical => sharp ? CombatCue.Slice : CombatCue.Whoosh,
+                CombatEventKind.Swing => whoosh,
+                CombatEventKind.SwingCritical => sharp ? CombatCue.Slice : whoosh,
                 _ => CombatCue.None,
             };
         }
+
+        /// <summary>A whoosh of either weight: the two are timed alike.</summary>
+        public static bool IsWhoosh(CombatCue cue) => cue == CombatCue.Whoosh || cue == CombatCue.HeavyWhoosh;
 
         /// <summary>
         /// What sounds on the frame an event is read: the thud for a landed hit, whatever struck
@@ -108,13 +122,14 @@ namespace Odyssey.Hud
         public static float PeakSeconds(CombatCue cue) => cue switch
         {
             CombatCue.Whoosh => WhooshPeakSeconds,
+            CombatCue.HeavyWhoosh => WhooshPeakSeconds,
             CombatCue.Slice => SlicePeakSeconds,
             CombatCue.Thud => ThudPeakSeconds,
             _ => 0f,
         };
 
         /// <summary>How far before the impact a cue's peak belongs: the whoosh's lead, the slice's none.</summary>
-        public static float LeadSeconds(CombatCue cue) => cue == CombatCue.Whoosh ? WhooshLeadSeconds : 0f;
+        public static float LeadSeconds(CombatCue cue) => IsWhoosh(cue) ? WhooshLeadSeconds : 0f;
 
         /// <summary>Ticks per real second at a game speed: the nominal rate times the speed, and 0 paused.</summary>
         public static float TicksPerRealSecond(int gameSpeed, float nominalTicksPerSecond) =>
@@ -137,6 +152,7 @@ namespace Odyssey.Hud
             return cue switch
             {
                 CombatCue.Whoosh => peakLead >= WhooshClearanceSeconds ? CueTiming.Play : CueTiming.Drop,
+                CombatCue.HeavyWhoosh => peakLead >= WhooshClearanceSeconds ? CueTiming.Play : CueTiming.Drop,
                 CombatCue.Slice => peakLead >= -SliceLateSeconds ? CueTiming.Play : CueTiming.Drop,
                 _ => CueTiming.Play,
             };
@@ -213,7 +229,8 @@ namespace Odyssey.Hud
                 {
                     Cancel(combatEvent.Attacker);
                     CombatCue cue = CombatSoundTiming.SwingCue(combatEvent.Kind,
-                        sides.IsHeldWeapon(combatEvent.Weapon), sides.IsSharp(combatEvent.Weapon, attackerKind));
+                        sides.IsHeldWeapon(combatEvent.Weapon), sides.IsSharp(combatEvent.Weapon, attackerKind),
+                        sides.WieldsNatural(attackerKind));
                     if (cue != CombatCue.None)
                         Add(new PendingCue(cue, combatEvent.Tick + combatEvent.Amount, combatEvent.Attacker, combatEvent.Cell));
                     return CombatCue.None;

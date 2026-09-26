@@ -402,7 +402,13 @@ namespace Odyssey.Presentation.Audio
         /// it played too recently — are exactly the things a test (and the developer overlay)
         /// wants to tell apart from each other and from a bug.
         /// </summary>
-        public bool PlayOneShot(string id, Vector3 worldPosition)
+        public bool PlayOneShot(string id, Vector3 worldPosition) => PlayOneShot(id, worldPosition, 1f);
+
+        /// <summary>
+        /// The same, pitched by <paramref name="pitchScale"/> on top of the def's own variance: a
+        /// creature's voice at its level's pitch (design 62 §8d, <c>SpeciesDef.voicePitchPerMille</c>).
+        /// </summary>
+        public bool PlayOneShot(string id, Vector3 worldPosition, float pitchScale)
         {
             if (!_byId.TryGetValue(id, out AudioCatalogue.SoundDef def)) return false;
 
@@ -443,7 +449,7 @@ namespace Odyssey.Presentation.Audio
                 return false;
             }
 
-            float pitch = 1f + Range(-def.PitchVariance, def.PitchVariance);
+            float pitch = (1f + Range(-def.PitchVariance, def.PitchVariance)) * Mathf.Max(0.1f, pitchScale);
             float gain = Mathf.Clamp01(
                 def.Volume * (1f + Range(-def.VolumeVariance, def.VolumeVariance)))
                 * AudioMath.DbToLinear(GainDb(def.Bus));

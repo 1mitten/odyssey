@@ -335,7 +335,9 @@ namespace Odyssey.Tests.Sim
         // The same day, the butcher's four levels (design 62 §4b): Species_ButcherScarred, _Blood
         // and _King (species 5-7, kinds 7-9) on an abstract ButcherBase, and Health_Brute2-4 on an
         // abstract BruteBody. Taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 17262718043086005326UL;
+        // And SpeciesDef gained voice and voicePitchPerMille, presentation's (design 62 §8d): the
+        // butcher calls in "butcher", its levels at 1,000 / 940 / 880 / 820.
+        const ulong ContentFingerprint = 9489355952634959984UL;
 
 
         [Test]

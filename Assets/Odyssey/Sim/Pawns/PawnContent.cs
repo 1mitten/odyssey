@@ -1023,6 +1023,19 @@ namespace Odyssey.Sim.Pawns
         /// it holds, so nobody who picks a weapon up gets it.
         /// </summary>
         public SweepDef? sweep;
+
+        /// <summary>
+        /// Whose voice this species calls in, by name, or empty for a silent one (design 62 §8d):
+        /// presentation hears a moment of a fight by <c>odyssey.sound.voice.{voice}.{moment}</c>.
+        /// Not read by the simulation.
+        /// </summary>
+        public string voice = string.Empty;
+
+        /// <summary>
+        /// How high its voice is played, per mille of the recording: a bigger level of the same
+        /// creature calls lower (design 62 §8d). Not read by the simulation.
+        /// </summary>
+        public int voicePitchPerMille = 1_000;
     }
 
     /// <summary>

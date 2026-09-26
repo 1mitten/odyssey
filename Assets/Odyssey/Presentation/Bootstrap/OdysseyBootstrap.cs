@@ -1162,6 +1162,8 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Which blows cut (design 33 §7d), read once off the same content, for the blood seam.
             _combatFeedback.BloodSides = CombatFeedback.BloodSidesOf(_pawns?.Content);
+            // Whose voices a fight is heard in (design 62 §8d), off the same content.
+            (_combatFeedback.Voices, _combatFeedback.VoicePitch) = CombatFeedback.VoicesOf(_pawns?.Content);
 
             // Which weapons are guns (design 47 §4c), off the same content, so a bullet's miss throws
             // dust and its streak is told where it landed.
