@@ -1,10 +1,12 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.IO;
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
 using Odyssey.Sim.Events;
+using Odyssey.Sim.Saving;
 
 namespace Odyssey.Tests.Sim.Events
 {
@@ -23,20 +25,24 @@ namespace Odyssey.Tests.Sim.Events
         sealed class Oracle : IStoryOracle
         {
             public bool SmallCanFire;
+            public bool BigRefused;
             public int Big, Good, Small;
             public int Tick;
             public readonly List<int> BigTicks = new List<int>();
+            public readonly List<int> GoodTicks = new List<int>();
 
             public bool TryFire(IncidentCategory category, bool excludeBad, int budgetPerMille)
             {
                 switch (category)
                 {
                     case IncidentCategory.ThreatBig:
+                        if (BigRefused) return false;
                         Big++;
                         BigTicks.Add(Tick);
                         return true;
                     case IncidentCategory.Misc:
                         Good++;
+                        GoodTicks.Add(Tick);
                         return true;
                     case IncidentCategory.ThreatSmall:
                         if (!SmallCanFire) return false;
@@ -49,13 +55,14 @@ namespace Odyssey.Tests.Sim.Events
         }
 
         /// <summary>A year from the end of grace, one check an hour: what the live system does.</summary>
-        static Oracle Run(StorytellerDef def, uint seed, bool bigAllowed = true, bool smallCanFire = false, int stretch = 100)
+        static Oracle Run(StorytellerDef def, uint seed, bool bigAllowed = true, bool smallCanFire = false, int stretch = 100,
+            bool bigRefused = false)
         {
             var pacer = new StorytellerPacer();
             int graceEnd = (int)((long)def.graceDays * Calendar.TicksPerDay * stretch / 100);
             var arm = DeterministicRandom.ForTick(seed, 0, StorytellerPurpose.Arm);
             pacer.Arm(def, 0, graceEnd, ref arm);
-            var oracle = new Oracle { SmallCanFire = smallCanFire };
+            var oracle = new Oracle { SmallCanFire = smallCanFire, BigRefused = bigRefused };
             int end = graceEnd + Days * Calendar.TicksPerDay;
             for (int tick = Calendar.TicksPerHour; tick < end; tick += Calendar.TicksPerHour)
             {
@@ -132,6 +139,98 @@ namespace Odyssey.Tests.Sim.Events
                     Assert.That(off.Big, Is.Zero, $"{def.defName} sent a big threat with big threats off");
                     Assert.That(off.Good, Is.GreaterThan(0), $"{def.defName} stopped the good events too");
                 }
+            }
+        }
+
+        /// <summary>
+        /// The good events keep coming in the last season, however long the colony has gone without a
+        /// big threat, both with big threats off and with every big threat refused. Trent's drought
+        /// once forced every roll into ThreatBig, which with big threats off was thrown away and with
+        /// one refused was spent, so from day 22 of a Peaceful game the bag was silent for good; the
+        /// check above passed on the first 22 days (review, 2026-09-26).
+        /// </summary>
+        [Test]
+        public void TheGoodEventsOutliveADrought()
+        {
+            foreach (StorytellerDef def in ContentPack.Storytellers().Defs)
+            {
+                int graceEnd = def.graceDays * Calendar.TicksPerDay;
+                // The drought (Trent's 14 days) has long since run by the last two seasons. Trent's
+                // bag is lumpy by design, so a single season can go without a good event by chance;
+                // two seasons per seed, and the last season on average over the seeds, cannot.
+                int lastTwo = graceEnd + (Days - 2 * SeasonDays) * Calendar.TicksPerDay;
+                int lastSeason = graceEnd + (Days - SeasonDays) * Calendar.TicksPerDay;
+                int offLast = 0, refusedLast = 0;
+                const int SeedCount = 20;
+                for (uint seed = 1; seed <= SeedCount; seed++)
+                {
+                    Oracle off = Run(def, seed, bigAllowed: false);
+                    Oracle refused = Run(def, seed, bigRefused: true);
+                    Assert.That(off.GoodTicks.FindAll(t => t >= lastTwo).Count, Is.GreaterThanOrEqualTo(2),
+                        $"{def.defName} seed {seed}: the good events stopped with big threats off");
+                    Assert.That(refused.GoodTicks.FindAll(t => t >= lastTwo).Count, Is.GreaterThanOrEqualTo(2),
+                        $"{def.defName} seed {seed}: the good events stopped while every big threat was refused");
+                    offLast += off.GoodTicks.FindAll(t => t >= lastSeason).Count;
+                    refusedLast += refused.GoodTicks.FindAll(t => t >= lastSeason).Count;
+                }
+                Assert.That(offLast, Is.GreaterThanOrEqualTo(2 * SeedCount), $"{def.defName}: the last season thinned with big threats off");
+                Assert.That(refusedLast, Is.GreaterThanOrEqualTo(2 * SeedCount), $"{def.defName}: the last season thinned with big threats refused");
+            }
+        }
+
+        /// <summary>
+        /// A pacer saved in the middle of an on-phase, with fires drawn and not yet fallen, comes
+        /// back with the same plan and fires on the same ticks. The colony-level save test saves
+        /// inside the grace, where every slot is still empty, so it never exercised a drawn plan.
+        /// </summary>
+        [Test]
+        public void APlanSavedMidPhaseFiresTheSame()
+        {
+            foreach (StorytellerDef def in ContentPack.Storytellers().Defs)
+            {
+                const uint seed = 9;
+                int graceEnd = def.graceDays * Calendar.TicksPerDay;
+                int saveAt = graceEnd + Calendar.TicksPerDay + 5 * Calendar.TicksPerHour;
+                int end = graceEnd + 30 * Calendar.TicksPerDay;
+
+                var a = new StorytellerPacer();
+                var arm = DeterministicRandom.ForTick(seed, 0, StorytellerPurpose.Arm);
+                a.Arm(def, 0, graceEnd, ref arm);
+                var before = new Oracle();
+                for (int tick = Calendar.TicksPerHour; tick <= saveAt; tick += Calendar.TicksPerHour)
+                {
+                    before.Tick = tick;
+                    var rng = DeterministicRandom.ForTick(seed, tick, StorytellerPurpose.Pace);
+                    a.Step(def, tick, graceEnd, true, ref rng, before);
+                }
+
+                var bytes = new MemoryStream();
+                using (var binary = new BinaryWriter(bytes, System.Text.Encoding.UTF8, leaveOpen: true))
+                    a.Save(new SaveWriter(binary));
+                bytes.Position = 0;
+                var b = new StorytellerPacer();
+                var armB = DeterministicRandom.ForTick(seed, 0, StorytellerPurpose.Arm);
+                b.Arm(def, 0, graceEnd, ref armB);
+                b.Load(new SaveReader(new BinaryReader(bytes), WorldSave.CurrentFormatVersion));
+
+                StateHash ha = StateHash.New(), hb = StateHash.New();
+                a.ContributeTo(ref ha);
+                b.ContributeTo(ref hb);
+                Assert.That(hb.Value, Is.EqualTo(ha.Value), $"{def.defName}: the loaded plan is not the saved one");
+
+                var oa = new Oracle();
+                var ob = new Oracle();
+                for (int tick = saveAt + Calendar.TicksPerHour; tick < end; tick += Calendar.TicksPerHour)
+                {
+                    oa.Tick = ob.Tick = tick;
+                    var ra = DeterministicRandom.ForTick(seed, tick, StorytellerPurpose.Pace);
+                    var rb = DeterministicRandom.ForTick(seed, tick, StorytellerPurpose.Pace);
+                    a.Step(def, tick, graceEnd, true, ref ra, oa);
+                    b.Step(def, tick, graceEnd, true, ref rb, ob);
+                }
+                Assert.That(oa.BigTicks.Count, Is.GreaterThan(0), $"{def.defName}: nothing fell after the save (the control)");
+                Assert.That(ob.BigTicks, Is.EqualTo(oa.BigTicks), $"{def.defName}: the big threats moved across the save");
+                Assert.That(ob.GoodTicks, Is.EqualTo(oa.GoodTicks), $"{def.defName}: the good events moved across the save");
             }
         }
 

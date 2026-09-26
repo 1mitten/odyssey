@@ -66,6 +66,23 @@ namespace Odyssey.Sim.Events
         /// <summary>A bag's draw for the fire in hand, read by the raid it sizes; 1000 otherwise.</summary>
         int _fireBudget = 1000;
 
+        /// <summary>
+        /// The world this storyteller belongs to, bound when the world is built, so an intent reads
+        /// the world's own clock. The context learns the tick only on the first system tick, so an
+        /// intent drained before it — a new game's choice on a world started at a later tick —
+        /// read 0 and counted the grace from the wrong day (review, 2026-09-26).
+        /// </summary>
+        SimWorld? _world;
+
+        /// <summary>Called by the composition with the world being built.</summary>
+        public Storyteller Bind(SimWorld world)
+        {
+            _world = world;
+            return this;
+        }
+
+        int Now => _world?.CurrentTick ?? _ctx.World?.CurrentTick ?? _ctx.CurrentTick;
+
         public Storyteller(PawnContext ctx, StorytellerContent content)
         {
             _ctx = ctx ?? throw new ArgumentNullException(nameof(ctx));
@@ -126,7 +143,7 @@ namespace Odyssey.Sim.Events
             Incidents? incidents = _ctx.Incidents;
             if (incidents == null) return false;
             IncidentContent content = incidents.Content;
-            int tick = _ctx.World?.CurrentTick ?? _ctx.CurrentTick;
+            int tick = Now;
             int colonists = RaidBudget.StandingColonists(_ctx);
 
             int total = 0;
@@ -209,7 +226,7 @@ namespace Odyssey.Sim.Events
             int index = intent.A;
             if (index < 0 || index >= _content.Count) return IntentRejection.OutOfBounds;
             if (index == _storyteller) return IntentRejection.AlreadyInThatState;
-            int tick = _ctx.World?.CurrentTick ?? _ctx.CurrentTick;
+            int tick = Now;
             bool first = _startTick < 0;
             if (first)
             {
@@ -243,7 +260,7 @@ namespace Odyssey.Sim.Events
 
             // A new stretch moves the first big threat only while it is still to come; once the
             // grace has passed it is not given again (design 68 §7).
-            int tick = _ctx.World?.CurrentTick ?? _ctx.CurrentTick;
+            int tick = Now;
             if (graceMoved && _storyteller >= 0 && tick < _graceEnd) ReArm(tick);
             return IntentRejection.None;
         }
@@ -315,7 +332,7 @@ namespace Odyssey.Sim.Events
         void OnDay(int tick)
         {
             bool lossToday = (_cause == TensionCauseKind.Died || _cause == TensionCauseKind.Downed)
-                             && tick - _causeTick < Calendar.TicksPerDay;
+                             && tick - _causeTick <= Calendar.TicksPerDay;
             if (lossToday) return;
             int gain = (_tension < TensionStart ? QuietBelow : QuietAbove) * _adaptationPercent / 100;
             _tension = Math.Min(TensionMax, _tension + gain);

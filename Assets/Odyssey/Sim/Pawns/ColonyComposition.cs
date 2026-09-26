@@ -346,7 +346,7 @@ namespace Odyssey.Sim.Pawns
             var storyteller = new Events.Storyteller(pawns, ContentPack.Storytellers());
             pawns.Storyteller = storyteller;
             builder
-                .AddSystem(_ => storyteller)
+                .AddSystem(w => storyteller.Bind(w))
                 .AddSnapshotContributor(storyteller)
                 .AddIntentHandler(IntentKind.SetStoryteller, storyteller.HandleSetStoryteller)
                 .AddIntentHandler(IntentKind.SetDifficulty, storyteller.HandleSetDifficulty);

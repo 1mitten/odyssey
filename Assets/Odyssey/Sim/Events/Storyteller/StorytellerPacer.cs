@@ -173,29 +173,42 @@ namespace Odyssey.Sim.Events
 
         int StepBag(GeneratorDef gen, int tick, int graceEnd, bool bigAllowed, ref DeterministicRandom rng, IStoryOracle oracle)
         {
-            IncidentCategory category;
-            bool drought = gen.droughtDays > 0 && tick >= graceEnd
-                           && tick - LastBigTick >= gen.droughtDays * Calendar.TicksPerDay;
-            if (drought) category = IncidentCategory.ThreatBig;
-            else
+            // Both draws are made on every roll, whatever the drought or the oracle says, so the
+            // number of draws a roll takes never depends on the colony and the generators after
+            // this one in the tick see the same stream either way.
+            int total = 0;
+            foreach (BagWeight w in gen.weights) total += w.weight;
+            int pick = rng.NextInt(total);
+            IncidentCategory category = gen.weights[gen.weights.Count - 1].category;
+            foreach (BagWeight w in gen.weights)
             {
-                int total = 0;
-                foreach (BagWeight w in gen.weights) total += w.weight;
-                int pick = rng.NextInt(total);
-                category = gen.weights[gen.weights.Count - 1].category;
-                foreach (BagWeight w in gen.weights)
+                if (pick < w.weight) { category = w.category; break; }
+                pick -= w.weight;
+            }
+            int budget = gen.budgetMinPerMille == gen.budgetMaxPerMille
+                ? gen.budgetMinPerMille
+                : rng.NextInt(gen.budgetMinPerMille, gen.budgetMaxPerMille + 1);
+
+            // The drought forces a big threat only where one may fall. With big threats off it
+            // would otherwise force every roll into a category that is then thrown away, and the
+            // bag goes silent for good (review, 2026-09-26). And a forced threat the world refuses
+            // does not spend the roll: the drawn category is tried instead, so a refire gate or a
+            // full board cannot starve the good events until a raid lands.
+            bool drought = bigAllowed && gen.droughtDays > 0 && tick >= graceEnd
+                           && tick - LastBigTick >= gen.droughtDays * Calendar.TicksPerDay;
+            if (drought)
+            {
+                if (oracle.TryFire(IncidentCategory.ThreatBig, false, budget))
                 {
-                    if (pick < w.weight) { category = w.category; break; }
-                    pick -= w.weight;
+                    LastBigTick = tick;
+                    return 1;
                 }
+                if (category == IncidentCategory.ThreatBig) return 0;
             }
 
             bool big = category == IncidentCategory.ThreatBig;
             if (big && (tick < graceEnd || !bigAllowed)) return 0;
 
-            int budget = gen.budgetMinPerMille == gen.budgetMaxPerMille
-                ? gen.budgetMinPerMille
-                : rng.NextInt(gen.budgetMinPerMille, gen.budgetMaxPerMille + 1);
             if (!oracle.TryFire(category, false, budget)) return 0;
             if (big) LastBigTick = tick;
             return 1;

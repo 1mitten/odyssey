@@ -78,6 +78,32 @@ namespace Odyssey.Tests.Sim.Events
             Assert.That(Send(colony, new Intent(IntentKind.SetStoryteller, default, 9)), Is.EqualTo(IntentRejection.OutOfBounds));
         }
 
+        /// <summary>
+        /// A world whose clock starts late (the game starts at noon) and whose storyteller is its
+        /// very first intent counts the grace from the world's clock. The handler read a context
+        /// that learns the tick only on the first system tick, which the intent phase precedes, so
+        /// it took 0 and the grace ended half a day early (review, 2026-09-26).
+        /// </summary>
+        [Test]
+        public void TheFirstIntentReadsTheWorldsClock()
+        {
+            const int Noon = 12 * Calendar.TicksPerHour;
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 3;
+            ColonyWorld colony = ColonyWorld.Build(new ColonyRequest
+            {
+                Size = new GridSize(60, 60, 16),
+                Seed = 7u,
+                Scenario = scenario,
+                StartTick = Noon,
+            });
+            Assert.That(Send(colony, new Intent(IntentKind.SetStoryteller, default, StorytellerHandle.Jacob)),
+                Is.EqualTo(IntentRejection.None));
+            Storyteller teller = Of(colony);
+            Assert.That(teller.StartTick, Is.EqualTo(Noon));
+            Assert.That(teller.GraceEndTick, Is.EqualTo(Noon + 12 * Calendar.TicksPerDay));
+        }
+
         [Test]
         public void TheDifficultyLeversAreStoredAndChecked()
         {
