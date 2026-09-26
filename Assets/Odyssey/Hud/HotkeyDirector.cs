@@ -311,7 +311,14 @@ namespace Odyssey.Hud
         /// binding, and while a field has the keyboard it belongs to the field, which is where
         /// that rule lives.</para>
         /// </summary>
-        public bool GameKeysLive => Listening == null && Typist == null;
+        public bool GameKeysLive => Listening == null && Typist == null && !Suspended;
+
+        /// <summary>
+        /// Whether something that is not a text field has taken the keys for a while — the wake
+        /// into a world (design 56), during which a press is a skip and nothing else. Its own flag
+        /// rather than a pretend typist, because a focus change must never clear it.
+        /// </summary>
+        public bool Suspended { get; set; }
 
         /// <summary>
         /// Take the keyboard for a text field. Idempotent, and a second field taking it from the

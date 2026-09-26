@@ -372,6 +372,10 @@ namespace Odyssey.Hud
         /// <summary>The registry key naming the selection-style row, and the key it is stored under.</summary>
         public const string SelectionStyleKey = "ui.settings.selectionstyle";
 
+        /// <summary>The registry key naming the wake-up row, and the key it is stored under
+        /// (design 56 §9).</summary>
+        public const string WakeUpKey = "ui.settings.wake";
+
         /// <summary>The registry key naming the exit row.</summary>
         /// <summary>The heading over the levers that decide how the frame is paced and drawn.</summary>
         public const string DisplayGroupKey = "ui.settings.display";
@@ -446,6 +450,7 @@ namespace Odyssey.Hud
             DeveloperKey,
             BuildLayoutKey,
             SelectionStyleKey,
+            WakeUpKey,
             ExitKey,
             "ui.settings.shadows",
             "ui.settings.surround",
@@ -1067,6 +1072,17 @@ namespace Odyssey.Hud
 
         public const SelectionStyle DefaultSelectionStyle = SelectionStyle.Highlight;
 
+        /// <summary>
+        /// Whether a colony is entered by waking into it — blurred, warm and muffled, clearing over
+        /// five seconds — or by a plain fade (design 56). On unless the player turned it off: it is
+        /// the way the owner asked for the game to open, and the switch is for the player who has
+        /// seen it enough times.
+        /// </summary>
+        public bool WakeUp { get; private set; } = true;
+
+        /// <summary>The wake-up's two rungs, in the order they are drawn.</summary>
+        public static readonly bool[] WakeUpRungs = { true, false };
+
         /// <summary>The two rungs, in the order they are drawn.</summary>
         public static readonly SelectionStyle[] SelectionStyles = { SelectionStyle.Highlight, SelectionStyle.Brackets };
 
@@ -1120,6 +1136,9 @@ namespace Odyssey.Hud
 
         /// <summary>Raised when the selection style changes.</summary>
         public event Action<SelectionStyle>? SelectionStyleChanged;
+
+        /// <summary>Raised when the wake-up is switched, with its new state.</summary>
+        public event Action<bool>? WakeUpChanged;
 
         /// <summary>Raised when one bus's volume changes, with the bus that changed.</summary>
         public event Action<SettingsBus>? BusDbChanged;
@@ -1255,6 +1274,7 @@ namespace Odyssey.Hud
                     SetCameraSpeed(100);
                     SetBuildPaletteLayout(BuildPaletteModel.Default);
                     SetSelectionStyle(DefaultSelectionStyle);
+                    SetWakeUp(true);
                     break;
                 case SettingsTab.Graphics:
                     foreach (GraphicsLadder ladder in LadderOrder) SetValue(ladder, DefaultOf(ladder));
@@ -1526,6 +1546,15 @@ namespace Odyssey.Hud
             DeveloperOverlayChanged?.Invoke();
         }
 
+        /// <summary>Switch the wake into a world on or off, and write it down.</summary>
+        public void SetWakeUp(bool on)
+        {
+            if (WakeUp == on) return;
+            WakeUp = on;
+            _store?.Write(WakeUpKey, on);
+            WakeUpChanged?.Invoke(on);
+        }
+
         /// <summary>
         /// Choose a Build-palette layout, from either of the two controls that offer one, and
         /// write the choice down. Stored as the enum's ordinal, which is the one place this
@@ -1699,6 +1728,9 @@ namespace Odyssey.Hud
 
             int? autosave = store.ReadInt(AutosaveKey);
             if (autosave.HasValue) SetAutosaveDays(autosave.Value);
+
+            bool? wake = store.Read(WakeUpKey);
+            if (wake.HasValue) SetWakeUp(wake.Value);
 
             int? style = store.ReadInt(SelectionStyleKey);
             if (style.HasValue && IsSelectionStyle(style.Value))
