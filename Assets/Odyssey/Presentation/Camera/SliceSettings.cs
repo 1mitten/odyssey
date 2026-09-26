@@ -70,7 +70,8 @@ namespace Odyssey.Presentation.CameraRig
         /// question reverses. What is overhead is a ceiling and one layer of it is all the context
         /// that helps; what is *under* you is the shape of the working, and a base three storeys
         /// deep is unreadable through a three-layer cap. So the cap comes off downwards and goes
-        /// on upwards.</para>
+        /// on upwards — to <see cref="undergroundDepth"/> layers, where the dimming stops telling
+        /// them apart, rather than to bedrock (design 62 §2c).</para>
         ///
         /// <para>The six ADR 0006 modes are untouched and still ship. This decides what the
         /// player gets when they have not chosen one: switch it off and every field below is
@@ -97,6 +98,29 @@ namespace Odyssey.Presentation.CameraRig
         [Range(0.2f, 1f)]
         [Tooltip("Brightness multiplier applied for each layer of depth below the slice.")]
         public float belowFalloff = 0.68f;
+
+        /// <summary>
+        /// How many layers below the slice are drawn when it is underground (design 62 §2c, DM1).
+        ///
+        /// <para><b>Why a number at all.</b> Underground the cap came off downwards — "every layer
+        /// below", so the shape of a working reads — and on a 16-layer board that was at most a
+        /// dozen layers. On a 32-layer board it is every layer to bedrock, walked and meshed by
+        /// every director on every frame for rock the player cannot tell apart.</para>
+        ///
+        /// <para><b>Why seven.</b> <see cref="ShadeBelow"/> dims a layer by
+        /// <see cref="belowFalloff"/> per step and floors at <see cref="MinShade"/>, and the renderer
+        /// asks it for <c>steps − 1</c> (the layer under the feet is lit as the active one). So the
+        /// layers one to seven below the slice draw at 1, 0.68, 0.46, 0.31, 0.21, 0.15 and 0.099 —
+        /// seven distinct shades — and the eighth would be 0.68⁷ ≈ 0.067, clamped to 0.08, as would
+        /// every layer under it. Past seven the dimming says nothing more about depth, so seven is
+        /// the deepest band that still reads as a band. Change it with the falloff, not alone.</para>
+        /// </summary>
+        [Range(1, 16)]
+        [Tooltip("How many layers below the slice are drawn when it is underground.")]
+        public int undergroundDepth = 7;
+
+        /// <summary>The floor <see cref="ShadeBelow"/> clamps to: the dimmest a drawn layer below gets.</summary>
+        public const float MinShade = 0.08f;
 
         /// <summary>
         /// Opacity of the first layer above the slice.
@@ -253,9 +277,11 @@ namespace Odyssey.Presentation.CameraRig
         {
             if (below == BelowMode.Hide) return activeLayer;
 
-            // Underground, the cap comes off: the shape of a working is what is beneath you, and
-            // the dimming falloff is what keeps the active layer standing out from it.
-            if (BelowSurface(activeLayer)) return 0;
+            // Underground, the cap loosens: the shape of a working is what is beneath you, and
+            // the dimming falloff is what keeps the active layer standing out from it. It stops
+            // where the falloff stops telling layers apart (undergroundDepth), not at bedrock —
+            // on a 32-layer board "every layer below" is twenty layers of rock nobody can see.
+            if (BelowSurface(activeLayer)) return Math.Max(0, activeLayer - undergroundDepth);
 
             int budget = activeLayer - belowDepth;
             if (!followDepth) return budget;
@@ -381,7 +407,7 @@ namespace Odyssey.Presentation.CameraRig
         public float ShadeBelow(int steps)
         {
             if (steps <= 0 || below == BelowMode.Normal) return 1f;
-            return Mathf.Clamp(Mathf.Pow(belowFalloff, steps), 0.08f, 1f);
+            return Mathf.Clamp(Mathf.Pow(belowFalloff, steps), MinShade, 1f);
         }
     }
 }

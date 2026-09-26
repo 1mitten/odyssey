@@ -98,23 +98,26 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void OnlyAMountainousSiteDeepensTheBoard()
         {
-            Assert.That(SiteRules.BoardLayers(16, HillBand.Mountainous), Is.EqualTo(24));
-            Assert.That(SiteRules.BoardLayers(24, HillBand.Mountainous), Is.EqualTo(24));
-            Assert.That(SiteRules.BoardLayers(30, HillBand.Mountainous), Is.EqualTo(30), "never shallower than chosen");
+            // 32 since every offered board went to 32 (design 62, DM2): a mountain is never
+            // shallower than the rest, so on the boards offered today it deepens nothing.
+            Assert.That(SiteRules.BoardLayers(16, HillBand.Mountainous), Is.EqualTo(32));
+            Assert.That(SiteRules.BoardLayers(GridSize.OfferedLayers, HillBand.Mountainous), Is.EqualTo(GridSize.OfferedLayers));
+            Assert.That(SiteRules.BoardLayers(40, HillBand.Mountainous), Is.EqualTo(40), "never shallower than chosen");
             foreach (HillBand band in new[] { HillBand.Flat, HillBand.Rolling, HillBand.Hilly })
                 Assert.That(SiteRules.BoardLayers(16, band), Is.EqualTo(16), band.ToString());
         }
 
         /// <summary>
-        /// Why a mountainous site is 24 deep (design 38 §13, 28-map-size §11): at 16 layers relief 4
-        /// leaves no rock under the lowest valley, and at 24 it leaves some. The 16-layer board is
-        /// the control — if it had rock too, the depth would be buying nothing.
+        /// Why a mountainous site is deep (design 38 §13, 28-map-size §11): at 16 layers relief 4
+        /// leaves no rock under the lowest valley, and at 24 it left some; it is 32 now, with every
+        /// board (design 62, DM2). The 16-layer board is the control — if it had rock too, the
+        /// depth would be buying nothing.
         /// </summary>
         [Test]
         public void AMountainousSiteKeepsRockUnderItsValleys()
         {
             var deep = new GridSize(120, 120, SiteRules.BoardLayers(16, HillBand.Mountainous));
-            Assert.That(RockUnderLowest(deep), Is.GreaterThan(0), "24 layers");
+            Assert.That(RockUnderLowest(deep), Is.GreaterThan(0), $"{deep.SizeY} layers");
             Assert.That(RockUnderLowest(Standard), Is.LessThanOrEqualTo(0), "the control: 16 layers at relief 4");
         }
 

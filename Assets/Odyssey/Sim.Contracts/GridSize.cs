@@ -69,6 +69,22 @@ namespace Odyssey.Sim.Contracts
         /// <summary>The scale target from the brief: a 625 m square district, forty layers deep.</summary>
         public static GridSize ScaleTarget => new GridSize(250, 250, 40);
 
+        /// <summary>
+        /// How deep every board the new-game page offers is built: 32 layers (design 62 §2d, §5a,
+        /// the deep-mining plan's DM2).
+        ///
+        /// <para><b>One number, read by every place a board's depth is chosen</b> — the page's
+        /// sizes (<c>Odyssey.Hud.MapSizes</c>), the scene's inspector default and the play
+        /// scene's generator (<c>OdysseyBootstrap.layers</c>, <c>PlayScene.PlayLayers</c>), the
+        /// site panel's default — where until 2026-09-26 it was three literals in three
+        /// assemblies. The extra layers go underneath: the ground sits at
+        /// <c>SizeY − 1 − headroom − relief</c>, so the surface, the sky over it and everything
+        /// on it are unchanged, and a valley has about twenty layers of rock under it instead of
+        /// three. Unopened rock costs memory and generation time and, since DM1, nothing per
+        /// edit. A saved board keeps the depth it was saved at: the header carries its size.</para>
+        /// </summary>
+        public const int OfferedLayers = 32;
+
         public bool Equals(GridSize other) => SizeX == other.SizeX && SizeZ == other.SizeZ && SizeY == other.SizeY;
         public override bool Equals(object? obj) => obj is GridSize other && Equals(other);
         public override int GetHashCode() => unchecked((SizeX * 397 ^ SizeZ) * 397 ^ SizeY);

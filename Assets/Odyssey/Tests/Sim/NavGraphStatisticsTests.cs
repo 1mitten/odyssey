@@ -28,11 +28,17 @@ namespace Odyssey.Tests.Sim
     /// low tens of thousands, not the theoretical 50 k-plus" — holds on both maps. The mechanism
     /// d-04 credited for it does not: "Most chunks in a ruined-city column are all-air or
     /// all-solid; those allocate no regions at all" is true of the city (65% of blocks are
-    /// uniform) and **false of the natural map**, where only 7.9% are. All-solid is exactly the
-    /// case that *does* allocate here, because <see cref="RegionKind.Impassable"/> regions are
-    /// kept deliberately so rooms and atmosphere have a substrate. Underground rock therefore
-    /// fills every block with one region, and the natural map's 24,141 regions are very nearly its
-    /// 23,031 live blocks.</para>
+    /// uniform) and **false of the natural map**, where only 7.9% are. All-solid was exactly the
+    /// case that <i>did</i> allocate here, because solid ground carried an
+    /// <see cref="RegionKind.Impassable"/> region so rooms and atmosphere had a substrate.
+    /// Underground rock therefore filled every block with one region, and the natural map's
+    /// 24,141 regions were very nearly its 23,031 live blocks.</para>
+    ///
+    /// <para><b>Since 2026-09-26 it does not</b> (design 62 §2c, DM1): solid ground belongs to no
+    /// region, as air never has, and d-04's mechanism is true of both maps. Walls keep theirs. The
+    /// numbers this arm prints moved deliberately that day — the natural map's regions are now its
+    /// open and walkable ground and nothing else — and <c>docs/design/28-map-size.md</c> §12 holds
+    /// the before-and-after. It asserts the rule itself: no solid terrain cell is in a region.</para>
     ///
     /// <para>So the uniformity figure is <b>recorded and not asserted</b>: it is a property of
     /// what the generator made, it differs by a factor of eight between two maps that are both
@@ -139,6 +145,7 @@ namespace Odyssey.Tests.Sim
             report.AppendLine($"connectors: {connectors}");
             report.AppendLine($"links by kind: {s.LinkKinds()}");
             report.AppendLine($"regions by kind: {s.RegionKinds()}");
+            report.AppendLine($"solid terrain cells {s.SolidCells} ({Percent(s.SolidCells, size.CellCount)}), in a region {s.SolidCellsInRegions}");
 
             foreach (TraverseMode mode in Enum.GetValues(typeof(TraverseMode)))
                 report.AppendLine($"districts ({mode}): {nav.DistrictCount(mode)}");
@@ -171,6 +178,13 @@ namespace Odyssey.Tests.Sim
             // x layers, and both maps land just under it for that reason.
             Assert.That(s.LargestRegion, Is.LessThanOrEqualTo(NavGraph.BlockSize * NavGraph.BlockSize),
                 $"a region outgrew its block on the {label} map");
+
+            // Design 62 §2c: rock nobody has opened is never visited by a pass over regions,
+            // because it is in none. Asserted over every cell, with the solid count beside it so a
+            // board with no rock cannot pass this for the wrong reason.
+            Assert.That(s.SolidCells, Is.GreaterThan(0), $"the {label} map has no solid ground to test the rule on");
+            Assert.That(s.SolidCellsInRegions, Is.Zero,
+                $"{s.SolidCellsInRegions} solid terrain cells carry a region on the {label} map");
 
             // Not asserted, deliberately: s.LiveBlocks. See the class comment — the uniformity
             // short-circuit d-04 credits for the budget is real on the city and absent on the
@@ -248,8 +262,12 @@ namespace Odyssey.Tests.Sim
                 int start = y * size.LayerStride;
                 for (int i = 0; i < size.LayerStride; i++)
                 {
+                    bool solid = (nav.Grid.Flags[start + i] & NavFlags.Solid) != 0
+                                 && (nav.Grid.Flags[start + i] & NavFlags.Blocked) == 0;
+                    if (solid) s.SolidCells++;
                     int region = nav.RegionOfCell(start + i);
                     if (region < 0) continue;
+                    if (solid) s.SolidCellsInRegions++;
 
                     if (regionLayer[region] < 0) regionLayer[region] = y;
                     else if (regionLayer[region] != y) s.SpanningRegions.Add(region);
@@ -307,6 +325,8 @@ namespace Odyssey.Tests.Sim
             public int CellsInRegions;
             public int LargestRegion;
             public int LiveBlocks;
+            public int SolidCells;
+            public int SolidCellsInRegions;
 
             /// <summary>Regions found on more than one layer. Must stay empty.</summary>
             public readonly HashSet<int> SpanningRegions = new HashSet<int>();

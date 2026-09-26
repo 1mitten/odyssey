@@ -150,10 +150,12 @@ namespace Odyssey.Hud
 
         public static readonly IReadOnlyList<Choice> All = new[]
         {
-            new Choice("ui.newgame.size.small", 80, 80, 16),
-            new Choice("ui.newgame.size.standard", 120, 120, 16),
-            new Choice("ui.newgame.size.large", 180, 180, 24),
-            new Choice("ui.newgame.size.huge", 240, 240, 16),
+            // Every board one depth since the deep-mining work (design 62 §2d): the sizes differ
+            // in ground, not in how far down the mine goes. GridSize.OfferedLayers says why.
+            new Choice("ui.newgame.size.small", 80, 80, GridSize.OfferedLayers),
+            new Choice("ui.newgame.size.standard", 120, 120, GridSize.OfferedLayers),
+            new Choice("ui.newgame.size.large", 180, 180, GridSize.OfferedLayers),
+            new Choice("ui.newgame.size.huge", 240, 240, GridSize.OfferedLayers),
         };
 
         /// <summary>Standard: the board every measurement on record was taken on, and the one the

@@ -513,14 +513,14 @@ namespace Odyssey.Tests.Sim
         };
 
         /// <summary>
-        /// The board the game actually loads — 120 x 120 x 16, wooded — at the size and shape
-        /// <c>OdysseyBootstrap</c> builds. The bare board above is the clean baseline; this is the
+        /// The board the game actually loads — 120 x 120 x 32 (16 until 2026-09-26), wooded — at the
+        /// size and shape <c>OdysseyBootstrap</c> builds. The bare board above is the clean baseline; this is the
         /// one whose regression a player would actually meet.
         /// </summary>
         public static readonly Case PlayedBoard = new Case
         {
-            Name = "wooded meadow 120x120x16, seed 1, 10,000 ticks",
-            Size = new GridSize(120, 120, 16),
+            Name = "wooded meadow 120x120x32, seed 1, 10,000 ticks",
+            Size = new GridSize(120, 120, GridSize.OfferedLayers),
             Seed = 1u,
             Ticks = 10_000,
             Map = MapType.Natural,
@@ -592,8 +592,15 @@ namespace Odyssey.Tests.Sim
             // Merged with raids (design 55), 2026-09-26: the gunman keeps kind 4 and the frog moves
             // to 5, and a pawn's kind is hashed. GoldenColonyProbe on the frog branch (fca2ef08) and
             // on the merge is identical on all three boards, so only the number moved.
-            Generated = 5385105565351640744UL,
-            Simulated = 1457182368184692081UL,
+            // 2026-09-26, every offered board 32 deep (design 62, DM2): this case follows the
+            // board the game loads, 120 x 120 x 16 -> 32, so both values moved. The extra layers
+            // go underneath, and GoldenColonyProbe says it is the same colony sixteen layers
+            // higher: every cell sum moved by exactly its count x 230,400 (16 layers x 14,400 cells;
+            // items 177 and 178, pawns 22, generated and simulated), and every other number — items
+            // by def, needs, mood, progress, experience, passions, jobs started, done and failed —
+            // is identical to the digit. The bare meadow and the city are fixed sizes and did not move.
+            Generated = 8380090605371818778UL,
+            Simulated = 17421262954474116166UL,
         };
 
         /// <summary>

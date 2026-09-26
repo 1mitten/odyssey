@@ -200,7 +200,7 @@ namespace Odyssey.Hud
         /// temperature, the seasons from coldest to warmest month, rainfall, latitude and the tile's
         /// place — and the board's depth when a mountainous site deepens it.
         /// </summary>
-        public static List<WorldStat> Stats(PlanetView planet, int tile, int chosenLayers = 16)
+        public static List<WorldStat> Stats(PlanetView planet, int tile, int chosenLayers = GridSize.OfferedLayers)
         {
             var rows = new List<WorldStat>();
             if (tile < 0 || tile >= planet.TileCount) return rows;
@@ -250,7 +250,7 @@ namespace Odyssey.Hud
         /// The setup page's read-only site line, for example "Meadow, Rolling, 53 N", with the depth
         /// added on a mountainous site.
         /// </summary>
-        public static string SiteLine(PlanetView planet, int tile, int chosenLayers = 16)
+        public static string SiteLine(PlanetView planet, int tile, int chosenLayers = GridSize.OfferedLayers)
         {
             if (tile < 0 || tile >= planet.TileCount) return string.Empty;
             HillBand hills = planet.HillsAt(tile);

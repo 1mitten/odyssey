@@ -140,8 +140,14 @@ namespace Odyssey.Sim.Contracts
         /// <summary>The rainfall of the reference site, in millimetres a year.</summary>
         public const int ReferenceRainfallMm = 1000;
 
-        /// <summary>How deep a mountainous board is (owner, 2026-09-26; design 38 §13's measurement).</summary>
-        public const int MountainLayers = 24;
+        /// <summary>
+        /// How deep a mountainous board is at least (owner, 2026-09-26; design 38 §13's
+        /// measurement). 24 until every offered board went to 32 (design 62, DM2): a mountainous
+        /// site is never shallower than the rest, so it is 32 too, and <see cref="BoardLayers"/>
+        /// deepens nothing a player can choose today. Kept as its own number because how deep a
+        /// mountain goes is a separate decision from how deep a board is.
+        /// </summary>
+        public const int MountainLayers = 32;
 
         /// <summary>
         /// How hard the seasons bite at a latitude, per mille of the reference's swing: ×0.15 at the

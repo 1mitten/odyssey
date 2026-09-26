@@ -21,28 +21,32 @@ namespace Odyssey.Tests.Sim
     /// </summary>
     public static class BoardSizes
     {
-        /// <summary>80 x 80 x 16. Close quarters.</summary>
-        public static GridSize Small => new GridSize(80, 80, 16);
+        /// <summary>80 x 80 x 32. Close quarters. Every board is <see cref="GridSize.OfferedLayers"/>
+        /// deep since the deep-mining work (design 62, DM2); the figures in
+        /// <c>docs/design/28-map-size.md</c> §2–§11 were taken at 16 (Large at 24) and §12 has the
+        /// 32-layer set.</summary>
+        public static GridSize Small => new GridSize(80, 80, GridSize.OfferedLayers);
 
         /// <summary>
-        /// 120 x 120 x 16 — the default, and the board every number on record was taken on.
+        /// 120 x 120 x 32 — the default. Every number on record before 2026-09-26 was taken at
+        /// 120 x 120 x 16.
         /// Every arm that quotes a Huge figure quotes this one beside it, because a ratio between
         /// two boards measured in one run is the only figure this machine can be trusted for.
         /// </summary>
-        public static GridSize Standard => new GridSize(120, 120, 16);
+        public static GridSize Standard => new GridSize(120, 120, GridSize.OfferedLayers);
 
-        /// <summary>180 x 180 x 24. Ships, and until 2026-09-21 nothing had ever run it.</summary>
-        public static GridSize Large => new GridSize(180, 180, 24);
+        /// <summary>180 x 180 x 32 (24 until 2026-09-26). Ships, and until 2026-09-21 nothing had ever run it.</summary>
+        public static GridSize Large => new GridSize(180, 180, GridSize.OfferedLayers);
 
         /// <summary>
-        /// 240 x 240 x 16 — twice Standard's ground at Standard's depth (2026-09-21,
-        /// <c>docs/design/28-map-size.md</c>).
+        /// 240 x 240 x 32 — twice Standard's ground at Standard's depth (2026-09-21 at 16 layers,
+        /// <c>docs/design/28-map-size.md</c>; 32 since 2026-09-26).
         ///
-        /// <para>Four times Standard's cells, but only 1.19x Large's and 1.04x its render chunks,
-        /// because chunks are 25 x 25 within one layer and Large carries eight more layers. The
-        /// one axis where Huge clearly exceeds Large is the layer stride, 57,600 against 32,400 —
-        /// which is <c>EnclosureGrid.SolveLayer</c> and the slice channel, and nothing else.</para>
+        /// <para>Four times Standard's cells. At 16 layers it was only 1.19x Large's cells and
+        /// 1.04x its render chunks, because Large then carried eight more layers; at one depth it
+        /// is 1.78x both. The layer stride, 57,600 against 32,400, is
+        /// <c>EnclosureGrid.SolveLayer</c> and the slice channel.</para>
         /// </summary>
-        public static GridSize Huge => new GridSize(240, 240, 16);
+        public static GridSize Huge => new GridSize(240, 240, GridSize.OfferedLayers);
     }
 }

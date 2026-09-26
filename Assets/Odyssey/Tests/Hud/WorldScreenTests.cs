@@ -415,9 +415,14 @@ namespace Odyssey.Tests.Hud
             Assert.That(rows[6].Value, Is.EqualTo("6, 10"));
             Assert.That(rows[3].Value, Does.Contain(" to "));
 
-            List<WorldStat> mountain = WorldChoice.Stats(planet, TestPlanet.Tile(3, 10));
+            // A mountainous site names its depth only when it deepens the board: on a 16-layer
+            // board it did, to 32; on the 32-layer boards offered since design 62 (DM2) it does
+            // not, and the row is gone.
+            List<WorldStat> mountain = WorldChoice.Stats(planet, TestPlanet.Tile(3, 10), chosenLayers: 16);
             Assert.That(mountain[mountain.Count - 1].LabelKey, Is.EqualTo("ui.world.depth"));
-            Assert.That(mountain[mountain.Count - 1].Value, Is.EqualTo("24 layers"));
+            Assert.That(mountain[mountain.Count - 1].Value, Is.EqualTo("32 layers"));
+            List<WorldStat> offered = WorldChoice.Stats(planet, TestPlanet.Tile(3, 10));
+            Assert.That(offered.ConvertAll(r => r.LabelKey), Has.No.Member("ui.world.depth"));
         }
 
         [Test]

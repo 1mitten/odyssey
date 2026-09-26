@@ -684,10 +684,12 @@ namespace Odyssey.Tests.Hud
         {
             var measured = new Dictionary<string, (int X, int Z, int Y)>
             {
-                ["ui.newgame.size.small"] = (80, 80, 16),
-                ["ui.newgame.size.standard"] = (120, 120, 16),
-                ["ui.newgame.size.large"] = (180, 180, 24),
-                ["ui.newgame.size.huge"] = (240, 240, 16),
+                // Every board 32 deep since the deep-mining work (design 62, DM2), measured in
+                // docs/design/28-map-size.md §12.
+                ["ui.newgame.size.small"] = (80, 80, 32),
+                ["ui.newgame.size.standard"] = (120, 120, 32),
+                ["ui.newgame.size.large"] = (180, 180, 32),
+                ["ui.newgame.size.huge"] = (240, 240, 32),
             };
 
             Assert.That(MapSizes.All.Count, Is.EqualTo(measured.Count),

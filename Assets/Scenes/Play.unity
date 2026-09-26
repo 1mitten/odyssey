@@ -500,7 +500,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Odyssey.Presentation::Odyssey.Presentation.Bootstrap.OdysseyBootstrap
   sizeX: 120
   sizeZ: 120
-  layers: 16
+  layers: 32
   seed: 1
   mapType: 1
   barrenMap: 1
