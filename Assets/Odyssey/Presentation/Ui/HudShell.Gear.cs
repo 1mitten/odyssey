@@ -475,8 +475,14 @@ namespace Odyssey.Presentation.Ui
         void OnGearKitClicked(GearKitView view)
         {
             GearModel gear = _inspect.Gear;
-            if ((uint)view.Index >= (uint)gear.Kit.Count || gear.Kit[view.Index].State != KitTileState.Filled) return;
-            OpenGearPopover(GearPopoverKind.Kit, GearSlot.Weapon, view.Index, view.Tile);
+            if ((uint)view.Index >= (uint)gear.Kit.Count) return;
+            KitTile tile = gear.Kit[view.Index];
+            // A filled tile opens its thing; an empty real slot opens Pick from stores for the kit
+            // (design 54 §3), as an empty worn slot does for what it wears.
+            if (tile.State == KitTileState.Filled)
+                OpenGearPopover(GearPopoverKind.Kit, GearSlot.Weapon, view.Index, view.Tile);
+            else if (tile.State == KitTileState.Empty && tile.Slot >= 0)
+                OpenGearPopover(GearPopoverKind.Pick, GearSlot.Weapon, view.Index, view.Tile);
         }
 
         // ================================================================ popovers
@@ -616,6 +622,25 @@ namespace Odyssey.Presentation.Ui
             popover.Add(EffectLine(Registry.Label(GearModel.KitKey), tile.CountText));
 
             PawnId pawn = _inspect.Pawn;
+            if (tile.Real)
+            {
+                // The real kit (design 54 §3): Use where it has one — greyed with its reason as the
+                // button's own words, so nothing moves — then Remove and Drop, the weapon's two.
+                int slot = tile.Slot;
+                (string, Action?) remove = (Registry.Label("ui.command.remove"), () => SendGearOrder(KitOrders.Drop(pawn, slot, leaveHere: false)));
+                (string, Action?) drop = (Registry.Label("ui.command.drop"), () => SendGearOrder(KitOrders.Drop(pawn, slot, leaveHere: true)));
+                if (tile.Use == KitUseHandle.None)
+                    ButtonRow(popover, remove, drop);
+                else
+                {
+                    (string, Action?) use = tile.Use == KitUseHandle.Usable
+                        ? (Registry.Label(KitOrders.UseCommandKey), (Action)(() => SendGearOrder(KitOrders.Use(pawn, slot))))
+                        : (tile.UseReason, (Action?)null);
+                    ButtonRow(popover, use, remove, drop);
+                }
+                return;
+            }
+
             int index = tile.PreviewIndex;
             ButtonRow(popover,
                 (Registry.Label("ui.command.remove"), () => _gearPreview.RemoveKit(pawn, index)),
@@ -627,7 +652,14 @@ namespace Odyssey.Presentation.Ui
         {
             var world = _boot?.World;
             if (world == null) return;
-            if (rebuild) _gearPick.Build(world.Views.Current, _gearPopoverSlot, _gearPreview);
+            if (rebuild)
+            {
+                GearModel gear = _inspect.Gear;
+                if ((uint)_gearPopoverKit < (uint)gear.Kit.Count)
+                    _gearPick.BuildKit(world.Views.Current, _inspect.Pawn, gear.Kit[_gearPopoverKit].Slot);
+                else
+                    _gearPick.Build(world.Views.Current, _gearPopoverSlot, _gearPreview);
+            }
             popover.Clear();
             popover.style.width = GearLayout.PickWidth;
 
@@ -822,10 +854,12 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// One or two buttons across the popover. On a downed colonist they are there, at 40 %, and
+        /// One to three buttons across the popover. On a downed colonist they are there, at 40 %, and
         /// do nothing — with the reason above them in the warning colour (the specification's 21f).
+        /// A button with no action is drawn the same way on its own: its label is then its reason
+        /// ("Not hurt"), so a greyed Use says why without a line that would move the others.
         /// </summary>
-        void ButtonRow(VisualElement popover, params (string Label, Action Act)[] buttons)
+        void ButtonRow(VisualElement popover, params (string Label, Action? Act)[] buttons)
         {
             bool downed = _inspect.Gear.Downed;
             if (downed) popover.Add(DownedReason(0));
@@ -835,7 +869,7 @@ namespace Odyssey.Presentation.Ui
             row.style.marginTop = GearLayout.ItemPopoverGap;
             for (int i = 0; i < buttons.Length; i++)
             {
-                (string label, Action act) = buttons[i];
+                (string label, Action? act) = buttons[i];
                 var button = new VisualElement();
                 button.style.flexGrow = 1;
                 button.style.flexBasis = 0;
@@ -845,18 +879,19 @@ namespace Odyssey.Presentation.Ui
                 if (i > 0) button.style.marginLeft = GearLayout.ItemPopoverGap;
                 Border(button, HudTheme.BorderWidth, Ink(HudTheme.ControlBorder));
                 button.Add(GearText(label, HudTextRole.Row, HudTokens.TextPrimary));
-                if (downed)
+                if (downed || act == null)
                 {
                     button.style.opacity = GearLayout.DisabledOpacity;
                     button.SetEnabled(false);
                 }
                 else
                 {
+                    Action run = act;
                     button.RegisterCallback<PointerEnterEvent>(_ => button.style.backgroundColor = Ink(HudTheme.RowRule));
                     button.RegisterCallback<PointerLeaveEvent>(_ => button.style.backgroundColor = Color.clear);
                     button.RegisterCallback<ClickEvent>(_ =>
                     {
-                        act();
+                        run();
                         CloseGearPopovers();
                     });
                 }

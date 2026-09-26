@@ -115,6 +115,24 @@ namespace Odyssey.Hud
 
         /// <summary>Its index in the preview's kit, for Remove and Drop; −1 for a tile with nothing in it.</summary>
         public int PreviewIndex;
+
+        /// <summary>
+        /// The colonist's real kit slot this tile draws (design 54), for the orders; −1 for a
+        /// locked tile and every tile while the preview is on.
+        /// </summary>
+        public int Slot;
+
+        /// <summary>The item def of a real thing in the slot, or −1.</summary>
+        public int ItemDef;
+
+        /// <summary>Whether Use can be pressed, a <see cref="KitUseHandle"/>; <see cref="KitUseHandle.None"/> for a thing with no use.</summary>
+        public int Use;
+
+        /// <summary>Why Use is greyed — "Not hurt", "Not hungry" — or empty.</summary>
+        public string UseReason;
+
+        /// <summary>A real thing in a real slot: its buttons send orders rather than edit the preview.</summary>
+        public bool Real => Slot >= 0 && ItemDef >= 0;
     }
 
     /// <summary>One figure on the effects line.</summary>
@@ -132,12 +150,12 @@ namespace Odyssey.Hud
     /// the gear seam of design 33 §9d). Unity-free; the view reads it and asks no aspect itself.
     ///
     /// <para><b>What is real</b>: the hand — the weapon from <c>odyssey.pawn.weapon</c>, drawn or at
-    /// the hip from <see cref="PawnFlags.Drawn"/>, or the bare hands — and whether she is downed.
-    /// <b>What is not yet</b>: no garment, kit or loadout exists in the simulation, so a colonist
-    /// wears the issued jumpsuit, the other four slots are empty, both belt slots are empty, the
-    /// pack slots are locked and every effect is the bare default — unless the
-    /// <see cref="GearPreview"/> is on, when the specification's 21c is laid over everything but
-    /// the hand.</para>
+    /// the hip from <see cref="PawnFlags.Drawn"/>, or the bare hands — whether she is downed, and
+    /// since design 54 <b>the belt's two kit slots</b>, from <c>odyssey.pawn.kit.*</c>.
+    /// <b>What is not yet</b>: no garment or loadout exists in the simulation, so a colonist wears
+    /// the issued jumpsuit, the other four slots are empty, the pack slots are locked and every
+    /// effect but the kit's is the bare default — unless the <see cref="GearPreview"/> is on, when
+    /// the specification's 21c is laid over everything but the hand, the kit row included.</para>
     ///
     /// <para><b>A refresh builds nothing when nothing moved</b>: the pane refreshes fifteen times a
     /// second, so the rows are rebuilt only when the weapon, its carry, the downed flag, the
@@ -212,6 +230,11 @@ namespace Odyssey.Hud
 
         // What the rows were last built from.
         int _builtPawn = int.MinValue, _builtWeapon = int.MinValue, _builtTier = -1, _builtCarry = -1, _builtPreview = -1;
+        int _builtKit = int.MinValue;
+
+        // The real kit as the frame publishes it (design 54 §6), read every refresh into these and
+        // folded into one signature, so a changed count rebuilds the row and an unchanged one does not.
+        readonly int[] _kitDef = new int[KitOrders.Slots], _kitCount = new int[KitOrders.Slots], _kitUse = new int[KitOrders.Slots];
         bool _builtDowned, _builtPerson;
 
         /// <summary>The row for one slot. Only meaningful after a refresh that returned true for a person.</summary>
@@ -245,9 +268,10 @@ namespace Odyssey.Hud
             GearCarry carry = !armed ? GearCarry.None : view.IsWeaponDrawn ? GearCarry.Drawn : GearCarry.AtHip;
             int weapon = armed ? def : -1;
             int preview = Preview != null ? (Preview.On ? 1 : 0) + (Preview.Version << 1) : -1;
+            int kit = ReadKit(snapshot, pawn);
 
             if (_builtPerson && _builtPawn == pawn.Value && _builtWeapon == weapon && _builtTier == tier && _builtCarry == (int)carry
-                && _builtDowned == view.IsDowned && _builtPreview == preview)
+                && _builtDowned == view.IsDowned && _builtPreview == preview && _builtKit == kit)
                 return true;
 
             _builtPerson = true;
@@ -257,8 +281,23 @@ namespace Odyssey.Hud
             _builtCarry = (int)carry;
             _builtDowned = view.IsDowned;
             _builtPreview = preview;
+            _builtKit = kit;
             Build(pawn, weapon, tier, carry, view.IsDowned);
             return true;
+        }
+
+        /// <summary>Read her kit's slots out of the frame; returns their signature.</summary>
+        int ReadKit(WorldSnapshot snapshot, PawnId pawn)
+        {
+            int signature = 17;
+            for (int slot = 0; slot < KitOrders.Slots; slot++)
+            {
+                _kitDef[slot] = snapshot.TryGetPawnAspect(pawn, KitOrders.DefKey(slot), out int def) ? def : -1;
+                _kitCount[slot] = _kitDef[slot] >= 0 && snapshot.TryGetPawnAspect(pawn, KitOrders.CountKey(slot), out int count) ? count : 0;
+                _kitUse[slot] = _kitDef[slot] >= 0 && snapshot.TryGetPawnAspect(pawn, KitOrders.UseKey(slot), out int use) ? use : KitUseHandle.None;
+                signature = unchecked(((signature * 31 + _kitDef[slot]) * 31 + _kitCount[slot]) * 31 + _kitUse[slot]);
+            }
+            return signature;
         }
 
         void Clear()
@@ -269,6 +308,7 @@ namespace Odyssey.Hud
             Effects.Clear();
             _builtPerson = false;
             _builtPawn = int.MinValue;
+            _builtKit = int.MinValue;
             if (had) Version++;
         }
 
@@ -312,9 +352,11 @@ namespace Odyssey.Hud
                     : Nothing(slot, Registry.Label(NothingWornKey)));
             }
 
-            // The kit: two on the belt, four more with a pack; what is in them is the preview's.
-            IReadOnlyList<PreviewKit> kit = Preview != null
-                ? Preview.Kit(pawn)
+            // The kit: two on the belt, four more with a pack. What is in them is her real kit (design
+            // 54) — unless the preview is on, when the whole row is the preview's, as the worn slots are.
+            bool previewKit = Preview != null && Preview.On;
+            IReadOnlyList<PreviewKit> kit = previewKit
+                ? Preview!.Kit(pawn)
                 : (IReadOnlyList<PreviewKit>)System.Array.Empty<PreviewKit>();
             int capacity = GearLayout.KitBelt + (pack ? GearLayout.KitPack : 0);
             int used = 0;
@@ -322,22 +364,37 @@ namespace Odyssey.Hud
             {
                 if (i >= capacity)
                 {
-                    Kit.Add(new KitTile { State = KitTileState.Locked, IconKey = string.Empty, Name = string.Empty, CountText = string.Empty, PreviewIndex = -1 });
+                    Kit.Add(EmptyKit(KitTileState.Locked, -1));
                     continue;
                 }
-                if (i < kit.Count)
+                if (previewKit && i < kit.Count)
                 {
                     PreviewKit stack = kit[i];
                     used++;
-                    Kit.Add(new KitTile
-                    {
-                        State = KitTileState.Filled, IconKey = stack.Key, Name = Registry.Label(stack.Key),
-                        Count = stack.Count, CountText = stack.Count.ToString(CultureInfo.InvariantCulture),
-                        PreviewIndex = i,
-                    });
+                    KitTile tile = EmptyKit(KitTileState.Filled, -1);
+                    tile.IconKey = stack.Key;
+                    tile.Name = Registry.Label(stack.Key);
+                    tile.Count = stack.Count;
+                    tile.CountText = stack.Count.ToString(CultureInfo.InvariantCulture);
+                    tile.PreviewIndex = i;
+                    Kit.Add(tile);
                     continue;
                 }
-                Kit.Add(new KitTile { State = KitTileState.Empty, IconKey = string.Empty, Name = string.Empty, CountText = string.Empty, PreviewIndex = -1 });
+                if (!previewKit && i < KitOrders.Slots && _kitDef[i] >= 0)
+                {
+                    used++;
+                    KitTile tile = EmptyKit(KitTileState.Filled, i);
+                    tile.ItemDef = _kitDef[i];
+                    tile.IconKey = ItemLabels.IconKey(_kitDef[i]);
+                    tile.Name = ItemLabels.Label(_kitDef[i]);
+                    tile.Count = _kitCount[i];
+                    tile.CountText = _kitCount[i].ToString(CultureInfo.InvariantCulture);
+                    tile.Use = _kitUse[i];
+                    tile.UseReason = KitOrders.UseReason(_kitUse[i]);
+                    Kit.Add(tile);
+                    continue;
+                }
+                Kit.Add(EmptyKit(KitTileState.Empty, previewKit || i >= KitOrders.Slots ? -1 : i));
             }
             PackHint = !pack;
 
@@ -355,6 +412,12 @@ namespace Odyssey.Hud
 
             Version++;
         }
+
+        static KitTile EmptyKit(KitTileState state, int slot) => new KitTile
+        {
+            State = state, IconKey = string.Empty, Name = string.Empty, CountText = string.Empty,
+            PreviewIndex = -1, Slot = slot, ItemDef = -1, UseReason = string.Empty,
+        };
 
         /// <summary>"4 of 6": the registry's words round the two figures.</summary>
         public static string KitCount(int used, int capacity) =>

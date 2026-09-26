@@ -4,9 +4,12 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// What a colonist's kit publishes (design 54 §6): for each <b>filled</b> slot, the thing's def
-    /// and how many, as two sparse pawn aspects — <c>odyssey.pawn.kit.&lt;slot&gt;</c> and
-    /// <c>odyssey.pawn.kit.&lt;slot&gt;.count</c>. An empty slot publishes nothing, so a colony with
+    /// What a colonist's kit publishes (design 54 §6): for each <b>filled</b> slot, the thing's def,
+    /// how many, and whether it can be used now, as sparse pawn aspects —
+    /// <c>odyssey.pawn.kit.&lt;slot&gt;</c>, <c>.count</c> and <c>.use</c> (a <see cref="KitUseHandle"/>,
+    /// absent for a thing with no use). Use is published rather than derived by the interface
+    /// because the rule is the simulation's (<see cref="Kit.UseOf"/>): the button reads what the
+    /// order will answer. An empty slot publishes nothing, so a colony with
     /// no kits publishes exactly what it did before them. The Hud keeps its own copy of the names,
     /// held to these by a contract test, as the weapon's are.
     /// </summary>
@@ -16,6 +19,7 @@ namespace Odyssey.Sim.Pawns
 
         static readonly AspectKey[] Defs = Build(string.Empty);
         static readonly AspectKey[] Counts = Build(".count");
+        static readonly AspectKey[] Uses = Build(".use");
 
         static AspectKey[] Build(string suffix)
         {
@@ -33,6 +37,9 @@ namespace Odyssey.Sim.Pawns
         /// <summary>How many are in <paramref name="slot"/>.</summary>
         public static AspectKey Count(int slot) => Counts[slot];
 
+        /// <summary>Whether it can be used now, a <see cref="KitUseHandle"/>; absent for a thing with no use.</summary>
+        public static AspectKey Use(int slot) => Uses[slot];
+
         /// <summary>Publish <paramref name="pawn"/>'s filled slots.</summary>
         public static void Publish(SnapshotWriter writer, Pawn pawn, PawnContext ctx)
         {
@@ -42,6 +49,8 @@ namespace Odyssey.Sim.Pawns
                 if (held == null) continue;
                 writer.AddPawnAspect(pawn.Id, Defs[slot], held.DefIndex);
                 writer.AddPawnAspect(pawn.Id, Counts[slot], held.Stack);
+                int use = Kit.UseOf(pawn, ctx, held);
+                if (use != KitUseHandle.None) writer.AddPawnAspect(pawn.Id, Uses[slot], use);
             }
         }
     }

@@ -11,6 +11,8 @@ namespace Odyssey.Hud
         public string IconKey;
         public string Name;
         public int Quality;
+
+        /// <summary>The tier's word beside the name; for a kit row (design 54), the stack's count instead: "× 8".</summary>
         public string QualityWord;
 
         /// <summary>The store's name, "Stockpile 3" — or, for a made-up thing, the preview's word.</summary>
@@ -52,6 +54,9 @@ namespace Odyssey.Hud
         /// <summary>The slot being filled.</summary>
         public GearSlot Slot { get; private set; }
 
+        /// <summary>The kit slot being filled (design 54), or −1 when the list is for a worn slot or the hand.</summary>
+        public int KitSlot { get; private set; } = -1;
+
         /// <summary>The rows on the current page, at most <see cref="GearLayout.PickMaxRows"/>.</summary>
         public readonly List<GearPickRow> Rows = new List<GearPickRow>();
 
@@ -61,13 +66,14 @@ namespace Odyssey.Hud
         /// <summary>Every row across every page.</summary>
         public int Total => _all.Count;
 
-        /// <summary>The slot's word, for the header: "HEAD".</summary>
-        public string SlotName => GearModel.SlotLabel(Slot);
+        /// <summary>The slot's word, for the header: "HEAD", or "KIT".</summary>
+        public string SlotName => KitSlot >= 0 ? Registry.Label(GearModel.KitKey) : GearModel.SlotLabel(Slot);
 
         /// <summary>List what fits <paramref name="slot"/>, and go to the first page.</summary>
         public void Build(WorldSnapshot snapshot, GearSlot slot, GearPreview? preview)
         {
             Slot = slot;
+            KitSlot = -1;
             _all.Clear();
             if (slot == GearSlot.Weapon) ReadStoredWeapons(snapshot);
             else if (preview != null && preview.On)
@@ -87,6 +93,65 @@ namespace Odyssey.Hud
             Page = 0;
             FillPage();
         }
+
+        /// <summary>
+        /// List what the stores hold that <paramref name="colonist"/>'s kit would take (design 54 §3):
+        /// every stored stack of a kind that fits a kit and for which one take has room
+        /// (<see cref="KitOrders.TakeRoom"/>), named by its store, with its count beside it. A row
+        /// chosen sends <see cref="KitOrders.Take"/>, the right-click menu's own order.
+        /// </summary>
+        public void BuildKit(WorldSnapshot snapshot, PawnId colonist, int kitSlot)
+        {
+            KitSlot = kitSlot;
+            _all.Clear();
+            ReadStores(snapshot);
+
+            GridSize size = snapshot.Size;
+            ReadOnlySpan<ThingView> things = snapshot.Things;
+            for (int i = 0; i < things.Length; i++)
+            {
+                ThingView thing = things[i];
+                if (!KitOrders.Fits(thing.DefIndex) || thing.Stack <= 0 || !size.Contains(thing.Cell)) continue;
+                if (KitOrders.TakeRoom(snapshot, colonist, thing.DefIndex) <= 0) continue;
+                if (!StoreOrdinal(size, thing, out int ordinal)) continue;
+
+                _all.Add(new GearPickRow
+                {
+                    IconKey = ItemLabels.IconKey(thing.DefIndex), Name = ItemLabels.Label(thing.DefIndex),
+                    QualityWord = "\u00d7 " + thing.Stack.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    Place = InventoryPlace.NameOf(thing.Contained, ordinal), Thing = thing, PreviewIndex = -1,
+                });
+            }
+            Sort();
+            Page = 0;
+            FillPage();
+        }
+
+        void ReadStores(WorldSnapshot snapshot)
+        {
+            _zoneOrdinalAt.Clear();
+            ReadOnlySpan<StoreView> stores = snapshot.Stores;
+            for (int i = 0; i < stores.Length; i++) _zoneOrdinalAt[stores[i].CellIndex] = stores[i].Ordinal;
+            _shelfOrdinalAt.Clear();
+            ReadOnlySpan<StorageUnitView> units = snapshot.StorageUnits;
+            for (int i = 0; i < units.Length; i++) _shelfOrdinalAt[units[i].CellIndex] = units[i].Ordinal;
+        }
+
+        /// <summary>The number of the store holding <paramref name="thing"/>; false for a thing loose outside every store.</summary>
+        bool StoreOrdinal(GridSize size, in ThingView thing, out int ordinal)
+        {
+            int cell = size.Index(thing.Cell.X, thing.Cell.Z, thing.Cell.Y);
+            return thing.Contained ? _shelfOrdinalAt.TryGetValue(cell, out ordinal) : _zoneOrdinalAt.TryGetValue(cell, out ordinal);
+        }
+
+        // By name, then by store, then by thing: the same list in the same order every time it opens.
+        void Sort() => _all.Sort((a, b) =>
+        {
+            int by = string.CompareOrdinal(a.Name, b.Name);
+            if (by != 0) return by;
+            by = string.CompareOrdinal(a.Place, b.Place);
+            return by != 0 ? by : a.Thing.Id.Value.CompareTo(b.Thing.Id.Value);
+        });
 
         void ReadStoredWeapons(WorldSnapshot snapshot)
         {
@@ -161,7 +226,7 @@ namespace Odyssey.Hud
                 preview?.Wear(colonist, pick.PreviewIndex);
                 return false;
             }
-            order = CombatOrders.Equip(colonist, pick.Thing);
+            order = KitSlot >= 0 ? KitOrders.Take(colonist, pick.Thing) : CombatOrders.Equip(colonist, pick.Thing);
             return true;
         }
     }

@@ -61,9 +61,9 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// <c>OrderUseKit(A = colonist, B = slot)</c>: use it now. Medical supplies start the
-        /// treatment of herself from that slot, with no walk (<see cref="Medical.WorthAnOrder"/> is
-        /// the test, the Tend order's own); a ration starts a meal of it where she stands, refused
-        /// while she is full. Anything else in a kit has no use yet.
+        /// treatment of herself from that slot, with no walk; a ration starts a meal of it where she
+        /// stands. Refused whenever <see cref="Kit.UseOf"/> — the rule the Use button is drawn from —
+        /// says it is not usable.
         /// </summary>
         public IntentRejection HandleOrderUseKit(Intent intent)
         {
@@ -72,11 +72,8 @@ namespace Odyssey.Sim.Pawns
             ColonyItem? item = Kit.Held(pawn, _ctx, intent.B);
             if (item == null) return IntentRejection.NotPermitted;
 
-            ItemDef def = _ctx.Content.Items[item.DefIndex];
-            bool heals = def.healPerUnit > 0, feeds = def.nutrition > 0;
-            if (heals && !Medical.WorthAnOrder(pawn, _ctx)) return IntentRejection.NotPermitted;
-            if (!heals && (!feeds || pawn.Needs[NeedIndex.Food] >= _ctx.Content.Needs[NeedIndex.Food].max))
-                return IntentRejection.NotPermitted;
+            if (Kit.UseOf(pawn, _ctx, item) != KitUseHandle.Usable) return IntentRejection.NotPermitted;
+            bool heals = _ctx.Content.Items[item.DefIndex].healPerUnit > 0;
 
             int tick = IntentTick;
             if (pawn.Drafted) pawn.DraftQuietSinceTick = tick;

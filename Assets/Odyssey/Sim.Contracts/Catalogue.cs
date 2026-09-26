@@ -630,4 +630,22 @@ namespace Odyssey.Sim.Contracts
         public const int Stone = 5;
         public const int Count = 6;
     }
+
+    /// <summary>
+    /// Whether the thing in a kit slot can be used now (design 54 §3), as the kit's
+    /// <c>odyssey.pawn.kit.&lt;slot&gt;.use</c> aspect carries it: the simulation's own answer, so
+    /// the Gear tab's Use button never disagrees with the order it sends. Absent (nought) for a
+    /// thing with no use at all.
+    /// </summary>
+    public static class KitUseHandle
+    {
+        public const int None = 0;
+        public const int Usable = 1;
+
+        /// <summary>Medical supplies on somebody with nothing to treat.</summary>
+        public const int NotHurt = 2;
+
+        /// <summary>A ration on somebody who is full.</summary>
+        public const int NotHungry = 3;
+    }
 }

@@ -419,6 +419,23 @@ namespace Odyssey.Tests.Sim
             Assert.That(frame.TryGetPawnAspect(pawn.Id, KitAspects.Def(0), out int def) && def == Medical, Is.True);
             Assert.That(frame.TryGetPawnAspect(pawn.Id, KitAspects.Count(0), out int count) && count == 3, Is.True);
             Assert.That(frame.TryGetPawnAspect(pawn.Id, KitAspects.Def(1), out _), Is.False);
+            Assert.That(frame.TryGetPawnAspect(pawn.Id, KitAspects.Use(0), out int whole) && whole == KitUseHandle.NotHurt, Is.True,
+                "whole, the supplies say Not hurt");
+
+            pawn.HpMilli = Pool(pawn, 300);
+            colony.World.Tick();
+            Assert.That(colony.World.Views.Current.TryGetPawnAspect(pawn.Id, KitAspects.Use(0), out int hurt) && hurt == KitUseHandle.Usable,
+                Is.True, "hurt, they are usable");
+        }
+
+        /// <summary>The aspect names the interface reads, spelled as the simulation publishes them.</summary>
+        [Test]
+        public void TheAspectNamesAreSpelledAsTheInterfaceReadsThem()
+        {
+            Assert.That(KitAspects.Def(0), Is.EqualTo(AspectKey.Of("odyssey.pawn.kit.0")));
+            Assert.That(KitAspects.Count(1), Is.EqualTo(AspectKey.Of("odyssey.pawn.kit.1.count")));
+            Assert.That(KitAspects.Use(1), Is.EqualTo(AspectKey.Of("odyssey.pawn.kit.1.use")));
+            Assert.That(Kit.Slots, Is.EqualTo(2), "the Hud draws two belt tiles live (GearLayout.KitBelt)");
         }
     }
 }

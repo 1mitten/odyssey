@@ -188,6 +188,25 @@ namespace Odyssey.Sim.Pawns
             return true;
         }
 
+        /// <summary>
+        /// Can she use <paramref name="item"/> now (design 54 §3) — a <see cref="KitUseHandle"/>.
+        /// The one owner of the rule: the Use order asks it and the snapshot publishes it, so the
+        /// button and the order cannot disagree. Supplies are usable while a treatment would do
+        /// anything (<see cref="Medical.WorthAnOrder"/>, the Tend order's test); a ration while she
+        /// is not full.
+        /// </summary>
+        public static int UseOf(Pawn pawn, PawnContext ctx, ColonyItem item)
+        {
+            ItemDef def = ctx.Content.Items[item.DefIndex];
+            if (def.healPerUnit > 0)
+                return Medical.WorthAnOrder(pawn, ctx) ? KitUseHandle.Usable : KitUseHandle.NotHurt;
+            if (def.nutrition > 0)
+                return pawn.Needs[NeedIndex.Food] < ctx.Content.Needs[NeedIndex.Food].max
+                    ? KitUseHandle.Usable
+                    : KitUseHandle.NotHungry;
+            return KitUseHandle.None;
+        }
+
         /// <summary>The first thing in her kit that heals (design 37: anything whose Def does), or null.</summary>
         public static ColonyItem? Supplies(Pawn pawn, PawnContext ctx)
         {

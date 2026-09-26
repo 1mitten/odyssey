@@ -98,6 +98,7 @@ namespace Odyssey.Hud
         {
             into.Clear();
             if (cell.HasValue) OfferEquip(selection, snapshot, cell.Value, into);
+            if (cell.HasValue) OfferKit(selection, snapshot, cell.Value, into);
             OfferTend(selection, snapshot, under, into);
 
             if (into.Count == 0) return false;
@@ -175,6 +176,52 @@ namespace Odyssey.Hud
 
             var order = new[] { CombatOrders.Equip(equipper, weapon) };
             return new ContextMenuRow(EquipKey, label, enabled: true, string.Empty, order);
+        }
+
+        /// <summary>
+        /// Take into kit (design 54 §3), one row per kind of kit thing at the click — loose or in a
+        /// store, in the cell or the one above, as Equip reads it — for the primary colonist.
+        /// Disabled with <i>Kit full</i> when one take has no room for it, and with <i>Downed</i>
+        /// when every colonist selected is down; no colonist selected, no row.
+        /// </summary>
+        static void OfferKit(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot, CellRef cell,
+            List<ContextMenuRow> into)
+        {
+            bool anyColonist = false;
+            PawnId taker = PawnId.None;
+            for (int i = 0; i < selection.Count && !taker.IsValid; i++)
+            {
+                if (!snapshot.TryGetPawn(selection[i], out PawnView view) || !view.IsColonist) continue;
+                anyColonist = true;
+                if (!view.IsDowned) taker = view.Id;
+            }
+            if (!anyColonist) return;
+
+            int first = into.Count;
+            CollectKit(snapshot, cell, taker, first, into);
+            if (cell.Y + 1 < snapshot.Size.SizeY) CollectKit(snapshot, cell.Above, taker, first, into);
+        }
+
+        static void CollectKit(WorldSnapshot snapshot, CellRef cell, PawnId taker, int first, List<ContextMenuRow> into)
+        {
+            ReadOnlySpan<ThingView> things = snapshot.Things;
+            for (int i = 0; i < things.Length; i++)
+            {
+                ThingView thing = things[i];
+                if (thing.Cell != cell || !KitOrders.Fits(thing.DefIndex)) continue;
+                string label = KitOrders.TakeLabel(thing.DefIndex);
+                bool offered = false;
+                for (int r = first; r < into.Count && !offered; r++) offered = into[r].Label == label;
+                if (offered) continue;
+
+                if (!taker.IsValid)
+                    into.Add(new ContextMenuRow(KitOrders.TakeKey, label, enabled: false, Registry.Label(DownedReasonKey), Nothing));
+                else if (KitOrders.TakeRoom(snapshot, taker, thing.DefIndex) <= 0)
+                    into.Add(new ContextMenuRow(KitOrders.TakeKey, label, enabled: false, Registry.Label(KitOrders.KitFullKey), Nothing));
+                else
+                    into.Add(new ContextMenuRow(KitOrders.TakeKey, label, enabled: true, string.Empty,
+                        new[] { KitOrders.Take(taker, thing) }));
+            }
         }
 
         /// <summary>The Tend row's verb (design 43 §11): "Tend", "Treat this patient".</summary>
