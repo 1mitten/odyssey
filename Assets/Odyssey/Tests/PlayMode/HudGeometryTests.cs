@@ -400,7 +400,7 @@ namespace Odyssey.Tests.PlayMode
                 settings.SetTab(SettingsTab.Audio);
                 yield return null;
 
-                List<Slider> faders = doc.rootVisualElement.Query<Slider>(className: "settings__fader").ToList();
+                List<Slider> faders = doc.rootVisualElement.Query<Slider>(className: HudShell.BusFaderClass).ToList();
                 Assert.That(faders.Count, Is.EqualTo(SettingsDirector.Buses.Length),
                     "one fader per bus, or a bus has no lever");
 

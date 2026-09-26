@@ -757,6 +757,9 @@ namespace Odyssey.Presentation.Ui
 
         // ============================================================ Audio
 
+        /// <summary>The class only a volume bus's fader carries.</summary>
+        public const string BusFaderClass = "settings__fader--bus";
+
         /// <summary>
         /// The Audio tab: one fader per bus. A fader holds a continuum rather than a choice, with
         /// unity seated at the centre of the track (owner, 2026-09-17) and the centre marked, so
@@ -778,6 +781,9 @@ namespace Odyssey.Presentation.Ui
 
                 var fader = new Slider(-1f, 1f, SliderDirection.Horizontal);
                 fader.AddToClassList("settings__fader");
+                // A bus's own marker: the Story block's Custom sliders are settings faders too,
+                // and a test counting the buses must not count them.
+                fader.AddToClassList(BusFaderClass);
                 fader.SetValueWithoutNotify(SettingsDirector.TrackOf(SettingsDirector.UnityDb));
                 fader.tooltip =
                     "Drag to set the volume. Silence at the left, unity at the centre mark, boost at the right";
