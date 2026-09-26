@@ -47,6 +47,13 @@ namespace Odyssey.Presentation.Ui
         }
 
         readonly List<StoryCardView> _storyCards = new();
+
+        /// <summary>
+        /// Where a storyteller's portrait is found, under <c>Resources</c>, named by its registry key
+        /// (<c>ui.storyteller.portrait.*</c>). A missing file leaves the drawn emblem, so a
+        /// storyteller added before its art still has a face.
+        /// </summary>
+        public const string StoryPortraitFolder = "Odyssey/Storytellers";
         readonly List<Label> _storyRungs = new();
         readonly Dictionary<string, StoryLeverView> _storyLevers = new();
         Label _storyBlurbCompact = null!;
@@ -86,6 +93,13 @@ namespace Odyssey.Presentation.Ui
                 portrait.tooltip = Registry.Label(teller.PortraitKey);
                 var emblem = new PathGlyph(teller.Emblem, HudLayout.StoryEmblem, HudTokens.TextMeta);
                 portrait.Add(emblem);
+                Texture2D? art = Resources.Load<Texture2D>($"{StoryPortraitFolder}/{teller.PortraitKey}");
+                if (art != null)
+                {
+                    portrait.style.backgroundImage = new StyleBackground(art);
+                    portrait.AddToClassList("story__portrait--art");
+                    emblem.style.display = DisplayStyle.None;
+                }
                 head.Add(portrait);
                 Label name = HudText.Make(teller.Label, HudTextRole.Name, ussClass: "story__name");
                 head.Add(name);

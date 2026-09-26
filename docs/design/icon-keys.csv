@@ -933,9 +933,9 @@ ui.assign.nohearth,No hearth yet,ui.assign,HA,"There is no hearth, so there is n
 ui.storyteller.jacob,Jacob,ui.storyteller,SY,"A llama who keeps the calendar. Trouble arrives on schedule, and he spits between visits."
 ui.storyteller.trent,Trent,ui.storyteller,SY,"Half man, half salvage. His implants misfire at random, and so does your luck."
 ui.storyteller.kano,Kano,ui.storyteller,SY,"A vast, sleepy pig. Long quiet seasons to build in, then one day he gets up."
-ui.storyteller.portrait.jacob,Jacob's portrait,ui.storyteller,SY,A llama keeping a calendar. Drawn as a square wave until the portrait is commissioned
-ui.storyteller.portrait.trent,Trent's portrait,ui.storyteller,SY,A man half rebuilt from salvage. Drawn as a jagged line until the portrait is commissioned
-ui.storyteller.portrait.kano,Kano's portrait,ui.storyteller,SY,A vast pig asleep. Drawn as a sun on the horizon until the portrait is commissioned
+ui.storyteller.portrait.jacob,Jacob's portrait,ui.storyteller,SY,A llama in spectacles keeping a calendar
+ui.storyteller.portrait.trent,Trent's portrait,ui.storyteller,SY,A man half rebuilt from salvage, one eye a red lens
+ui.storyteller.portrait.kano,Kano's portrait,ui.storyteller,SY,A vast pig asleep in the hay
 ui.storyteller.heading,Storyteller,ui.storyteller,SY,"Who decides when things happen to the colony, and how hard the threats hit"
 ui.difficulty.heading,Difficulty,ui.difficulty,SY,"How hard threats hit, and how forgiving the game is after a disaster"
 ui.difficulty.peaceful,Peaceful,ui.difficulty,SY,No big threats at all. The colony is left to build

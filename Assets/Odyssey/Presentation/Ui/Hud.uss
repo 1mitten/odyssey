@@ -4169,6 +4169,11 @@
     background-color: rgba(12, 16, 20, 1);
 }
 
+/* The commissioned portrait fills the tile at any size, compact included. */
+.story__portrait--art {
+    background-size: cover;
+}
+
 .story__name {
     margin-left: 12px;
     color: rgb(238, 243, 246);

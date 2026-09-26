@@ -11,9 +11,9 @@ Who decides when things happen to the colony, how hard the threats hit, and the 
 | **Jacob** | `ui.storyteller.jacob` | A llama who keeps the calendar. Trouble arrives on schedule, and he spits between visits. | no art | SY |
 | **Trent** | `ui.storyteller.trent` | Half man, half salvage. His implants misfire at random, and so does your luck. | no art | SY |
 | **Kano** | `ui.storyteller.kano` | A vast, sleepy pig. Long quiet seasons to build in, then one day he gets up. | no art | SY |
-| **Jacob's portrait** | `ui.storyteller.portrait.jacob` | A llama keeping a calendar. Drawn as a square wave until the portrait is commissioned <br>**Needs:** a llama holding a calendar. Commissioned portrait art, not a sheet icon | no art | SY |
-| **Trent's portrait** | `ui.storyteller.portrait.trent` | A man half rebuilt from salvage. Drawn as a jagged line until the portrait is commissioned <br>**Needs:** a man half rebuilt from salvage. Commissioned portrait art, not a sheet icon | no art | SY |
-| **Kano's portrait** | `ui.storyteller.portrait.kano` | A vast pig asleep. Drawn as a sun on the horizon until the portrait is commissioned <br>**Needs:** a vast sleeping pig. Commissioned portrait art, not a sheet icon | no art | SY |
+| **Jacob's portrait** | `ui.storyteller.portrait.jacob` | A llama in spectacles keeping a calendar <br>**Needs:** a llama holding a calendar. Commissioned portrait art, not a sheet icon | no art | SY |
+| **Trent's portrait** | `ui.storyteller.portrait.trent` | A man half rebuilt from salvage <br>**Needs:** a man half rebuilt from salvage. Commissioned portrait art, not a sheet icon | no art | SY |
+| **Kano's portrait** | `ui.storyteller.portrait.kano` | A vast pig asleep in the hay <br>**Needs:** a vast sleeping pig. Commissioned portrait art, not a sheet icon | no art | SY |
 | **Storyteller** | `ui.storyteller.heading` | Who decides when things happen to the colony, and how hard the threats hit | no art | SY |
 
 ## Difficulty
