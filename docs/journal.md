@@ -13958,3 +13958,45 @@ Written in a container with no Unity: the model and its setting are proven in th
 engine half is uncompiled and owes both Unity tiers, a player build and the hitch tour's mid-wake
 picture before it merges (design 56 §11).
 
+
+## 2026-09-26 — Factions: a racket, a horde, and one owner of sides
+
+**Asked to explore factions, with the reference's page as the starting point.** Three read-only
+surveys ran first. The code has a side on the *kind*, `Faction { Colony, Wild, Hostile }`, and
+nothing else: no goodwill, no relations, and no pawn can change sides. "Is this an enemy?" is
+answered in about a dozen places, every one of them centred on the colony. `Ranged.cs:80` spells
+the asymmetry out: `me.IsColonist ? IsThreatTo : other.IsColonist`. The docs had factions at M7,
+"scope lightly", with research item A13 never run, and *proposed* names (the Tithe, the Cartage,
+the Kindred). **The wiki itself was refused by the proxy**, as it has been for every Lane A question
+this month, so `a-13` stands on search excerpts; its high-confidence numbers are the ones design 61
+uses.
+
+**Two things on the remote changed the plan between rounds.**
+1. The prisoner line (design 58, unmerged) had already built `Allegiance`, "the one owner of whose
+   side a pawn is on". The pairwise hostility rule proposed as F0 therefore **extends it**, and the
+   prisoner line merges first. A second owner of sides, written the same week, would have been
+   exactly the pattern design 58 §14 warns about.
+2. Design numbers 57 to 60 were all taken on branches, so this is 61.
+
+**The owner's answers turned a generic system into this game's.**
+- The bandits are kept "as we know them" and made a **protection racket**. The mechanic that makes
+  that work is the reference's own drift, not a script:
+  - the bandits' natural band sits *below* the hostile line, so a paid tithe lifts them to neutral;
+  - four a day wears the payment off, and the collector comes back.
+  - Paying is one storage zone with a filter at the top rung, which reuses the whole haul system
+    rather than adding a giver.
+- **The Orc Army** is the owner's own addition: a permanently hostile horde, hostile to the bandits
+  too. That buys the one faction-against-faction moment the slice has.
+- The traders' caravans are another agent's. This line owns the model, and design 61 §6 gives that
+  line both its contract and a stop-gap (`Faction.Neutral`) for landing first.
+
+**Decisions to keep.**
+- `Relation` is **stored**, because hysteresis needs the previous state.
+- Drift writes **no reason row**, or it would push the real reasons out of a five-row ring.
+- The section is **hashed only where it differs from a new world**, so F1 should move no golden.
+  That is to be measured, not assumed.
+- **Nothing is built.** The plan waits for approval.
+- **Still open with the owner:**
+  - which Synty pack has the orcs;
+  - what "maybe something else" meant (the Sump, arriving from below, is proposed);
+  - whether *the Tithe* survives as a name or becomes the word for the demand.
