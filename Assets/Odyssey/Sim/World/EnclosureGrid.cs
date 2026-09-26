@@ -319,11 +319,14 @@ namespace Odyssey.Sim.World
                     if (x == 0 || x == sizeX - 1 || z == 0 || z == sizeZ - 1)
                         touchesMapEdge = true;
 
-                    if (_currentRoomCells.Count > MaxRoomCells)
-                    {
-                        exceededLimit = true;
-                        break;
-                    }
+                    // **Flagged, never cut short** (design 58 §15d). The fill used to break here,
+                    // leaving every cell it had queued marked visited and unprocessed — so a later
+                    // fill that reached one treated it as a wall, and a room whose doorway opened on
+                    // to a big outdoor region scanned first came out enclosed. A broken cell door
+                    // left its cell a cell. Carrying on costs nothing: every cell of a layer is
+                    // visited once either way, and the cells a break skipped were only flooded
+                    // again as regions of their own.
+                    if (_currentRoomCells.Count > MaxRoomCells) exceededLimit = true;
 
                     // North (z + 1)
                     if (z + 1 < sizeZ) ProcessNeighbour(baseCell, currLocal + sizeX, 0, ref tail);
