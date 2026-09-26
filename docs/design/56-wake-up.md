@@ -245,6 +245,15 @@ on screen and no frame cap is through 600 frames before a 0.2 s close has run. T
 fifteen-second real-time deadline now (`WakeUpTests.PassageSeconds`) and pass. The code was right;
 the test counted the wrong unit — the same trap as "a frame is not a tick" in `docs/lessons.md`.
 
+**The player build refused** until `Odyssey/WakeBlur` was in the committed always-included list
+(`ProjectSettings/GraphicsSettings.asset`, by `ShaderInclusion.Apply`): the code's `Required` list and
+the project setting are two things, and only a player build compares them. Built, the hitch tour at
+3840 x 2160 from the title screen logs *blur shader available True, pass enqueued 162 times* and a
+mid-wake picture that is fully blurred and warm. Its two slow frames are the build frame (742 ms,
+behind the black, where it belongs) and the 4K screenshot itself. The capture had been written to a
+relative `Logs/wake-mid.png`, which a player does not resolve against its working directory and
+drops without a word; it goes beside the `-logFile` now. Every item above is closed.
+
 ## 12. What not to undo by tidying
 
 - **Two dark frames**, and the build **requested** late but **handed over** in its own frame (§3).
