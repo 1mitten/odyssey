@@ -637,3 +637,94 @@ only differences inside the table are read):
   Standard and Huge, a figure noisier than `World` because the frame is GPU-bound there. **"Performance
   doesn't suffer" is breached by the relief, not the depth**, and the lever is M9's ground skin, which
   replaces ~625 turf instances a surface chunk with one mesh — measure it against this table.
+
+## 12. Thirty-two layers, and rock that costs nothing (2026-09-26, deep mining DM1–DM2)
+
+Design 62 §2 asked for a deeper board on one condition: that the depth cost memory and generation
+time and nothing else. Three depth-scaled costs were taken out first (DM1), then every offered
+board went to 32 layers (DM2, `GridSize.OfferedLayers`).
+
+**What changed.** Solid terrain belongs to no navigation region (`NavGrid.KindOf`; walls keep
+theirs), so the rebuild's passes over every region stop counting rock. Underground, the drawn band
+stops `SliceSettings.undergroundDepth` = 7 layers below the slice — where `ShadeBelow` floors at
+0.08 and stops telling layers apart — instead of at bedrock. And `DoorDirector` rescans only the
+chunks whose `ChunkVersion` moved (`Odyssey.Hud.ChunkedCellList`), not 1.8 million cells on every
+edit. The nav graph was never in the world hash (`NavGraph.ContributeTo` has no caller), so no
+golden moved for DM1 and `GoldenColonyProbe` is identical before and after.
+
+**The machine.** A cloud container, Linux 6.18, 4 logical CPUs, .NET 8.0.31, Debug build through
+`scripts/test-fast.sh`, **with other agents' test runs on the same CPUs** (load average 6–9 during
+the run). The absolutes are two to three times the Windows dev machine's §2 and §11 figures and
+are not comparable with them; **read each row against its control beside it**. The arm is
+`DeepBoardProbe` (`[Explicit]`): the played map through `PlayedMap.Def`, seed 4242; the edit tick
+is `NavGraphStatisticsTests`' (mean of 200 rebuilds, one random solid cell cleared before each).
+The control is `NavGrid.SolidTerrainHasRegions`, which restores the old rule on one graph, run
+before/after/before/after on identical grids; the repeat is the noise floor.
+
+### 12.1 DM1: before and after, one run (2026-09-26 17:41Z)
+
+| Board | Regions before → after | Links | Edit tick before (r1 / r2) | Edit tick after (r1 / r2) | Nav graph MiB before → after | World MiB (B/cell) |
+|---|---|---|---|---|---|---|
+| Standard 120² @16 | 2,110 → 392 | 1,496 | 2.23 † / 1.15 | 1.65 † / 0.77 | 2.12 → 1.94 | 18.7 (85.1) |
+| Standard @24 | 3,262 → 392 | 1,497 | 1.02 / 1.16 | 0.64 / 0.63 | 3.08 → 2.90 | 27.3 (82.8) |
+| **Standard @32** | 4,414 → 392 | 1,497 | 1.25 / 1.07 | **0.64 / 0.64** | 4.09 → 3.71 | 35.8 (81.4) |
+| Huge 240² @16 | 8,406 → 1,501 | 6,257 | 2.73 / 2.95 | 2.02 / 2.15 | 8.48 → 7.77 | 73.7 (83.9) |
+| Huge @24 | 13,018 → 1,506 | 6,269 | 3.18 / 2.96 | 2.23 / 2.04 | 12.39 → 11.66 | 108.4 (82.3) |
+| **Huge @32** | 17,626 → 1,506 | 6,269 | 3.24 / 3.33 | **2.04 / 2.01** | 16.42 → 14.89 | 142.5 (81.1) |
+| Scale target 250² @40 | 24,141 → 1,649 | 6,865 | 4.23 / 4.19 | 2.51 / 2.32 | 21.21 → 19.66 | 191.6 (80.4) |
+
+† The first rows of the run carry the JIT's warm-up; r2 is the figure to read.
+
+- **The gate holds.** The edit tick at 32 layers after is under today's at 16 on both boards:
+  Standard 0.64 against 1.15, Huge 2.01–2.04 against 2.73–2.95.
+- **Depth has left the edit tick.** After the change, regions do not move with depth at all (392 on
+  Standard at 16, 24 and 32; 1,501 → 1,506 on Huge) and neither does the tick (Huge 2.02–2.15 at
+  16, 2.01–2.04 at 32). Before it, regions grew 2.1× from 16 to 32 and the tick with them.
+- **Regions fell 5.4–14.6×; the tick fell 30–45 %.** What is left of an edit is the links (flat in
+  depth, about 1,500 and 6,300), the block flood and the portal and district passes over them — the
+  cost of what is open, not of what is under it. The scale target's 1.15 ms of the 2026-09-19 audit
+  is 4.2 → 2.3–2.5 ms here, on this machine.
+- **Memory is the cells.** Removing rock regions saves 0.2–1.5 MiB of region arrays; the world is
+  81–85 bytes a cell at every depth, so 32 layers is simply twice 16.
+- **Not measured here, owed to a Unity session:** the frame with the camera ten layers down, before
+  and after the seven-layer band, and `FrameSection.Doors` under an arm that keeps editing (§2's gap
+  is still open; the rescan is now per chunk and `ChunkedCellListTests` and
+  `DoorPresentationTests.ADoorRaisedRescansItsChunkNotTheBoard` hold its shape, not its cost).
+
+### 12.2 DM2: every board at 32 layers, one run (2026-09-26 17:42Z)
+
+| Board | Cells | Generation, median of 5 seeds | Regions / links | Edit tick | World MiB (B/cell) | Save KB |
+|---|---|---|---|---|---|---|
+| Small 80² @16 | 102,400 | 26 ms | 156 / 572 | 0.83 † | 8.4 (86.0) | 64 |
+| **Small @32** | 204,800 | 42 ms | 156 / 572 | 0.29 | 16.0 (82.1) | 67 |
+| Standard 120² @16 | 230,400 | 60 ms | 392 / 1,496 | 0.68 | 18.6 (84.7) | 147 |
+| **Standard @32** | 460,800 | 99 ms | 392 / 1,497 | 0.68 | 35.8 (81.4) | 154 |
+| Large 180² @24 | 777,600 | 174 ms | 884 / 3,565 | 1.24 | 60.9 (82.2) | 393 |
+| **Large @32** | 1,036,800 | 216 ms | 884 / 3,565 | 1.27 | 80.1 (81.0) | 368 |
+| Huge 240² @16 | 921,600 | 261 ms | 1,501 / 6,257 | 2.06 | 73.7 (83.9) | 601 |
+| **Huge @32** | 1,843,200 | 422 ms | 1,506 / 6,269 | 2.02 | 142.5 (81.1) | 641 |
+
+† Warm-up, as above.
+
+- **32 layers costs memory and generation time and nothing else**, as design 62 §2c required: the
+  edit tick is the same at 32 as at the old depth on every board, regions and links are unmoved,
+  and a save grows by 0–7 % (the palette chunks compress uniform rock; Large's is smaller at 32
+  than at 24 on this seed).
+- **Memory doubles with the cells**: Standard 35.8 MiB, Large 80.1, Huge 142.5 of simulation, plus
+  roughly 18–20 B/cell of render mirror (§2) — about 176 MiB on Huge in all. Design 62 §2d's
+  estimate (~36 / ~80 / ~140) holds. Huge at 32 is the owner's call on the laptop (design 62 §11 Q2).
+- **Generation is 1.6–1.9× slower**, 99 ms on Standard and 422 ms on Huge here, inside the loading
+  screen.
+- **The played-board golden moved to 32 layers** and `GoldenColonyProbe` says it is the same colony
+  sixteen layers higher: every cell sum moved by exactly its count × 230,400 and every other number
+  is identical (`Golden.cs`).
+
+**One depth-scaled term found and not changed:** `NavGraph.RecomputeLayerChangeEstimate` divides
+the board's portal count by `SizeY − 1`, so a deeper board (portals unchanged, more layer gaps of
+rock) raises the path search's layer-change hint. Measured by the same arm (a repeat of §12.2 at
+17:43Z, which also read Small 0.41 → 0.44 ms, Standard 0.64 → 0.60, Large 1.23 → 1.26 and Huge
+2.01 → 2.08 for the edit tick, confirming the table): **Small 3,000 → 4,600, Standard 2,500 →
+3,600, Large 3,000 → 3,500, Huge 2,500 → 3,600.** It moves search effort and possibly route choice,
+not correctness — and the played-board golden above did not notice it, because the colony's paths
+there never change layer through a portal the hint decides. Fixing it (count only the gaps that hold
+a portal) would move the goldens; it wants its own unit and a measurement.
