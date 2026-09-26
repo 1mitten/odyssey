@@ -22,7 +22,6 @@ namespace Odyssey.Hud
         static IReadOnlyList<AlmanacEntry> TerrainEntries() => new List<AlmanacEntry>
         {
             Keyed("ui.terrain.grass", Terrain, "Terrain", "Natural",
-                Icon("grass", "#4d9e5a", "M4 20c2-6 5-11 8-16 3 5 6 10 8 16M8 20c1-4 3-7 5-10M16 20c-1-4-3-7-5-10"),
                 "The living surface of the meadow. Every dry surface column on the board is grass, and every tree and bush stands on it.",
                 "Covers the surface of the meadow", AlmanacAction.FindOnMap,
                 new[] {
@@ -37,7 +36,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.terrain.carrot", "sown into grass"), ("ui.terrain.tree.meadow", "grows on it"), ("ui.terrain.subsoil", "the two cells beneath") }),
 
             Keyed("ui.terrain.marsh", Terrain, "Terrain", "Natural",
-                Icon("marsh", "#6b7d4a", "M3 18h18M5 18c0-4 1-7 2-9M9 18c0-3 0-6-1-8M15 18c0-3 1-6 2-8M19 18c0-4-1-7-2-9M3 14c3-1 5 1 8 0"),
                 "Wet ground in a broken ring round the meadow's water. Slower to cross than grass and too poor to sow.",
                 "One cell round streams and ponds, broken up", AlmanacAction.FindOnMap,
                 new[] {
@@ -51,7 +49,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.terrain.water.shallow", "the water it fringes"), ("ui.terrain.grass", "the faster ground beside it") }),
 
             Keyed("ui.terrain.water.shallow", Terrain, "Terrain", "Natural",
-                Icon("water_shallow", "#3d7e9a", "M2 15c4-2 6 2 10 0s6 2 10 0M2 9c4-2 6 2 10 0s6 2 10 0"),
                 "Streams and the edges of ponds, one layer down on a sand bed. People wade it at a third of their pace; animals never enter it.",
                 "Streams, and within two cells of a pond's shore", AlmanacAction.FindOnMap,
                 new[] {
@@ -67,7 +64,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.terrain.water.deep", "further from the shore"), ("ui.terrain.sand", "the bed beneath"), ("ui.terrain.marsh", "the ring round it") }),
 
             Keyed("ui.terrain.water.deep", Terrain, "Terrain", "Natural",
-                Icon("water_deep", "#255a78", "M2 8c4-2 6 2 10 0s6 2 10 0M2 13c4-2 6 2 10 0s6 2 10 0M2 18c4-2 6 2 10 0s6 2 10 0"),
                 "The middle of a pond, more than two cells from the shore. Nobody enters it and paths go round.",
                 "The middle of ponds", AlmanacAction.FindOnMap,
                 new[] {
@@ -80,7 +76,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.terrain.water.shallow", "the wadeable edge"), ("ui.terrain.packedgravel", "the bed beneath") }),
 
             Keyed("ui.terrain.sand", Terrain, "Terrain", "Natural",
-                Icon("sand", "#c9b27a", "M3 17c3-1 6-1 9 0s6 1 9 0M6 12h.01M11 10h.01M16 12h.01M9 14h.01M14 14h.01"),
                 "Loose, barren ground. On the meadow it is the bed of every stream and pond edge.",
                 "Under shallow water", AlmanacAction.FindOnMap,
                 new[] {
@@ -93,7 +88,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.terrain.water.shallow", "the water above it"), ("ui.terrain.packedgravel", "the deep water's bed") }),
 
             Keyed("ui.terrain.packedgravel", Terrain, "Terrain", "Natural",
-                Icon("packed_gravel", "#7d7a74", "M4 17h16M6 14a2 1.5 0 1 0 4 0 2 1.5 0 1 0-4 0M13 13a2.5 1.5 0 1 0 5 0 2.5 1.5 0 1 0-5 0M9 10a2 1.5 0 1 0 4 0 2 1.5 0 1 0-4 0"),
                 "Stony ground packed hard. Firm footing and poor soil. On the meadow it lies only under deep water.",
                 "Under deep water", AlmanacAction.FindOnMap,
                 new[] {
@@ -106,7 +100,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.terrain.water.deep", "the water above it"), ("ui.terrain.sand", "the shallow water's bed") }),
 
             Keyed("ui.terrain.subsoil", Terrain, "Terrain", "Natural",
-                Icon("subsoil", "#8a6b4b", "M2 8h20M2 14h20M5 11h.01M10 11h.01M15 11h.01M19 11h.01M7 17h.01M13 17h.01M18 17h.01"),
                 "The band between the grass and the rock, two cells deep everywhere. Cheap to dig through.",
                 "The two cells under the surface", AlmanacAction.FindOnMap,
                 new[] {
@@ -119,7 +112,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.terrain.grass", "the surface above"), ("ui.terrain.rock", "what lies below"), ("ui.arch.tool.mine", "how it is dug") }),
 
             Keyed("ui.terrain.rock", Terrain, "Terrain", "Natural",
-                Icon("rock", "#87929e", "M4 18l3-11 9-3 5 7-2 7z M7 7l6 5 4-5"),
                 "Natural stone: the band under the subsoil, the outcrops that break the surface, and the walls of the caverns. Mined, and every cell gives stone.",
                 "Below the subsoil, and in outcrops at the surface", AlmanacAction.FindOnMap,
                 new[] {
@@ -135,7 +127,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.res.stone", "what it yields"), ("ui.res.ironore", "a seam inside it"), ("ui.res.coal", "a deeper seam"), ("ui.skill.mining", "the skill that digs it") }),
 
             Keyed("ui.terrain.bedrock", Terrain, "Terrain", "Natural",
-                Icon("bedrock", "#4f5660", "M2 20h20M2 16h20M4 16l2-4 4 2 4-5 4 3 2-2v6"),
                 "The floor of the world: the bottom two layers. It cannot be mined.",
                 "The bottom two layers", AlmanacAction.None,
                 new[] {
@@ -148,7 +139,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.terrain.rock", "the stone above it"), ("ui.arch.tool.mine", "the order that stops here") }),
 
             Keyed("ui.res.rubble", Terrain, "Terrain", "Debris",
-                Icon("rubble", "#8f8a82", "M3 19l3-4 3 2 3-5 4 3 5-2v6H3z M7 10l2-2 2 2-2 2z M15 8l2-1 1 2-2 1z"),
                 "Broken masonry left where a floor fell in. It must be cleared before anything is built in its cell.",
                 "Where a slab collapses", AlmanacAction.FindOnMap,
                 new[] {
@@ -162,7 +152,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.arch.tool.roof", "what falls to make it"), ("ui.arch.tool.mine", "the order that clears it") }),
 
             Keyed("ui.terrain.bareearth", Terrain, "Terrain", "Natural",
-                Icon("bare_earth", "#8a6b4b", "M2 18c4-3 8-3 10 0 2-3 6-3 10 0M4 12c3-2 6-2 8 0 2-2 5-2 8 0"),
                 "Soil with the grass worn off it. The meadow generator does not lay it today, so a colony will not meet it yet.",
                 "Not on the meadow board", AlmanacAction.None,
                 new[] {
@@ -173,7 +162,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.terrain.grass", "what covers it on the meadow") }),
 
             Keyed("ui.terrain.gravel", Terrain, "Terrain", "Natural",
-                Icon("gravel", "#7d7a74", "M6 16a3 2 0 1 0 6 0 3 2 0 1 0-6 0M14 12a4 2.5 0 1 0 8 0 4 2.5 0 1 0-8 0M8 8a2.5 2 0 1 0 5 0 2.5 2 0 1 0-5 0"),
                 "Loose gravel of the ruined city. A colonist stands in it rather than on it. The meadow has none.",
                 "The ruined city only", AlmanacAction.None,
                 new[] {
@@ -186,17 +174,16 @@ namespace Odyssey.Hud
 
         static IReadOnlyList<AlmanacEntry> FloraEntries() => new List<AlmanacEntry>
         {
-            Tree("ui.terrain.tree.birch", "#e8e4d8", 650, 22,
+            Tree("ui.terrain.tree.birch", 650, 22,
                 "A slim white-barked tree, more than half of the meadow's woodland. Quickest to fell, and the least wood."),
-            Tree("ui.terrain.tree.meadow", "#3f8a4a", 900, 32,
+            Tree("ui.terrain.tree.meadow", 900, 32,
                 "A broad round-crowned tree of the open meadow, the common broadleaf of the woods."),
-            Tree("ui.terrain.tree.fruit", "#8fae3d", 800, 28,
+            Tree("ui.terrain.tree.fruit", 800, 28,
                 "A low spreading tree. It bears no fruit yet: for now it is wood like the others."),
-            Tree("ui.terrain.tree.giant", "#2f6a3a", 2400, 100,
+            Tree("ui.terrain.tree.giant", 2400, 100,
                 "A rare old giant, about one tree in a hundred. An hour's felling, and more wood than four meadow trees."),
 
             Keyed("ui.terrain.bush", Flora, "Flora", "Undergrowth",
-                Icon("bush", "#4f8a3f", "M4 19h16M5 19c-2-3 0-7 3-7 0-3 3-5 5-4 2-2 6 0 5 3 3 0 4 5 1 8"),
                 "Dense undergrowth among the trees. Slow to push through, and it must be cleared before anything is built in its cell.",
                 "In the woods, away from the colony's start", AlmanacAction.FindOnMap,
                 new[] {
@@ -211,7 +198,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.terrain.bush.berry", "one bush in six"), ("ui.arch.tool.fell", "the order that clears it"), ("ui.terrain.grass", "the only ground it grows on") }),
 
             Keyed("ui.terrain.bush.berry", Flora, "Flora", "Undergrowth",
-                Icon("berry_bush", "#a0304a", "M4 19h16M5 19c-2-3 0-7 3-7 0-3 3-5 5-4 2-2 6 0 5 3 3 0 4 5 1 8M9 14h.01M13 12h.01M15 15h.01"),
                 "A bush that bears berries. Order a Harvest when it is ripe and a colonist picks eight; it grows them back in three days.",
                 "One bush in six", AlmanacAction.FindOnMap,
                 new[] {
@@ -227,7 +213,6 @@ namespace Odyssey.Hud
                 alsoKeys: new[] { "ui.terrain.bush.picked" }),
 
             Keyed("ui.terrain.carrot", Flora, "Flora", "Crop",
-                Icon("carrot_plant", "#ff8c3b", "M12 22V10 M8 10c0-3 4-6 4-6s4 3 4 6 M7 15h10"),
                 "The one crop. Sown in a growing zone, it grows for about four days of daylight, is cut at full growth and sown again.",
                 "Growing zones", AlmanacAction.FindOnMap,
                 new[] {
@@ -244,10 +229,8 @@ namespace Odyssey.Hud
                 new[] { ("ui.res.carrots", "the harvest"), ("ui.arch.tool.growzone", "where it is sown"), ("ui.skill.growing", "the skill that works it") }),
         };
 
-        static AlmanacEntry Tree(string key, string colour, int work, int wood, string definition) =>
+        static AlmanacEntry Tree(string key, int work, int wood, string definition) =>
             Keyed(key, Flora, "Flora", "Tree",
-                Icon(key.Substring(key.LastIndexOf('.') + 1) + "_tree", colour,
-                    "M12 2c-4 0-7 3-7 7 0 3 2 5 4 6h6c2-1 4-3 4-6 0-4-3-7-7-7z M12 15v7 M9 22h6"),
                 definition,
                 "The woods of the meadow", AlmanacAction.FindOnMap,
                 new[] {

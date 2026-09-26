@@ -40,7 +40,7 @@ namespace Odyssey.Tests.Hud
                     Assert.That(entry.Definition, Is.Not.Empty, entry.Name);
                     Assert.That(entry.Source, Is.Not.Empty, entry.Name);
                     Assert.That(entry.Properties, Is.Not.Empty, entry.Name);
-                    Assert.That(entry.Icon.Path, Is.Not.Empty, entry.Name);
+                    Assert.That(IconGlyphs.For(entry.IconKey), Is.Not.Empty, entry.Name);
                     Assert.That(entry.Body.Paragraph, Is.Not.Empty, entry.Name);
                     Assert.That(entry.Related, Is.Not.Empty, entry.Name);
                     Assert.That(entry.PrimaryAction.Length == 0, Is.EqualTo(entry.Action == AlmanacAction.None), entry.Name);

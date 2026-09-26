@@ -10,25 +10,24 @@ namespace Odyssey.Hud
     {
         static IReadOnlyList<AlmanacEntry> WeatherEntries() => new List<AlmanacEntry>
         {
-            Sky(WeatherLabels.ClearKey, "#f0d060", "M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z M12 1v2 M12 21v2 M4.2 4.2l1.4 1.4 M18.4 18.4l1.4 1.4 M1 12h2 M21 12h2 M4.2 19.8l1.4-1.4 M18.4 5.6l1.4-1.4",
+            Sky(WeatherLabels.ClearKey,
                 "Open sky. The warmest weather and the commonest in every season.",
                 "+1.5 °C", "16 to 40 hours", "45%, 65%, 55%",
                 "Nothing slows anyone and nothing needs shelter."),
-            Sky(WeatherLabels.CloudyKey, "#aab4c0", "M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19 10a4 4 0 0 1 0 8z",
+            Sky(WeatherLabels.CloudyKey,
                 "Grey sky. A little colder, and the colours drain from the world.",
                 "−1.5 °C", "10 to 30 hours", "30%, 20%, 40%",
                 "It changes only the temperature — and through it mood, sleep and work — and the light."),
-            Sky(WeatherLabels.RainKey, "#6fa8d8", "M7 14a5 5 0 1 1 1-9.9A6 6 0 0 1 19 6a4 4 0 0 1 0 8z M8 17l-1 3 M12 17l-1 3 M16 17l-1 3",
+            Sky(WeatherLabels.RainKey,
                 "Rain, from drizzle to downpour. Under open sky it slows everyone a little and waters the crops.",
                 "−3 °C", "6 to 24 hours", "19%, 11%, 4%",
                 "A roof or a tree keeps a colonist dry. Heavy rain sends hogs and rats to cover; the frogs stay out."),
-            Sky(WeatherLabels.StormKey, "#5a6a90", "M7 14a5 5 0 1 1 1-9.9A6 6 0 0 1 19 6a4 4 0 0 1 0 8z M13 14l-3 4h3l-2 4",
+            Sky(WeatherLabels.StormKey,
                 "A storm: the heaviest rain and the coldest weather. The rarest.",
                 "−5 °C", "4 to 12 hours", "6%, 4%, 1%",
                 "Always heavy, so always the full rain penalty in the open, and animals looking for cover."),
 
-            Named("The year", Weather, "Seventy-two days in three seasons", "Calendar", "Seasons",
-                Icon("year", "#9fd0a0", "M4 5h16v16H4z M4 10h16 M8 3v4 M16 3v4"),
+            Named("The year", Weather, "Seventy-two days in three seasons", "Calendar", "Seasons", "ui.world.seasons",
                 "The year is 72 days: six months of twelve, two to each season. Wash is spring, Glare summer, Rime winter.",
                 "The clock", AlmanacAction.None,
                 new[] {
@@ -42,8 +41,7 @@ namespace Odyssey.Hud
                     ("Its weather", "Each season rolls its own mix of clear, cloudy, rain and storm.")),
                 new[] { ("Temperature", "what the seasons do"), (WeatherLabels.ClearKey, "the commonest weather"), ("ui.terrain.carrot", "stops in the cold") }),
 
-            new AlmanacEntry(string.Empty, "Temperature", Weather, "Warm, cold, and what each costs", "Climate", "Rooms",
-                Icon("temperature", "#e0805a", "M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"),
+            new AlmanacEntry("ui.overlay.temperature", Registry.Label("ui.overlay.temperature"), Weather, "Warm, cold, and what each costs", "Climate", "Rooms", "ui.overlay.temperature",
                 "Every enclosed room holds one temperature of its own; outside is the season, the hour and the weather. A colonist is comfortable from 16 to 26 °C.",
                 "The Temperature overlay, and a tile's pane", AlmanacAction.None,
                 new[] {
@@ -56,13 +54,12 @@ namespace Odyssey.Hud
                     ("Underground", "The ground damps the seasons: a cellar lags, and a deep mine holds the year's average."),
                     ("Warm air rises", "Heat climbs a stairwell four times as readily as cold falls down it."),
                     ("Crops", "Carrots stop at 0 °C and at 58 °C.")),
-                new[] { ("ui.arch.tool.heater", "warms a room"), ("ui.arch.tool.campfire", "warms without power"), ("The year", "the seasons") },
-                new[] { "ui.overlay.temperature" }),
+                new[] { ("ui.arch.tool.heater", "warms a room"), ("ui.arch.tool.campfire", "warms without power"), ("The year", "the seasons") }),
         };
 
-        static AlmanacEntry Sky(string key, string colour, string path, string definition,
+        static AlmanacEntry Sky(string key, string definition,
             string offset, string spell, string chances, string paragraph) =>
-            Keyed(key, Weather, "Sky", "Spell", Icon(key.Substring(11), colour, path),
+            Keyed(key, Weather, "Sky", "Spell",
                 definition, "The clock's weather glyph", AlmanacAction.None,
                 new[] {
                     ("Temperature", offset + " at full strength"), ("A spell", spell),
@@ -76,12 +73,11 @@ namespace Odyssey.Hud
 
         static IReadOnlyList<AlmanacEntry> EventEntries() => new List<AlmanacEntry>
         {
-            Drop("ui.bulletin.supplydrop", "ui.res.rations", "10 to 20", "#d4af37"),
-            Drop("ui.bulletin.scrapdrop", "ui.res.scrap", "15 to 30", "#8ca0b3"),
-            Drop("ui.bulletin.medicaldrop", "ui.res.medkit", "4 to 8", "#d85a5a"),
+            Drop("ui.bulletin.supplydrop", "ui.res.rations", "10 to 20"),
+            Drop("ui.bulletin.scrapdrop", "ui.res.scrap", "15 to 30"),
+            Drop("ui.bulletin.medicaldrop", "ui.res.medkit", "4 to 8"),
 
             Keyed("ui.alert.raid", Events, "Event", "Threat",
-                Icon("raid", "#d04040", "M12 2l9 4v6c0 5-4 9-9 10-5-1-9-5-9-10V6z M12 8v5 M12 16h.01"),
                 "A band of hostiles that behaves as one: it walks on from one edge, gathers, probes, and then assaults the hearth. When half of it is down, the rest leave.",
                 "The debug menu's Events tab", AlmanacAction.None,
                 new[] {
@@ -100,7 +96,6 @@ namespace Odyssey.Hud
                 alsoKeys: new[] { "ui.bulletin.raidincoming" }),
 
             Keyed("ui.bulletin.theft", Events, "Event", "Loss",
-                Icon("theft", "#d08040", "M4 7h16v13H4z M9 7V4h6v3 M15 14h6 M18 11l3 3-3 3"),
                 "A bandit with nobody left to fight and nothing to break carries the nearest stack off the board.",
                 "Written on the Events panel when it happens", AlmanacAction.None,
                 new[] { ("Takes", "The nearest stack of anything"), ("Written", "When it leaves the board with it") },
@@ -108,7 +103,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.pawn.bandit", "the thief"), ("ui.bulletin.banditleft", "left with nothing") }),
 
             Keyed("ui.bulletin.banditleft", Events, "Event", "Departure",
-                Icon("bandit_left", "#a08070", "M9 21H5V3h4 M16 17l5-5-5-5 M21 12H9"),
                 "A bandit walked off the board with nothing. Only a lone bandit is written down: a raid's retreat is not.",
                 "Written on the Events panel when it happens", AlmanacAction.None,
                 new[] { ("Written", "When a bandit outside a raid leaves empty-handed") },
@@ -116,9 +110,8 @@ namespace Odyssey.Hud
                 new[] { ("ui.pawn.bandit", "who left"), ("ui.bulletin.theft", "left with something") }),
         };
 
-        static AlmanacEntry Drop(string key, string itemKey, string count, string colour) =>
+        static AlmanacEntry Drop(string key, string itemKey, string count) =>
             Keyed(key, Events, "Event", "Drop",
-                Icon(key.Substring(12), colour, "M12 2v10 M12 12l4-4 M12 12l-4-4 M4 16h16v4H4z"),
                 $"{count} {Lc(itemKey)} fall from the sky on to a random spot anywhere on the board, and the colony hauls them.",
                 "The debug menu's Events tab", AlmanacAction.None,
                 new[] {

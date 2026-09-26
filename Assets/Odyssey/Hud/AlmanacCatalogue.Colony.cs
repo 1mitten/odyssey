@@ -25,7 +25,6 @@ namespace Odyssey.Hud
         static IReadOnlyList<AlmanacEntry> PeopleEntries() => new List<AlmanacEntry>
         {
             Keyed("ui.pawn.colonist", People, "Person", "Ours",
-                Icon("colonist", "#7fd0e0", "M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M4 21a8 8 0 0 1 16 0"),
                 "One of the colony: rolled with a face, a name, a pace and her skills, and kept alive by food, rest and a roof.",
                 "Chosen at the start of a game", AlmanacAction.OpenWork,
                 new[] {
@@ -41,7 +40,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.need.food", "a need"), ("ui.skill.construction", "a skill"), ("ui.combat.health", "her health"), ("ui.overlay.home", "where she may be kept") }),
 
             Keyed("ui.pawn.bandit", People, "Person", "Hostile",
-                Icon("bandit", "#d04040", "M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M4 21a8 8 0 0 1 16 0 M8 7h8"),
                 "A raider in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing; with nobody left to fight, carries something off.",
                 "Raids, and the debug menu", AlmanacAction.FindOnMap,
                 new[] {
@@ -56,7 +54,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.pawn.gunman", "the armed kind"), ("ui.alert.raid", "how they come"), ("ui.bulletin.theft", "what they take") }),
 
             Keyed("ui.pawn.gunman", People, "Person", "Hostile",
-                Icon("gunman", "#d04040", "M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M4 21a8 8 0 0 1 16 0 M15 14h6"),
                 "A bandit with a pistol, dressed as the rest. Shoots from range and clubs whoever comes close.",
                 "Raids with gunmen in the mix", AlmanacAction.FindOnMap,
                 new[] {
@@ -72,7 +69,6 @@ namespace Odyssey.Hud
         static IReadOnlyList<AlmanacEntry> FaunaEntries() => new List<AlmanacEntry>
         {
             Keyed(PawnKindLabels.IconKeys[PawnKindLabels.MiddenHogKind], Fauna, "Fauna", "Wild",
-                Icon("fauna_hog", "#c49a7a", "M4 13c0-3 3-6 8-6s8 3 8 6v3H4v-3z M6 16v3 M18 16v3 M20 12l2-1"),
                 "The midden hog is pig stock gone feral. It lives in sounders in the woodland, rests often, and will turn on anyone who hits it. No meat yet, and no taming.",
                 "Wild " + Lc(PawnKindLabels.Wandering) + " or " + Lc(PawnKindLabels.Resting) + " on the Animals tab (F5)", AlmanacAction.OpenAnimals,
                 new[] {
@@ -89,7 +85,6 @@ namespace Odyssey.Hud
                 new[] { (PawnKindLabels.IconKeys[PawnKindLabels.DuctRatKind], "another animal on the board"), ("ui.terrain.tree.meadow", "the woods it keeps to"), ("ui.arch.tool.door", "stops it") }),
 
             Keyed(PawnKindLabels.IconKeys[PawnKindLabels.DuctRatKind], Fauna, "Fauna", "Vermin",
-                Icon("fauna_duct_rat", "#8c7d75", "M3 13c1-2 4-3 7-3 4 0 8 2 10 6H2c0-1 0-2 1-3z M17 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"),
                 "The duct rat keeps to the rock: outcrops, faces and cuts. It is out at night, climbs ladders and opens doors, and will not swim.",
                 "Wild " + Lc(PawnKindLabels.Wandering) + " or " + Lc(PawnKindLabels.Resting) + " on the Animals tab (F5)", AlmanacAction.OpenAnimals,
                 new[] {
@@ -106,7 +101,6 @@ namespace Odyssey.Hud
                 new[] { (PawnKindLabels.IconKeys[PawnKindLabels.MiddenHogKind], "another animal on the board"), ("ui.arch.tool.ladder", "a climb it takes"), ("ui.terrain.rock", "what it keeps beside") }),
 
             Keyed(PawnKindLabels.IconKeys[PawnKindLabels.CulvertFrogKind], Fauna, "Fauna", "Wild",
-                Icon("fauna_culvert_frog", "#2f9e57", "M5 15c0-4 3-7 7-7s7 3 7 7H5z M8 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M16 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M4 18l3-3 M20 18l-3-3"),
                 "The culvert frog, the commonest animal on the meadow, lives on the banks of its water in threes to fives. It hops rather than walks and stays out in the rain.",
                 "Wild " + Lc(PawnKindLabels.Wandering) + " or " + Lc(PawnKindLabels.Resting) + " on the Animals tab (F5)", AlmanacAction.OpenAnimals,
                 new[] {
@@ -125,49 +119,49 @@ namespace Odyssey.Hud
 
         static IReadOnlyList<AlmanacEntry> SkillEntries() => new List<AlmanacEntry>
         {
-            Skill("ui.skill.construction", "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z",
+            Skill("ui.skill.construction",
                 "Building: how fast, whether it goes wrong, and how good a bed comes out.",
                 "Building, delivering, deconstructing, laying and lifting power lines",
                 "A builder at level 0 botches 15 jobs in 100, losing the work and half the material; from level 3 she never does. The quality of a bed is rolled from this skill when it is finished.",
                 new[] { ("0", "70% speed", "Botches 15 in 100"), ("3", "92% speed", "Never botches"), ("4", "100% speed", "The standard"), ("10", "145% speed", "Beds mostly Decent"), ("20", "220% speed", "The only level that makes Epic") },
                 ("ui.work.construction", "ui.arch.tool.bed")),
-            Skill("ui.skill.mining", "M4 20l16-16M14 4l6 6M4 14l6 6",
+            Skill("ui.skill.mining",
                 "Digging: how fast rock, ore and rubble come out.",
                 "Digging, and clearing rubble",
                 "Mining buys speed. Every rock cell gives 8 stone and every seam cell 15 ore, whoever digs it.",
                 new[] { ("0", "55% speed", ""), ("5", "108% speed", ""), ("10", "160% speed", ""), ("20", "265% speed", "") },
                 ("ui.work.mining", "ui.terrain.rock")),
-            Skill("ui.skill.cutting", "M5 21l7-7 M14 4l6 6-8 8-6-6z",
+            Skill("ui.skill.cutting",
                 "Felling: how fast the axe comes down and the tree goes over.",
                 L("ui.arch.tool.fell"),
                 "Chopping buys speed. What a tree gives is the tree's, not the chopper's.",
                 new[] { ("0", "60% speed", ""), ("4", "100% speed", "The standard"), ("10", "160% speed", ""), ("20", "260% speed", "") },
                 ("ui.work.cutting", "ui.terrain.tree.giant")),
-            Skill("ui.skill.growing", "M12 22v-9 M12 13a5 5 0 0 0 5-5c0-4-5-6-5-6s-5 2-5 6a5 5 0 0 0 5 5z",
+            Skill("ui.skill.growing",
                 "Sowing, harvesting and picking: how fast.",
                 "Sowing, harvesting, picking berries",
                 "Growing buys speed at the hoe. It does not change what a crop yields: a carrot plant gives five whoever harvests it.",
                 new[] { ("0", "60% speed", ""), ("4", "100% speed", "The standard"), ("10", "160% speed", ""), ("20", "260% speed", "") },
                 ("ui.work.growing", "ui.terrain.carrot")),
-            Skill("ui.skill.cooking", "M4 13h16a8 8 0 0 1-16 0z M3 13h18 M9 9c0-2 2-2 2-4 M13 9c0-2 2-2 2-4",
+            Skill("ui.skill.cooking",
                 "Cooking: how fast a meal is made, and how seldom it burns.",
                 "Cooking a bill",
                 "A meal is 300 ticks of work at full speed. The burn chance falls with every level and is gone from 14; a campfire burns half as often again.",
                 new[] { ("0", "40% speed", "Burns 30 in 100"), ("5", "70% speed", "Burns 10 in 100"), ("8", "88% speed", "Burns 5 in 100"), ("10", "100% speed", "Burns 3 in 100"), ("14", "124% speed", "Never burns") },
                 ("ui.work.cooking", "ui.res.meal.burnt")),
-            Skill("ui.skill.medicine", "M4 7h16v13H4z M9 7V4h6v3 M12 10v7 M8.5 13.5h7",
+            Skill("ui.skill.medicine",
                 "Treating the hurt: how fast, and how well a tend is done.",
                 "Treating a patient, or herself",
                 "The tend's quality comes from this skill, times the supplies used, and a better tend heals faster: 4 to 12 points a day.",
                 new[] { ("0", "60% speed", "Tends at 20%"), ("5", "110% speed", "Tends at 70%"), ("10", "160% speed", "Tends at 110%"), ("20", "260% speed", "Tends at 155%") },
                 ("ui.work.doctor", "ui.res.medkit")),
-            Skill("ui.skill.melee", "M14.5 3.5l6 6-11 11-3-3z M3.5 20.5l3-3",
+            Skill("ui.skill.melee",
                 "Close combat: landing a blow, and getting out of the way of one.",
                 "Every swing, landed or not",
                 "Every swing trains it. A critical blow does half as much again.",
                 new[] { ("0", "Hits 50%", "Dodges 0%"), ("10", "Hits 80%", "Dodges 10%"), ("20", "Hits 90%", "Dodges 30%") },
                 ("ui.item.machete", "ui.pawn.bandit")),
-            Skill("ui.skill.shooting", "M12 2v4 M12 18v4 M2 12h4 M18 12h4 M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z",
+            Skill("ui.skill.shooting",
                 "Aim: how much of a shot's accuracy survives each cell of distance.",
                 "Every shot, hit or miss",
                 "Accuracy is multiplied by the skill's factor once per cell to the target, then by the weapon's own curve and any cover.",
@@ -175,9 +169,9 @@ namespace Odyssey.Hud
                 ("ui.item.pistol", "ui.pawn.gunman")),
         };
 
-        static AlmanacEntry Skill(string key, string path, string definition, string trainedBy, string paragraph,
+        static AlmanacEntry Skill(string key, string definition, string trainedBy, string paragraph,
             (string, string, string)[] levels, (string Work, string Thing) related) =>
-            Keyed(key, Skills, "Skill", "Learned", Icon(key.Substring(9), "#7fd0e0", path),
+            Keyed(key, Skills, "Skill", "Learned",
                 definition, "Every colonist, on her Skills tab", AlmanacAction.OpenWork,
                 WithShared(("Trained by", trainedBy)),
                 Levels(paragraph + " Levels cost more as they climb; a day's learning in one skill past 4,000 points counts a fifth.", levels),
@@ -216,7 +210,6 @@ namespace Odyssey.Hud
             var rel = new List<(string, string)>(related);
             if (skillKey.Length > 0) rel.Insert(0, (skillKey, "the skill that sets its pace"));
             return Keyed(key, WorkTypes, "Work type", emergency ? "Emergency" : "Priority",
-                Icon(key.Substring(8), "#7fd0e0", emergency ? "M12 3v12 M12 19h.01 M4 21h16L12 3z" : "M4 6h16M4 12h16M4 18h10"),
                 covers, "A column on the Work tab (F1)", AlmanacAction.OpenWork,
                 new[] {
                     ("Skill", skillKey.Length > 0 ? L(skillKey) : "None: anyone does it at one pace"),
@@ -232,7 +225,6 @@ namespace Odyssey.Hud
         static IReadOnlyList<AlmanacEntry> NeedEntries() => new List<AlmanacEntry>
         {
             Keyed("ui.need.food", Needs, "Need", "Body",
-                Icon("need_food", "#e0a05a", "M18 8h1a4 4 0 0 1 0 8h-1 M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z M6 1v3 M10 1v3 M14 1v3"),
                 "How fed a colonist is, 0 to 1,000. It falls all day and night, and she eats the best food she can reach once it is under 300.",
                 "Every colonist's pane", AlmanacAction.None,
                 new[] {
@@ -247,7 +239,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.res.meal.veg", "the best food"), ("ui.res.rations", "the second best"), ("ui.need.mood", "what hunger costs") }),
 
             Keyed("ui.need.rest", Needs, "Need", "Body",
-                Icon("need_rest", "#8f9fe0", "M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"),
                 "How rested a colonist is, 0 to 1,000: the bar is what she has left. Under 280 she goes to bed; at nothing she drops where she stands.",
                 "Every colonist's pane", AlmanacAction.None,
                 new[] {
@@ -262,7 +253,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.arch.tool.bed", "where she rests best"), ("ui.need.mood", "what tiredness costs") }),
 
             Keyed("ui.need.joy", Needs, "Need", "Mind",
-                Icon("need_joy", "#e0d05a", "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M8 14c1 2 2.5 3 4 3s3-1 4-3 M9 9h.01 M15 9h.01"),
                 "Recreation: time spent idle, 0 to 1,000. It rises whenever a colonist has nothing to do and falls while she works. It is not on her pane yet.",
                 "Simulated, not yet shown", AlmanacAction.None,
                 new[] {
@@ -275,7 +265,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.need.mood", "what it moves") }),
 
             Keyed("ui.need.mood", Needs, "Need", "Mind",
-                Icon("need_mood", "#7fd0e0", "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm-3.5-9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm7 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm-7 4.5a5.5 5.5 0 0 0 7 0"),
                 "How good a colonist feels, 0 to 1,000. It drifts towards a target made of her needs, the temperature and what has happened to her lately.",
                 "Every colonist's pane", AlmanacAction.None,
                 new[] {
@@ -299,7 +288,6 @@ namespace Odyssey.Hud
         static IReadOnlyList<AlmanacEntry> HealthEntries() => new List<AlmanacEntry>
         {
             Keyed("ui.combat.health", Health, "Health", "Pool",
-                Icon("health", "#e05a5a", "M12 21l-1.4-1.3C5.4 15.4 2 12.3 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1C13.1 3.8 14.8 3 16.5 3 19.6 3 22 5.4 22 8.5c0 3.8-3.4 6.9-8.6 11.5z"),
                 "A person's pool of 100 points. At 0 she is down; at −50 she is dead. She gets up again only when the pool is full.",
                 "The pane's Health bar and the Health tab", AlmanacAction.None,
                 new[] {
@@ -314,8 +302,7 @@ namespace Odyssey.Hud
                 new[] { ("Body", "where blows land"), ("ui.health.pain", "can down her early"), ("ui.work.rescue", "carries her to bed"), ("ui.res.medkit", "heals it") },
                 alsoKeys: new[] { "ui.combat.condition" }),
 
-            new AlmanacEntry(string.Empty, "Body", Health, "Six regions over one pool", "Health", "Regions",
-                Icon("body", "#e05a5a", "M12 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z M8 9h8l1 7h-2l-1 6h-4l-1-6H7z M5 10l3-1 M19 10l-3-1"),
+            new AlmanacEntry(string.Empty, "Body", Health, "Six regions over one pool", "Health", "Regions", "ui.health.torso",
                 "A person is six regions: head, torso, two arms, two legs. A blow lands on one by how much of the body it covers; a limb's excess passes to the torso.",
                 "The Health tab", AlmanacAction.None,
                 new[] {
@@ -331,47 +318,46 @@ namespace Odyssey.Hud
                 new[] { ("ui.health.wound", "a kind of injury"), ("ui.health.fracture", "from a fall"), ("ui.health.moving", "what the legs drive") },
                 new[] { "ui.health.head", "ui.health.torso", "ui.health.arm", "ui.health.leg", "ui.health.arm.left", "ui.health.arm.right", "ui.health.leg.left", "ui.health.leg.right" }),
 
-            Capacity("ui.health.pain", "M12 2v10 M12 16h.01 M4 21h16L12 3z",
+            Capacity("ui.health.pain",
                 "Every point of injury hurts: 1.25% each. At 80% she goes down in pain shock — 64 points of injury, whatever her pool says.",
                 new[] { ("Per point", "1.25%"), ("Shock", "At 80%: down"), ("Also", "Takes up to 40% off consciousness") },
                 new[] { ("ui.health.consciousness", "what pain takes"), ("ui.health.tended", "does not stop it") }),
-            Capacity("ui.health.consciousness", "M12 4.5a4.5 4.5 0 0 0-4.5 4.5c0 1.9 1.1 3.5 2.7 4.1v2.9h3.6v-2.9c1.6-.6 2.7-2.2 2.7-4.1a4.5 4.5 0 0 0-4.5-4.5z M9 19h6v2H9z",
+            Capacity("ui.health.consciousness",
                 "How awake she is. Pain above 10% takes some of it, blood loss more, and a vital region at nothing all of it. Under 30% she goes down.",
                 new[] { ("Pain", "Takes (pain − 10%) × 4/9, at most 40%"), ("Blood loss", "×0.9 at 15%, ×0.8 at 30%, ×0.6 from 45%"), ("Down", "Under 30%") },
                 new[] { ("ui.health.pain", "takes some"), ("ui.health.blood", "takes more"), ("ui.health.moving", "scaled by it") }),
-            Capacity("ui.health.moving", "M13.5 5.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1l-6 2.3V13h2V9.6l1.8-.7",
+            Capacity("ui.health.moving",
                 "Her legs, times how awake she is. It scales how fast she walks; at 15% or less she cannot stand.",
                 new[] { ("From", "What is left of both legs, averaged, × consciousness"), ("Walk", "Scales her pace"), ("Down", "At 15% or less") },
                 new[] { ("Body", "the legs"), ("ui.health.manipulation", "the arms' twin") }),
-            Capacity("ui.health.manipulation", "M8 13V5a1.5 1.5 0 0 1 3 0v6 M11 11V4a1.5 1.5 0 0 1 3 0v7 M14 11V5.5a1.5 1.5 0 0 1 3 0V14c0 4-3 7-6 7s-5-2-6-4l-2-4a1.5 1.5 0 0 1 2.6-1.5L8 14",
+            Capacity("ui.health.manipulation",
                 "Her arms, times how awake she is. It scales how fast she works.",
                 new[] { ("From", "What is left of both arms, averaged, × consciousness"), ("Work", "Scales every work rate") },
                 new[] { ("Body", "the arms"), ("ui.health.moving", "the legs' twin") }),
-            Capacity("ui.health.blood", "M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z",
+            Capacity("ui.health.blood",
                 "What bleeding has taken. Every point of untended cut loses blood by the day; all of it, and she dies.",
                 new[] { ("Loses", "6% a day per point of untended cut"), ("A 10-point cut", "Kills in about 40 hours"), ("Comes back", "33% a day once nothing bleeds") },
                 new[] { ("ui.health.wound", "what bleeds"), ("ui.health.tended", "stops it"), ("ui.health.consciousness", "what it takes") }),
-            Capacity("ui.health.wound", "M4 20L20 4 M8 20l12-12",
+            Capacity("ui.health.wound",
                 "A cut from a sharp blow or a bullet: the one kind of injury that bleeds.",
                 new[] { ("From", "Blades and bullets"), ("Bleeds", "Until tended") },
                 new[] { ("ui.health.blood", "what it drains"), ("ui.health.bruise", "the blunt kind") }),
-            Capacity("ui.health.bruise", "M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z M9 10h.01 M14 13h.01",
+            Capacity("ui.health.bruise",
                 "An injury from a blunt blow or a short fall. It hurts and never bleeds.",
                 new[] { ("From", "Clubs, fists and falls"), ("Bleeds", "Never") },
                 new[] { ("ui.health.wound", "the sharp kind"), ("ui.health.fracture", "a worse fall") }),
-            Capacity("ui.health.fracture", "M5 19l5-5-2-2 4-4-2-2 5-5 M14 10l5 5",
+            Capacity("ui.health.fracture",
                 "A broken bone: the worst hit of a fall of two layers or more.",
                 new[] { ("From", "A fall of two layers or more"), ("Bleeds", "Never") },
                 new[] { ("Body", "falls land on the legs"), ("ui.health.bruise", "a shorter fall") }),
-            Capacity("ui.health.tended", "M5 12l5 5L20 7",
+            Capacity("ui.health.tended",
                 "Treated. A treatment tends every untended injury at once and stops every bleed; a tended injury heals wherever she is.",
                 new[] { ("Heals", "4 to 12 points a day, by the tend's quality"), ("Quality", "Medicine skill × supplies; bare hands at most 70%") },
                 new[] { ("ui.work.doctor", "tends"), ("ui.res.medkit", "a better tend"), ("ui.skill.medicine", "sets the quality") }),
         };
 
-        static AlmanacEntry Capacity(string key, string path, string definition, (string, string)[] properties, (string, string)[] related) =>
+        static AlmanacEntry Capacity(string key, string definition, (string, string)[] properties, (string, string)[] related) =>
             Keyed(key, Health, "Health", key.EndsWith("wound") || key.EndsWith("bruise") || key.EndsWith("fracture") ? "Injury" : key.EndsWith("tended") ? "State" : "Capacity",
-                Icon(key.Substring(10), "#e05a5a", path),
                 definition, "The Health tab", AlmanacAction.None,
                 properties,
                 Effects("HEALTH", definition),

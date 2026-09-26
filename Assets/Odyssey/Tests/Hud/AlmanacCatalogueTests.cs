@@ -98,16 +98,26 @@ namespace Odyssey.Tests.Hud
             }
         }
 
-        /// <summary>Every entry draws a line icon when there is no pixel art, so every path must parse.</summary>
+        /// <summary>
+        /// A page's picture is its key's, from the one table every icon slot reads
+        /// (<see cref="IconGlyphs"/>), so every page — and every other key it answers to, which the
+        /// inspect pane can show — has line art there to fall back on when there is no pixel art.
+        /// </summary>
         [Test]
-        public void EveryIconIsAPathThatDraws()
+        public void EveryPageAndEveryKeyItAnswersToHasAPicture()
         {
+            var missing = new List<string>();
             foreach (AlmanacCategory category in AlmanacCatalogue.Categories)
             {
                 Assert.That(SvgPath.Parse(category.IconPath), Is.Not.Empty, category.Name);
                 foreach (AlmanacEntry entry in category.Entries)
-                    Assert.That(SvgPath.Parse(entry.Icon.Path), Is.Not.Empty, entry.Name);
+                {
+                    if (IconGlyphs.For(entry.IconKey).Length == 0) missing.Add($"{entry.Name} ({entry.IconKey})");
+                    foreach (string also in entry.AlsoKeys)
+                        if (IconGlyphs.For(also).Length == 0) missing.Add($"{entry.Name} alias {also}");
+                }
             }
+            Assert.That(missing, Is.Empty, "no line art in IconGlyphs for:\n  " + string.Join("\n  ", missing));
         }
 
         /// <summary>A find-on-map button needs a key to find by.</summary>

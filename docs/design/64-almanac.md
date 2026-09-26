@@ -49,11 +49,37 @@ Events.
 - **The button does what the entry can do** (`AlmanacAction`): find the thing on the map, by key,
   closing only when something was found; or open the tab that holds its live half (Work, Animals,
   Inventory, Assign, Build); or nothing, and then there is no button.
-- **Icons draw**: the owner's pixel art where the key has it (at 32 and 64, ADR 0007), otherwise
-  the entry's line icon through `PathGlyph`, tinted. Related chips draw their target's line icon.
+- **Icons draw, and from one place** (§2a).
 - **Search reads the definition** as well as the name and the index line.
 - **Navigation is by category and name**: the Construction skill and the Construction work type
   are one word for two things, as on the Work tab.
+
+## 2a. One picture per key, everywhere
+
+Owner, the same day: *"these icons used need to match (and come from the same place if possible so
+we don't have to update several places) the panel info when you are clicking around. For example,
+bush has entry with icon but when I click on one in game - there is no icon."*
+
+The first cut drew the Almanac's own line icons, held in the catalogue, while the inspect pane drew
+an `IconBadge` for the same key — the owner's pixel art or, for most keys, the placeholder square.
+Two sources, and they disagreed on 94 of 110 things.
+
+**Now there is one source.** `Odyssey.Hud.IconGlyphs` is the table of line art by registry key, and
+`IconBadge` — the element behind every icon slot in the game: the pane's avatar, list rows, the
+palette, the Inventory, the command bar — draws, in order, **the owner's pixel art** (`IconArt`),
+**else the key's line art** (`IconGlyphs`), **else** the placeholder square. The Almanac holds no
+picture: an entry names an `IconKey` (its own key, or one chosen for an idea without one: *Body*
+draws `ui.health.torso`, *The year* `ui.world.seasons`) and draws an `IconBadge` for it. Change a
+shape in `IconGlyphs` and the pane, the page and every list change together; drop in a sheet and
+its art replaces the line art everywhere at once.
+
+Colour follows the existing rule rather than the Almanac's old per-entry tints: an icon is inked like
+the text beside it, and only stores and the command bar take the category colour.
+
+`IconGlyphs.Aliases` draws one key as another: a picked berry bush as the berry bush, every body
+region as the body, the raid warning as the raid. `IconGlyphsTests` holds every key and alias to
+the registry and every path to the parser, and fails on any item, standing thing, ground, animal,
+person or floor material the pane can show without a picture.
 
 ## 3. What keeps it true
 
@@ -89,7 +115,8 @@ Of the 107 keyed entries (audit script in the handover, 2026-09-26):
 | Mapped to sheets 01–05, 07, 08, **which were never committed** | **26** — wall, bed, shelf, campfire, cooker, generator, stockpile, sandbags, pistol, meal, rations, medkit, pickaxe orders… | the owner copies six PNGs into `art-source/icons/sheets/` and runs `icons.py export`; about 130 more keys elsewhere come with them |
 | No art anywhere (`gap` or not in `icon-map.csv`) | **57** — trees, bushes, water, rock, animals, people, weapons, weather, health, events | drawn or photographed |
 
-Every one of those draws its line icon today, so none is blank.
+Every one of those draws its line art from `IconGlyphs` today, on its page and in the pane, so
+none is blank; a sheet's art replaces it everywhere at once.
 
 **Photographing** is feasible and is the natural route for the 3D things: a `ThingStudio` beside
 `PortraitStudio` — same environment take-over, one render per key per session, cached, 64 px —

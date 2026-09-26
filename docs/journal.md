@@ -14372,3 +14372,10 @@ numbers to it. The registry guard caught about fifty of my own labels on the fir
 are on sheet 06 and unexported; twenty-six more are on the six sheets never committed; fifty-seven
 have no source. Photographing the 3D ones in the game (a studio beside `PortraitStudio`, never
 committed, because a Synty render is still Synty) covers about forty-five of those (design 64 §4).
+
+**The same day, the owner on the icons**: *"these icons used need to match (and come from the same
+place if possible so we don't have to update several places) the panel info when you are clicking
+around"* — a bush had a picture on its page and a placeholder square when clicked. The Almanac's
+paths moved into one table, `IconGlyphs`, keyed by registry key, and `IconBadge` — every icon slot
+in the game — falls back to it where there is no pixel art. The Almanac now draws an `IconBadge`
+like everything else, so there is one place to change a picture (design 64 §2a).

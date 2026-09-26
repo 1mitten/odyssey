@@ -21,25 +21,6 @@ namespace Odyssey.Hud
         OpenBuild,
     }
 
-    public sealed class AlmanacIcon
-    {
-        public string Name { get; }
-        public string Colour { get; }
-
-        /// <summary>
-        /// Line art on the 24-unit grid, drawn by <c>PathGlyph</c> wherever the registry key has no
-        /// pixel art (ADR 0007). Every entry has one; <c>AlmanacCatalogueTests</c> parses them all.
-        /// </summary>
-        public string Path { get; }
-
-        public AlmanacIcon(string name, string colour, string path)
-        {
-            Name = name;
-            Colour = colour;
-            Path = path;
-        }
-    }
-
     public sealed class AlmanacBody
     {
         public string Type { get; }
@@ -91,7 +72,12 @@ namespace Odyssey.Hud
         public string Summary { get; }
         public string TypeChip { get; }
         public string NatureChip { get; }
-        public AlmanacIcon Icon { get; }
+        /// <summary>
+        /// The key its picture is drawn by: its own key, or a key chosen for an idea that has none.
+        /// The picture itself is never here — it is the owner's art for the key, or the key's line
+        /// art in <see cref="IconGlyphs"/>, which is what every icon slot in the game draws.
+        /// </summary>
+        public string IconKey { get; }
         public string Definition { get; }
 
         /// <summary>Where a player meets it: how it is made, found or arrives. A fact, never a count.</summary>
@@ -110,7 +96,7 @@ namespace Odyssey.Hud
             string summary,
             string typeChip,
             string natureChip,
-            AlmanacIcon icon,
+            string iconKey,
             string definition,
             string source,
             AlmanacAction action,
@@ -125,7 +111,7 @@ namespace Odyssey.Hud
             Summary = summary;
             TypeChip = typeChip;
             NatureChip = natureChip;
-            Icon = icon;
+            IconKey = iconKey;
             Definition = definition;
             Source = source;
             Action = action;
@@ -295,29 +281,27 @@ namespace Odyssey.Hud
         /// <summary>A registry name lower-cased, for the middle of a sentence.</summary>
         static string Lc(string key) => Registry.Label(key).ToLowerInvariant();
 
-        static AlmanacIcon Icon(string name, string colour, string path) => new AlmanacIcon(name, colour, path);
-
         /// <summary>
         /// An entry about a registry key: its name and its index line are the registry's, so the
         /// wiki, the pane and the Almanac say the same thing.
         /// </summary>
         static AlmanacEntry Keyed(
-            string key, string category, string typeChip, string natureChip, AlmanacIcon icon,
+            string key, string category, string typeChip, string natureChip,
             string definition, string source, AlmanacAction action,
             (string, string)[] properties, AlmanacBody body, (string, string)[] related,
             string[]? alsoKeys = null, string? summary = null)
         {
             string line = summary ?? Registry.Describe(key);
-            return new AlmanacEntry(key, Registry.Label(key), category, line, typeChip, natureChip, icon,
+            return new AlmanacEntry(key, Registry.Label(key), category, line, typeChip, natureChip, key,
                 definition, source, action, properties, body, related, alsoKeys);
         }
 
         /// <summary>An entry for an idea with no registry key of its own.</summary>
         static AlmanacEntry Named(
-            string name, string category, string summary, string typeChip, string natureChip, AlmanacIcon icon,
+            string name, string category, string summary, string typeChip, string natureChip, string iconKey,
             string definition, string source, AlmanacAction action,
             (string, string)[] properties, AlmanacBody body, (string, string)[] related) =>
-            new AlmanacEntry(string.Empty, name, category, summary, typeChip, natureChip, icon,
+            new AlmanacEntry(string.Empty, name, category, summary, typeChip, natureChip, iconKey,
                 definition, source, action, properties, body, related);
 
         static AlmanacBody Effects(string label, string paragraph, params (string, string)[] effects) =>

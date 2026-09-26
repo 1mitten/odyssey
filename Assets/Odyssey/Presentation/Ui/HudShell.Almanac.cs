@@ -624,21 +624,24 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// The entry's picture: the owner's pixel art where the registry key has it, drawn at a
-        /// size ADR 0007 allows (32 or 64), and otherwise the entry's own line icon, tinted in its
-        /// colour. Every entry has a line icon (AlmanacCatalogueTests), so nothing draws blank.
+        /// The entry's picture, drawn by the same <see cref="IconBadge"/> the inspect pane and every
+        /// list draw for the same key: the owner's pixel art where there is some, else the key's
+        /// line art in <see cref="IconGlyphs"/>. The Almanac holds no picture of its own, so a thing
+        /// looks the same on its page as it does when clicked (owner, 2026-09-26). Pixel art is
+        /// drawn at 32 or 64 (ADR 0007); line art at the smaller size, inside the same square.
         /// </summary>
         static VisualElement AlmanacIconFor(AlmanacEntry entry, float art, float line)
         {
-            if (entry.Key.Length > 0 && IconArt.Has(entry.Key))
-                return new IconBadge(entry.Key, art);
-            return AlmanacLineIcon(entry, line);
+            var badge = new IconBadge(entry.IconKey, IconArt.Has(entry.IconKey) ? art : line);
+            badge.Inherit(HudTokens.TextPrimary);
+            return badge;
         }
 
         static VisualElement AlmanacLineIcon(AlmanacEntry entry, float size)
         {
-            Color tint = ColorUtility.TryParseHtmlString(entry.Icon.Colour, out Color c) ? c : HudTokens.TextMeta;
-            return new PathGlyph(entry.Icon.Path, size, tint);
+            var badge = new IconBadge(entry.IconKey, size);
+            badge.Inherit(HudTokens.TextMeta);
+            return badge;
         }
 
         void RunAlmanacAction(AlmanacEntry entry, Label label)

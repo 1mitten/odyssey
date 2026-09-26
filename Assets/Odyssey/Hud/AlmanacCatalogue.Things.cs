@@ -12,7 +12,6 @@ namespace Odyssey.Hud
         static IReadOnlyList<AlmanacEntry> MaterialEntries() => new List<AlmanacEntry>
         {
             Keyed("ui.res.wood", Materials, "Material", "Organic",
-                Icon("wood", "#a26e3c", "M4 6h16M4 12h16M4 18h16M7 3v18M17 3v18"),
                 "Felled timber: the first thing a colony builds with, the generator's fuel, and the campfire's cooking wood.",
                 "Felled from trees; 150 in the starting kit", AlmanacAction.FindOnMap,
                 new[] {
@@ -28,7 +27,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.terrain.tree.meadow", "where it comes from"), ("ui.res.stone", "the other building material"), ("ui.arch.tool.generator", "burns it for power"), ("ui.arch.tool.campfire", "cooks with it") }),
 
             Keyed("ui.res.stone", Materials, "Material", "Mineral",
-                Icon("stone", "#7d8590", "M3 8l9-5 9 5v8l-9 5-9-5V8z"),
                 "Broken rock from a mined face, and the loose stones the meadow lays. Slower to build with than wood, and it stands up to more.",
                 "Mined from rock; loose stones; 150 in the starting kit", AlmanacAction.FindOnMap,
                 new[] {
@@ -43,7 +41,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.terrain.rock", "where it is mined"), ("ui.res.wood", "the quicker material"), ("ui.arch.tool.sandbag", "always built of it") }),
 
             Keyed("ui.res.scrap", Materials, "Material", "Metal",
-                Icon("scrap", "#8ca0b3", "M4 7l8-4 8 4v10l-8 4-8-4V7z M9 12l3 3 5-5"),
                 "Salvaged metal. Power lines, the generator, the heater and the cooker all take it as parts beside their material.",
                 "Wreckage piles on the board; the scrap drop", AlmanacAction.FindOnMap,
                 new[] {
@@ -58,7 +55,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.arch.tool.conduit", "built of it"), ("ui.arch.tool.generator", "needs 20"), ("ui.bulletin.scrapdrop", "brings more") }),
 
             Keyed("ui.res.ironore", Materials, "Material", "Ore",
-                Icon("iron_ore", "#9c5a4c", "M12 2l8 5v10l-8 5-8-5V7l8-5z M8 10l4 3 4-3"),
                 "Iron ore, mined from seams inside the rock. Nothing uses it yet: there is no smelting.",
                 "Seams 3 to 13 layers down", AlmanacAction.FindOnMap,
                 new[] {
@@ -71,7 +67,6 @@ namespace Odyssey.Hud
                 new[] { ("ui.terrain.rock", "the stone round it"), ("ui.res.coal", "the deeper seam"), ("ui.skill.mining", "the skill that digs it") }),
 
             Keyed("ui.res.coal", Materials, "Material", "Ore",
-                Icon("coal", "#3a3a3c", "M5 9l5-5 9 3 2 7-6 6-8-2z"),
                 "Coal, mined from seams deeper than iron. Nothing burns it yet: the generator runs on wood.",
                 "Seams 7 to 22 layers down", AlmanacAction.FindOnMap,
                 new[] {
@@ -86,39 +81,39 @@ namespace Odyssey.Hud
 
         static IReadOnlyList<AlmanacEntry> FoodEntries() => new List<AlmanacEntry>
         {
-            Eaten("ui.res.meal", "#e2b04a", 900, 10, "Cooked", "+50",
+            Eaten("ui.res.meal", 900, 10, "Cooked", "+50",
                 "A cooked meal with meat in it, the best food there is. There is no meat in the game yet, so a cook makes vegetable meals.",
                 "Cooked, once there is meat",
                 new[] { ("ui.res.meal.veg", "what the cook makes today"), ("ui.arch.tool.galley", "where it is cooked"), ("ui.need.food", "what it fills") }),
-            Eaten("ui.res.meal.veg", "#9fbf4a", 900, 10, "Cooked", "+50",
+            Eaten("ui.res.meal.veg", 900, 10, "Cooked", "+50",
                 "A meal cooked from any raw food. As filling and as welcome as one with meat.",
                 "Cooked at an electric cooker or a campfire",
                 new[] { ("ui.arch.tool.galley", "cooked here"), ("ui.skill.cooking", "the skill that cooks it"), ("ui.res.carrots", "an ingredient"), ("ui.res.meal.burnt", "what a slip makes") }),
-            Eaten("ui.res.rations", "#d4af37", 900, 20, "Sealed", "+20",
+            Eaten("ui.res.rations", 900, 20, "Sealed", "+20",
                 "Sealed food from before the collapse. Eaten after a cooked meal and before anything burnt or raw.",
                 "36 in the starting kit; the supply drop",
                 new[] { ("ui.bulletin.supplydrop", "brings more"), ("ui.res.meal.veg", "eaten first when there is one"), ("ui.need.food", "what it fills") }),
-            Eaten("ui.res.meal.burnt", "#6b4a2a", 700, 10, "Burnt", "−40",
+            Eaten("ui.res.meal.burnt", 700, 10, "Burnt", "−40",
                 "A meal the cook let catch. Less filling, and eating one sours the mood.",
                 "A cook's slip",
                 new[] { ("ui.skill.cooking", "the higher, the fewer"), ("ui.arch.tool.campfire", "burns half as often again") }),
-            Eaten("ui.res.carrots", "#ff8c3b", 180, 75, "Raw", "−50",
+            Eaten("ui.res.carrots", 180, 75, "Raw", "−50",
                 "The field crop. Eaten raw in a pinch, and three of them make a meal.",
                 "Harvested from a growing zone, 5 a plant",
                 new[] { ("ui.terrain.carrot", "the crop"), ("ui.res.meal.veg", "three make one"), ("ui.arch.tool.growzone", "where it grows") }),
-            Eaten("ui.res.berries", "#a0304a", 60, 75, "Raw", "−50",
+            Eaten("ui.res.berries", 60, 75, "Raw", "−50",
                 "Picked from a ripe berry bush. Eaten raw, or cooked with the rest.",
                 "Harvest a berry bush, 8 a picking",
                 new[] { ("ui.terrain.bush.berry", "where they grow"), ("ui.arch.tool.harvest", "the order that picks them") }),
-            Eaten("ui.res.mushrooms", "#c8b89a", 70, 75, "Raw", "−50",
+            Eaten("ui.res.mushrooms", 70, 75, "Raw", "−50",
                 "Found in the grass under the trees. Eaten raw, or cooked with the rest; more come up somewhere else.",
                 "Beside trees, 3 to 5 at a time",
                 new[] { ("ui.terrain.tree.meadow", "found beside trees"), ("ui.res.meal.veg", "cooked into one") }),
         };
 
-        static AlmanacEntry Eaten(string key, string colour, int nutrition, int stack, string tier, string mood,
+        static AlmanacEntry Eaten(string key, int nutrition, int stack, string tier, string mood,
             string definition, string source, (string, string)[] related) =>
-            Keyed(key, Food, "Eaten", tier, Icon(key.Substring(3).Replace('.', '_'), colour, FoodPath(tier)),
+            Keyed(key, Food, "Eaten", tier,
                 definition, source, AlmanacAction.FindOnMap,
                 new[] {
                     ("Nutrition", $"{nutrition} of the need's 1,000"), ("Stack", $"{stack}"),
@@ -131,18 +126,9 @@ namespace Odyssey.Hud
                     ("To cook", "A cook turns 500 nutrition of any raw food into one meal.")),
                 related);
 
-        static string FoodPath(string tier) => tier switch
-        {
-            "Cooked" => "M4 13h16a8 8 0 0 1-16 0z M3 13h18 M9 9c0-2 2-2 2-4 M13 9c0-2 2-2 2-4",
-            "Sealed" => "M5 4h14v16H5z M5 9h14 M9 4v5",
-            "Burnt" => "M4 13h16a8 8 0 0 1-16 0z M3 13h18 M10 5c1 1 1 2 0 3 M14 5c1 1 1 2 0 3",
-            _ => "M12 21c-4 0-7-3-7-7 0-3 3-7 7-7s7 4 7 7c0 4-3 7-7 7z M12 7V3",
-        };
-
         static IReadOnlyList<AlmanacEntry> MedicineEntries() => new List<AlmanacEntry>
         {
             Keyed("ui.res.medkit", Medicine, "Medical", "Supplies",
-                Icon("medkit", "#d85a5a", "M4 7h16v13H4z M9 7V4h6v3 M12 10v7 M8.5 13.5h7"),
                 "Dressings and drugs. A doctor uses one unit per treatment, for forty points of health and a proper tend.",
                 "6 in the starting kit; the medical drop", AlmanacAction.FindOnMap,
                 new[] {
@@ -159,21 +145,20 @@ namespace Odyssey.Hud
 
         static IReadOnlyList<AlmanacEntry> WeaponEntries() => new List<AlmanacEntry>
         {
-            Melee("ui.item.bat", "#b08a5a", 7, 120, "Blunt", "20% chance to stun for 1 s",
+            Melee("ui.item.bat", 7, 120, "Blunt", "20% chance to stun for 1 s",
                 "A wooden bat. One is in the starting kit, and bandits carry them.", "The starting kit; dropped by bandits",
                 new[] { ("ui.item.crowbar", "the bandit's other weapon"), ("ui.pawn.bandit", "carries one") }),
-            Melee("ui.item.crowbar", "#7d8590", 8, 132, "Blunt", "25% chance to stun for 1.5 s",
+            Melee("ui.item.crowbar", 8, 132, "Blunt", "25% chance to stun for 1.5 s",
                 "A crowbar: heavier and slower than a bat, and it stuns more often. Only bandits bring them.", "Dropped by bandits",
                 new[] { ("ui.item.bat", "lighter and quicker"), ("ui.pawn.bandit", "carries one") }),
-            Melee("ui.item.machete", "#9fb0bf", 8, 96, "Sharp", "No stun; its cuts bleed",
+            Melee("ui.item.machete", 8, 96, "Sharp", "No stun; its cuts bleed",
                 "A machete, sharp and the quickest to swing. One is in the starting kit.", "The starting kit",
                 new[] { ("ui.item.arcblade", "hits harder"), ("ui.health.wound", "what a sharp blow leaves") }),
-            Melee("ui.item.arcblade", "#7fd0e0", 10, 114, "Sharp", "No stun; its cuts bleed",
+            Melee("ui.item.arcblade", 10, 114, "Sharp", "No stun; its cuts bleed",
                 "An arc blade, the hardest-hitting thing a colonist can hold. It is found only through the debug menu.", "The debug menu",
                 new[] { ("ui.item.machete", "quicker, lighter"), ("ui.skill.melee", "the skill that swings it") }),
 
             Keyed("ui.item.pistol", Weapons, "Weapon", "Ranged",
-                Icon("pistol", "#9aa3ad", "M3 9h15l2-2h1v5h-6l-1 2h-3l-1 5H6l1-5H3z"),
                 "A pistol: ten damage a shot out to 26 metres, and a club when an enemy is within reach. Gunmen carry them.",
                 "Dropped by gunmen", AlmanacAction.FindOnMap,
                 new[] {
@@ -188,10 +173,9 @@ namespace Odyssey.Hud
                 new[] { ("ui.skill.shooting", "the skill that aims it"), ("ui.pawn.gunman", "carries one"), ("ui.arch.tool.sandbag", "the cover that stops it") }),
         };
 
-        static AlmanacEntry Melee(string key, string colour, int damage, int cooldown, string kind, string special,
+        static AlmanacEntry Melee(string key, int damage, int cooldown, string kind, string special,
             string definition, string source, (string, string)[] related) =>
-            Keyed(key, Weapons, "Weapon", "Melee", Icon(key.Substring(8), colour,
-                    kind == "Sharp" ? "M4 20l3-3M7 17l11-11 2-3-3 2L6 16z M5 15l4 4" : "M5 19l2 2 11-11-2-2z M16 8l2-5 3 3-5 2"),
+            Keyed(key, Weapons, "Weapon", "Melee",
                 definition, source, AlmanacAction.FindOnMap,
                 new[] {
                     ("Damage", $"{damage}, {kind.ToLowerInvariant()}"), ("Between swings", $"{cooldown} ticks ({cooldown / 60.0:0.0} s)"),
