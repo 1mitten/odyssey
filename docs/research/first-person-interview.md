@@ -6,8 +6,8 @@ camera will look into the colonist's view, what they are doing, so you can see t
 with a melee, walking etc and a more close up way to see action. Please explore and plan first. Ask
 me questions."*
 
-The questions are at the end. **No answers yet**; this file is updated when they arrive, and the
-design document (`docs/design/56-ride-along.md`, name provisional) is written from it.
+The questions and the owner's answers are at the end (§5). The design document
+(`docs/design/56-ride-along.md`, name provisional) is written from them.
 
 ## 1. Does it already exist?
 
@@ -150,3 +150,14 @@ overturned):
   exit.
 - A performance measurement is owed: the frame at a level view, at 4K, on Standard and Huge, with
   the mode's own far plane and fog.
+
+## 5. Answers (2026-09-26, round 1)
+
+| # | Answer | What it decides |
+|---|---|---|
+| 1 | **Behind the shoulder, and the wheel goes in to the eyes** | A spring-arm chase camera with wall pull-in by default, and a continuous wheel range down to an eye stop. The eye stop owes: hiding the head (bone scale, ink off, shadows kept), a combat look target (the aim point for a gunman, the opponent for melee), and a stabilised gaze. |
+| 2 | **Watch only** | No intent and no simulation change: the colonist runs herself. The mouse orbits and looks. Drafted orders from the view are a possible later unit, not this one. |
+| 3 | **A minimal strip** | Name, activity line, health, speed control and "Esc to leave". Every other HUD region is hidden while riding; alerts still arrive. |
+| 4 | **Time unchanged** | Entering or leaving does not touch the speed. Speed keys and pause stay live; every other game key (slice, walls-down, tools, tabs) is gated while riding. |
+
+Still open: **the name** (Q5). The §4 assumptions stand unless the owner overturns one.
