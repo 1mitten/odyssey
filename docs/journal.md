@@ -14205,3 +14205,16 @@ now"*. So design 59 builds the mechanism and a debug tab to drive it, and nothin
 - **The Faces tab acts on the selected colonist, or with nobody selected on the whole colony** for
   expressions, because the useful comparison is the colony at a distance; Talk takes the nearest
   colonist within 8 m.
+
+**Then the owner looked at the sheets** — *"these are good - stern should happen when fighting/in
+draft, obviously when you tired, a variety of motions when talking etc - give it context where we
+can for now"* — and the face was given its context the same day (design 59 §3a): stern drafted or
+fighting, pained, tired from the game's own sleep line, glum, eyes shut asleep, all read off the
+frame. Talking got five manners, listener replies, an eyebrow flash on a greeting, and **hands**,
+which the board-angle photograph showed are the one part of talking visible at play zoom. The
+hands' angles were tuned by photograph (out 10° folded a woman's forearm across her belly; 16°
+opens it). **The struck-up conversation was measured with a control and changed by it**: a
+wandering bare colony struck up none in 90 s, the diagnostic line showed why (the one pair that met
+had walked six metres apart within seconds), and standing still became a condition — two colonists
+held together then fell to talking in 0.4 s. It is the trigger the first answer deferred, read as
+covered by "give it context where we can"; the chance and the reach are guesses for play to tune.

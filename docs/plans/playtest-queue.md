@@ -33,6 +33,11 @@ the next session learns to ignore.
     normally play at, nothing on a face reads: that was measured, e-15. On the men the brow band
     hides the eyes from above even close in.)
   - Wrong: a blink looks like a flicker, or colonists visibly blink in step.
+  - **Context and hands (added the same day).** Draft a colonist and zoom in: her face goes stern.
+    At your normal zoom, watch two colonists talk: a raised, beating forearm should say who is
+    speaking. Wrong: the hand pops up or drops rather than rising and falling, or you never see two
+    colonists fall to talking by themselves at a meal or by the fire in ten minutes of play (the
+    chance is a guess, §5c).
 
 - **First Person: does the shoulder camera show a colonist's day and a fight clearly?**
   (`claude/planning-session-fok6wm`, design 57.) Select a colonist, press **First Person** on her
