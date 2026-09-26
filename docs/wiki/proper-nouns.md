@@ -11,10 +11,13 @@ Names that are not interface keys: people, places, factions, creatures, the cale
 | Hostile faction | **the Tithe** | proposed  | Raiders who consider a cut of your salvage theirs by right, and collect. The name carries the motive, so a raid needs no explanation. Institutional rather than feral, which makes them scarier and gives them negotiators |
 | Trading faction | **the Cartage** | proposed  | A hauliers' combine that runs the routes between holdings. Sounds like a guild because it is one. Trade goodwill, caravan contracts and the price of fuel all sit naturally under it |
 | Neutral faction | **the Kindred** | proposed  | Other survivor holdings who recognise each other. Loosely allied, individually weak, and the source of refugees, wanderers and most of the early quests |
-| Storyteller | **Registrar Vell** | proposed  | Steady escalation. Framed as the old civic apparatus still running: a registrar who expects your holding to follow a curve and files it accordingly. The default |
-| Storyteller | **Warden Ida** | proposed  | Long quiet stretches, gentler peaks. For building and looking at what you built |
-| Storyteller | **the Static** | proposed  | No curve at all. A broadcast that never stopped, saying whatever it says. For players who want the story to surprise them rather than escalate |
-| Storyteller | **Inspector Crane** | proposed  | Front-loaded and harsh. Arrives early, does not wait for you to be ready. The hard mode |
+| Storyteller | **Jacob** | accepted  | A llama who keeps the calendar: the rhythm storyteller, threats on a cycle you can learn, slowly rising. The default. Owner, 2026-09-26 (design 59). Jacob left the colonist name pool the same day for Jonah, in place |
+| Storyteller | **Trent** | accepted  | Half man, half salvage, his implants misfiring at random: the chaotic storyteller, anything any time, never quiet for too long. Owner, 2026-09-26 (design 59). Trent left the colonist name pool the same day for Wade, in place |
+| Storyteller | **Kano** | accepted  | A vast, sleepy pig: the calm storyteller, long quiet seasons and then one hard test. Owner, 2026-09-26 (design 59) |
+| Storyteller | **Registrar Vell** | superseded  | Superseded 2026-09-26 by the owner's Jacob, Trent and Kano (design 59). Steady escalation. Framed as the old civic apparatus still running: a registrar who expects your holding to follow a curve and files it accordingly. The default |
+| Storyteller | **Warden Ida** | superseded  | Superseded 2026-09-26 by the owner's Jacob, Trent and Kano (design 59). Long quiet stretches, gentler peaks. For building and looking at what you built |
+| Storyteller | **the Static** | superseded  | Superseded 2026-09-26 by the owner's Jacob, Trent and Kano (design 59). No curve at all. A broadcast that never stopped, saying whatever it says. For players who want the story to surprise them rather than escalate |
+| Storyteller | **Inspector Crane** | superseded  | Superseded 2026-09-26 by the owner's Jacob, Trent and Kano (design 59). Front-loaded and harsh. Arrives early, does not wait for you to be ready. The hard mode |
 | City wildlife | **midden hog** | proposed  | Pig-descended, thrives on refuse heaps, tameable. The reliable meat and leather animal, and the one you meet first |
 | City predator | **girder cat** | proposed  | A lean climbing predator that hunts along the structure of a ruin. Named for the verticality on purpose: it arrives from a layer you were not watching |
 | Feral machine | **loper** | proposed  | A long-legged maintenance unit still walking its rounds, now hostile to anything that moves. Not alive, not intelligent, not harmless. ui.pawn.synth points at this |
@@ -36,7 +39,7 @@ Names that are not interface keys: people, places, factions, creatures, the cale
 | Colonist names | **Given names only, no surnames** | proposed  | A holding is small enough to be on first-name terms, and a single short name fits the roster bar, which is the densest region in the interface. Short, consonant-forward, mixed origin, nothing that reads as a joke |
 | Starter name pool | **See docs/design/colonist-names.csv** | approved  | 244 given names in three registers — settled, frontier and yard — owner-supplied 2026-09-18. The eight invented for the mockups are in the frontier register. The pool has its own file because it would drown this table, and its own wiki page so every name can be read and struck; the order of that file is load-bearing, since a name is arithmetic on a saved seed |
 
-**0 of 31 rows have no name at all.** Those are not oversights to tidy up later: a storyteller and a faction with no name cannot be written about, and the city the whole prototype is set in is currently called nothing.
+**0 of 34 rows have no name at all.** Those are not oversights to tidy up later: a storyteller and a faction with no name cannot be written about, and the city the whole prototype is set in is currently called nothing.
 
 ---
 

@@ -70,6 +70,11 @@ SECTIONS = [
      "A project's description here is the body of its detail pane: the screen reads this column, "
      "so correcting a line here corrects the game. Only Power is listed yet, and the projects are "
      "placeholders until the research mechanism exists (design 34)."),
+    ("story", "Storytellers and difficulty", ["ui.storyteller", "ui.difficulty", "ui.tension"],
+     "Who decides when things happen to the colony, how hard the threats hit, and the tension gauge "
+     "that shows how hard the storyteller is pressing. A storyteller's description is the blurb on "
+     "its New game card: the screen reads this column. Nothing reads the choice until the "
+     "storyteller itself is built (design 59)."),
     ("world", "World and interface", ["ui.terrain", "ui.weather", "ui.overlay", "ui.layer",
                                       "ui.tab", "ui.speed", "ui.settings", "ui.inventory.hud"],
      "Weather, the data overlays, the layer controls and the rest of the interface furniture. The "
@@ -93,6 +98,7 @@ NS_TITLES = {
     "ui.research.category": "Fields", "ui.research.project": "Projects",
     "ui.research.status": "Project states", "ui.research.hud": "The Research tab's words",
     "ui.inventory.hud": "The Inventory tab's words",
+    "ui.storyteller": "Storytellers", "ui.difficulty": "Difficulty", "ui.tension": "Tension",
 }
 SHEET_NAMES = {
     "01": "raw materials", "02": "food", "03": "camp and crafting", "04": "manufactured",

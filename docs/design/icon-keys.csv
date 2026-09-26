@@ -928,3 +928,45 @@ ui.assign.response,Response,ui.assign,HA,"What she does about danger. Press a ce
 ui.assign.anywhere,Anywhere,ui.assign,HA,"She takes work wherever it is"
 ui.assign.home,Home,ui.assign,HA,"She takes no work outside home, and walks home when idle. A draft overrides it"
 ui.assign.nohearth,No hearth yet,ui.assign,HA,"There is no hearth, so there is no home and Home keeps nobody in. Mark a campfire as the hearth"
+ui.storyteller.jacob,Jacob,ui.storyteller,SY,"A llama who keeps the calendar. Trouble arrives on schedule, and he spits between visits."
+ui.storyteller.trent,Trent,ui.storyteller,SY,"Half man, half salvage. His implants misfire at random, and so does your luck."
+ui.storyteller.kano,Kano,ui.storyteller,SY,"A vast, sleepy pig. Long quiet seasons to build in, then one day he gets up."
+ui.storyteller.portrait.jacob,Jacob's portrait,ui.storyteller,SY,A llama keeping a calendar. Drawn as a square wave until the portrait is commissioned
+ui.storyteller.portrait.trent,Trent's portrait,ui.storyteller,SY,A man half rebuilt from salvage. Drawn as a jagged line until the portrait is commissioned
+ui.storyteller.portrait.kano,Kano's portrait,ui.storyteller,SY,A vast pig asleep. Drawn as a sun on the horizon until the portrait is commissioned
+ui.storyteller.heading,Storyteller,ui.storyteller,SY,"Who decides when things happen to the colony, and how hard the threats hit"
+ui.difficulty.heading,Difficulty,ui.difficulty,SY,"How hard threats hit, and how forgiving the game is after a disaster"
+ui.difficulty.peaceful,Peaceful,ui.difficulty,SY,No big threats at all. The colony is left to build
+ui.difficulty.gentle,Gentle,ui.difficulty,SY,"Small threats, and a loss eases the next ones a great deal"
+ui.difficulty.easy,Easy,ui.difficulty,SY,"Lighter threats, and a forgiving recovery after a loss"
+ui.difficulty.normal,Normal,ui.difficulty,SY,The game as it is tuned
+ui.difficulty.hard,Hard,ui.difficulty,SY,"Heavier threats, and a loss is remembered for longer"
+ui.difficulty.brutal,Brutal,ui.difficulty,SY,"The heaviest threats, and little mercy after a loss"
+ui.difficulty.custom,Custom,ui.difficulty,SY,Your own numbers for all four levers
+ui.difficulty.threatscale,Threat scale,ui.difficulty,SY,"How hard threats hit, as a share of Normal"
+ui.difficulty.bigthreats,Big threats,ui.difficulty,SY,Whether raids and other big threats come at all
+ui.difficulty.adaptation,Adaptation,ui.difficulty,SY,"How strongly a loss eases the next threats, and how fast quiet days build them back"
+ui.difficulty.grace,Grace,ui.difficulty,SY,"How long before the first big threat, against the storyteller's own"
+ui.difficulty.setby,Set by {rung}. Pick Custom to change.,ui.difficulty,SY,Why the four levers cannot be moved on any rung but Custom
+ui.difficulty.own,Your own settings,ui.difficulty,SY,The four levers are yours to move
+ui.tension.gauge,Tension,ui.tension,SY,How hard the storyteller is pressing. A loss eases it; quiet days build it back
+ui.tension.band.0,Reeling,ui.tension,SY,Just hit. The next threats will be small
+ui.tension.band.1,Easing,ui.tension,SY,Recovering. Threats are still lighter than usual
+ui.tension.band.2,Even,ui.tension,SY,Neither easing nor building
+ui.tension.band.3,Building,ui.tension,SY,"The colony is doing well, and threats are growing to match"
+ui.tension.band.4,Peak,ui.tension,SY,As hard as the storyteller presses
+ui.tension.cause.died,"A colonist died, {ago}",ui.tension,SY,What last moved the gauge: a death
+ui.tension.cause.downed,"A colonist was downed, {ago}",ui.tension,SY,What last moved the gauge: a colonist downed
+ui.tension.cause.quiet,{n} quiet days,ui.tension,SY,What last moved the gauge: days with no loss
+ui.tension.cause.quietone,One quiet day,ui.tension,SY,What last moved the gauge: a day with no loss
+ui.tension.cause.none,Nothing has moved it yet,ui.tension,SY,The gauge has not moved since the colony began
+ui.tension.ago.today,today,ui.tension,SY,A cause from the same day
+ui.tension.ago.day,1 day ago,ui.tension,SY,A cause from the day before
+ui.tension.ago.days,{n} days ago,ui.tension,SY,A cause from some days before
+ui.settings.group.story,Story,ui.settings,SY,"Who tells the colony's story, and how hard it is"
+ui.settings.group.pausing,Pausing,ui.settings,SY,When the game stops the clock by itself
+ui.settings.pausebigthreats,Pause on big threats,ui.settings,SY,"Stop the clock when a raid or other big threat arrives, so you can look before it starts"
+ui.settings.storychosen,Chosen when a colony starts,ui.settings,SY,"Storyteller and difficulty belong to a colony, so there is nothing to change until one is open"
+ui.debug.tension,Tension preview,ui.debug,SY,Show the tension gauge at a band until the storyteller drives it. Needs a storyteller chosen at New game
+ui.debug.tensioncause,Tension cause,ui.debug,SY,Which cause the preview's tooltip names
+ui.debug.tensionoff,Off,ui.debug,SY,The gauge is not drawn

@@ -16,7 +16,7 @@ Ordinary given names, the register most of a colony is drawn in.
 | **Lucas** | m | **Charlotte** | f | **Benjamin** | m | **Amelia** | f |
 | **Henry** | m | **Harper** | f | **Evelyn** | f | **Mason** | m |
 | **Abigail** | f | **Michael** | m | **Emily** | f | **Ethan** | m |
-| **Ella** | f | **Daniel** | m | **Elizabeth** | f | **Jacob** | m |
+| **Ella** | f | **Daniel** | m | **Elizabeth** | f | **Jonah** | m |
 | **Camila** | f | **Logan** | m | **Luna** | f | **Jackson** | m |
 | **Sofia** | f | **Levi** | m | **Avery** | any | **Scarlett** | f |
 | **Jack** | m | **Eleanor** | f | **Owen** | m | **Madison** | f |
@@ -85,7 +85,7 @@ Nicknames and what people actually get called. Informal, and the register that m
 | **Gardino** | any | **Gary** | m | **Gazza** | m | **Smithy** | any |
 | **Johno** | m | **Spudgun** | any | **Spud** | any | **Tommy** | m |
 | **Preston** | m | **Flower** | any | **Holiday** | any | **Bert** | m |
-| **Trent** | m |  |  |  |  |  |  |
+| **Wade** | m |  |  |  |  |  |  |
 
 ---
 

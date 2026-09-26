@@ -34,7 +34,7 @@ namespace Odyssey.Hud
             "James", "Emma", "Liam", "Olivia", "Noah", "Sophia", "Oliver", "Ava",
             "Elijah", "Isabella", "William", "Mia", "Lucas", "Charlotte", "Benjamin", "Amelia",
             "Henry", "Harper", "Evelyn", "Mason", "Abigail", "Michael", "Emily", "Ethan",
-            "Ella", "Daniel", "Elizabeth", "Jacob", "Camila", "Logan", "Luna", "Jackson",
+            "Ella", "Daniel", "Elizabeth", "Jonah", "Camila", "Logan", "Luna", "Jackson",
             "Sofia", "Levi", "Avery", "Scarlett", "Jack", "Eleanor", "Owen", "Madison",
             "Theodore", "Layla", "Samuel", "Penelope", "Joseph", "Chloe", "John", "Grace",
             "David", "Nora", "Luke", "Hazel", "Julian", "Zoey", "Dylan", "Riley",
@@ -60,7 +60,7 @@ namespace Odyssey.Hud
             "Jungle", "Diggy G", "Jesus", "Jimmy", "Karl", "Maston", "Tristan", "Dave",
             "Bingo", "Lucky G", "Pleb", "Jonny", "Johnny", "Bishop", "Pete", "Dwayne",
             "Mungo", "Treacle", "Sausage", "Gardino", "Gary", "Gazza", "Smithy", "Johno",
-            "Spudgun", "Spud", "Tommy", "Preston", "Flower", "Holiday", "Bert", "Trent",
+            "Spudgun", "Spud", "Tommy", "Preston", "Flower", "Holiday", "Bert", "Wade",
         };
 
         /// <summary>

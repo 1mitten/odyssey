@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-137 entries, 111 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+141 entries, 115 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -162,6 +162,10 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **View** | `ui.settings.group.view` | The keys that move the slice and frame the map | no art | M3 |
 | **Tools** | `ui.settings.group.tools` | The keys that arm an order | no art | M3 |
 | **Time** | `ui.settings.group.time` | The keys that pause the game and set its speed | no art | M3 |
+| **Story** | `ui.settings.group.story` | Who tells the colony's story, and how hard it is | no art | SY |
+| **Pausing** | `ui.settings.group.pausing` | When the game stops the clock by itself | no art | SY |
+| **Pause on big threats** | `ui.settings.pausebigthreats` | Stop the clock when a raid or other big threat arrives, so you can look before it starts | no art | SY |
+| **Chosen when a colony starts** | `ui.settings.storychosen` | Storyteller and difficulty belong to a colony, so there is nothing to change until one is open | no art | SY |
 
 ## The Inventory tab's words
 

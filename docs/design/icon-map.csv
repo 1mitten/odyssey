@@ -468,3 +468,6 @@ ui.bill.needs,-,,,"Interface words, no icon wanted",-,gap
 ui.bill.needs.fire,-,,,"Interface words, no icon wanted",-,gap
 ui.bill.supply,-,,,"Interface words, no icon wanted",-,gap
 ui.bill.nosupply,-,,,"an empty basket. Our own concept",-,gap
+ui.storyteller.portrait.jacob,-,,,"a llama holding a calendar. Commissioned portrait art, not a sheet icon",-,gap
+ui.storyteller.portrait.trent,-,,,"a man half rebuilt from salvage. Commissioned portrait art, not a sheet icon",-,gap
+ui.storyteller.portrait.kano,-,,,"a vast sleeping pig. Commissioned portrait art, not a sheet icon",-,gap

@@ -153,8 +153,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#health">Health and anatomy<b>39</b></a></li>
 <li><a href="#events">Events<b>51</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
-<li><a href="#world">World and interface<b>137</b></a></li>
-<li><a href="#proper-nouns">Proper nouns<b>31</b></a></li>
+<li><a href="#story">Storytellers and difficulty<b>35</b></a></li>
+<li><a href="#world">World and interface<b>141</b></a></li>
+<li><a href="#proper-nouns">Proper nouns<b>34</b></a></li>
 </ul></nav>
 <main>
 <div class="lede"><h1>Every named thing in the game</h1>
@@ -162,9 +163,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>929</b><i>named entries</i></div>
+<div class="stat"><b>971</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>657</b><i>no art yet</i></div>
+<div class="stat m"><b>699</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -3083,8 +3084,235 @@ footer code{font-size:11.5px;color:var(--ink2)}
 </div>
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
+<section id="story" data-sec="1">
+<h2>Storytellers and difficulty <em class="count">35 entries</em></h2>
+<p class="blurb">Who decides when things happen to the colony, how hard the threats hit, and the tension gauge that shows how hard the storyteller is pressing. A storyteller's description is the blurb on its New game card: the screen reads this column. Nothing reads the choice until the storyteller itself is built (design 59).</p>
+<h3 class="nsh">Storytellers</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.storyteller.jacob" data-hay="jacob ui.storyteller.jacob a llama who keeps the calendar. trouble arrives on schedule, and he spits between visits. " data-gap="1">
+<div class="nm">Jacob<span class="k">ui.storyteller.jacob</span></div>
+<div class="dsc">A llama who keeps the calendar. Trouble arrives on schedule, and he spits between visits.</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.storyteller.trent" data-hay="trent ui.storyteller.trent half man, half salvage. his implants misfire at random, and so does your luck. " data-gap="1">
+<div class="nm">Trent<span class="k">ui.storyteller.trent</span></div>
+<div class="dsc">Half man, half salvage. His implants misfire at random, and so does your luck.</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.storyteller.kano" data-hay="kano ui.storyteller.kano a vast, sleepy pig. long quiet seasons to build in, then one day he gets up. " data-gap="1">
+<div class="nm">Kano<span class="k">ui.storyteller.kano</span></div>
+<div class="dsc">A vast, sleepy pig. Long quiet seasons to build in, then one day he gets up.</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.storyteller.portrait.jacob" data-hay="jacob's portrait ui.storyteller.portrait.jacob a llama keeping a calendar. drawn as a square wave until the portrait is commissioned a llama holding a calendar. commissioned portrait art, not a sheet icon" data-gap="1">
+<div class="nm">Jacob's portrait<span class="k">ui.storyteller.portrait.jacob</span></div>
+<div class="dsc">A llama keeping a calendar. Drawn as a square wave until the portrait is commissioned<span class="need">Needs drawing: a llama holding a calendar. Commissioned portrait art, not a sheet icon</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.storyteller.portrait.trent" data-hay="trent's portrait ui.storyteller.portrait.trent a man half rebuilt from salvage. drawn as a jagged line until the portrait is commissioned a man half rebuilt from salvage. commissioned portrait art, not a sheet icon" data-gap="1">
+<div class="nm">Trent's portrait<span class="k">ui.storyteller.portrait.trent</span></div>
+<div class="dsc">A man half rebuilt from salvage. Drawn as a jagged line until the portrait is commissioned<span class="need">Needs drawing: a man half rebuilt from salvage. Commissioned portrait art, not a sheet icon</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.storyteller.portrait.kano" data-hay="kano's portrait ui.storyteller.portrait.kano a vast pig asleep. drawn as a sun on the horizon until the portrait is commissioned a vast sleeping pig. commissioned portrait art, not a sheet icon" data-gap="1">
+<div class="nm">Kano's portrait<span class="k">ui.storyteller.portrait.kano</span></div>
+<div class="dsc">A vast pig asleep. Drawn as a sun on the horizon until the portrait is commissioned<span class="need">Needs drawing: a vast sleeping pig. Commissioned portrait art, not a sheet icon</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.storyteller.heading" data-hay="storyteller ui.storyteller.heading who decides when things happen to the colony, and how hard the threats hit " data-gap="1">
+<div class="nm">Storyteller<span class="k">ui.storyteller.heading</span></div>
+<div class="dsc">Who decides when things happen to the colony, and how hard the threats hit</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+</div>
+<h3 class="nsh">Difficulty</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.difficulty.heading" data-hay="difficulty ui.difficulty.heading how hard threats hit, and how forgiving the game is after a disaster " data-gap="1">
+<div class="nm">Difficulty<span class="k">ui.difficulty.heading</span></div>
+<div class="dsc">How hard threats hit, and how forgiving the game is after a disaster</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.difficulty.peaceful" data-hay="peaceful ui.difficulty.peaceful no big threats at all. the colony is left to build " data-gap="1">
+<div class="nm">Peaceful<span class="k">ui.difficulty.peaceful</span></div>
+<div class="dsc">No big threats at all. The colony is left to build</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.difficulty.gentle" data-hay="gentle ui.difficulty.gentle small threats, and a loss eases the next ones a great deal " data-gap="1">
+<div class="nm">Gentle<span class="k">ui.difficulty.gentle</span></div>
+<div class="dsc">Small threats, and a loss eases the next ones a great deal</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.difficulty.easy" data-hay="easy ui.difficulty.easy lighter threats, and a forgiving recovery after a loss " data-gap="1">
+<div class="nm">Easy<span class="k">ui.difficulty.easy</span></div>
+<div class="dsc">Lighter threats, and a forgiving recovery after a loss</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.difficulty.normal" data-hay="normal ui.difficulty.normal the game as it is tuned " data-gap="1">
+<div class="nm">Normal<span class="k">ui.difficulty.normal</span></div>
+<div class="dsc">The game as it is tuned</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.difficulty.hard" data-hay="hard ui.difficulty.hard heavier threats, and a loss is remembered for longer " data-gap="1">
+<div class="nm">Hard<span class="k">ui.difficulty.hard</span></div>
+<div class="dsc">Heavier threats, and a loss is remembered for longer</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.difficulty.brutal" data-hay="brutal ui.difficulty.brutal the heaviest threats, and little mercy after a loss " data-gap="1">
+<div class="nm">Brutal<span class="k">ui.difficulty.brutal</span></div>
+<div class="dsc">The heaviest threats, and little mercy after a loss</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.difficulty.custom" data-hay="custom ui.difficulty.custom your own numbers for all four levers " data-gap="1">
+<div class="nm">Custom<span class="k">ui.difficulty.custom</span></div>
+<div class="dsc">Your own numbers for all four levers</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.difficulty.threatscale" data-hay="threat scale ui.difficulty.threatscale how hard threats hit, as a share of normal " data-gap="1">
+<div class="nm">Threat scale<span class="k">ui.difficulty.threatscale</span></div>
+<div class="dsc">How hard threats hit, as a share of Normal</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.difficulty.bigthreats" data-hay="big threats ui.difficulty.bigthreats whether raids and other big threats come at all " data-gap="1">
+<div class="nm">Big threats<span class="k">ui.difficulty.bigthreats</span></div>
+<div class="dsc">Whether raids and other big threats come at all</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.difficulty.adaptation" data-hay="adaptation ui.difficulty.adaptation how strongly a loss eases the next threats, and how fast quiet days build them back " data-gap="1">
+<div class="nm">Adaptation<span class="k">ui.difficulty.adaptation</span></div>
+<div class="dsc">How strongly a loss eases the next threats, and how fast quiet days build them back</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.difficulty.grace" data-hay="grace ui.difficulty.grace how long before the first big threat, against the storyteller's own " data-gap="1">
+<div class="nm">Grace<span class="k">ui.difficulty.grace</span></div>
+<div class="dsc">How long before the first big threat, against the storyteller's own</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.difficulty.setby" data-hay="set by {rung}. pick custom to change. ui.difficulty.setby why the four levers cannot be moved on any rung but custom " data-gap="1">
+<div class="nm">Set by {rung}. Pick Custom to change.<span class="k">ui.difficulty.setby</span></div>
+<div class="dsc">Why the four levers cannot be moved on any rung but Custom</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.difficulty.own" data-hay="your own settings ui.difficulty.own the four levers are yours to move " data-gap="1">
+<div class="nm">Your own settings<span class="k">ui.difficulty.own</span></div>
+<div class="dsc">The four levers are yours to move</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+</div>
+<h3 class="nsh">Tension</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.tension.gauge" data-hay="tension ui.tension.gauge how hard the storyteller is pressing. a loss eases it; quiet days build it back " data-gap="1">
+<div class="nm">Tension<span class="k">ui.tension.gauge</span></div>
+<div class="dsc">How hard the storyteller is pressing. A loss eases it; quiet days build it back</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.tension.band.0" data-hay="reeling ui.tension.band.0 just hit. the next threats will be small " data-gap="1">
+<div class="nm">Reeling<span class="k">ui.tension.band.0</span></div>
+<div class="dsc">Just hit. The next threats will be small</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.tension.band.1" data-hay="easing ui.tension.band.1 recovering. threats are still lighter than usual " data-gap="1">
+<div class="nm">Easing<span class="k">ui.tension.band.1</span></div>
+<div class="dsc">Recovering. Threats are still lighter than usual</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.tension.band.2" data-hay="even ui.tension.band.2 neither easing nor building " data-gap="1">
+<div class="nm">Even<span class="k">ui.tension.band.2</span></div>
+<div class="dsc">Neither easing nor building</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.tension.band.3" data-hay="building ui.tension.band.3 the colony is doing well, and threats are growing to match " data-gap="1">
+<div class="nm">Building<span class="k">ui.tension.band.3</span></div>
+<div class="dsc">The colony is doing well, and threats are growing to match</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.tension.band.4" data-hay="peak ui.tension.band.4 as hard as the storyteller presses " data-gap="1">
+<div class="nm">Peak<span class="k">ui.tension.band.4</span></div>
+<div class="dsc">As hard as the storyteller presses</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.tension.cause.died" data-hay="a colonist died, {ago} ui.tension.cause.died what last moved the gauge: a death " data-gap="1">
+<div class="nm">A colonist died, {ago}<span class="k">ui.tension.cause.died</span></div>
+<div class="dsc">What last moved the gauge: a death</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.tension.cause.downed" data-hay="a colonist was downed, {ago} ui.tension.cause.downed what last moved the gauge: a colonist downed " data-gap="1">
+<div class="nm">A colonist was downed, {ago}<span class="k">ui.tension.cause.downed</span></div>
+<div class="dsc">What last moved the gauge: a colonist downed</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.tension.cause.quiet" data-hay="{n} quiet days ui.tension.cause.quiet what last moved the gauge: days with no loss " data-gap="1">
+<div class="nm">{n} quiet days<span class="k">ui.tension.cause.quiet</span></div>
+<div class="dsc">What last moved the gauge: days with no loss</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.tension.cause.quietone" data-hay="one quiet day ui.tension.cause.quietone what last moved the gauge: a day with no loss " data-gap="1">
+<div class="nm">One quiet day<span class="k">ui.tension.cause.quietone</span></div>
+<div class="dsc">What last moved the gauge: a day with no loss</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.tension.cause.none" data-hay="nothing has moved it yet ui.tension.cause.none the gauge has not moved since the colony began " data-gap="1">
+<div class="nm">Nothing has moved it yet<span class="k">ui.tension.cause.none</span></div>
+<div class="dsc">The gauge has not moved since the colony began</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.tension.ago.today" data-hay="today ui.tension.ago.today a cause from the same day " data-gap="1">
+<div class="nm">today<span class="k">ui.tension.ago.today</span></div>
+<div class="dsc">A cause from the same day</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.tension.ago.day" data-hay="1 day ago ui.tension.ago.day a cause from the day before " data-gap="1">
+<div class="nm">1 day ago<span class="k">ui.tension.ago.day</span></div>
+<div class="dsc">A cause from the day before</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.tension.ago.days" data-hay="{n} days ago ui.tension.ago.days a cause from some days before " data-gap="1">
+<div class="nm">{n} days ago<span class="k">ui.tension.ago.days</span></div>
+<div class="dsc">A cause from some days before</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+</div>
+<p class="empty" hidden>No entries in this section match.</p>
+</section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">137 entries</em></h2>
+<h2>World and interface <em class="count">141 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -3857,6 +4085,30 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.settings.group.story" data-hay="story ui.settings.group.story who tells the colony's story, and how hard it is " data-gap="1">
+<div class="nm">Story<span class="k">ui.settings.group.story</span></div>
+<div class="dsc">Who tells the colony's story, and how hard it is</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.settings.group.pausing" data-hay="pausing ui.settings.group.pausing when the game stops the clock by itself " data-gap="1">
+<div class="nm">Pausing<span class="k">ui.settings.group.pausing</span></div>
+<div class="dsc">When the game stops the clock by itself</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.settings.pausebigthreats" data-hay="pause on big threats ui.settings.pausebigthreats stop the clock when a raid or other big threat arrives, so you can look before it starts " data-gap="1">
+<div class="nm">Pause on big threats<span class="k">ui.settings.pausebigthreats</span></div>
+<div class="dsc">Stop the clock when a raid or other big threat arrives, so you can look before it starts</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
+<div class="row gap" id="ui.settings.storychosen" data-hay="chosen when a colony starts ui.settings.storychosen storyteller and difficulty belong to a colony, so there is nothing to change until one is open " data-gap="1">
+<div class="nm">Chosen when a colony starts<span class="k">ui.settings.storychosen</span></div>
+<div class="dsc">Storyteller and difficulty belong to a colony, so there is nothing to change until one is open</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">SY</div>
+</div>
 </div>
 <h3 class="nsh">The Inventory tab's words</h3>
 <div class="tbl">
@@ -3943,8 +4195,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="proper-nouns" data-sec="1" class="nouns">
-<h2>Proper nouns <em class="count">31 entries</em></h2>
-<p class="blurb">Names that are not interface keys: people, places, factions, creatures, the calendar. The brief requires every one of these to be ours rather than borrowed, so this table exists to make the empty rows impossible to miss. <strong>0 of 31 have no name at all</strong>, including the city the whole prototype is set in.</p>
+<h2>Proper nouns <em class="count">34 entries</em></h2>
+<p class="blurb">Names that are not interface keys: people, places, factions, creatures, the calendar. The brief requires every one of these to be ours rather than borrowed, so this table exists to make the empty rows impossible to miss. <strong>0 of 34 have no name at all</strong>, including the city the whole prototype is set in.</p>
 <div class="tbl">
 <div class="row head"><div>Category</div><div>Name</div><div>Notes</div><div class="st">Status</div></div>
 <div class="row" id="world.planet" data-hay="the world carrow a city-world: one settlement that grew until it covered the planet. short, bleak, easy to say, and it survives being said a thousand times. the register throughout is english industrial rather than classical or invented-exotic: a working future, not a mythic one proposed" data-gap="0">
@@ -3989,29 +4241,47 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Other survivor holdings who recognise each other. Loosely allied, individually weak, and the source of refugees, wanderers and most of the early quests</div>
 <div class="st proposed">proposed</div>
 </div>
-<div class="row" id="storyteller.vell" data-hay="storyteller registrar vell steady escalation. framed as the old civic apparatus still running: a registrar who expects your holding to follow a curve and files it accordingly. the default proposed" data-gap="0">
+<div class="row" id="storyteller.jacob" data-hay="storyteller jacob a llama who keeps the calendar: the rhythm storyteller, threats on a cycle you can learn, slowly rising. the default. owner, 2026-09-26 (design 59). jacob left the colonist name pool the same day for jonah, in place accepted" data-gap="0">
+<div class="nm">Storyteller<span class="k">storyteller.jacob</span></div>
+<div>Jacob</div>
+<div class="dsc">A llama who keeps the calendar: the rhythm storyteller, threats on a cycle you can learn, slowly rising. The default. Owner, 2026-09-26 (design 59). Jacob left the colonist name pool the same day for Jonah, in place</div>
+<div class="st accepted">accepted</div>
+</div>
+<div class="row" id="storyteller.trent" data-hay="storyteller trent half man, half salvage, his implants misfiring at random: the chaotic storyteller, anything any time, never quiet for too long. owner, 2026-09-26 (design 59). trent left the colonist name pool the same day for wade, in place accepted" data-gap="0">
+<div class="nm">Storyteller<span class="k">storyteller.trent</span></div>
+<div>Trent</div>
+<div class="dsc">Half man, half salvage, his implants misfiring at random: the chaotic storyteller, anything any time, never quiet for too long. Owner, 2026-09-26 (design 59). Trent left the colonist name pool the same day for Wade, in place</div>
+<div class="st accepted">accepted</div>
+</div>
+<div class="row" id="storyteller.kano" data-hay="storyteller kano a vast, sleepy pig: the calm storyteller, long quiet seasons and then one hard test. owner, 2026-09-26 (design 59) accepted" data-gap="0">
+<div class="nm">Storyteller<span class="k">storyteller.kano</span></div>
+<div>Kano</div>
+<div class="dsc">A vast, sleepy pig: the calm storyteller, long quiet seasons and then one hard test. Owner, 2026-09-26 (design 59)</div>
+<div class="st accepted">accepted</div>
+</div>
+<div class="row" id="storyteller.vell" data-hay="storyteller registrar vell superseded 2026-09-26 by the owner's jacob, trent and kano (design 59). steady escalation. framed as the old civic apparatus still running: a registrar who expects your holding to follow a curve and files it accordingly. the default superseded" data-gap="0">
 <div class="nm">Storyteller<span class="k">storyteller.vell</span></div>
 <div>Registrar Vell</div>
-<div class="dsc">Steady escalation. Framed as the old civic apparatus still running: a registrar who expects your holding to follow a curve and files it accordingly. The default</div>
-<div class="st proposed">proposed</div>
+<div class="dsc">Superseded 2026-09-26 by the owner's Jacob, Trent and Kano (design 59). Steady escalation. Framed as the old civic apparatus still running: a registrar who expects your holding to follow a curve and files it accordingly. The default</div>
+<div class="st superseded">superseded</div>
 </div>
-<div class="row" id="storyteller.ida" data-hay="storyteller warden ida long quiet stretches, gentler peaks. for building and looking at what you built proposed" data-gap="0">
+<div class="row" id="storyteller.ida" data-hay="storyteller warden ida superseded 2026-09-26 by the owner's jacob, trent and kano (design 59). long quiet stretches, gentler peaks. for building and looking at what you built superseded" data-gap="0">
 <div class="nm">Storyteller<span class="k">storyteller.ida</span></div>
 <div>Warden Ida</div>
-<div class="dsc">Long quiet stretches, gentler peaks. For building and looking at what you built</div>
-<div class="st proposed">proposed</div>
+<div class="dsc">Superseded 2026-09-26 by the owner's Jacob, Trent and Kano (design 59). Long quiet stretches, gentler peaks. For building and looking at what you built</div>
+<div class="st superseded">superseded</div>
 </div>
-<div class="row" id="storyteller.static" data-hay="storyteller the static no curve at all. a broadcast that never stopped, saying whatever it says. for players who want the story to surprise them rather than escalate proposed" data-gap="0">
+<div class="row" id="storyteller.static" data-hay="storyteller the static superseded 2026-09-26 by the owner's jacob, trent and kano (design 59). no curve at all. a broadcast that never stopped, saying whatever it says. for players who want the story to surprise them rather than escalate superseded" data-gap="0">
 <div class="nm">Storyteller<span class="k">storyteller.static</span></div>
 <div>the Static</div>
-<div class="dsc">No curve at all. A broadcast that never stopped, saying whatever it says. For players who want the story to surprise them rather than escalate</div>
-<div class="st proposed">proposed</div>
+<div class="dsc">Superseded 2026-09-26 by the owner's Jacob, Trent and Kano (design 59). No curve at all. A broadcast that never stopped, saying whatever it says. For players who want the story to surprise them rather than escalate</div>
+<div class="st superseded">superseded</div>
 </div>
-<div class="row" id="storyteller.crane" data-hay="storyteller inspector crane front-loaded and harsh. arrives early, does not wait for you to be ready. the hard mode proposed" data-gap="0">
+<div class="row" id="storyteller.crane" data-hay="storyteller inspector crane superseded 2026-09-26 by the owner's jacob, trent and kano (design 59). front-loaded and harsh. arrives early, does not wait for you to be ready. the hard mode superseded" data-gap="0">
 <div class="nm">Storyteller<span class="k">storyteller.crane</span></div>
 <div>Inspector Crane</div>
-<div class="dsc">Front-loaded and harsh. Arrives early, does not wait for you to be ready. The hard mode</div>
-<div class="st proposed">proposed</div>
+<div class="dsc">Superseded 2026-09-26 by the owner's Jacob, Trent and Kano (design 59). Front-loaded and harsh. Arrives early, does not wait for you to be ready. The hard mode</div>
+<div class="st superseded">superseded</div>
 </div>
 <div class="row" id="creature.scavenger" data-hay="city wildlife midden hog pig-descended, thrives on refuse heaps, tameable. the reliable meat and leather animal, and the one you meet first proposed" data-gap="0">
 <div class="nm">City wildlife<span class="k">creature.scavenger</span></div>
@@ -4140,7 +4410,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 929, "gaps": 657};</script>
+<script>window.WIKI={"total": 971, "gaps": 699};</script>
 <script>
 (function(){
   var D = window.WIKI;
