@@ -91,6 +91,33 @@ namespace Odyssey.Sim.Worldgen
             return Lerp(Lerp(v00, v10, tx), Lerp(v01, v11, tx), tz);
         }
 
+        /// <summary>
+        /// One octave of 2D value noise that repeats every <paramref name="circumference"/> along x
+        /// (design 57 §4b): the lattice column is taken modulo the number of cells round the
+        /// circumference, so the field's east edge meets its west with no seam and no trigonometry —
+        /// the planet's wrap, in integers. <paramref name="period"/> must divide the circumference.
+        /// </summary>
+        public static int Value2DWrapped(uint seed, int x, int z, int period, int circumference)
+        {
+            if (period < 1) period = 1;
+            int cells = circumference / period;
+            if (cells < 1) cells = 1;
+            int wrapped = x % circumference;
+            if (wrapped < 0) wrapped += circumference;
+            int cx = wrapped / period;
+            int cz = FloorDiv(z, period);
+            int tx = Smooth((wrapped - cx * period) * FractionOne / period);
+            int tz = Smooth((z - cz * period) * FractionOne / period);
+            int cx1 = (cx + 1) % cells;
+
+            int v00 = Lattice(seed, cx, cz);
+            int v10 = Lattice(seed, cx1, cz);
+            int v01 = Lattice(seed, cx, cz + 1);
+            int v11 = Lattice(seed, cx1, cz + 1);
+
+            return Lerp(Lerp(v00, v10, tx), Lerp(v01, v11, tx), tz);
+        }
+
         /// <summary>One octave of 3D value noise. The third axis is the layer.</summary>
         public static int Value3D(uint seed, int x, int z, int y, int period)
         {

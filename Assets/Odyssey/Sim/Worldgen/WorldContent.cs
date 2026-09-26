@@ -135,7 +135,8 @@ namespace Odyssey.Sim.Worldgen
         /// </summary>
         public static DefLoader Register(DefLoader loader) =>
             loader.Register<TerrainDef>().Register<OreKindDef>().Register<PlantDef>().Register<ClimateDef>()
-                .Register<Weather.WeatherDef>().Register<WildPlantDef>();
+                .Register<Weather.WeatherDef>().Register<WildPlantDef>()
+                .Register<Worldgen.Planet.BiomeDef>().Register<Worldgen.Planet.PlanetDef>();
 
         /// <summary>
         /// The whole terrain table, in index order. A missing or misspelt kind throws here
@@ -174,6 +175,27 @@ namespace Odyssey.Sim.Worldgen
             _wildPlants = null;
             _climate = null;
             _weathers = null;
+            _planet = null;
+            _biomes = null;
+        }
+
+        static Worldgen.Planet.PlanetDef? _planet;
+        static Worldgen.Planet.BiomeDef[]? _biomes;
+
+        /// <summary>The planet's shape and climate (design 57 §4c).</summary>
+        public static Worldgen.Planet.PlanetDef Planet => _planet ??= One<Worldgen.Planet.PlanetDef>(ContentPack.Core, "Planet_Carrow");
+
+        /// <summary>The biomes, lowest priority first — the order a tile is classified in (design 57 §6).</summary>
+        public static Worldgen.Planet.BiomeDef[] Biomes => _biomes ??= BiomesFromDefs(ContentPack.Core);
+
+        public static Worldgen.Planet.BiomeDef[] BiomesFromDefs(DefDatabase defs)
+        {
+            if (!defs.HasTable<Worldgen.Planet.BiomeDef>())
+                throw new DefLoadException("the content has no BiomeDef at all, and the planet needs its biomes.");
+            var table = new List<Worldgen.Planet.BiomeDef>(defs.Table<Worldgen.Planet.BiomeDef>().All);
+            table.Sort((a, b) => a.priority != b.priority ? a.priority.CompareTo(b.priority)
+                : string.CompareOrdinal(a.defName, b.defName));
+            return table.ToArray();
         }
 
         /// <summary>The weather kinds in <see cref="Contracts.WeatherKind"/> order, one Def each (design 43 §4).</summary>

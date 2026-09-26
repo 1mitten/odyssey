@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The planet's biomes (design 57 §6): six, by the owner's ruling of 2026-09-26 on Claude Design's
+  specification (docs/reference/mockups/world-screen-spec.md).
+
+  A land tile takes the first biome, lowest priority first, whose bands hold its mean temperature
+  (centi-degrees) and rainfall (mm a year). Bands are half-open: min <= value < max. Meadow is the
+  remainder, so the table is total — PlanetTests proves every land tile of two hundred worlds lands
+  somewhere. A sea tile is Ocean unless a biome that freezes the sea holds it (Ice).
+
+  ONLY MEADOW IS SETTLEABLE until the next art pack (owner, 2026-09-26). Turning a biome on is its
+  `settleable` flag and a `board` preset.
+
+  The ramps are the map's colour at t = 0 (rampFrom) and t = 1 (rampTo), from the specification;
+  `ramp` names the rule for t (design 57 §9b). The names are registry keys (ui.biome.*).
+-->
+<Defs>
+
+  <BiomeDef>
+    <defName>Biome_Ice</defName>
+    <labelKey>ui.biome.ice</labelKey>
+    <priority>1</priority>
+    <freezesSea>true</freezesSea>
+    <bands>
+      <li><tempMaxC>-1000</tempMaxC></li>
+    </bands>
+    <rampFrom>#b9c9d2</rampFrom>
+    <rampTo>#f4f8fa</rampTo>
+    <ramp>Ice</ramp>
+  </BiomeDef>
+
+  <BiomeDef>
+    <defName>Biome_ColdSteppe</defName>
+    <labelKey>ui.biome.coldsteppe</labelKey>
+    <priority>2</priority>
+    <bands>
+      <li><tempMaxC>300</tempMaxC></li>
+    </bands>
+    <rampFrom>#cdc79c</rampFrom>
+    <rampTo>#8c8766</rampTo>
+  </BiomeDef>
+
+  <BiomeDef>
+    <defName>Biome_Marsh</defName>
+    <labelKey>ui.biome.marsh</labelKey>
+    <priority>3</priority>
+    <bands>
+      <li><rainMinMm>1500</rainMinMm></li>
+    </bands>
+    <rampFrom>#5c9c8c</rampFrom>
+    <rampTo>#2c6660</rampTo>
+  </BiomeDef>
+
+  <BiomeDef>
+    <defName>Biome_DryScrub</defName>
+    <labelKey>ui.biome.dryscrub</labelKey>
+    <priority>4</priority>
+    <bands>
+      <li><rainMaxMm>500</rainMaxMm></li>
+      <li><tempMinC>1700</tempMinC></li>
+    </bands>
+    <rampFrom>#e0b577</rampFrom>
+    <rampTo>#a8743f</rampTo>
+  </BiomeDef>
+
+  <BiomeDef>
+    <defName>Biome_Meadow</defName>
+    <labelKey>ui.biome.meadow</labelKey>
+    <priority>5</priority>
+    <settleable>true</settleable>
+    <bands>
+      <li></li>
+    </bands>
+    <rampFrom>#a3cf72</rampFrom>
+    <rampTo>#4f8f45</rampTo>
+    <board>Meadow</board>
+  </BiomeDef>
+
+  <BiomeDef>
+    <defName>Biome_Ocean</defName>
+    <labelKey>ui.biome.ocean</labelKey>
+    <priority>6</priority>
+    <water>true</water>
+    <rampFrom>#0b1d2c</rampFrom>
+    <rampTo>#2f6f8c</rampTo>
+    <ramp>Ocean</ramp>
+  </BiomeDef>
+
+</Defs>

@@ -363,7 +363,7 @@ Taken as each unit lands, with the machine and date.
 
 | What | Number |
 |---|---|
-| planet generation (64 × 32) | *WG2* |
+| planet generation (64 × 32) | **2.1 ms median, 2.45 worst**, over 20 seeds (fast tier, CoreCLR, the build container, 2026-09-26): a twenty-fifth of the 50 ms budget. Two sample planets hold 13–17 % Meadow, 19–21 % Ice and 37 % Ocean, with a dry-scrub belt round the equator, since the six biomes have no tropical forest. |
 | map paint at 2× | *WG3a* |
 | board memory per hill band | *WG4* |
 
