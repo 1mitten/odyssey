@@ -1684,6 +1684,7 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             DrawStandingOrders(_world.Views.Current);
+            DrawCracks(_world.Views.Current);
             DrawZones(_world.Views.Current);
             DrawBuildingSites(_world.Views.Current);
             DrawToolPreview();
@@ -1987,9 +1988,31 @@ namespace Odyssey.Presentation.Bootstrap
                 // in mining", and marking the wall's top face is what mining already does to rock.
                 _renderer.DrawCellMark(cell, tint);
 
-                if (orders[i].Progress > 0)
+                // A face being mined is drawn cracked instead (design 57, owner 2026-09-26: the
+                // cracks replace the pale slab). The slab stays for a build without the shader.
+                bool cracked = kind == DesignationKind.Mine && _renderer.CracksAvailable;
+                if (orders[i].Progress > 0 && !cracked)
                     _renderer.DrawCellCut(cell, orders[i].Progress / 255f, CutColour);
             }
+        }
+
+        readonly System.Collections.Generic.List<CrackedCell> _crackedCells =
+            new System.Collections.Generic.List<CrackedCell>();
+
+        /// <summary>
+        /// Struck walls and rock being mined, drawn broken (design 57): <c>CrackModel</c> says which
+        /// cells and how badly, the renderer draws each cell's own meshes over themselves in the
+        /// crack shader. Called every frame, whether or not anything is cracked, so a cell that
+        /// came down or was ordered again gives its scratch batch back. Filtered to the band a
+        /// click can reach, as the orders are: anything drawn solid, never a ghost.
+        /// </summary>
+        void DrawCracks(WorldSnapshot snapshot)
+        {
+            if (_renderer == null || cameraRig == null) return;
+            int lowest = System.Math.Max(0, cameraRig.LowestSelectableLayer);
+            int highest = cameraRig.HighestSelectableLayer;
+            CrackModel.Gather(snapshot, _crackedCells, lowest, highest);
+            _renderer.DrawCracks(_crackedCells);
         }
 
         /// <summary>The colour a growing zone's whole-tile cover is drawn in — a dark worked-soil

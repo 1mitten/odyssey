@@ -95,6 +95,10 @@ namespace Odyssey.EditorTools
             // is no fallback that draws it: without this row a player fires invisible bullets.
             "Odyssey/Tracer",
 
+            // Cracks on a struck wall and a face being mined (design 57), found by name by the
+            // chunk renderer. Without it a player keeps the mining cut slab and walls never crack.
+            "Odyssey/Crack",
+
             // The sky, and it was not on the first draft of this list — `ShaderInclusionTests`
             // found it on the run that was meant to confirm the fix, along with `Standard` below.
             // Worth recording rather than quietly adding: a list of runtime-found shaders
