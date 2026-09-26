@@ -330,6 +330,8 @@ ui.command.fightback,Fight back,ui.command,CB,"Fights only whoever strikes her. 
 ui.command.defend,Defend,ui.command,CB,"Joins a fight near her, then goes back to work. Press to change"
 ui.command.flee,Flee,ui.command,CB,"Runs from danger near her, and fights only when cornered. Press to change"
 ui.command.sethearth,Make this the hearth,ui.command,M3,"Centre the colony's home on this campfire"
+ui.command.ride,First Person,ui.command,RA,"Watch from behind her shoulder while she goes about her day. The wheel goes in to her eyes; Esc leaves"
+ui.command.leaveride,Leave,ui.command,RA,"Back to the colony view, where you were"
 ui.menu.cancel,Cancel,ui.menu,CB,"Close the menu a right-click opened, and order nothing"
 ui.overlay.temperature,Temperature,ui.overlay,M1,Warm to cold across the slice
 ui.overlay.light,Light,ui.overlay,M1,How lit each cell is
