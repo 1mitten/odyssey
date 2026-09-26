@@ -570,8 +570,30 @@ namespace Odyssey.Tests.Sim
             // the merged code; GoldenColonyProbe on main (2a1cfa63) and on the merge is identical on
             // all three boards, so the hash sees more and no colony does anything different.
             // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
-            Generated = 13308657285820379759UL,
-            Simulated = 16876557663456853837UL,
+            // 2026-09-25, nobody over anybody and nothing in a tree (design 31 §20, 20 §14, 23 §11):
+            // Simulated only. A wander leg now refuses a cell another pawn stands on or is heading
+            // to, so people and animals take different legs. GoldenColonyProbe against the branch's
+            // base: items, food, rest, mood, experience, passions and failed jobs identical; only
+            // where they stand, the progress into their steps and the wanders (99 -> 100) differ.
+            // 2026-09-25, the culvert frog (design 30 §8): the meadow's table gained frogs on the
+            // bank and its density went 15 -> 21, so the board is seeded with three more animals
+            // (pawns 15 -> 18). GoldenColonyProbe against main (4c40e189): items, experience, passions and
+            // failed jobs identical; food, rest and mood differ by exactly three animals' untouched
+            // needs (3 x 800 / 800 / 600), and the rest — pawn cells, progress, wanders and waits
+            // started — is the animals' own. The colonists did the same things. The bare meadow
+            // and the city did not move: neither table has a frog.
+            // 2026-09-26, "more of them": the frog's weight 2 -> 4, groups 3-5, density 21 -> 27,
+            // and its pace 800 -> 1,000. Pawns 15 -> 22 against main (4c40e189); items,
+            // experience, passions and failed jobs identical, food/rest/mood differ by exactly
+            // seven animals' untouched needs (7 x 800 / 800 / 600). The colonists did the same things.
+            // Then the frogs' legs diverge from each other (design 30 §8e): Simulated only; the
+            // probe differs from the line above in the animals' wander count alone (217 -> 216).
+            // Merged with main (wander claims, design 31 §20), 2026-09-26: re-taken from the merged code.
+            // Merged with raids (design 55), 2026-09-26: the gunman keeps kind 4 and the frog moves
+            // to 5, and a pawn's kind is hashed. GoldenColonyProbe on the frog branch (fca2ef08) and
+            // on the merge is identical on all three boards, so only the number moved.
+            Generated = 5385105565351640744UL,
+            Simulated = 1457182368184692081UL,
         };
 
         /// <summary>
@@ -614,8 +636,10 @@ namespace Odyssey.Tests.Sim
             // Re-baked again 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
             // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            // 2026-09-25, nobody over anybody (design 31 §20): Simulated only, the wander legs
+            // (74 -> 75) and where everybody stands; every other census number identical.
             Generated = 14180088319569370523UL,
-            Simulated = 7648152829369388509UL,
+            Simulated = 6894148259867231222UL,
         };
     }
 }

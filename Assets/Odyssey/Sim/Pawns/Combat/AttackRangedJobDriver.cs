@@ -80,6 +80,8 @@ namespace Odyssey.Sim.Pawns
             ToilIndex = Approach;
             ToilProgress = 0;
             Pawn.NextSwingTick = 0;
+            // A throw that never left the hand gives its own clock back too (design 62 §7a).
+            Pawn.HurlReadyTick = 0;
         }
 
         /// <summary>How much of the aim a tick is worth, in milliwork: the shooter's condition, never her skill.</summary>
@@ -94,10 +96,15 @@ namespace Odyssey.Sim.Pawns
             if (target.Downed && Job.DestCell != AttackMeleeJobDriver.ToTheDeath) return JobStatus.Succeeded;
 
             // Her gun is what makes this job hers: without one (dropped, taken, never held) it is over.
-            RangedDef? ranged = ctx.WeaponRules.ArmamentOf(Pawn, ctx).Attack.ranged;
+            // A thrower's is its own throw (design 62 §7a).
+            RangedDef? ranged = Hurl.ArmamentOf(Pawn, ctx).Attack.ranged;
             if (ranged == null) return JobStatus.Failed;
 
             int tick = ctx.CurrentTick;
+
+            // One rock and back to the chase: once the throw is away its own clock is running, and
+            // a thrower that stood to throw again would be a gunman (design 62 §7a).
+            if (Pawn.Species.hurl != null && ToilIndex != Aim && tick < Pawn.HurlReadyTick) return JobStatus.Succeeded;
 
             if (ToilIndex == Aim)
             {
@@ -127,6 +134,24 @@ namespace Odyssey.Sim.Pawns
             {
                 // Land a step that is well under way; stop on one that has barely begun.
                 if (!boundary) return LandTheStep(ctx);
+
+                // A bandit, or a colonist fighting back undrafted, looks for cover before she shoots
+                // (design 53 §6). A drafted colonist holds where the player put her, and an order the
+                // player gave is carried out from where it finds her.
+                // Never a thrower (design 62 §7a): a boss that ducked behind sandbags to lob a rock
+                // would be the thing the owner shot from a rock.
+                if (!Pawn.Drafted && !Job.PlayerForced && Pawn.Species.hurl == null
+                    && tick - Pawn.JobStartTick < CoverPosition.SeekWindowTicks)
+                {
+                    int cover = CoverDestination(ctx, target);
+                    if (cover >= 0 && cover != Pawn.Cell)
+                    {
+                        JobStatus toCover = GotoCell(ctx, cover);
+                        if (toCover != JobStatus.Failed) return JobStatus.Ongoing;
+                        Pawn.ClearPath();
+                        Pawn.Destination = -1;
+                    }
+                }
 
                 if (MayShootFrom(ctx, target, tick))
                 {
@@ -192,6 +217,24 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// Where a fighter who takes cover should be going, with her line open from where she stands
+        /// (design 53 §6): on to the cell she is already walking to while it has more cover from the
+        /// target than this one; else, with this cell barely covered, the best cell
+        /// <see cref="CoverPosition.Find"/> gives, which may be this one. -1 or her own cell: shoot
+        /// from here.
+        /// </summary>
+        int CoverDestination(PawnContext ctx, Pawn target)
+        {
+            int here = ctx.RangedRules.CoverPerMille(target.Cell, Pawn.Cell, ctx);
+            int going = Pawn.Destination;
+            if (going >= 0 && going != Pawn.Cell && going != target.Cell
+                && ctx.RangedRules.CoverPerMille(target.Cell, going, ctx) > here)
+                return going;
+            if (here >= ctx.Content.Combat.coverCrouchPerMille) return -1;
+            return CoverPosition.Find(ctx, Pawn, target, ctx.WeaponRules.ArmamentOf(Pawn, ctx));
+        }
+
+        /// <summary>
         /// May she shoot from the cell she is on? Never from her target's cell, and never from a cell
         /// another fighter holds (<see cref="Melee.Holds"/>) — the melee driver's rule. Standing on a
         /// cell she took and waiting out her clock, it is still hers, so she is not asked every tick.
@@ -210,8 +253,14 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         void StartAim(PawnContext ctx, Pawn target, int tick)
         {
-            Armament armament = ctx.WeaponRules.ArmamentOf(Pawn, ctx);
-            Pawn.NextSwingTick = tick + armament.Attack.cooldownTicks;
+            Armament armament = Hurl.ArmamentOf(Pawn, ctx);
+            if (Pawn.Species.hurl != null)
+            {
+                // A throw runs its own clock (design 62 §7a); the cleaver waits only for the throw.
+                Pawn.HurlReadyTick = tick + armament.Attack.cooldownTicks;
+                Pawn.NextSwingTick = tick + armament.Attack.windupTicks;
+            }
+            else Pawn.NextSwingTick = tick + armament.Attack.cooldownTicks;
             if (Pawn.Drafted) Pawn.DraftQuietSinceTick = tick;
             Job.TargetCell = target.Cell;
             ToilIndex = Aim;

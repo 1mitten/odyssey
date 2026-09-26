@@ -66,12 +66,25 @@ namespace Odyssey.Presentation.World
         public AttackStyle?[] WeaponStyles { get; set; } = Array.Empty<AttackStyle?>();
 
         /// <summary>
+        /// Every kind's natural attack style (<see cref="CombatPose.NaturalStylesOf"/>): what a pawn
+        /// holding nothing swings in, when its species has an attack of its own — the butcher's
+        /// cleaver (design 62 §8). Set once by the composition root; empty means fists and bites.
+        /// </summary>
+        public AttackStyle?[] KindStyles { get; set; } = Array.Empty<AttackStyle?>();
+
+        AttackStyle? NaturalStyleOf(int kind) =>
+            kind >= 0 && kind < KindStyles.Length ? KindStyles[kind] : null;
+
+        /// <summary>
         /// The wind-up a swing is assumed to have until its <see cref="CombatEventKind.Swing"/>
         /// event says otherwise, in ticks. The gesture and the event are published by the same
         /// tick and read in the same frame, so this is overwritten before a single frame is drawn
         /// with it; it exists for a swing whose event was never seen.
         /// </summary>
         public const int DefaultWindupTicks = 20;
+
+        /// <summary>How many ticks of the heavy swing come before a thrown rock leaves the hand (design 62 §7a).</summary>
+        public const int ThrowLeadTicks = 18;
 
         /// <summary>How long the action layer takes to come in and go out, in seconds.</summary>
         public const float CombatEaseSeconds = 0.12f;
@@ -317,6 +330,10 @@ namespace Odyssey.Presentation.World
             public Vector3 SlideFrom;
             public float SlideSeconds;
 
+            /// <summary>How long this slide is drawn over, and how high it lifts: a butcher's fling is longer and thrown (design 62 §8).</summary>
+            public float SlideDuration = KnockbackSlide.Seconds;
+            public float SlideArc;
+
             /// <summary>
             /// The draw and the sheathe's layer (design 33 §8b): input 2 of <see cref="Layer"/>,
             /// masked to the upper body so the legs keep walking, with one clip slot. Absent where
@@ -413,6 +430,14 @@ namespace Odyssey.Presentation.World
                         KnockBack(knocked, combatEvent);
                     return;
 
+                // A thrown rock (design 62 §7a): the heavy swing, quick, released on the shot's tick,
+                // so the arm comes over as the rock leaves it.
+                case CombatEventKind.Shot:
+                    if (Odyssey.Sim.Pawns.Hurl.IsHurl(combatEvent.Weapon)
+                        && _byPawn.TryGetValue(combatEvent.Attacker.Value, out Figure? thrower))
+                        StartSwing(thrower, AttackStyle.Heavy, combatEvent.Tick - ThrowLeadTicks, ThrowLeadTicks);
+                    return;
+
                 case CombatEventKind.Dodge:
                     if (_byPawn.TryGetValue(combatEvent.Target.Value, out Figure? dodger))
                         Dodge(dodger, combatEvent.Attacker);
@@ -433,7 +458,7 @@ namespace Odyssey.Presentation.World
         {
             int weapon = _frame != null && _frame.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponKey, out int held)
                 ? held : -1;
-            AttackStyle style = CombatPose.StyleFor(weapon, WeaponStyles, pawn.IsPerson);
+            AttackStyle style = CombatPose.StyleFor(weapon, WeaponStyles, pawn.IsPerson, NaturalStyleOf(pawn.Kind));
             StartSwing(figure, style, _frame != null ? _frame.Tick : _frameTicks, DefaultWindupTicks);
         }
 
@@ -445,7 +470,7 @@ namespace Odyssey.Presentation.World
         void TimeSwing(Figure figure, in CombatEventView swing)
         {
             if (!(_frame != null && _frame.TryGetPawn(swing.Attacker, out PawnView pawn))) return;
-            AttackStyle style = CombatPose.StyleFor(swing.Weapon, WeaponStyles, pawn.IsPerson);
+            AttackStyle style = CombatPose.StyleFor(swing.Weapon, WeaponStyles, pawn.IsPerson, NaturalStyleOf(pawn.Kind));
             CombatRole role = CombatPose.SwingRole(style);
             CombatState fight = figure.Fight;
 
@@ -553,12 +578,17 @@ namespace Odyssey.Presentation.World
             if (knock.Amount < 0 || knock.Amount >= size.SizeX * size.SizeZ * size.SizeY) return;
             Vector3 offset = GroundRelief.Lift(CellMetrics.FloorCentre(size.FromIndex(knock.Amount)))
                              - GroundRelief.Lift(CellMetrics.FloorCentre(knock.Cell));
-            if (new Vector2(offset.x, offset.z).magnitude > CellMetrics.SizeXZ * 1.5f
-                || Mathf.Abs(offset.y) > CellMetrics.SizeY * 1.5f)
-                return;
+            // A one-tile knockback slides a quarter second; a butcher's fling (design 62 §8) carries
+            // two cells, or down a drop of up to four layers, and is thrown in an arc over longer.
+            // Anything further than that is not a slide the simulation can make: nothing is drawn.
+            float horizontal = new Vector2(offset.x, offset.z).magnitude;
+            if (horizontal > CellMetrics.SizeXZ * 3.5f || Mathf.Abs(offset.y) > CellMetrics.SizeY * 4.5f) return;
+            bool fling = KnockbackSlide.IsFling(horizontal, offset.y, CellMetrics.SizeXZ, CellMetrics.SizeY);
 
             fight.SlideFrom = offset;
             fight.SlideSeconds = 0f;
+            fight.SlideDuration = fling ? KnockbackSlide.FlingSeconds : KnockbackSlide.Seconds;
+            fight.SlideArc = fling && horizontal > 0.01f ? KnockbackSlide.FlingArcMetres : 0f;
             fight.Sliding = true;
 
             // This frame was posed on the landing tile before its events were read: put it back
@@ -620,7 +650,7 @@ namespace Odyssey.Presentation.World
             if (fight.Sliding)
             {
                 fight.SlideSeconds += dt;
-                if (KnockbackSlide.Finished(fight.SlideSeconds)) fight.Sliding = false;
+                if (fight.SlideSeconds >= fight.SlideDuration) fight.Sliding = false;
             }
 
             // The one-shot: advanced, and let go when it is over.
@@ -833,7 +863,7 @@ namespace Odyssey.Presentation.World
             if (fight.Sliding)
             {
                 KnockbackSlide.Offset(fight.SlideFrom.x, fight.SlideFrom.y, fight.SlideFrom.z, fight.SlideSeconds,
-                    out float x, out float y, out float z);
+                    fight.SlideDuration, fight.SlideArc, out float x, out float y, out float z);
                 offset = new Vector3(x, y, z);
             }
 
@@ -940,7 +970,7 @@ namespace Odyssey.Presentation.World
         /// An animal wears its kind's row.
         /// </summary>
         public int LookForCorpse(in CorpseView corpse) =>
-            (corpse.Flags & PawnFlags.Person) == 0
+            (corpse.Flags & PawnFlags.Person) == 0 || HasKindRow(corpse.Kind)
                 ? AnimalLookIndex(corpse.Kind)
                 : Appearances.LookFor(corpse.Pawn.Value, corpse.RollSeed, PawnOutfits.For(corpse));
 

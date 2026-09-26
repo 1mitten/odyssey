@@ -49,5 +49,12 @@ namespace Odyssey.Hud
         public static readonly AspectKey OrderTargetKey = AspectKey.Of(OrderTarget);
         public static readonly AspectKey RescueNoBedKey = AspectKey.Of(RescueNoBed);
         public static readonly AspectKey ResponseKey = AspectKey.Of(Response);
+
+        /// <summary>
+        /// A sweep winding up: the facing, 1–8 round from east, while it is in the air (design 62 §8).
+        /// What the telegraph draws the front arc of three from.
+        /// </summary>
+        public const string SweepFacing = "odyssey.pawn.sweep.facing";
+        public static readonly AspectKey SweepFacingKey = AspectKey.Of(SweepFacing);
     }
 }

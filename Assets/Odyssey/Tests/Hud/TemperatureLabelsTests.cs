@@ -65,7 +65,7 @@ namespace Odyssey.Tests.Hud
             {
                 string name = Path.GetFileName(file);
                 if (name == "TemperatureLabels.cs") continue;
-                if (name == "AlmanacCatalogue.cs") continue;   // prose, not a rendering
+                if (name.StartsWith("AlmanacCatalogue", StringComparison.Ordinal)) continue;   // prose, not a rendering
 
                 string[] lines = File.ReadAllLines(file);
                 for (int i = 0; i < lines.Length; i++)

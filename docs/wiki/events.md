@@ -1,8 +1,8 @@
 # Events
 
-Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.
+Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about. A raid's mix names who a band of hostiles is made of (design 55).
 
-48 entries, 23 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+51 entries, 26 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Alerts
 
@@ -56,7 +56,7 @@ Three channels, and the difference is not cosmetic. Alerts are conditions that p
 | **Refugee** | `ui.bulletin.refugee` | Someone is asking for shelter <br>**Needs:** someone asking for shelter | no art | M2 |
 | **Animal joined** | `ui.bulletin.animaljoin` | A tame beast has attached itself to us | sheet 06 (action tiles), med | M2 |
 | **Crash** | `ui.bulletin.crash` | Something has come down nearby <br>**Needs:** a crashed ship or drop pod | no art | M2 |
-| **Supply drop** | `ui.bulletin.supplydrop` | Something has fallen from the sky. Fetch it before the weather does <br>**Needs:** a stack falling from the sky. Our own concept | no art | M3 |
+| **Supply drop** | `ui.bulletin.supplydrop` | Rations have fallen from the sky. Somebody has to fetch them <br>**Needs:** a stack falling from the sky. Our own concept | no art | M3 |
 | **Birth** | `ui.bulletin.birth` | A tame animal has given birth <br>**Needs:** a newborn animal | no art | M2 |
 | **Theft** | `ui.bulletin.theft` | A bandit carried something off the board <br>**Needs:** a figure carrying a sack off the edge. Our own concept | no art | CB |
 | **Bandit left** | `ui.bulletin.banditleft` | A bandit walked off the board with nothing <br>**Needs:** a figure walking off the edge. Our own concept | no art | CB |
@@ -66,6 +66,14 @@ Three channels, and the difference is not cosmetic. Alerts are conditions that p
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
 | **{name} has reached {skill} {level}** | `ui.toast.skillup` | A colonist's skill has gone up a level | no art | M2 |
+
+## Raid mixes
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Bandits** | `ui.raid.mix.bandits` | A band of bandits, every one hand to hand with a crowbar or a bat | no art | RD |
+| **Gunmen** | `ui.raid.mix.gunmen` | A band of gunmen, every one with a pistol | no art | RD |
+| **Mixed** | `ui.raid.mix.mixed` | Mostly bandits, with about three in ten carrying pistols | no art | RD |
 
 ---
 

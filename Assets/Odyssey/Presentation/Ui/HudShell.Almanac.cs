@@ -286,7 +286,7 @@ namespace Odyssey.Presentation.Ui
                 if (string.Equals(cat.Name, activeCat, StringComparison.OrdinalIgnoreCase))
                     row.AddToClassList("almanac-cat--active");
 
-                var icon = new HudGlyph(HudGlyphKind.Placeholder, 16f, HudTokens.TextMeta);
+                var icon = new PathGlyph(cat.IconPath, 16f, HudTokens.TextMeta);
                 icon.AddToClassList("almanac-cat__icon");
 
                 Label name = HudText.Make(cat.Name, HudTextRole.Body, ussClass: "almanac-cat__name");
@@ -334,6 +334,7 @@ namespace Odyssey.Presentation.Ui
                     {
                         if (ent.Name.IndexOf(_almanacSearchQuery, StringComparison.OrdinalIgnoreCase) >= 0 ||
                             ent.Summary.IndexOf(_almanacSearchQuery, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            ent.Definition.IndexOf(_almanacSearchQuery, StringComparison.OrdinalIgnoreCase) >= 0 ||
                             ent.CategoryName.IndexOf(_almanacSearchQuery, StringComparison.OrdinalIgnoreCase) >= 0)
                         {
                             entries.Add(ent);
@@ -356,17 +357,11 @@ namespace Odyssey.Presentation.Ui
                 bool isSelected = string.Equals(ent.Name, activeEntry, StringComparison.OrdinalIgnoreCase);
                 if (isSelected) row.AddToClassList("almanac-idx-row--active");
 
-                // 26px Identity square (colour swatch or line icon)
+                // 32px identity square: the owner's art at 32 where the key has it, else the
+                // entry's own line icon (ADR 0007: pixel art is shown at 32 and 64 only).
                 var sq = new VisualElement();
                 sq.AddToClassList("almanac-idx-row__sq");
-                if (ent.HasColor && ColorUtility.TryParseHtmlString(ent.Color, out Color color))
-                {
-                    sq.style.backgroundColor = color;
-                }
-                else
-                {
-                    sq.Add(new HudGlyph(HudGlyphKind.Placeholder, 14f, HudTokens.TextDim));
-                }
+                sq.Add(AlmanacIconFor(ent, art: 32f, line: 20f));
                 row.Add(sq);
 
                 var texts = new VisualElement();
@@ -394,7 +389,7 @@ namespace Odyssey.Presentation.Ui
             _almanacDetailPane.Clear();
             if (_directors?.Almanac == null) return;
 
-            AlmanacEntry? entry = AlmanacCatalogue.GetEntry(_directors.Almanac.CurrentEntry);
+            AlmanacEntry? entry = AlmanacCatalogue.GetEntry(_directors.Almanac.CurrentCategory, _directors.Almanac.CurrentEntry);
             if (entry == null) return;
 
             // Band 1: Identity Band
@@ -403,14 +398,7 @@ namespace Odyssey.Presentation.Ui
 
             var sq96 = new VisualElement();
             sq96.AddToClassList("almanac-sq96");
-            if (entry.HasColor && ColorUtility.TryParseHtmlString(entry.Color, out Color swatchColor))
-            {
-                sq96.style.backgroundColor = swatchColor;
-            }
-            else
-            {
-                sq96.Add(new HudGlyph(HudGlyphKind.Placeholder, 48f, HudTokens.TextDim));
-            }
+            sq96.Add(AlmanacIconFor(entry, art: 64f, line: 56f));
             band1.Add(sq96);
 
             var idCol = new VisualElement();
@@ -431,7 +419,7 @@ namespace Odyssey.Presentation.Ui
             Label def = HudText.Make(entry.Definition, HudTextRole.Body, ussClass: "almanac-definition");
             idCol.Add(def);
 
-            Label live = HudText.Make(entry.LiveState, HudTextRole.Meta, ussClass: "almanac-live");
+            Label live = HudText.Make(entry.Source, HudTextRole.Meta, ussClass: "almanac-live");
             idCol.Add(live);
 
             band1.Add(idCol);
@@ -439,11 +427,19 @@ namespace Odyssey.Presentation.Ui
             var actionsCol = new VisualElement();
             actionsCol.AddToClassList("almanac-actions-col");
 
-            var actBtn = new VisualElement();
-            actBtn.AddToClassList("almanac-action-btn");
-            actBtn.Add(HudText.Make(entry.PrimaryAction, HudTextRole.Body));
-            actBtn.RegisterCallback<ClickEvent>(_ => FindOnMap(entry));
-            actionsCol.Add(actBtn);
+            // The action is what the entry can actually do (AlmanacAction): find the thing on the
+            // map, or open the tab that holds its live half. An entry for something that is not
+            // on the map and has no tab of its own has no button, rather than one that closes the
+            // Almanac and does nothing.
+            if (entry.Action != AlmanacAction.None)
+            {
+                var actBtn = new VisualElement();
+                actBtn.AddToClassList("almanac-action-btn");
+                Label actLabel = HudText.Make(entry.PrimaryAction, HudTextRole.Body);
+                actBtn.Add(actLabel);
+                actBtn.RegisterCallback<ClickEvent>(_ => RunAlmanacAction(entry, actLabel));
+                actionsCol.Add(actBtn);
+            }
 
             var pinBtn = new VisualElement();
             pinBtn.AddToClassList("almanac-pin-btn");
@@ -590,17 +586,23 @@ namespace Odyssey.Presentation.Ui
             chipsWrap.style.flexDirection = FlexDirection.Row;
             chipsWrap.style.flexWrap = Wrap.Wrap;
 
-            foreach ((string rName, string rReason) in entry.Related)
+            foreach ((string rTarget, string rReason) in entry.Related)
             {
+                // A link names its target by registry key (or by name for an entry that has no
+                // key); AlmanacCatalogueTests holds every one of them to an entry, so this never
+                // draws a chip that goes nowhere.
+                AlmanacEntry? targetEntry = AlmanacCatalogue.Resolve(rTarget);
+                if (targetEntry == null) continue;
+
                 var chip = new VisualElement();
                 chip.AddToClassList("almanac-rel-chip");
 
                 var thumb = new VisualElement();
                 thumb.AddToClassList("almanac-rel-thumb");
-                thumb.Add(new HudGlyph(HudGlyphKind.Placeholder, 14f, HudTokens.TextDim));
+                thumb.Add(AlmanacLineIcon(targetEntry, 16f));
 
                 var texts = new VisualElement();
-                Label relTitle = HudText.Make(rName, HudTextRole.Body, ussClass: "almanac-rel-name");
+                Label relTitle = HudText.Make(targetEntry.Name, HudTextRole.Body, ussClass: "almanac-rel-name");
                 Label relWhy = HudText.Make(rReason, HudTextRole.Meta, ussClass: "almanac-rel-reason");
                 texts.Add(relTitle);
                 texts.Add(relWhy);
@@ -608,13 +610,8 @@ namespace Odyssey.Presentation.Ui
                 chip.Add(thumb);
                 chip.Add(texts);
 
-                string target = rName;
                 chip.RegisterCallback<ClickEvent>(_ =>
-                {
-                    AlmanacEntry? targetEntry = AlmanacCatalogue.GetEntry(target);
-                    if (targetEntry != null)
-                        _directors?.Almanac.NavigateTo(targetEntry.CategoryName, targetEntry.Name);
-                });
+                    _directors?.Almanac.NavigateTo(targetEntry.CategoryName, targetEntry.Name));
 
                 chipsWrap.Add(chip);
             }
@@ -626,198 +623,135 @@ namespace Odyssey.Presentation.Ui
             _almanacDetailPane.Add(grid);
         }
 
-        void FindOnMap(AlmanacEntry entry)
+        /// <summary>
+        /// The entry's picture, drawn by the same <see cref="IconBadge"/> the inspect pane and every
+        /// list draw for the same key: the owner's pixel art where there is some, else the key's
+        /// line art in <see cref="IconGlyphs"/>. The Almanac holds no picture of its own, so a thing
+        /// looks the same on its page as it does when clicked (owner, 2026-09-26). Pixel art is
+        /// drawn at 32 or 64 (ADR 0007); line art at the smaller size, inside the same square.
+        /// </summary>
+        static VisualElement AlmanacIconFor(AlmanacEntry entry, float art, float line)
         {
-            ToggleAlmanac(false);
-            if (_directors == null || _boot?.World == null) return;
-            WorldSnapshot snapshot = _boot.World.Views.Current;
-            WorldRenderModel? model = _boot.Model;
-
-            // 1. Colonists: the entry names a colonist, so the map's answer is a colonist. The
-            // property categories (Skills, Needs, Traits, Health, Fauna) are deliberately not
-            // here: none of them is a thing on the map, and highlighting a pawn as a stand-in
-            // answers a question nobody asked (owner, 2026-09-20).
-            if (entry.CategoryName == "Colonists")
-            {
-                for (int i = 0; i < snapshot.PawnCount; i++)
-                {
-                    // A colonist entry's name is the colonist's name; jump to that pawn when it
-                    // exists, otherwise do nothing rather than substitute another colonist.
-                    if (string.Equals(ColonistNames.Of(snapshot, snapshot.Pawns[i].Id), entry.Name,
-                            StringComparison.OrdinalIgnoreCase))
-                    {
-                        _directors.ChooseColonist(snapshot.Pawns[i].Id, snapshot);
-                        return;
-                    }
-                }
-            }
-
-            // 2. Check if current selection already matches this entry:
-            if (_directors.Selection.Cell.HasValue)
-            {
-                var resolved = AlmanacDirector.ResolveSelection(_inspect);
-                if (resolved.HasValue && string.Equals(resolved.Value.Entry, entry.Name, StringComparison.OrdinalIgnoreCase))
-                {
-                    CellRef curCell = _directors.Selection.Cell.Value;
-                    _directors.Slice.SetLayer(curCell.Y);
-                    _directors.Camera.JumpTo(curCell);
-                    return;
-                }
-            }
-
-            // 3. Items & Materials: check Things in snapshot
-            for (int i = 0; i < snapshot.ThingCount; i++)
-            {
-                ThingView tv = snapshot.Things[i];
-                string label = ItemLabels.Label(tv.DefIndex);
-                if (Matches(label, entry.Name))
-                {
-                    _directors.Slice.SetLayer(tv.Cell.Y);
-                    _directors.Selection.Pick(tv.Cell, PawnId.None, snapshot);
-                    _directors.Camera.JumpTo(tv.Cell);
-                    return;
-                }
-            }
-
-            // 4. Flora: check Plants in snapshot (crops)
-            for (int i = 0; i < snapshot.PlantCount; i++)
-            {
-                PlantView pv = snapshot.Plants[i];
-                CellRef plantCell = snapshot.Size.FromIndex(pv.CellIndex);
-                if (entry.CategoryName == "Flora")
-                {
-                    _directors.Slice.SetLayer(plantCell.Y);
-                    _directors.Selection.Pick(plantCell, PawnId.None, snapshot);
-                    _directors.Camera.JumpTo(plantCell);
-                    return;
-                }
-            }
-
-            // 5. Structures: check Sites in snapshot
-            for (int i = 0; i < snapshot.SiteCount; i++)
-            {
-                SiteView sv = snapshot.Sites[i];
-                string bldKey = BuildLabels.BuildingKey(sv.Building);
-                string bldName = string.IsNullOrEmpty(bldKey) ? string.Empty : Registry.Label(bldKey);
-                if (Matches(bldName, entry.Name))
-                {
-                    CellRef siteCell = snapshot.Size.FromIndex(sv.CellIndex);
-                    _directors.Slice.SetLayer(siteCell.Y);
-                    _directors.Selection.Pick(siteCell, PawnId.None, snapshot);
-                    _directors.Camera.JumpTo(siteCell);
-                    return;
-                }
-            }
-
-            // 6. Check WorldRenderModel for Edifices (trees, walls, doors, ladders, beds, stairs, etc.) and Terrain
-            if (model != null)
-            {
-                int activeLayer = _directors.Slice.ActiveLayer;
-
-                if (entry.CategoryName == "Structures" || entry.CategoryName == "Flora" || entry.CategoryName == AlmanacKeys.Materials)
-                {
-                    CellRef? foundEdifice = FindEdificeInModel(model, entry.Name, entry.CategoryName, activeLayer);
-                    if (foundEdifice.HasValue)
-                    {
-                        CellRef c = foundEdifice.Value;
-                        _directors.Slice.SetLayer(c.Y);
-                        _directors.Selection.Pick(c, PawnId.None, snapshot);
-                        _directors.Camera.JumpTo(c);
-                        return;
-                    }
-                }
-
-                CellRef? foundTerrain = FindTerrainInModel(model, entry.Name, activeLayer);
-                if (foundTerrain.HasValue)
-                {
-                    CellRef c = foundTerrain.Value;
-                    _directors.Slice.SetLayer(c.Y);
-                    _directors.Selection.Pick(c, PawnId.None, snapshot);
-                    _directors.Camera.JumpTo(c);
-                    return;
-                }
-            }
-
-            // Nothing found: stay where the player is. Jumping to a colonist because this
-            // entry happened to be unfindable says the map answered a question it did not
-            // (owner, 2026-09-20 — "don't resort to highlight colonist").
+            var badge = new IconBadge(entry.IconKey, IconArt.Has(entry.IconKey) ? art : line);
+            badge.Inherit(HudTokens.TextPrimary);
+            return badge;
         }
 
-        static CellRef? FindEdificeInModel(WorldRenderModel model, string entryName, string categoryName, int preferredY)
+        static VisualElement AlmanacLineIcon(AlmanacEntry entry, float size)
+        {
+            var badge = new IconBadge(entry.IconKey, size);
+            badge.Inherit(HudTokens.TextMeta);
+            return badge;
+        }
+
+        void RunAlmanacAction(AlmanacEntry entry, Label label)
+        {
+            if (_directors == null) return;
+            switch (entry.Action)
+            {
+                case AlmanacAction.FindOnMap:
+                    // Only close once something is found: closing and then finding nothing left
+                    // the player on the map with no idea why the page went away.
+                    if (!FindOnMap(entry)) label.text = "None on this map";
+                    return;
+                case AlmanacAction.OpenWork:
+                    ToggleAlmanac(false);
+                    _directors.Work.SetOpen(true);
+                    return;
+                case AlmanacAction.OpenAnimals:
+                    ToggleAlmanac(false);
+                    _directors.Animals.SetOpen(true);
+                    return;
+                case AlmanacAction.OpenInventory:
+                    ToggleAlmanac(false);
+                    _directors.Inventory.SetOpen(true);
+                    return;
+                case AlmanacAction.OpenAssign:
+                    ToggleAlmanac(false);
+                    _directors.Assign.SetOpen(true);
+                    return;
+                case AlmanacAction.OpenBuild:
+                    ToggleAlmanac(false);
+                    SetBuildPalette(true);
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// Finds an instance of the entry's thing by its registry key — the same key the pane, the
+        /// palette and the Inventory name it by — and selects it. Returns false, leaving the
+        /// Almanac open, when the map has none.
+        /// </summary>
+        bool FindOnMap(AlmanacEntry entry)
+        {
+            if (_directors == null || _boot?.World == null || entry.Key.Length == 0) return false;
+            WorldSnapshot snapshot = _boot.World.Views.Current;
+            WorldRenderModel? model = _boot.Model;
+            string key = entry.Key;
+
+            CellRef? found = null;
+            PawnId pawn = PawnId.None;
+
+            // Animals and people: the first of the kind.
+            for (int i = 0; i < snapshot.PawnCount && found == null; i++)
+                if (PawnKindLabels.IconKey(snapshot.Pawns[i].Kind) == key)
+                {
+                    found = snapshot.Pawns[i].Cell;
+                    pawn = snapshot.Pawns[i].Id;
+                }
+
+            // Loose things: a pile on the ground (a thing in a shelf or a hand has no cell).
+            for (int i = 0; i < snapshot.ThingCount && found == null; i++)
+            {
+                ThingView tv = snapshot.Things[i];
+                if (ItemLabels.IconKey(tv.DefIndex) == key && tv.Cell.Y >= 0) found = tv.Cell;
+            }
+
+            // Crops in a growing zone.
+            for (int i = 0; i < snapshot.PlantCount && found == null; i++)
+                if (BuildLabels.PlantKey(snapshot.Plants[i].Plant) == key)
+                    found = snapshot.Size.FromIndex(snapshot.Plants[i].CellIndex);
+
+            // Building sites waiting for work.
+            for (int i = 0; i < snapshot.SiteCount && found == null; i++)
+                if (BuildLabels.BuildingKey(snapshot.Sites[i].Building) == key)
+                    found = snapshot.Size.FromIndex(snapshot.Sites[i].CellIndex);
+
+            // Standing things and the ground itself, from the render mirror.
+            if (found == null && model != null)
+                found = FindInModel(model, key, _directors.Slice.ActiveLayer);
+
+            if (found == null) return false;
+
+            CellRef cell = found.Value;
+            ToggleAlmanac(false);
+            _directors.Slice.SetLayer(cell.Y);
+            _directors.Selection.Pick(cell, pawn, snapshot);
+            _directors.Camera.JumpTo(cell);
+            return true;
+        }
+
+        /// <summary>
+        /// The first cell, walking out from the layer the player is on, whose edifice or terrain is
+        /// named by <paramref name="key"/>.
+        /// </summary>
+        static CellRef? FindInModel(WorldRenderModel model, string key, int preferredY)
         {
             GridSize size = model.Size;
-            int totalLayers = size.SizeY;
-
-            for (int step = 0; step < totalLayers; step++)
+            for (int step = 0; step < size.SizeY; step++)
             {
-                int y = (preferredY + step) % totalLayers;
+                int y = (preferredY + step) % size.SizeY;
                 for (int z = 0; z < size.SizeZ; z++)
-                {
                     for (int x = 0; x < size.SizeX; x++)
                     {
                         int idx = size.Index(x, z, y);
                         ushort ed = model.EdificeDef(idx);
-                        if (ed == 0) continue;
-
-                        if (MatchesEdifice(ed, entryName, categoryName))
-                            return new CellRef(x, z, y);
-                    }
-                }
-            }
-            return null;
-        }
-
-        static bool MatchesEdifice(ushort edificeDef, string entryName, string categoryName)
-        {
-            string title = EdificeLabels.Title(edificeDef);
-            if (Matches(title, entryName)) return true;
-
-            if (categoryName == "Flora" && (edificeDef == 10 || edificeDef == 11))
-                return true;
-
-            return false;
-        }
-
-        static CellRef? FindTerrainInModel(WorldRenderModel model, string entryName, int preferredY)
-        {
-            GridSize size = model.Size;
-            int totalLayers = size.SizeY;
-
-            for (int step = 0; step < totalLayers; step++)
-            {
-                int y = (preferredY + step) % totalLayers;
-                for (int z = 0; z < size.SizeZ; z++)
-                {
-                    for (int x = 0; x < size.SizeX; x++)
-                    {
-                        int idx = size.Index(x, z, y);
+                        if (ed != 0 && EdificeLabels.IconKey(ed) == key) return new CellRef(x, z, y);
                         ushort t = model.Terrain(idx);
-                        if (t == 0) continue;
-                        string label = TerrainLabels.Label(t);
-                        if (string.IsNullOrEmpty(label)) continue;
-
-                        if (MatchesTerrain(label, entryName))
-                            return new CellRef(x, z, y);
+                        if (t != 0 && TerrainLabels.IconKey(t) == key) return new CellRef(x, z, y);
                     }
-                }
             }
             return null;
-        }
-
-        static bool MatchesTerrain(string label, string entryName)
-        {
-            if (Matches(label, entryName)) return true;
-            if (label.IndexOf("water", StringComparison.OrdinalIgnoreCase) >= 0 &&
-                entryName.IndexOf("Water", StringComparison.OrdinalIgnoreCase) >= 0)
-                return true;
-            return false;
-        }
-
-        static bool Matches(string a, string b)
-        {
-            if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b)) return false;
-            return a.IndexOf(b, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   b.IndexOf(a, StringComparison.OrdinalIgnoreCase) >= 0;
         }
     }
 }

@@ -34,7 +34,7 @@ namespace Odyssey.Presentation.Ui
         /// (U40) — rolling a candidate needs <c>Odyssey.Sim</c>, which <c>Odyssey.Hud</c> cannot
         /// reference.
         /// </summary>
-        readonly MenuDirector _menu = new MenuDirector(new SeedField(), new ColonistSelect(RollCandidate));
+        readonly MenuDirector _menu = MakeMenu();
 
         /// <summary>
         /// The start screen's own director, which the shell owns rather than the session does —
@@ -50,7 +50,6 @@ namespace Odyssey.Presentation.Ui
         // The setup page: the board across the top, the people below it. Full-viewport, not a
         // panel — `docs/design/19-world-setup.md` §1 says why.
         VisualElement _setupPage = null!;
-        TextField _seedBox = null!;
         TextField _colonyBox = null!;
         Label _sizeLabel = null!;
         VisualElement _startCommit = null!;
@@ -217,6 +216,12 @@ namespace Odyssey.Presentation.Ui
 
             _setupPage = BuildSetupPage();
             _hud.Add(_setupPage);
+
+            // The planet, between New game and the setup page (design 59 §9).
+            _worldPage = BuildWorldPage();
+            _hud.Add(_worldPage);
+            _menu.World!.PlanetChanged += OnPlanetChanged;
+            _menu.World.Changed += RefreshWorldSelection;
 
             _menu.Changed += RefreshSetupPage;
             _menu.ShowingChanged += RefreshStartScreen;
@@ -478,12 +483,13 @@ namespace Odyssey.Presentation.Ui
 
             board.Add(Captioned(SeedField.ColonyKey, _colonyBox = Field("colony", 32,
                 text => _menu.TypeColonyName(text))));
-            board.Add(Captioned(SeedField.SeedKey, _seedBox = Field("seed", SeedEntry.MaxDigits,
-                text => _menu.Seed.Type(text))));
 
-            var reroll = SeedRow(SeedField.RerollKey, () => _menu.Seed.Reroll());
-            reroll.AddToClassList("setup__inline");
-            board.Add(reroll);
+            // The site this page was reached from, read-only (design 59 §9): the seed and its reroll
+            // moved to the World screen, where they make the planet, and Back returns there.
+            _setupSiteLine = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "setup__sizevalue");
+            VisualElement site = Captioned("ui.world.site", _setupSiteLine);
+            site.style.width = 340; // "Meadow, Mountainous, 53 N, 24 layers" is wider than a name box
+            board.Add(site);
 
             // One control that cycles rather than a row each: there are few sizes and a player
             // picking one is cycling, not navigating.
@@ -906,11 +912,13 @@ namespace Odyssey.Presentation.Ui
                 _colonyBox.SetValueWithoutNotify(_menu.ColonyName);
 
             HudText.Set(_sizeLabel, MapSizes.At(_menu.Size).Label, HudTextRole.Row);
+            RefreshSetupSiteLine();
         }
 
         void RefreshSeed()
         {
-            if (_seedBox.value != _menu.Seed.Text) _seedBox.SetValueWithoutNotify(_menu.Seed.Text);
+            if (_worldSeedBox.value != _menu.Seed.Text) _worldSeedBox.SetValueWithoutNotify(_menu.Seed.Text);
+            RefreshWorldNext();
 
             // Drawn faint and inert rather than hidden: a Start that disappears while you are
             // mid-edit reads as a broken screen. MenuDirector.Start refuses as well — this is the
@@ -979,21 +987,24 @@ namespace Odyssey.Presentation.Ui
         int _curtain;
         VisualElement _curtainPane = null!;
 
-        /// <summary>Whether a new world is being drawn behind the curtain right now.</summary>
-        public bool CurtainUp => _curtain > 0;
+        /// <summary>Whether a new world is being drawn behind the curtain right now — the older
+        /// three-frame cover, or the wake's veil while the world is built (design 56).</summary>
+        public bool CurtainUp => _curtain > 0 || _wake.WorldCovered;
 
-        /// <summary>The cover: the menu's picture, opaque, over every other element. Built last.</summary>
+        /// <summary>
+        /// The cover, over every other element. Built last. <b>Warm black rather than the menu's
+        /// starfield since the wake-up</b> (design 56 §4): the menu fades into it and the world
+        /// comes out of it, so it is the dark behind closed eyes rather than a second copy of the
+        /// menu. Its opacity is the wake's veil; the older path shows it opaque.
+        /// </summary>
         void BuildCurtain()
         {
             _curtainPane = new VisualElement { name = "curtain", pickingMode = PickingMode.Position };
-            _curtainPane.AddToClassList("backdrop");
-            var picture = Resources.Load<Texture2D>(MenuBackdropResource);
-            if (picture != null)
-            {
-                _curtainPane.style.backgroundImage = new StyleBackground(picture);
-                _curtainPane.style.unityBackgroundScaleMode = new StyleEnum<ScaleMode>(ScaleMode.ScaleAndCrop);
-            }
+            _curtainPane.AddToClassList("curtain");
             _curtainPane.style.display = DisplayStyle.None;
+            // A press on the veil while the wake holds it is a skip and nothing else.
+            _curtainPane.RegisterCallback<PointerDownEvent>(OnVeilPointer);
+            _curtainPane.RegisterCallback<WheelEvent>(OnVeilPointer);
             _hud.Add(_curtainPane);
         }
 
@@ -1001,12 +1012,29 @@ namespace Odyssey.Presentation.Ui
 
         void OnSessionChanged()
         {
+            // The wake owns the veil from the press to the end of the dream (design 56). A load
+            // raises this three times inside its build — torn down, built, read — and none of
+            // them may lift a cover the wake is still counting.
+            if (_wake.Active)
+            {
+                ApplySession();
+                return;
+            }
+
             // A world arriving from the start screen is drawn behind the curtain for a few frames
             // (CurtainFrames); Update counts them down. Anything else — a session torn down, the
             // shell attaching to a world that is already up — shows at once.
             bool fromStartScreen = _boot!.Directors != null && CurtainFrames > 0
                                    && _backdrop.style.display == DisplayStyle.Flex;
+            // A world that is already behind the curtain keeps it. A load raises this twice in
+            // the same frame — once when the world is built, once when the save has been read
+            // into it (RefreshAfterLoad) — and the first raise has already hidden the backdrop
+            // the test above reads, so the second used to lift the cover on the build frame
+            // itself: a load showed exactly the frames the curtain exists to hide
+            // (docs/bug-patterns.md, "An event raised twice in one frame").
+            bool stillCovering = _boot.Directors != null && _curtain > 0;
             ApplySession();
+            if (stillCovering) return;
             if (fromStartScreen)
             {
                 _curtain = CurtainFrames;
@@ -1028,6 +1056,10 @@ namespace Odyssey.Presentation.Ui
             // which read as the game being open behind a dialog it was not open behind.
             bool playing = live != null;
             _worldUi.style.display = playing ? DisplayStyle.Flex : DisplayStyle.None;
+            // The planet, its texture and its buffer belong to the menu and go with it (design 59 §4e).
+            if (playing) ReleaseWorldMap();
+            // A ride belongs to the colony it was begun in (design 57 §5).
+            ResetRideUi();
             _backdrop.style.display = playing ? DisplayStyle.None : DisplayStyle.Flex;
 
             // The toast stack belongs to a colony and goes away with it (SK4). Not for the rows —
@@ -1052,6 +1084,17 @@ namespace Odyssey.Presentation.Ui
         {
             // The setup page is not a screen of the panel; it stands in its place, full viewport,
             // and the panel goes away entirely while it is up.
+            // The World screen stands in the panel's place the same way (design 59 §9).
+            bool world = _menu.Showing && _menu.Screen == MenuScreen.World;
+            _worldPage.style.display = world ? DisplayStyle.Flex : DisplayStyle.None;
+            if (world)
+            {
+                _setupPage.style.display = DisplayStyle.None;
+                _startScreen.ShowScrimOnly();
+                RefreshWorldPage();
+                return;
+            }
+
             bool setup = _menu.Showing && _menu.Screen == MenuScreen.NewGame;
             _setupPage.style.display = setup ? DisplayStyle.Flex : DisplayStyle.None;
             if (setup)
@@ -1235,16 +1278,22 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void OnStartNewGame(NewGameChoice choice)
         {
-            // The last world is still behind the start screen: a second press would build again.
-            if (_curtain > 0) return;
-            MapSizes.Choice size = MapSizes.At(choice.Size);
-            _boot!.BuildSession(choice.Seed, null, choice.Colonists, choice.Name,
-                new GridSize(size.X, size.Z, size.Y));
+            // Not built here: the menu fades to black first, and the build is asked for once the
+            // black has been drawn (design 56 §3). BeginWake refuses a second press while the
+            // first is under way, which is the guard the curtain used to be.
+            BeginWake(() =>
+            {
+                MapSizes.Choice size = MapSizes.At(choice.Size);
+                // With a site the seed is the world's, and the bootstrap derives the board's from it
+                // and the tile, and deepens a mountainous board (design 59 §5, §8).
+                _boot!.BuildSession(choice.Seed, null, choice.Colonists, choice.Name,
+                    new GridSize(size.X, size.Z, size.Y), choice.Site, choice.Seed);
 
-            // After the build, because a name belongs to a colonist and there were none until the
-            // line above. The seeds go with the names so the bootstrap can check it is naming the
-            // person the player was looking at rather than whoever landed in that slot.
-            _boot.NameColonists(choice.Names, choice.Colonists);
+                // After the build, because a name belongs to a colonist and there were none until
+                // the line above. The seeds go with the names so the bootstrap can check it is
+                // naming the person the player was looking at rather than whoever landed in that slot.
+                _boot.NameColonists(choice.Names, choice.Colonists);
+            });
         }
 
         // ============================================================ naming a save
@@ -1634,7 +1683,9 @@ namespace Odyssey.Presentation.Ui
         void OnLoadSave(SaveRow row)
         {
             if (!_savePathById.TryGetValue(row.Id, out string? path)) return;
-            _boot!.LoadSession(path);
+            // The same passage as a new colony: the list fades, the save is read behind the black,
+            // and the player wakes into it at the speed it was saved at (design 56 §7).
+            BeginWake(() => _boot!.LoadSession(path));
         }
 
         /// <summary>

@@ -310,7 +310,37 @@ namespace Odyssey.Tests.Sim
         // Medicine rows were dropped for design 37's (design 43 §15), so no handle moved. No golden
         // moved: the ledger is hashed only while a pawn has anything on it. Re-taken from the
         // merged pack.
-        const ulong ContentFingerprint = 5726159748193892954UL;
+        // 2026-09-25, design 53 §2-§3 (cover, CV1): CombatDef's coverPerMille slot deleted, and the cover
+        // numbers added — fullFillCoverPerMille 750, the low and tall descent tangents 176/700 and 577/1732,
+        // coverInterceptPerMille 500, coverCrouchPerMille 200; WildPlantDef coverPerMille and coverTall
+        // (trees 250 tall, bushes 150 low).
+        // Cover merged onto health, 2026-09-25: its three streams moved to the 22nd-24th; re-taken.
+        //
+        // 2026-09-25, raids (design 55 §8): PawnKind_Gunman appended at kind 4 — a hostile person
+        // armed from a table of one, Item_Pistol, with the bandit's traverse mode and motive. No
+        // golden moved: no golden spawns a hostile.
+        // Raids merged onto cover, 2026-09-26: re-taken from the merged pack.
+        // 2026-09-25, the culvert frog (design 30 §8): Species_CulvertFrog and PawnKind_CulvertFrog
+        // appended (kind 4, species 3; kind 5 since the merge with raids), and SpeciesDef gained bankRadius and ignoresRain, both
+        // nought/false on every other species. Taken from a freshly loaded pack.
+        // 2026-09-26, the owner's first ask on the frog: bodyLengthMm 400 -> 870 and movePerMille
+        // 800 -> 1,000, so the bigger frog hops a body and a half. Taken from a freshly loaded pack.
+        // And SpeciesDef gained divergeRadius (frog 6; design 30 §8e), the same day.
+        // The frog merged with cover, 2026-09-26: re-taken from the merged pack.
+        // The frog merged with raids, 2026-09-26: the gunman keeps kind 4 and the frog moves to 5;
+        // re-taken from the merged pack.
+        // 2026-09-26, the butcher (design 62): Species_Butcher and PawnKind_Butcher appended
+        // (species 4, kind 6), Health_Brute beside Health_Person, and SpeciesDef gained unstoppable
+        // and sweep, false and null on every other species. Taken from a freshly loaded pack.
+        // The same day, the butcher's four levels (design 62 §4b): Species_ButcherScarred, _Blood
+        // and _King (species 5-7, kinds 7-9) on an abstract ButcherBase, and Health_Brute2-4 on an
+        // abstract BruteBody. Taken from a freshly loaded pack.
+        // And SpeciesDef gained voice and voicePitchPerMille, presentation's (design 62 §8d): the
+        // butcher calls in "butcher", its levels at 1,000 / 940 / 880 / 820.
+        // And ButcherBase's traverseMode Animal -> Bandit (design 62 §3a): the owner shot one dead
+        // from a rock it could not climb.
+        // And SpeciesDef gained hurl, the butcher's thrown rock (design 62 §7a), null elsewhere.
+        const ulong ContentFingerprint = 11334523027874196340UL;
 
 
         [Test]

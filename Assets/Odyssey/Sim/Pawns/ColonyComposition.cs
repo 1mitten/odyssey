@@ -60,7 +60,8 @@ namespace Odyssey.Sim.Pawns
         /// </remarks>
         public static SimWorldBuilder AddColony(this SimWorldBuilder builder, PawnContext pawns,
             DesignationGrid designations, SupportSystem support, NavGraph nav,
-            List<PlacedEdifice> edifices, out ConstructionGrid construction, JobSystem? jobs = null)
+            List<PlacedEdifice> edifices, out ConstructionGrid construction, JobSystem? jobs = null,
+            Worldgen.ClimateDef? climate = null, int wetPerMille = 1000)
         {
             // pawns.Cells, not a grid of its own: the context already carries the one cell grid the
             // colony is about, and taking a second would be an invitation to hand in two.
@@ -128,11 +129,16 @@ namespace Odyssey.Sim.Pawns
             // construction it reads sources through. Built here for the same argument as every
             // other seam on the context: an optional one is how a caller forgets it, and a
             // colony that forgot it would be a colony where nothing is ever cold.
-            var temperature = new Temperature.TemperatureSystem(pawns, edifices, Worldgen.WorldContent.Climate);
+            // The climate is the site's when the colony stands on a planet (design 59 §7) and the
+            // content's temperate curve otherwise. Defaulted here, unlike the grids above, because
+            // the default *is* the correct answer for every caller without a planet — a test that
+            // forgets it gets exactly the world it had before sites existed.
+            var temperature = new Temperature.TemperatureSystem(pawns, edifices,
+                climate ?? Worldgen.WorldContent.Climate);
             pawns.Temperature = temperature;
             // The sky (design 43), which writes the outdoor curve's weather term before the thermal
             // pass reads it: Order 35 against temperature's 50.
-            var weather = new Weather.WeatherSystem(pawns, Worldgen.WorldContent.Weathers);
+            var weather = new Weather.WeatherSystem(pawns, Worldgen.WorldContent.Weathers, wetPerMille);
             pawns.Weather = weather;
             // And where it reaches: the one shelter rule (design 43 §6), read by pace, growth and
             // the animals. Derived, so it is neither saved nor hashed and needs no schedule slot.
@@ -161,6 +167,11 @@ namespace Odyssey.Sim.Pawns
             construction.Hearth = hearth;
             pawns.Home = new World.HomeArea(pawns);
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
+            // The raids (design 55): a clock in the pawn phase at order 15, hashed only while a band
+            // is on the board, so its registration moved no golden. Every colony gets it, as every
+            // colony gets the events that fire one.
+            var raids = new Events.RaidSystem(pawns) { Jobs = pipeline };
+            pawns.Raids = raids;
             builder
                 // The world itself, first: it is what everything below reads, and it ticks
                 // nothing, so nothing else would ever have put it in the hash (OQ-50).
@@ -182,6 +193,9 @@ namespace Odyssey.Sim.Pawns
                 // are one order earlier in the same phase.
                 .AddSystem(_ => new StartingSkillsSystem(pawns))
                 .AddSystem(_ => new NeedsSystem(pawns))
+                .AddSystem(_ => raids)
+                .AddHashable(raids)
+                .AddSnapshotContributor(raids)
                 // Inside the lambda, not before it: the factory runs during Build(), so a giver
                 // registered after this call is still picked up. Outside it, AddColony would have
                 // had to be the last call on the builder, which is precisely the kind of ordering
@@ -244,6 +258,8 @@ namespace Odyssey.Sim.Pawns
                 // The struck buildings and which edifices are targets (design 33 §13i): neither
                 // saved nor hashed, a report of the damage store and of the content.
                 .AddSnapshotContributor(new EdificeDamageContributor(pawns))
+                // What a shot would come to, while the interface asks (design 53 §8b).
+                .AddSnapshotContributor(new ShotReportContributor(pawns))
                 // The world's own answer to "what is this cell", beside the pawn registry's
                 // answer to "who is here". Every colony gets it, so a click is answered in any
                 // build rather than the ones that remembered to attach the question.

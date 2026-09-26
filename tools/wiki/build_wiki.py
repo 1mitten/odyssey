@@ -57,13 +57,13 @@ SECTIONS = [
     ("health", "Health and anatomy", ["ui.health"],
      "Body parts, injuries and conditions. The anatomy sheet covers this better than any other "
      "part of the game, which is either fortunate or ominous."),
-    ("events", "Events", ["ui.alert", "ui.bulletin", "ui.toast"],
+    ("events", "Events", ["ui.alert", "ui.bulletin", "ui.toast", "ui.raid"],
      "Three channels, and the difference is not cosmetic. Alerts are conditions that persist until "
      "fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things "
      "that happened and are gone in six seconds, which is the right home for anything that recurs "
      "often enough that clearing it by hand would become a chore. Alerts and bulletins carry the "
      "layer they occurred on and jump the camera there, which a flat colony sim never has to think "
-     "about."),
+     "about. A raid's mix names who a band of hostiles is made of (design 55)."),
     ("research", "Research", ["ui.research.category", "ui.research.project", "ui.research.status",
                               "ui.research.hud"],
      "What the colony can learn, grouped by field, and the words the Research tab uses about it. "
@@ -71,9 +71,11 @@ SECTIONS = [
      "so correcting a line here corrects the game. Only Power is listed yet, and the projects are "
      "placeholders until the research mechanism exists (design 34)."),
     ("world", "World and interface", ["ui.terrain", "ui.weather", "ui.overlay", "ui.layer",
-                                      "ui.tab", "ui.speed", "ui.settings", "ui.inventory.hud"],
+                                      "ui.tab", "ui.speed", "ui.settings", "ui.inventory.hud",
+                                      "ui.biome", "ui.hills", "ui.world"],
      "Weather, the data overlays, the layer controls and the rest of the interface furniture. The "
-     "six layer visibility modes are decided: see ADR 0006."),
+     "six layer visibility modes are decided: see ADR 0006. The planet's biomes and terrain are "
+     "proposals for veto (design 59): only Meadow can be settled until more art arrives."),
 ]
 NS_TITLES = {
     "ui.terrain": "Terrain",
@@ -86,12 +88,14 @@ NS_TITLES = {
     "ui.status": "Current activity", "ui.stat": "Pace and what it is made of",
     "ui.health": "Body parts and conditions",
     "ui.alert": "Alerts", "ui.bulletin": "Bulletins", "ui.toast": "Toasts",
+    "ui.raid": "Raid mixes",
     "ui.weather": "Weather",
     "ui.overlay": "Overlays", "ui.layer": "Layer controls", "ui.tab": "Tabs",
     "ui.speed": "Game speed", "ui.settings": "Settings",
     "ui.research.category": "Fields", "ui.research.project": "Projects",
     "ui.research.status": "Project states", "ui.research.hud": "The Research tab's words",
     "ui.inventory.hud": "The Inventory tab's words",
+    "ui.biome": "Biomes", "ui.hills": "Terrain on the planet", "ui.world": "The World screen's words",
 }
 SHEET_NAMES = {
     "01": "raw materials", "02": "food", "03": "camp and crafting", "04": "manufactured",

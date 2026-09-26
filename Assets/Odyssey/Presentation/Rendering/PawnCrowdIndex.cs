@@ -255,24 +255,39 @@ namespace Odyssey.Presentation.Rendering
         /// is what keeps the arithmetic identical to the plain scan. What it guarantees is that
         /// nobody inside the radius is missing.</para>
         /// </summary>
-        public Neighbourhood Near(Vector3 at) => new Neighbourhood(this, at);
+        public Neighbourhood Near(Vector3 at) => new Neighbourhood(this, at, ownBucketOnly: false);
 
-        /// <summary>The 3 x 3 x 3 block of buckets around a point. A struct with a struct
-        /// enumerator so a <c>foreach</c> in the pose loop allocates nothing.</summary>
+        /// <summary>
+        /// Every pawn in the one bucket <paramref name="at"/> falls in — no neighbours.
+        ///
+        /// <para><b>For the stand-apart rule, and exact for it</b> (design 25 §10): the pawns it
+        /// wants are the ones standing on the same cell, and a standing pawn's cached position is
+        /// its cell's <c>FloorCentre</c>, computed by the same arithmetic for every pawn on that
+        /// cell. Identical floats fall in the identical bucket, so one bucket holds all of them —
+        /// one probe where <see cref="Near"/> makes twenty-seven. The caller still checks the cell,
+        /// because a bucket 3 m across holds several.</para>
+        /// </summary>
+        public Neighbourhood Here(Vector3 at) => new Neighbourhood(this, at, ownBucketOnly: true);
+
+        /// <summary>The 3 x 3 x 3 block of buckets around a point, or only the middle one of it.
+        /// A struct with a struct enumerator so a <c>foreach</c> in the pose loop allocates
+        /// nothing.</summary>
         public readonly struct Neighbourhood
         {
             readonly PawnCrowdIndex _index;
             readonly int _bx, _by, _bz;
+            readonly bool _ownBucketOnly;
 
-            internal Neighbourhood(PawnCrowdIndex index, Vector3 at)
+            internal Neighbourhood(PawnCrowdIndex index, Vector3 at, bool ownBucketOnly)
             {
                 _index = index;
                 _bx = BucketOf(at.x);
                 _by = BucketOf(at.y);
                 _bz = BucketOf(at.z);
+                _ownBucketOnly = ownBucketOnly;
             }
 
-            public Enumerator GetEnumerator() => new Enumerator(_index, _bx, _by, _bz);
+            public Enumerator GetEnumerator() => new Enumerator(_index, _bx, _by, _bz, _ownBucketOnly);
         }
 
         /// <summary>See <see cref="Neighbourhood"/>.</summary>
@@ -281,16 +296,20 @@ namespace Odyssey.Presentation.Rendering
             readonly PawnCrowdIndex _index;
             readonly int _bx, _by, _bz;
             int _neighbour;
+            readonly int _lastNeighbour;
             int _at;
             int _end;
 
-            internal Enumerator(PawnCrowdIndex index, int bx, int by, int bz)
+            internal Enumerator(PawnCrowdIndex index, int bx, int by, int bz, bool ownBucketOnly)
             {
                 _index = index;
                 _bx = bx;
                 _by = by;
                 _bz = bz;
-                _neighbour = 0;
+                // Neighbour 13 is (0, 0, 0) in the k % 3, k / 3 % 3, k / 9 unpacking below: the
+                // bucket itself. Starting there and stopping after it visits that bucket alone.
+                _neighbour = ownBucketOnly ? 13 : 0;
+                _lastNeighbour = ownBucketOnly ? 14 : 27;
                 _at = 0;
                 _end = 0;
                 Current = -1;
@@ -307,7 +326,7 @@ namespace Odyssey.Presentation.Rendering
                         Current = _index._items[_at++];
                         return true;
                     }
-                    if (_neighbour >= 27) return false;
+                    if (_neighbour >= _lastNeighbour) return false;
 
                     int k = _neighbour++;
                     int dx = k % 3 - 1;

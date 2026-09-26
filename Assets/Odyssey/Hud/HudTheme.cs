@@ -125,6 +125,19 @@ namespace Odyssey.Hud
         /// glass laid on the board rather than as a hole cut in it.</summary>
         public static readonly HudColour PanelFill = new HudColour(12, 16, 20, 1f);
 
+        /// <summary>
+        /// The inspect pane's fill: the panel colour at 85% (owner, 2026-09-25: the colonist info
+        /// pane at 85% opacity). <b>The one exception to the opaque panel</b> — the roster cards and
+        /// every other panel stay at <see cref="PanelFill"/>. The pane is one element whatever is
+        /// selected, so a tile, a store or an animal's pane is the same 85%.
+        ///
+        /// <para><b>What it costs.</b> Over pure white terrain the primary ink reads 11.2:1 and the
+        /// meta ink 6.5:1, both above body minimum; the dim ink reads 4.44:1, a hair under it, and
+        /// passes over anything darker than white (4.74:1 over a light grey). <c>HudLayoutTests</c>
+        /// holds all three numbers.</para>
+        /// </summary>
+        public static readonly HudColour InspectFill = new HudColour(12, 16, 20, 0.85f);
+
         /// <summary>The command bar's fill: the same colour, a little more opaque, because the
         /// bar is always on screen and always carries text.</summary>
         public static readonly HudColour BarFill = new HudColour(12, 16, 20, 0.90f);
@@ -245,6 +258,23 @@ namespace Odyssey.Hud
             > 3_000 => Warn,                              // hot
             < 1_000 => Info,                              // cold, however deep
             _ => null,                                    // comfortable, and the work band
+        };
+
+        /// <summary>
+        /// How livable a site's temperature is, on the World screen (owner, 2026-09-26: "indicate
+        /// temperatures with colouring red, amber and green"): a traffic light, not a reading.
+        /// Green is the band <see cref="Temperature"/> leaves alone as comfortable, 10–30 °C;
+        /// amber is its cold and hot bands short of freezing and sweltering; red is below freezing
+        /// or above 35 °C. The same thresholds as <see cref="Temperature"/>, so a site judged green
+        /// is one a colonist's pane would not tint, and one question with two answers is avoided.
+        /// </summary>
+        public static HudColour SiteTemperature(int centiC) => centiC switch
+        {
+            > 3_500 => Bad,
+            > 3_000 => Warn,
+            < 0 => Bad,
+            < 1_000 => Warn,
+            _ => Good,
         };
 
         /// <summary>The tint laid over a stores row whose stock is falling.</summary>
@@ -407,6 +437,17 @@ namespace Odyssey.Hud
             /// <summary>Selected border and ink: the solid hue.</summary>
             public HudColour Selected => Hue;
         }
+
+        /// <summary>
+        /// The World map's fixed inks (design 59 §9a, Claude Design's specification): a land name's
+        /// dark ink, a sea name's pale one, and what shows behind the map where it does not reach.
+        /// Map colours rather than interface tokens, because they are drawn over the planet's own
+        /// colours and must read on every biome; the biome ramps themselves are content
+        /// (<c>Biomes.xml</c>).
+        /// </summary>
+        public static readonly HudColour MapLandInk = new HudColour(12, 16, 20, 0.78f);
+        public static readonly HudColour MapSeaInk = new HudColour(190, 225, 240, 0.85f);
+        public static readonly HudColour MapBackdrop = new HudColour(0x08, 0x15, 0x21);
 
         /// <summary>
         /// The Zones category's olive, named because two things wear it: the category tier below,

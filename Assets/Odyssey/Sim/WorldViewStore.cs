@@ -30,6 +30,9 @@ namespace Odyssey.Sim
         /// <summary>Publish one standing order, wherever in the world it is.</summary>
         public void AddOrder(in OrderView view) => _target.AddOrder(view);
 
+        /// <summary>Publish one part-mined cell with no order on it (design 58 §3).</summary>
+        public void AddPartMined(in PartMinedView view) => _target.AddPartMined(view);
+
         /// <summary>Publish one built store — a shelf — and how full it is.</summary>
         public void AddStorageUnit(in StorageUnitView view) => _target.AddStorageUnit(view);
 
@@ -75,6 +78,9 @@ namespace Odyssey.Sim
         /// </summary>
         public void AddCellDetail(in CellDetail detail) => _target.AddCellDetail(detail);
 
+        /// <summary>The answer to the standing <c>QueryShot</c> (design 53 §8b).</summary>
+        public void SetShotReport(in ShotReportView report) => _target.SetShotReport(report);
+
         /// <summary>Publish one entry of the incident ledger. See <see cref="BulletinView"/>.</summary>
         public void AddBulletin(in BulletinView view) => _target.AddBulletin(view);
 
@@ -82,6 +88,9 @@ namespace Odyssey.Sim
         public void AddFalling(in FallingView view) => _target.AddFalling(view);
 
         public void AddProjectile(in ProjectileView view) => _target.AddProjectile(view);
+
+        /// <summary>Publish one raid. See <see cref="RaidView"/>.</summary>
+        public void AddRaid(in RaidView view) => _target.AddRaid(view);
 
         /// <summary>Publish one line cell. See <see cref="ConduitView"/> for which are published when.</summary>
         public void AddConduit(in ConduitView view) => _target.AddConduit(view);
@@ -169,6 +178,15 @@ namespace Odyssey.Sim
         /// published. Set through a <c>WatchHome</c> intent; view state like <see cref="WatchPower"/>.
         /// </summary>
         public bool WatchHome { get; internal set; }
+
+        /// <summary>
+        /// The shot the interface has asked about (design 53 §8b): the shooter's and the target's
+        /// pawn ids, nought for no question. View state like <see cref="QueryCell"/>.
+        /// </summary>
+        public int QueryShotShooter { get; internal set; }
+
+        /// <inheritdoc cref="QueryShotShooter"/>
+        public int QueryShotTarget { get; internal set; }
 
         public int PublishCount { get; private set; }
 

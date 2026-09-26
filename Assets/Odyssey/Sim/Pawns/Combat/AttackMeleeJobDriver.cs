@@ -216,6 +216,8 @@ namespace Odyssey.Sim.Pawns
         bool MayFightFrom(PawnContext ctx, Pawn target, int tick)
         {
             if (Pawn.Cell == target.Cell) return false;
+            // Never from on top of cover (design 53 §5): she climbs over and fights from beside it.
+            if (!Standing.CanStandAt(ctx, Pawn.Cell)) return false;
             // Standing on a side she took, waiting for her swing clock: nobody else chooses a cell
             // a fighter holds, so it is still hers. Job.WorkTicks is set from the first stop.
             if (Pawn.Destination < 0 && tick < Pawn.NextSwingTick && Job.WorkTicks != 0) return true;
@@ -241,7 +243,10 @@ namespace Odyssey.Sim.Pawns
             if (Pawn.Drafted) Pawn.DraftQuietSinceTick = tick;
             Pawn.BeginGesture(PawnGesture.Strike);
             SwingOutcome outcome = ctx.MeleeRules.Resolve(Pawn, target, armament, ctx, tick);
-            Pawn.HoldSwing(outcome);
+            // A sweeping species keeps the way it faced (design 62 §5): the arc is the one it wound
+            // up in, not the one the target has moved to. Nought for everybody else.
+            int facing = Pawn.Species.sweep != null ? SweepArc.Facing(ctx.Size, Pawn.Cell, target.Cell) : 0;
+            Pawn.HoldSwing(outcome, facing);
             CombatEventKind kind = outcome.Landed && outcome.Critical ? CombatEventKind.SwingCritical : CombatEventKind.Swing;
             ctx.CombatLog.Report(kind, Pawn.Id, target.Id, ctx.Size.FromIndex(target.Cell), tick,
                 armament.Attack.windupTicks, armament.ItemDef);

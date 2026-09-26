@@ -54,6 +54,8 @@ namespace Odyssey.Hud
 
         public const string SpawnRatKey = "ui.debug.spawnrat";
 
+        public const string SpawnFrogKey = "ui.debug.spawnfrog";
+
         public const string GiveWoodKey = "ui.debug.givewood";
         public const string GiveStoneKey = "ui.debug.givestone";
         public const string GiveFoodKey = "ui.debug.givefood";
@@ -62,6 +64,13 @@ namespace Odyssey.Hud
         public const string GiveCarrotsKey = "ui.debug.givecarrots";
         public const string SkipDayKey = "ui.debug.skipday";
         public const string SkipMorningKey = "ui.debug.skipmorning";
+
+        /// <summary>
+        /// Skip to ten at night, when it is fully dark (design 52 §5). The butterflies' glow is the
+        /// one thing that only exists after dusk, and <see cref="SkipMorningKey"/> lands at four in
+        /// the morning with about a minute of night left — too short to judge a spectacle by.
+        /// </summary>
+        public const string SkipNightKey = "ui.debug.skipnight";
         public const string RipenCropsKey = "ui.debug.ripen";
 
         /// <summary>Completes the project in hand, which is how a Research tab project becomes done until the mechanism exists (design 34).</summary>
@@ -119,16 +128,34 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly string[] IconKeys =
         {
-            PanelKey, CheatsKey, EventsKey, SpawnTabKey, SpawnPawnKey, SpawnHogKey, SpawnRatKey,
+            PanelKey, CheatsKey, EventsKey, SpawnTabKey, SpawnPawnKey, SpawnHogKey, SpawnRatKey, SpawnFrogKey,
             SpawnBanditKey, SpawnBatKey, SpawnCrowbarKey, SpawnMacheteKey, SpawnArcBladeKey,
-            SpawnBanditsKey, ArmColonistsKey, SpawnPistolKey, SpawnGunmanKey, HurtKey, HealKey, KillKey, GiveMedkitsKey,
+            SpawnBanditsKey, ArmColonistsKey, SpawnPistolKey, SpawnGunmanKey, SpawnButcherKey,
+            SpawnButcherScarredKey, SpawnButcherBloodKey, SpawnButcherKingKey, HurtKey, HealKey, KillKey, GiveMedkitsKey,
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey, GiveCarrotsKey,
-            SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
+            SkipDayKey, SkipMonthKey, SkipMorningKey, SkipNightKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
             JumpsFailKey,
             WeatherTabKey, WeatherClearKey, WeatherOvercastKey, WeatherDrizzleKey, WeatherRainKey,
             WeatherDownpourKey, WeatherStormKey, RainParticlesKey, WetGlossKey,
+            RaidSizeKey, RaidMixKey, RaidAutoKey,
         };
+
+        /// <summary>
+        /// The raid's two controls on the Events tab (design 55 §9): how many, and who. Their row
+        /// labels, and the word the size reads at 0.
+        /// </summary>
+        public const string RaidSizeKey = "ui.debug.raid.size",
+            RaidMixKey = "ui.debug.raid.mix",
+            RaidAutoKey = "ui.debug.raid.auto";
+
+        /// <summary>The slider's top: the owner's 200. The simulation refuses a band that would not fit.</summary>
+        public const int RaidSizeMax = 200;
+
+        /// <summary>The two controls' tooltips, as the Spawn rows keep theirs here.</summary>
+        public const string RaidSizeTooltip =
+                "How many the next raid brings. Auto sizes it from the colonists standing and the days survived",
+            RaidMixTooltip = "Who the next raid is made of: bandits, gunmen, or a mix of both";
 
         public const string WeatherClearKey = "ui.debug.weather.clear",
             WeatherOvercastKey = "ui.debug.weather.overcast",
@@ -212,6 +239,13 @@ namespace Odyssey.Hud
         /// one — the bandit's own kind, with the spawn intent's <c>B</c> naming the weapon plus one.
         /// </summary>
         public const string SpawnPistolKey = "ui.debug.spawnpistol", SpawnGunmanKey = "ui.debug.spawngunman";
+
+        /// <summary>The butcher (design 62): debug-spawned only until it has been played.</summary>
+        public const string SpawnButcherKey = "ui.debug.spawnbutcher";
+
+        /// <summary>The butcher's three harder levels (design 62 §4b), one row each.</summary>
+        public const string SpawnButcherScarredKey = "ui.debug.spawnbutcher.scarred",
+            SpawnButcherBloodKey = "ui.debug.spawnbutcher.blood", SpawnButcherKingKey = "ui.debug.spawnbutcher.king";
 
         /// <summary>
         /// One row of the Spawn tab: its name, what its tooltip says, and the intent a click sends
@@ -304,12 +338,22 @@ namespace Odyssey.Hud
                 PawnKindLabels.Bandit, GroupHostilesKey),
             Pawn(SpawnBanditsKey, "Adds three bandits near the camera, each on its own tile",
                 PawnKindLabels.Bandit, GroupHostilesKey, repeat: 3),
-            new SpawnRow(SpawnGunmanKey, "Adds a hostile bandit near the camera, holding a pistol. It shoots whoever it can see",
-                IntentKind.SpawnPawn, PawnKindLabels.Bandit, ItemHandle.Pistol + 1, GroupHostilesKey),
+            Pawn(SpawnGunmanKey, "Adds a gunman near the camera: a bandit with a pistol. It shoots whoever it can see",
+                PawnKindLabels.Gunman, GroupHostilesKey),
+            Pawn(SpawnButcherKey, "Adds the butcher near the camera: huge, slow and hard to kill. Its cleaver sweeps three cells and flings whoever it lands on",
+                PawnKindLabels.Butcher, GroupHostilesKey),
+            Pawn(SpawnButcherScarredKey, "Adds a scarred butcher: the second level, bigger and half as tough again",
+                PawnKindLabels.ButcherScarred, GroupHostilesKey),
+            Pawn(SpawnButcherBloodKey, "Adds a blood butcher: the third level, bigger again and twice as tough as the first",
+                PawnKindLabels.ButcherBlood, GroupHostilesKey),
+            Pawn(SpawnButcherKingKey, "Adds the butcher king: the fourth level, the biggest, and it flings three cells",
+                PawnKindLabels.ButcherKing, GroupHostilesKey),
             Pawn(SpawnHogKey, "Adds a wild midden hog near the camera. It wanders and rests, and never takes a ladder",
                 PawnKindLabels.MiddenHogKind, GroupAnimalsKey),
             Pawn(SpawnRatKey, "Adds a duct rat near the camera. It wanders and rests, and climbs anything",
                 PawnKindLabels.DuctRatKind, GroupAnimalsKey),
+            Pawn(SpawnFrogKey, "Adds a culvert frog near the camera. It heads for the nearest water and keeps to the bank",
+                PawnKindLabels.CulvertFrogKind, GroupAnimalsKey),
             Weapon(SpawnBatKey, "Adds a bat near the camera. Blunt, and now and then it stuns", ItemHandle.Bat),
             Weapon(SpawnCrowbarKey, "Adds a crowbar near the camera. Heavier and slower than a bat, and stuns more often",
                 ItemHandle.Crowbar),
@@ -383,5 +427,42 @@ namespace Odyssey.Hud
             WetGlossOnly = on;
             WeatherChanged?.Invoke();
         }
+
+        /// <summary>
+        /// How many the next raid brings, 0 to <see cref="RaidSizeMax"/>. 0 is <i>Auto</i>: the
+        /// incident's own headcount-and-days size (design 55 §9). Kept for the session, so a second
+        /// raid is one click.
+        /// </summary>
+        public int RaidSize { get; private set; }
+
+        /// <summary>Which mix the next raid is made from, as an index into <see cref="RaidMixLabels.Keys"/>. Mixed until chosen.</summary>
+        public int RaidMix { get; private set; } = RaidMixLabels.Default;
+
+        public void SetRaidSize(int size) => RaidSize = Math.Max(0, Math.Min(RaidSizeMax, size));
+
+        public void SetRaidMix(int mix)
+        {
+            if (mix >= 0 && mix < RaidMixLabels.Keys.Length) RaidMix = mix;
+        }
+
+        /// <summary>
+        /// What the Raid row says when the raid it was asked for will not fire (design 55 §9:
+        /// refused, not trimmed, and says so): too many for the room left under the pawn ceiling,
+        /// or, when there is room, no edge the band can reach. A debug line, so plain ASCII.
+        /// </summary>
+        public static string RaidRefusal(int wanted, int room) =>
+            wanted > room
+                ? $"Refused: {wanted} will not fit, room for {Math.Max(0, room)} under the ceiling"
+                : "Refused: no edge the band can reach";
+
+        /// <summary>What the size slider's figure reads: the number, or <i>Auto</i> at 0.</summary>
+        public static string RaidSizeText(int size) => size <= 0 ? Registry.Label(RaidAutoKey) : size.ToString();
+
+        /// <summary>
+        /// The raid, as the debug row sends it (design 55 §9): the incident in A, the size in B (0 for
+        /// the incident's own) and the mix plus one in C.
+        /// </summary>
+        public Intent RaidIntent(int incidentDef) =>
+            new Intent(IntentKind.InvokeIncident, default, incidentDef, RaidSize, RaidMix + 1);
     }
 }

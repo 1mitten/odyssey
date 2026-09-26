@@ -22,6 +22,7 @@ putting a file of the same name in the same folder.
 | `chop.wav` | An axe biting into a tree trunk — the felling stroke landing. Dull; wood does not ring. | 0.2–0.8 s | no | mono |
 | `pick.wav` | A pick striking stone — the mining stroke landing. A click and a short ring. | 0.2–0.8 s | no | mono |
 | ~~`alert.wav`~~ | **Supplied 2026-09-19** and split into five: `alert-normal`, `alert-negative`, `alert-happy`, `alert-joined`, `alert-raid`. See `docs/design/24-alert-sounds.md` — the sourcing note below still applies to any future chime. |  |  |  |
+| `alert-raid-arrive.wav` | **Supplied 2026-09-25** (Pixabay, freesound_community, `war-horn-horror-73771`; Pixabay Content License, the owner to confirm) and baked by `tools/audio/bake_raid.sh`: a raid arriving at the edge of the board. 2D, Alerts bus, played by the raid's Events row. **The assault horn the owner supplied beside it (trading_nation, `low-horn-185556`) is already `alert-raid.wav`**, measured sample for sample, so the siren's source and licence are now known. See `docs/design/55-raids.md` §7. | 18.0 s | no | stereo |
 | `draft.wav` | **Supplied 2026-09-23** (a sword drawn; Pixabay, Dragon Studio) and baked by `tools/audio/bake_draft.sh`: the sound of a colonist being drafted. 2D, Effects bus. See `docs/design/33-combat.md` §2i. | | | |
 | `carry-lift.wav`, `carry-drop.wav` | **Supplied 2026-09-19** as one recording and split into two by `tools/audio/bake_carry.sh`. See `docs/design/24-carrying.md` §12. | | | |
 | `swim-stroke.wav`, `_01`, `_02` | **Supplied 2026-09-25** (Pixabay, freesound_community, `swim-44183`; Pixabay Content License, the owner to confirm) and baked by `tools/audio/bake_swim.sh` into three takes at 0.94/1.00/1.06 speed: one arm of a swimmer's stroke, played once per arm as the hand goes in. Its loudest moment is at 0.18 s, and **that number is a timing constant** (`SwimPose.StrokeSoundPeakSeconds`). -24 LUFS max momentary. Heard within 40 m of the camera only. See `docs/design/20-swimming-and-water.md` §9. | 0.71–0.80 s | no | mono |
@@ -29,6 +30,8 @@ putting a file of the same name in the same folder.
 | `combat-whoosh_01.wav` | **Supplied 2026-09-23** (Pixabay, floraphonic, `swing-whoosh-3`; the same licence): the second whoosh, cut so its loudest moment lines up with the first's at 0.040 s. | 0.18 s | no | mono |
 | `combat-crit-slice.wav` | **Supplied 2026-09-23** (Pixabay, Dragon Studio, `violent-sword-slice`; the same licence): a sharp weapon's critical, played instead of the whoosh, its loudest moment (0.065 s, `SlicePeakSeconds`) on the impact. The source's 2.2 s tail is cut to 1.1 s with a fade. | 1.10 s | no | mono |
 | `combat-hit.wav` | **Supplied 2026-09-23** (Pixabay, virtual_vibes, `cinematic-thud-fx`; the same licence): every landed blow, from the struck, played on the hit's own frame — so its transient is cut to its first sample (loudest at 0.013 s). Quiet in the source, lifted 5 dB to the ear through a limiter. | 0.75 s | no | mono |
+| `break-wood.wav`, `_01`, `_02` | **Supplied 2026-09-26** (Pixabay, floraphonic, `wood-smash-3-170418`; Pixabay Content License, **confirmed by the owner 2026-09-26**) and baked by `tools/audio/bake_demolition.sh`: something built of wood coming down — broken in a fight or taken apart, wall, door, furniture or floor. The source is brick-walled (+2.5 dBFS in the float decode); the bake takes it down in float, high-passes at 60 Hz and low-passes at 9 kHz, adds the gunshot's outdoor space (a convolved tail and a 140 ms slapback) at −11 dB, and makes three takes at 0.94–1.06 speed with their own tails, at −19 LUFS max momentary. **Imported with `normalize` off.** See `docs/design/58-cracks.md` §9. | 1.70 s | no | mono |
+| `break-rock.wav`, `_01`, `_02` | **Supplied 2026-09-26** (Pixabay, Dragon Studio, `boulder-impact-487673`; the same licence) and baked by the same script: a mined face collapsing. Brick-walled harder (+3.3 dBFS, RMS at full scale for its first 0.35 s); high-passed at 35 Hz, low-passed at 5.5 kHz, the rest as the wood. | 1.60 s | no | mono |
 | `water.wav` | The bed for ponds, streams and the river. Flat and eventless — nothing may *happen* in it, or the event repeats every few seconds and becomes the only thing you hear. Its level is driven by how much water is near the camera, so what is wanted is the sound of standing beside a stream, not of approaching one. | 15–90 s | **yes, seamlessly** | mono |
 | `ambience-day.wav` | The sound of the world outdoors by day, under everything else: air, distance, birds. The floor of the mix — the thing you stop hearing and would notice the absence of. Eventless, like the water. | 10–60 s | **yes, seamlessly** | stereo |
 | `ambience-night.wav` | The same after dark, and a *different world* rather than a quieter one: the day's birds gone, something else started. It plays at a lower level than the day bed. | 10–60 s | **yes, seamlessly** | stereo |
@@ -149,6 +152,28 @@ The lossless master is what is committed; the MP3 is not, per the rule above.
   the middle: an audible breath at every wrap. The fades are quarter-sine.
 - **Levelled before folding**, so the limiter's lookahead never sees the seam.
 - **Stereo, source rate kept.** A 2D bed's width is most of what makes it read as all around.
+
+**The butcher's voice and its cleaver, 2026-09-26** (design 62 §8d, `tools/audio/bake_butcher.sh`).
+Three owner-supplied Pixabay recordings, each a single call of under a second, mono 44.1 kHz:
+`freesound_community-pig-sound-47168` (a grunt), `-pig-squeak-47166` (a squeal) and
+`-pig-oink-47167` (an oink).
+
+- **The variations are made, not cut.** Each take is a source resampled lower, 0.54 to 0.90 of
+  its rate, which lowers the pitch and slows the call together: a bigger throat, not a
+  pitch-shifted small one. A low shelf gives each weight at the play distance, and the deepest are
+  low-passed. The result is fifteen takes: strike ×4, hurt ×4, fling ×4, down ×3.
+- **Four loudnesses, the owner's order** ("loud when he knocks people back or even when hit"):
+  strike −21, hurt −18, fling −15 and down −14 LUFS (max momentary).
+- **A lookahead limiter, not the ceiling.** A pig's call peaks about 17 dB over its loudness, so
+  holding the −3 dBFS ceiling by turning each take down left the fling at −20 LUFS, no louder than
+  the hurt. Each take is lifted by its full gain into a latency-compensated limiter at −3 dBFS.
+- **The deep whoosh is the committed sword whoosh at 0.62**, about eight semitones down, with its
+  top rolled off. Its head is re-cut so its loudest 10 ms is centred at 0.041 s again, the
+  whoosh's own timing constant, and it is levelled at −19 LUFS, two over the sword's −21.
+- **Imported without normalising** (`ButcherSoundTests`), or the ladder flattens.
+- **The level's pitch at play time:** 1.00, 0.94, 0.88 and 0.82 from the butcher to the king
+  (`SpeciesDef.voicePitchPerMille`).
+- **Pixabay Content License**, as the blows: the owner to confirm.
 
 ## Licensing
 

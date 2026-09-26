@@ -102,8 +102,8 @@ namespace Odyssey.Tests.Hud
                 Assert.That(keys, Does.Contain(row.Key), $"{row.Key} is not in DebugDirector.IconKeys");
                 Assert.That(row.Tooltip, Is.Not.Empty, row.Key);
             }
-            Assert.That(DebugDirector.SpawnRows.Length, Is.EqualTo(20),
-                "colonist, arm-all, hurt, heal, kill, bandit, three bandits, pistol bandit, two animals, " +
+            Assert.That(DebugDirector.SpawnRows.Length, Is.EqualTo(25),
+                "colonist, arm-all, hurt, heal, kill, bandit, three bandits, pistol bandit, four butchers, three animals, " +
                 "five weapons, four resources and the medical supplies");
             Assert.That(DebugDirector.SpawnRows[0].Key, Is.EqualTo(DebugDirector.SpawnPawnKey), "the colonist first");
         }
@@ -156,18 +156,17 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The ranged line's two rows (design 47 §4d). The pistol bandit is the bandit's own kind with
-        /// the weapon in <c>B</c>, plus one — 0 being "the kind's own table", which every other pawn
-        /// row sends, so the plain bandit row is the control. The pistol is one item, granted as the
-        /// other weapons are.
+        /// The ranged line's two rows (design 47 §4d). The gunman is a kind of its own since the raid
+        /// (design 55 §8), armed from its own table, so the row sends nothing in <c>B</c>, as every
+        /// other pawn row does. The pistol is one item, granted as the other weapons are.
         /// </summary>
         [Test]
         public void TheRangedRowsSendWhatTheySay()
         {
             DebugDirector.SpawnRow gunman = RowFor(DebugDirector.SpawnGunmanKey);
             Assert.That(gunman.Kind, Is.EqualTo(IntentKind.SpawnPawn));
-            Assert.That(gunman.A, Is.EqualTo(PawnKindLabels.Bandit));
-            Assert.That(gunman.B, Is.EqualTo(ItemHandle.Pistol + 1));
+            Assert.That(gunman.A, Is.EqualTo(PawnKindLabels.Gunman));
+            Assert.That(gunman.B, Is.EqualTo(0), "the gunman deals its pistol from its own table");
             Assert.That(gunman.Group, Is.EqualTo(DebugDirector.GroupHostilesKey));
             Assert.That(RowFor(DebugDirector.SpawnBanditKey).B, Is.EqualTo(0), "the plain bandit deals from its own table");
 
@@ -234,7 +233,7 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void TheAlmanacOpensAnAnimalsCorpseOnItsKindAndNothingForABandit()
+        public void TheAlmanacOpensAnAnimalsCorpseOnItsKindAndABanditOnTheBanditsPage()
         {
             var pane = new InspectModel();
             pane.SetCorpse(7);
@@ -245,19 +244,19 @@ namespace Odyssey.Tests.Hud
 
             pane.SetColonist(Raider);
             pane.Refresh(Board());
-            Assert.That(AlmanacDirector.ResolveSelection(pane), Is.Null,
-                "a bandit opened a colonist's Skills entry");
+            Assert.That(AlmanacDirector.ResolveSelection(pane), Is.EqualTo(("People", Registry.Label("ui.pawn.bandit"))),
+                "a bandit opens its own kind's page, never a colonist's");
         }
 
         [Test]
-        public void TheAlmanacHasNoEntryForAWeaponRatherThanTheRationPack()
+        public void TheAlmanacOpensAWeaponOnItsOwnPageRatherThanTheRationPack()
         {
             WorldSnapshot frame = Board();
             frame.AddThing(new ThingView(new ThingId(30), new CellRef(2, 2, 1), ItemHandle.Crowbar, 0));
             var pane = new InspectModel();
             pane.SetItem(new ThingId(30));
             pane.Refresh(frame);
-            Assert.That(AlmanacDirector.ResolveSelection(pane), Is.Null);
+            Assert.That(AlmanacDirector.ResolveSelection(pane), Is.EqualTo((AlmanacCatalogue.Weapons, Registry.Label("ui.item.crowbar"))));
         }
     }
 }

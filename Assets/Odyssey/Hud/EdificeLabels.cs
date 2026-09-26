@@ -35,6 +35,8 @@ namespace Odyssey.Hud
             "ui.terrain.bush", "ui.terrain.bush.berry", "ui.terrain.bush.picked",
             // The kitchen (design 48), edifice 22, after the wild things.
             "ui.arch.tool.galley",
+            // Cover (design 53 §4), edifice 23.
+            "ui.arch.tool.sandbag",
         };
 
         public static string IconKey(int edifice) =>

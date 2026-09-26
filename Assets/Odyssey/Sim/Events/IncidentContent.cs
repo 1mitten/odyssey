@@ -85,6 +85,12 @@ namespace Odyssey.Sim.Events
 
         /// <summary>How long a thing is in the air before it lands. 0 lands it on the same tick.</summary>
         public int fallTicks;
+
+        /// <summary>
+        /// A raid's own parameters (design 55 §8), or null for any incident that is not one: the first
+        /// per-worker block, the shape design 23 §8 asked for rather than widening the flat set.
+        /// </summary>
+        public RaidParams? raid;
     }
 
     /// <summary>
@@ -107,9 +113,26 @@ namespace Odyssey.Sim.Events
             "Incident_Theft",
             "Incident_BanditLeft",
             "Incident_MedicalDrop",
+            // A band of hostiles from one edge (design 55), appended.
+            "Incident_Raid",
+        };
+
+        /// <summary>
+        /// Every raid mix in index order (design 55 §8), the same contract as <see cref="Order"/>:
+        /// position <i>is</i> the mix index the intent carries and the ledger records, so append,
+        /// never insert. The debug dropdown lists them in this order.
+        /// </summary>
+        public static readonly string[] MixOrder =
+        {
+            "RaidMix_Bandits",
+            "RaidMix_Gunmen",
+            "RaidMix_Mixed",
         };
 
         public IncidentDef[] Defs = System.Array.Empty<IncidentDef>();
+
+        /// <summary>The raid mixes, bound, in <see cref="MixOrder"/>.</summary>
+        public RaidMix[] Mixes = System.Array.Empty<RaidMix>();
 
         /// <summary>The <c>ItemIndex</c> each incident pays out, or -1 for none. Parallel to <see cref="Defs"/>.</summary>
         public int[] ItemIndex = System.Array.Empty<int>();
@@ -120,7 +143,7 @@ namespace Odyssey.Sim.Events
         public int Count => Defs.Length;
 
         /// <summary>The Def types this content is made of, registered in one place.</summary>
-        public static DefLoader Register(DefLoader loader) => loader.Register<IncidentDef>();
+        public static DefLoader Register(DefLoader loader) => loader.Register<IncidentDef>().Register<RaidMixDef>();
 
         /// <summary>
         /// Read and bind. A missing Def, an unknown worker or an item the pawn content does not
@@ -154,9 +177,25 @@ namespace Odyssey.Sim.Events
                     $"simulation assembly answers to. Known: {string.Join(", ", IncidentWorkerRegistry.Names)}.");
 
                 content.ItemIndex[i] = def.item.Length == 0 ? -1 : ItemIndexOf(pawns, def);
+            }
 
-                // What this worker's own fields must satisfy is the worker's to say.
-                worker.Validate(def, pawns);
+            // The mixes after the workers resolve and before any is asked to validate: a raid's
+            // Def names a mix, and its worker checks the name (design 55 §8).
+            content.Mixes = new RaidMix[MixOrder.Length];
+            for (int m = 0; m < MixOrder.Length; m++)
+                content.Mixes[m] = RaidMix.Bind(OneMix(defs, MixOrder[m]), pawns);
+
+            // What each worker's own fields must satisfy is the worker's to say.
+            for (int i = 0; i < Order.Length; i++)
+                content.Workers[i].Validate(content.Defs[i], pawns);
+
+            // A raid's mix is a name the worker cannot resolve alone (it sees the pawns, not the mixes).
+            for (int i = 0; i < Order.Length; i++)
+            {
+                IncidentDef def = content.Defs[i];
+                if (def.raid != null && content.MixIndex(def.raid.mix) < 0)
+                    throw new DefLoadException(
+                        $"{def.Origin}: incident '{def.defName}' names raid mix '{def.raid.mix}', which the content does not have.");
             }
 
             return content;
@@ -174,6 +213,23 @@ namespace Odyssey.Sim.Events
                 if (pawns.Items[i].defName == def.item) return i;
             throw new DefLoadException(
                 $"{def.Origin}: incident '{def.defName}' pays out '{def.item}', which the pawn content does not carry.");
+        }
+
+        /// <summary>The index of the mix named <paramref name="defName"/> in <see cref="MixOrder"/>, or -1.</summary>
+        public int MixIndex(string defName)
+        {
+            for (int m = 0; m < Mixes.Length; m++)
+                if (Mixes[m].Def.defName == defName) return m;
+            return -1;
+        }
+
+        static RaidMixDef OneMix(DefDatabase defs, string defName)
+        {
+            if (!defs.HasTable<RaidMixDef>())
+                throw new DefLoadException($"the content has no RaidMixDef at all, and '{defName}' is required.");
+            if (!defs.Table<RaidMixDef>().TryGetHandle(defName, out var handle))
+                throw new DefLoadException($"the content has no RaidMixDef named '{defName}'.");
+            return defs.Table<RaidMixDef>()[handle];
         }
 
         static IncidentDef One(DefDatabase defs, string defName)

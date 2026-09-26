@@ -30,6 +30,8 @@ namespace Odyssey.Hud
             "ui.arch.tool.conduit", "ui.arch.tool.generator", "ui.arch.tool.heater",
             // The kitchen (design 48), BuildingHandle 12.
             "ui.arch.tool.galley",
+            // Cover (design 53 §4), BuildingHandle 13.
+            "ui.arch.tool.sandbag",
         };
 
         /// <summary>

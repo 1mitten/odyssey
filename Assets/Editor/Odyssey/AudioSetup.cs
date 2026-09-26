@@ -198,6 +198,20 @@ namespace Odyssey.EditorTools
                 mono: true, loadInBackground: false, placeholder: null),
             new("combat-hit", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: true, loadInBackground: false, placeholder: null),
+            // The butcher (design 62 §8d), baked by tools/audio/bake_butcher.sh: its cleaver's deep
+            // whoosh and its voice, four moments. The blows' class for the blows' reason, and **not
+            // normalised**: the bake sets each moment's loudness (strike -21, hurt -18, fling -15,
+            // down -14 LUFS), and the importer's normalise would raise every take to one peak.
+            new("combat-whoosh-heavy", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            new("butcher-strike", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            new("butcher-hurt", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            new("butcher-fling", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            new("butcher-down", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
             // The gunshot (design 47 §4c-bis), baked by tools/audio/bake_gunshot.sh: three near
             // takes and two far. The blows' class for the blows' reason — it plays on the Shot's
             // own frame — and **not normalised**: the bake sets the near takes at -14 LUFS and the
@@ -205,6 +219,13 @@ namespace Odyssey.EditorTools
             new("combat-shot", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: true, loadInBackground: false, placeholder: null, normalize: false),
             new("combat-shot-far", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            // Something coming down (design 58 §9), baked by tools/audio/bake_demolition.sh: wood
+            // broken or taken apart, and a mined face collapsing. The gunshot's class and its
+            // reason for **not normalising** — the bake levels every take at -19 LUFS.
+            new("break-wood", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            new("break-rock", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: true, loadInBackground: false, placeholder: null, normalize: false),
             new("alert-normal", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: false, loadInBackground: false, Alert),
@@ -215,6 +236,8 @@ namespace Odyssey.EditorTools
             new("alert-joined", AudioCompressionFormat.ADPCM, AudioClipLoadType.CompressedInMemory,
                 mono: false, loadInBackground: false, placeholder: null),
             new("alert-raid", AudioCompressionFormat.ADPCM, AudioClipLoadType.CompressedInMemory,
+                mono: false, loadInBackground: false, placeholder: null),
+            new("alert-raid-arrive", AudioCompressionFormat.ADPCM, AudioClipLoadType.CompressedInMemory,
                 mono: false, loadInBackground: false, placeholder: null),
             // The forest beds are minutes long, so they stream rather than sit in memory: a
             // three-minute stereo bed decompressed on load is eighteen megabytes of RAM to play
@@ -605,6 +628,17 @@ namespace Odyssey.EditorTools
                     Priority = 150, Cooldown = 0.1f,
                 };
 
+            AudioCatalogue.SoundDef VoiceSound(string id, string clip, float volume, float variance, float cooldown, int priority) =>
+                new AudioCatalogue.SoundDef
+                {
+                    Id = id,
+                    Clips = Variants(clip),
+                    Bus = SoundBus.Effects,
+                    Volume = volume, VolumeVariance = variance, PitchVariance = 0.06f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = priority, Cooldown = cooldown,
+                };
+
             AudioCatalogue.SoundDef AlertSound(string id, string clip, float volume,
                 float cooldown = 2f) =>
                 new AudioCatalogue.SoundDef
@@ -730,6 +764,27 @@ namespace Odyssey.EditorTools
                     SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
                     Priority = 110, Cooldown = 0f,
                 },
+                // The butcher's cleaver (design 62 §8d): the whoosh's timing and place, a little louder
+                // (the bake's -19 against -21) and a heavier blade.
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.CombatSwingHeavy,
+                    Clips = Variants("combat-whoosh-heavy"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.75f, VolumeVariance = 0.10f, PitchVariance = 0.05f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = 130, Cooldown = 0f,
+                },
+                // The butcher's voice (design 62 §8d; owner, 2026-09-26: "varying volumes - loud when
+                // he knocks people back or even when hit"). Four moments, four loudnesses — the bake's
+                // ladder is 7 dB from the grunt to the bellow — and each play moved by its variance
+                // so no two are alike. A cooldown per moment, so a sweep that flings three people is
+                // one bellow and a flurry of hits one squeal at a time. Heard as far as the blows,
+                // and a bellow or a death wins a voice before a thud does.
+                VoiceSound(SoundIds.Voice("butcher", Odyssey.Hud.VoiceCue.Strike)!, "butcher-strike", 0.55f, 0.25f, 0.8f, 150),
+                VoiceSound(SoundIds.Voice("butcher", Odyssey.Hud.VoiceCue.Hurt)!, "butcher-hurt", 0.8f, 0.18f, 0.6f, 115),
+                VoiceSound(SoundIds.Voice("butcher", Odyssey.Hud.VoiceCue.Fling)!, "butcher-fling", 1.0f, 0.08f, 0.5f, 95),
+                VoiceSound(SoundIds.Voice("butcher", Odyssey.Hud.VoiceCue.Down)!, "butcher-down", 1.0f, 0.05f, 0.3f, 95),
                 // The gunshot (design 47 §4c-bis), two sounds by distance: CombatFeedback plays the
                 // crack when the shooter is within 70 m of the listener and the thump beyond, so a
                 // player zoomed in on a fight hears the one and one pulled back over the colony the
@@ -755,6 +810,29 @@ namespace Odyssey.EditorTools
                     SpatialBlend = 1f, MinDistance = 50f, MaxDistance = 400f,
                     Priority = 120, Cooldown = 0.06f,
                 },
+                // Something coming down (design 58 §9): wood broken or taken apart, and a mined
+                // face collapsing. Placed at the cell and heard across the view like the pick that
+                // leads up to it (20 / 200 m against the pick's 20 / 210). The cooldown makes a
+                // gallery of faces finishing on one tick one collapse rather than a pile-up; the
+                // priority sits among the blows, below the gunshot.
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.BreakWood,
+                    Clips = Variants("break-wood"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.85f, VolumeVariance = 0.12f, PitchVariance = 0.05f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = 110, Cooldown = 0.1f,
+                },
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.BreakRock,
+                    Clips = Variants("break-rock"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.85f, VolumeVariance = 0.12f, PitchVariance = 0.05f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = 110, Cooldown = 0.1f,
+                },
                 // The alerts. Zero variance on all five: a chime is a signal and a signal that
                 // wobbles reads as a fault, which is the opposite of what the work sounds want
                 // variance for. 2D, top voice priority, and a cooldown long enough that two
@@ -771,6 +849,10 @@ namespace Odyssey.EditorTools
                 // The raid siren carries its own crescendo and is nine seconds long; a second
                 // one starting over the first would be a mess, so its cooldown covers the clip.
                 AlertSound(SoundIds.AlertRaid, "alert-raid", 0.9f, cooldown: 10f),
+                // A raid arriving at the edge (design 55 §7): the war horn, 18 s and kept whole, so
+                // its cooldown covers the clip for the same reason as the siren's. It baked to
+                // -17.3 LUFS against the siren's -18.6, so 1.3 dB comes off here: 0.9 x 0.86.
+                AlertSound(SoundIds.AlertRaidArrive, "alert-raid-arrive", 0.78f, cooldown: 19f),
             });
 
             // The campfire, and it is played by something at last (design 31 §7): FireDirector

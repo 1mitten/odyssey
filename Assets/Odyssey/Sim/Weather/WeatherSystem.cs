@@ -59,8 +59,18 @@ namespace Odyssey.Sim.Weather
         int _blendStart, _blendTicks = BlendTicks;
         int _spellEnd;
 
-        public WeatherSystem(PawnContext ctx, WeatherDef[] defs)
+        /// <summary>
+        /// How much more often it rains here than the table says, per mille (design 59 §7): a
+        /// planet site's rainfall over the reference's 1,000 mm. Applied to every kind that rains;
+        /// the draw is by the season's weight sum, so the dry kinds need no adjustment. 1000 — no
+        /// site — is today's table exactly. Not saved: it is a pure function of the header's site.
+        /// </summary>
+        public int WetPerMille { get; }
+
+        public WeatherSystem(PawnContext ctx, WeatherDef[] defs, int wetPerMille = 1000)
         {
+            if (wetPerMille <= 0) throw new ArgumentOutOfRangeException(nameof(wetPerMille));
+            WetPerMille = wetPerMille;
             if (defs.Length == 0) throw new ArgumentException("the weather table is empty", nameof(defs));
             for (int i = 0; i < defs.Length; i++)
             {
@@ -100,6 +110,25 @@ namespace Odyssey.Sim.Weather
         }
 
         /// <summary>
+        /// Put back the temperature's weather offset after a load. The offset is written only on
+        /// this system's own cadence and is saved nowhere, so a loaded world kept the one its build
+        /// had set until the next <see cref="IntervalTicks"/> boundary, and any colonist whose needs
+        /// fell due in that gap read another outdoor temperature from the world it was saved from
+        /// and parted from it by hash. Found by a raid's save test on 2026-09-26; nothing about it is
+        /// the raid's. The value is the one the last boundary that ran set: this system runs before
+        /// the pawn systems and the tick counts up after every system, so that boundary is the last
+        /// multiple of the interval below <paramref name="currentTick"/>. (A debug force mid-interval
+        /// set it to that instant's view instead; a save taken after one resumes on the boundary's.)
+        /// </summary>
+        public void RestoreOffset(int currentTick)
+        {
+            if (!_started || _ctx.Temperature == null || currentTick <= 0) return;
+            int last = currentTick - 1;
+            last -= last % IntervalTicks;
+            _ctx.Temperature.WeatherOffsetC = ViewAt(last).TempOffsetC;
+        }
+
+        /// <summary>
         /// The first sky, with no blend: a world does not load into a spell arriving. Rolled from
         /// the season the world starts in, like every spell after it.
         /// </summary>
@@ -117,7 +146,7 @@ namespace Odyssey.Sim.Weather
         {
             var rng = DeterministicRandom.ForTick(_ctx.Seed, tick, WeatherPurpose.Roll);
             int season = Calendar.SeasonOfYear(tick);
-            int kind = PickKind(_defs, season, rng.NextInt(TotalWeight(_defs, season)));
+            int kind = PickKind(_defs, season, rng.NextInt(TotalWeight(_defs, season, WetPerMille)), WetPerMille);
             Start(tick, kind, 0, quick, ref rng);
         }
 
@@ -138,20 +167,30 @@ namespace Odyssey.Sim.Weather
             _blendTicks = quick ? QuickBlendTicks : BlendTicks;
         }
 
+        /// <summary>
+        /// One kind's weight in a season at a site's wetness: the table's own, scaled for a kind
+        /// that rains. The one owner of that rule, so the total and the pick cannot disagree.
+        /// </summary>
+        public static int Weight(WeatherDef def, int season, int wetPerMille = 1000)
+        {
+            int w = Math.Max(0, def.seasonWeights[season]);
+            return def.rainPerMille > 0 && wetPerMille != 1000 ? w * wetPerMille / 1000 : w;
+        }
+
         /// <summary>The season's total weight, per 10,000. A season that rolls nothing rolls clear.</summary>
-        public static int TotalWeight(WeatherDef[] defs, int season)
+        public static int TotalWeight(WeatherDef[] defs, int season, int wetPerMille = 1000)
         {
             int total = 0;
-            for (int i = 0; i < defs.Length; i++) total += Math.Max(0, defs[i].seasonWeights[season]);
+            for (int i = 0; i < defs.Length; i++) total += Weight(defs[i], season, wetPerMille);
             return Math.Max(1, total);
         }
 
         /// <summary>Which kind a roll of <paramref name="draw"/> (0 up to the total) lands on. Pure, so it can be tested alone.</summary>
-        public static int PickKind(WeatherDef[] defs, int season, int draw)
+        public static int PickKind(WeatherDef[] defs, int season, int draw, int wetPerMille = 1000)
         {
             for (int i = 0; i < defs.Length; i++)
             {
-                int w = Math.Max(0, defs[i].seasonWeights[season]);
+                int w = Weight(defs[i], season, wetPerMille);
                 if (draw < w) return i;
                 draw -= w;
             }
@@ -327,5 +366,24 @@ namespace Odyssey.Sim.Weather
         }
 
         int Clamp(int kind) => kind < 0 || kind >= _defs.Length ? 0 : kind;
+
+        /// <summary>
+        /// After a load, put back the temperature offset the weather last wrote. <b>The offset is
+        /// not saved</b> — it is derived — and it is written only on a weather pass, every
+        /// <see cref="IntervalTicks"/>, so until the next pass a loaded colony read the fresh
+        /// board's offset while the run that was never saved read the loaded sky's. The needs pass
+        /// samples a colonist's ambient in between, and a save mid-fight on a cloudy day parted from
+        /// its twin 46 ticks after the load, on one colonist's mood (found by the cover gate,
+        /// <c>CoverGateTests</c>, 2026-09-25). <paramref name="nextTick"/> is the world's tick after
+        /// the load — the next to run — so the last pass was at the interval at or below the tick
+        /// before it, and the offset is the sky's at that pass, exactly as the unbroken run holds
+        /// it. Nothing on a world that has not ticked yet.
+        /// </summary>
+        public void ReapplyOffset(int nextTick)
+        {
+            if (_ctx.Temperature == null || !_started || nextTick <= 0) return;
+            int last = (nextTick - 1) / IntervalTicks * IntervalTicks;
+            _ctx.Temperature.WeatherOffsetC = ViewAt(last).TempOffsetC;
+        }
     }
 }

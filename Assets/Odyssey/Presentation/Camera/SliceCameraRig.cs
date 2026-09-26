@@ -34,7 +34,7 @@ namespace Odyssey.Presentation.CameraRig
     /// setting.
     /// </summary>
     [RequireComponent(typeof(UnityEngine.Camera))]
-    public sealed class SliceCameraRig : MonoBehaviour
+    public sealed partial class SliceCameraRig : MonoBehaviour
     {
         [Header("Slice")]
         public SliceSettings slice = new SliceSettings();
@@ -117,6 +117,7 @@ namespace Odyssey.Presentation.CameraRig
         Vector3 _focus;
         Vector3? _glideTarget;
         CellRef? _glidingTo;
+        int _glideSerial = -1;
         float _targetYaw;
         float _targetDistance;
         bool _orbiting;
@@ -286,6 +287,9 @@ namespace Odyssey.Presentation.CameraRig
 
         public void Bind(WorldRenderModel model, ChunkRenderer renderer, HudDirectors directors)
         {
+            // A session that ended mid-ride hands the next one the colony view's drawing and the
+            // pointer back, not the ride's (design 57 §5).
+            RestoreFromRide();
             _model = model;
             _renderer = renderer;
             _directors = directors;
@@ -302,6 +306,15 @@ namespace Odyssey.Presentation.CameraRig
         {
             if (_model == null || _directors == null) return;
             float dt = Mathf.Max(Time.unscaledDeltaTime, 1e-4f);
+
+            // Riding along with a colonist (design 57): the view is hers until Escape, so none of
+            // the colony view's input is read and nothing is picked. The camera is stood in
+            // LateUpdate by the composition root, where her figure has a position (PlaceRide).
+            if (SyncRide())
+            {
+                ReadRide();
+                return;
+            }
 
             ReadKeyboard(dt);
             ReadMouse(dt);
@@ -433,6 +446,8 @@ namespace Odyssey.Presentation.CameraRig
             Vector2 pointer = mouse.position.ReadValue();
             bool overInterface = PointerOverInterface != null && PointerOverInterface(pointer);
             PointerWasOverInterface = overInterface;
+            _pointerNow = pointer;
+            _pointerKnown = true;
 
             // Case 8 of design 09 section 6: scroll over a panel scrolls the panel, scroll over
             // the world zooms the camera. Until this guard the wheel did both at once — a scroll
@@ -597,6 +612,11 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         void ResolvePointer()
         {
+            // The plain hover the readout asks for (design 53 §8b), resolved here with every other
+            // pick, after the camera has moved this frame.
+            _hasPointerCell = WantsPointerCell && _pointerKnown && !PointerWasOverInterface
+                && CellAt(_pointerNow, out _pointerCell);
+
             switch (_pending)
             {
                 case PointerOutcome.Idle:
@@ -703,6 +723,31 @@ namespace Odyssey.Presentation.CameraRig
         /// <inheritdoc cref="HighestSelectableLayer"/>
         public int LowestSelectableLayer =>
             _model == null ? ActiveLayer : slice.LowestSelectableLayer(ActiveLayer, _model.LowestOutdoorLayer);
+
+        /// <summary>
+        /// The cell under the mouse now, on a drawn layer, and where the mouse is — false when the
+        /// pointer is over the interface or the ray misses. What the hit-chance readout asks
+        /// (design 53 §8b); it resolves a pick exactly as a click would.
+        /// </summary>
+        public bool CellUnderPointer(out CellRef cell, out Vector2 screenPosition)
+        {
+            cell = _pointerCell;
+            screenPosition = _pointerNow;
+            return _hasPointerCell;
+        }
+
+        /// <summary>
+        /// Should the cell under the pointer be resolved every frame, tool or no tool? Set by the
+        /// hit-chance readout while it could show (design 53 §8b), so a colony with nobody drafted
+        /// pays for no pick. Resolved in <see cref="ResolvePointer"/> like every other pick — after
+        /// the camera has moved, never before (design 28, P15).
+        /// </summary>
+        public bool WantsPointerCell { get; set; }
+
+        Vector2 _pointerNow;
+        bool _pointerKnown;
+        CellRef _pointerCell;
+        bool _hasPointerCell;
 
         /// <summary>The cell under a screen point on a drawn layer, or false when the ray misses.</summary>
         bool CellAt(Vector2 screenPosition, out CellRef cell)
@@ -817,6 +862,12 @@ namespace Odyssey.Presentation.CameraRig
         /// Realise the camera director's jump: a glide to the cell at the current zoom, on the
         /// smoothing the rest of the camera uses, because a cut would lose the player their
         /// bearings where a glide keeps them. The director is told when the rig has landed.
+        ///
+        /// <para>A jump that carries a distance (a roster double-click, 2026-09-25) sets the zoom
+        /// target once, when the request is taken, so the zoom rides the same smoothing as the
+        /// glide and a wheel turn during it still wins. A second request for the cell already
+        /// being glided to is taken again when its serial is new, or a double-click on the
+        /// colonist a single click had just sent the camera to would never zoom.</para>
         /// </summary>
         void TakeJumpRequest()
         {
@@ -827,12 +878,16 @@ namespace Odyssey.Presentation.CameraRig
                 _glidingTo = null;
                 return;
             }
-            if (_glidingTo.HasValue && _glidingTo.Value == wanted.Value) return;
+            int serial = _directors!.Camera.JumpSerial;
+            if (_glidingTo.HasValue && _glidingTo.Value == wanted.Value && _glideSerial == serial) return;
 
             Vector3 target = CellMetrics.FloorCentre(wanted.Value);
             target.y = _focus.y;
             _glideTarget = target;
             _glidingTo = wanted;
+            _glideSerial = serial;
+            float? zoom = _directors!.Camera.JumpDistance;
+            if (zoom.HasValue) _targetDistance = Mathf.Clamp(zoom.Value, minDistance, maxDistance);
         }
 
         // -------------------------------------------------------- selection
@@ -913,8 +968,30 @@ namespace Odyssey.Presentation.CameraRig
                 }
             }
 
-            var rotation = Quaternion.Euler(pitch, yaw, 0f);
-            transform.SetPositionAndRotation(_focus - rotation * Vector3.forward * distance, rotation);
+            // The wake's settle (design 56 §6) is added to what is drawn and never to the rig's
+            // own state: the targets, the smoothing and a restored pose all go on meaning what
+            // they meant, and at a settle of nought the camera is exactly where it would have been.
+            var rotation = Quaternion.Euler(
+                Mathf.Clamp(pitch + _settlePitch, 20f, 85f), yaw + _settleYaw, 0f);
+            float drawnDistance = distance * (1f + _settleDistance);
+            transform.SetPositionAndRotation(_focus - rotation * Vector3.forward * drawnDistance, rotation);
         }
+
+        float _settlePitch, _settleYaw, _settleDistance;
+
+        /// <summary>
+        /// How far the drawn camera still is from the rig's own pose, on the way into a colony
+        /// (design 56 §6): higher by <paramref name="pitchDeg"/>, round by <paramref name="yawDeg"/>
+        /// and further out by <paramref name="distanceFactor"/> of its distance. Nought is the pose.
+        /// </summary>
+        public void SetSettle(float pitchDeg, float yawDeg, float distanceFactor)
+        {
+            _settlePitch = pitchDeg;
+            _settleYaw = yawDeg;
+            _settleDistance = Mathf.Max(0f, distanceFactor);
+        }
+
+        /// <summary>Whether a settle is being drawn, for a test that wants it gone afterwards.</summary>
+        public bool Settling => _settlePitch != 0f || _settleYaw != 0f || _settleDistance != 0f;
     }
 }

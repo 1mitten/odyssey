@@ -364,6 +364,78 @@ namespace Odyssey.Tests.Hud
             camera.Cancel();
             Assert.That(camera.JumpTarget, Is.Null, "a pan is the player winning");
         }
+
+        /// <summary>
+        /// A close-up jump carries its distance; a plain one after it does not inherit it, and
+        /// every request is numbered so the rig takes a repeat for the cell it is already heading to.
+        /// </summary>
+        [Test]
+        public void AJumpCarriesAZoomOnlyWhenItAsksForOne()
+        {
+            var camera = new CameraDirector();
+            var cell = new CellRef(5, 6, 1);
+            camera.JumpTo(cell);
+            int first = camera.JumpSerial;
+            Assert.That(camera.JumpDistance, Is.Null, "a plain jump keeps the player's zoom");
+
+            camera.JumpTo(cell, CameraDirector.CloseUpMetres);
+            Assert.That(camera.JumpTarget, Is.EqualTo(cell));
+            Assert.That(camera.JumpDistance, Is.EqualTo(CameraDirector.CloseUpMetres));
+            Assert.That(camera.JumpSerial, Is.Not.EqualTo(first), "the same cell asked again is a new request");
+
+            camera.JumpTo(cell);
+            Assert.That(camera.JumpDistance, Is.Null, "the zoom does not leak into the next jump");
+
+            camera.JumpTo(cell, 20f);
+            camera.Arrived();
+            Assert.That(camera.JumpDistance, Is.Null);
+            camera.JumpTo(cell, 20f);
+            camera.Cancel();
+            Assert.That(camera.JumpDistance, Is.Null);
+        }
+    }
+
+    /// <summary>The roster card's double click and the world pick's share one threshold (2026-09-25).</summary>
+    public class DoubleClickTests
+    {
+        [Test]
+        public void TwoClicksOnOneColonistInsideTheThresholdAreADoubleClick()
+        {
+            var clicks = new DoubleClick();
+            var a = new PawnId(3);
+            Assert.That(clicks.Click(a, 10f), Is.False, "the first click is a single");
+            Assert.That(clicks.Click(a, 10f + DoubleClick.Seconds * 0.5f), Is.True);
+            Assert.That(clicks.Click(a, 10f + DoubleClick.Seconds * 0.6f), Is.False,
+                "a double is spent: the third click starts a new pair");
+        }
+
+        [Test]
+        public void TooSlowOrADifferentColonistOrAForgottenFirstClickIsNot()
+        {
+            var clicks = new DoubleClick();
+            var a = new PawnId(3);
+            var b = new PawnId(4);
+
+            clicks.Click(a, 0f);
+            Assert.That(clicks.Click(a, DoubleClick.Seconds + 0.01f), Is.False, "too slow");
+
+            clicks.Click(a, 5f);
+            Assert.That(clicks.Click(b, 5.1f), Is.False, "a different card");
+            Assert.That(clicks.Click(b, 5.2f), Is.True, "but the second card's own pair counts");
+
+            clicks.Click(a, 9f);
+            clicks.Forget();
+            Assert.That(clicks.Click(a, 9.1f), Is.False, "a sweep in between breaks the pair");
+
+            Assert.That(clicks.Click(PawnId.None, 20f), Is.False);
+            Assert.That(clicks.Click(PawnId.None, 20.1f), Is.False, "nobody twice is not a double");
+        }
+
+        [Test]
+        public void TheThresholdIsTheWorldPicksThreeHundredAndFiftyMilliseconds()
+        {
+            Assert.That(DoubleClick.Seconds, Is.EqualTo(0.35f));
+        }
     }
 
     public class HudDirectorsTests
@@ -413,6 +485,31 @@ namespace Odyssey.Tests.Hud
             Assert.That(directors.Selection.Pawn, Is.EqualTo(new PawnId(7)));
             Assert.That(directors.Camera.JumpTarget, Is.EqualTo(at));
             Assert.That(directors.ChooseAnimal(new PawnId(99), snapshot), Is.False);
+        }
+
+        /// <summary>
+        /// A roster card double-clicked (2026-09-25): the slice, the selection and a jump that
+        /// also zooms in close — where <see cref="HudDirectors.ChooseColonist"/>, which the alerts
+        /// and the Events panel still use, keeps the player's zoom.
+        /// </summary>
+        [Test]
+        public void ClosingInOnAColonistAlsoZooms()
+        {
+            var directors = new HudDirectors(layerCount: 4, startLayer: 1);
+            var snapshot = Frame.Write();
+            var at = new CellRef(6, 2, 3);
+            snapshot.AddPawn(new PawnView(new PawnId(7), at, 500, 500, 50, JobHandle.Haul));
+
+            Assert.That(directors.CloseInOnColonist(new PawnId(7), snapshot), Is.True);
+            Assert.That(directors.Slice.ActiveLayer, Is.EqualTo(3));
+            Assert.That(directors.Selection.Pawn, Is.EqualTo(new PawnId(7)));
+            Assert.That(directors.Camera.JumpTarget, Is.EqualTo(at));
+            Assert.That(directors.Camera.JumpDistance, Is.EqualTo(CameraDirector.CloseUpMetres));
+
+            directors.ChooseColonist(new PawnId(7), snapshot);
+            Assert.That(directors.Camera.JumpDistance, Is.Null, "the other callers keep the zoom");
+
+            Assert.That(directors.CloseInOnColonist(new PawnId(99), snapshot), Is.False);
         }
 
         [Test]
@@ -928,6 +1025,14 @@ namespace Odyssey.Tests.Hud
                 "the cut-away hides the floor overhead, so it starts off");
             Assert.That(SettingsDirector.DefaultOn(GraphicsOption.FoliageShadows), Is.False,
                 "grass has never cast shadows; turning them on is a choice, not the baseline");
+            Assert.That(SettingsDirector.DefaultOn(GraphicsOption.FadeForEveryColonist), Is.False,
+                "owner, 2026-09-25: the trees cleared round the colony with nothing selected");
+            Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.FadeForEveryColonist), Is.False,
+                "read by the sight lines each frame, like See-through");
+            Assert.That(SettingsDirector.KeyOf(GraphicsOption.FadeForEveryColonist),
+                Is.EqualTo(SettingsDirector.FadeForEveryColonistKey));
+            Assert.That(SettingsDirector.PresetOn(QualityPreset.Ultra, GraphicsOption.FadeForEveryColonist), Is.False,
+                "a preset is what the machine can afford, not how the player likes to look");
 
             // Three are read as the frame is submitted; two are baked into the instance matrices
             // when a chunk is meshed, and the panel has to know which it is holding.

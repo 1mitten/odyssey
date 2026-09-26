@@ -550,12 +550,26 @@ namespace Odyssey.Hud
         static readonly string HostileWord = Registry.Label("ui.pawn.hostile").ToLowerInvariant();
         static readonly string AnimalWord = Registry.Label("ui.pawn.animal").ToLowerInvariant();
         static readonly string BanditWord = PawnKindLabels.Label(PawnKindLabels.Bandit).ToLowerInvariant();
+        static readonly string GunmanWord = PawnKindLabels.Label(PawnKindLabels.Gunman).ToLowerInvariant();
+        // Every butcher level's word (design 62 §4b), lower-cased once, indexed from the first.
+        static readonly string[] ButcherWords =
+        {
+            PawnKindLabels.Label(PawnKindLabels.Butcher).ToLowerInvariant(),
+            PawnKindLabels.Label(PawnKindLabels.ButcherScarred).ToLowerInvariant(),
+            PawnKindLabels.Label(PawnKindLabels.ButcherBlood).ToLowerInvariant(),
+            PawnKindLabels.Label(PawnKindLabels.ButcherKing).ToLowerInvariant(),
+        };
 
         /// <summary>
-        /// The word under a hostile person's name: "bandit" for the bandit (design 42 §2), the
-        /// generic "hostile" for any hostile kind that comes after it and has no word of its own.
+        /// The word under a hostile person's name: "bandit" for the bandit (design 42 §2), "gunman"
+        /// for the gunman (design 55 §8), the generic "hostile" for any hostile kind that comes after
+        /// them and has no word of its own.
         /// </summary>
-        static string HostileKindWord(int kind) => kind == PawnKindLabels.Bandit ? BanditWord : HostileWord;
+        static string HostileKindWord(int kind) =>
+            kind == PawnKindLabels.Bandit ? BanditWord
+            : kind == PawnKindLabels.Gunman ? GunmanWord
+            : kind >= PawnKindLabels.Butcher && kind <= PawnKindLabels.ButcherKing ? ButcherWords[kind - PawnKindLabels.Butcher]
+            : HostileWord;
 
         static string WithArticle(string noun) =>
             noun.Length > 0 && "aeiou".IndexOf(noun[0]) >= 0 ? "an " + noun : "a " + noun;
@@ -735,7 +749,7 @@ namespace Odyssey.Hud
                 }
 
                 AddColonistTabs();
-                AddColonistCommands(!Tombstoned && OrderModel.IsDrafted(snapshot, Pawn), ResponseModel.Of(snapshot, Pawn));
+                AddColonistCommands(!Tombstoned && OrderModel.IsDrafted(snapshot, Pawn));
                 RefreshSkills(snapshot);
                 return;
             }
@@ -1717,53 +1731,54 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// The draft's key names, one per face of the one button (design 33 §2f). Public so the
-        /// shell that draws the button can tell it is the one that does something.
+        /// The Draft toggle's key (design 33 §2f). Public so the shell that draws the header can tell
+        /// which toggle a command is.
         /// </summary>
-        public const string DraftKey = "ui.command.draft", UndraftKey = "ui.command.undraft";
+        public const string DraftKey = "ui.command.draft";
 
-        /// <summary>Whether the colonist on the pane is drafted: which face the Draft button shows.</summary>
+        /// <summary>
+        /// What the Draft toggle reads while it is on (design 61 §2): the status the colonist is in,
+        /// not the verb, because an on toggle names its state.
+        /// </summary>
+        public const string DraftedKey = "ui.status.drafted";
+
+        /// <summary>
+        /// First Person (design 57): the view locked behind her shoulder until Escape. Public for the
+        /// same reason as the draft's key: the shell that draws the header has to know which it is.
+        /// </summary>
+        public const string RideKey = "ui.command.ride";
+
+        /// <summary>Whether the colonist on the pane is drafted.</summary>
         public bool Drafted { get; private set; }
 
         /// <summary>
-        /// The colonist's response to danger (<see cref="ResponseModel"/>, design 33 §18e): which
-        /// face the response button shows. A colonist gone from the frame reads as the default,
-        /// with the button off.
+        /// The header's two toggles (design 61, mockup 24c): Draft, then First Person. Whether each
+        /// is on, mixed or live depends on the whole selection, which this model does not hold, so
+        /// the shell asks <see cref="OrderModel.DraftFaceOf"/> and
+        /// <see cref="HudDirectors.TryFirstPersonSubject"/> for the face; what is here is which
+        /// toggles a subject has at all, and that a colonist who has gone has none live.
+        ///
+        /// <para><b>Four buttons became two.</b> Prioritise went with First Person (design 57 §6).
+        /// The response (Fight back, Defend, Flee) left with this header: it is a standing setting,
+        /// not an action, and the Assign tab's Response column already holds it for every colonist
+        /// at once (design 43 §6). The dead Inspect placeholder, which the shell had been skipping
+        /// by its label, went with it.</para>
         /// </summary>
-        public int Response { get; private set; }
-
-        void AddColonistCommands(bool drafted, int response)
+        void AddColonistCommands(bool drafted)
         {
             Drafted = drafted;
-            Response = response;
             Commands.Add(new InspectCommand
             {
-                IconKey = "ui.command.inspect", Label = "Inspect",
-                Enabled = false, Reason = "the record view arrives with the log (M6)",
-            });
-            Commands.Add(new InspectCommand
-            {
-                IconKey = "ui.command.prioritise", Label = "Prioritise",
-                Enabled = false, Reason = "job priorities arrive with the work grid (M7)",
-            });
-            // Live since the draft (design 33 §2f). One button with two faces, as the reference
-            // has it: it says what pressing it will do, and a tombstoned colonist has nothing to
-            // command.
-            string key = drafted ? UndraftKey : DraftKey;
-            Commands.Add(new InspectCommand
-            {
-                IconKey = key, Label = Registry.Label(key),
+                IconKey = DraftKey, Label = Registry.Label(DraftKey),
                 Enabled = !Tombstoned,
-                Reason = drafted ? "give back to the work list (T)" : "take direct control: right-click to move (T)",
+                Reason = "Take direct control: right-click to move. Press again to give back to the work list",
             });
-            // Her response to danger (design 33 §18e), beside Draft. A setting rather than an
-            // action, so the face is the response she has, and a press moves it round the three.
-            string respond = ResponseModel.KeyOf(response);
+            // First Person (design 57), after the one that commands her: this one only watches.
             Commands.Add(new InspectCommand
             {
-                IconKey = respond, Label = Registry.Label(respond),
+                IconKey = RideKey, Label = Registry.Label(RideKey),
                 Enabled = !Tombstoned,
-                Reason = ResponseModel.Describe(response),
+                Reason = "Watch from behind her shoulder; the wheel goes in to her eyes, Esc leaves",
             });
         }
     }

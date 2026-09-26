@@ -32,7 +32,11 @@ namespace Odyssey.Sim.Pawns
                 Pawn? close = CombatJobs.EnemyInReach(_ctx, pawn);
                 if (close == null) return;
                 // The shot never happened: its clock comes back, as when an aim breaks.
-                if (pawn.Driver is AttackRangedJobDriver { InAim: true }) pawn.NextSwingTick = 0;
+                if (pawn.Driver is AttackRangedJobDriver { InAim: true })
+                {
+                    pawn.NextSwingTick = 0;
+                    pawn.HurlReadyTick = 0; // a thrower's rock never left the hand (design 62 §7a)
+                }
                 SwapAttack(pawn, close, JobIndex.AttackMelee, tick);
                 return;
             }
@@ -102,7 +106,7 @@ namespace Odyssey.Sim.Pawns
                 return;
             }
 
-            Armament armament = _ctx.WeaponRules.ArmamentOf(shooter, _ctx);
+            Armament armament = Hurl.ArmamentOf(shooter, _ctx);
             if (!aim.AimDone(armament)) return;
             aim.EndAim();
 
@@ -136,7 +140,7 @@ namespace Odyssey.Sim.Pawns
             bool toTheDeath = target.Downed && shooter.CurrentJob != null
                 && shooter.CurrentJob.DestCell == AttackMeleeJobDriver.ToTheDeath;
             return _ctx.Projectiles.Launch(shooter.Id.Value, target.Id.Value, armament.ItemDef, shooter.Cell, shot.EndCell,
-                tick, tick + shot.FlightTicks, shot.Aimed, toTheDeath, shot.DamageMilli);
+                tick, tick + shot.FlightTicks, shot.Aimed, toTheDeath, shot.DamageMilli, shot.CoverCell);
         }
 
         /// <summary>
@@ -164,11 +168,25 @@ namespace Odyssey.Sim.Pawns
         {
             Pawn? shooter = _ctx.Pawns.Get(new PawnId(bullet.Shooter));
             Pawn? target = bullet.Target != 0 ? _ctx.Pawns.Get(new PawnId(bullet.Target)) : null;
-            AttackDef? attack = bullet.Weapon >= 0 && bullet.Weapon < _ctx.Content.Items.Length
-                ? _ctx.Content.Items[bullet.Weapon].weapon : null;
+            // A thrown rock (design 62 §7a) lands with its thrower's species' throw, known by its
+            // weapon id even if the thrower has died since.
+            AttackDef? attack = Hurl.IsHurl(bullet.Weapon) ? Hurl.AttackOf(_ctx, bullet.Weapon)
+                : bullet.Weapon >= 0 && bullet.Weapon < _ctx.Content.Items.Length
+                    ? _ctx.Content.Items[bullet.Weapon].weapon : null;
             if (attack == null) return;
             var armament = new Armament(attack, bullet.Weapon);
             var hit = new SwingOutcome(CombatEventKind.Hit, bullet.DamageMilli);
+            // A rock usually knocks her off her perch: the thrower's fling chance, rolled here on
+            // its own stream (the shot's roll said only whether it flew true).
+            SweepDef? fling = Hurl.IsHurl(bullet.Weapon)
+                ? _ctx.Content.SpeciesOf(Hurl.KindOf(bullet.Weapon)).sweep : null;
+            if (fling != null)
+            {
+                var roll = DeterministicRandom.ForTick(_ctx.Seed, tick,
+                    PawnPurpose.SweepKnock ^ (uint)bullet.Shooter ^ ((uint)bullet.Target << 16));
+                hit = new SwingOutcome(CombatEventKind.Hit, bullet.DamageMilli, 0, critical: false,
+                    knockback: roll.NextInt(1_000) < fling.knockbackPerMille);
+            }
 
             // A shot aimed true lands on its target wherever it now stands (owner, 2026-09-25: "make
             // sure shots that hit actually connect with the target directly"): the line is walked to
@@ -190,6 +208,14 @@ namespace Odyssey.Sim.Pawns
                 if (!LineOfSight.Passes(_ctx, previous, cell))
                 {
                     MissAt(shooter, target, bullet.Weapon, previous, tick);
+                    return;
+                }
+
+                // The piece of cover the cover roll fired it into (design 53 §2d): it takes the bullet,
+                // wall or sandbag alike, and reports it as cover.
+                if (cell == bullet.CoverCell)
+                {
+                    StrikeCover(shooter, target, armament, attack, bullet.DamageMilli, cell, tick);
                     return;
                 }
 
@@ -224,11 +250,70 @@ namespace Odyssey.Sim.Pawns
                     return;
                 }
 
+                // Cover it crosses (design 53 §2e): a stray is caught at half the thing's cover, past
+                // the dead zone. Not a shot whose cover roll has already spoken — one aimed true
+                // crossing its target's own neighbours, or one already fired into a piece.
+                if (CatchesStray(bullet, homing ? end : -1, cell, tick))
+                {
+                    StrikeCover(shooter, target, armament, attack, bullet.DamageMilli, cell, tick);
+                    return;
+                }
+
                 previous = cell;
             }
 
             // Nothing took it: into the ground where it was going.
             MissAt(shooter, target, bullet.Weapon, end, tick);
+        }
+
+        /// <summary>
+        /// Does the cover in <paramref name="cell"/> catch this bullet (design 53 §2e)? Rolled on
+        /// <see cref="PawnPurpose.RangedCoverIntercept"/> salted by the shooter and the cell, against
+        /// <see cref="IRangedRules.CoverInterceptPerMille"/>. Never for a bullet already fired into
+        /// cover, and never in the eight neighbours of <paramref name="aimedAt"/> (a shot aimed true:
+        /// its cover roll covered them).
+        /// </summary>
+        bool CatchesStray(Projectiles.Entry bullet, int aimedAt, int cell, int tick)
+        {
+            if (bullet.CoverCell >= 0) return false;
+            if (aimedAt >= 0 && Adjacent(aimedAt, cell)) return false;
+            int basePerMille = Cover.BaseAt(_ctx, cell, out _);
+            if (basePerMille <= 0) return false;
+            int distance = RangedGeometry.DistanceMm(_ctx.Size, bullet.StartCell, cell);
+            int chance = _ctx.RangedRules.CoverInterceptPerMille(basePerMille, distance, _ctx);
+            if (chance <= 0) return false;
+            var roll = DeterministicRandom.ForTick(_ctx.Seed, tick,
+                PawnPurpose.RangedCoverIntercept ^ (uint)bullet.Shooter ^ (uint)cell);
+            return roll.NextInt(1_000) < chance;
+        }
+
+        /// <summary>Are two cells neighbours on one layer (the eight round each other)?</summary>
+        bool Adjacent(int a, int b)
+        {
+            CellRef p = _ctx.Size.FromIndex(a), q = _ctx.Size.FromIndex(b);
+            return p.Y == q.Y && System.Math.Abs(p.X - q.X) <= 1 && System.Math.Abs(p.Z - q.Z) <= 1 && a != b;
+        }
+
+        /// <summary>
+        /// Cover took the bullet (design 53 §2e): <see cref="CombatEventKind.Covered"/> reported at
+        /// the cover's cell with the damage it took, the thing there struck through
+        /// <see cref="StrikeBuilding"/> when it has hit points (a sandbag, a wall, a shelf; not a tree
+        /// or a rock face), and the shot heard as an attack by whom it was at, as a miss is.
+        /// </summary>
+        void StrikeCover(Pawn? shooter, Pawn? target, in Armament armament, AttackDef attack, int damageMilli, int cell,
+            int tick)
+        {
+            int taken = 0;
+            if (BuildingTargets.TryFind(_ctx, cell, out BuildingTarget building))
+            {
+                long scaled = (long)damageMilli * BuildingTargets.DamageFactorPerMille(attack.damageKind, building.Stuff) / 1_000;
+                taken = (int)scaled;
+                StrikeBuilding(shooter, building, cell, armament, new SwingOutcome(CombatEventKind.Hit, taken), tick);
+            }
+            if (target != null && !Melee.IsDead(target))
+                _ctx.CombatHooks.RaiseSwingResolved(new SwingReport(target, shooter, CombatEventKind.Miss, armament.ItemDef, tick));
+            _ctx.CombatLog.Report(CombatEventKind.Covered, shooter?.Id ?? default, target?.Id ?? default,
+                _ctx.Size.FromIndex(cell), tick, taken, armament.ItemDef);
         }
 
         /// <summary>

@@ -269,6 +269,34 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// The butcher moves as a bandit (design 62 §3a): <c>TraverseMode.Bandit</c>, which opens no
+        /// door, so a closed door is a wall to it too, and it breaks it down the same way — the
+        /// hostile mind's own fallback, nothing of the butcher's. Never stands in the doorway of a
+        /// door still standing, never opens it.
+        /// </summary>
+        [Test]
+        public void TheButcherBreaksTheDoorDownToo()
+        {
+            var colony = Bare();
+            Pawn colonist = colony.Pawns.Pawns.All[0];
+            var ring = RoomWithADoor(colony, colonist);
+            int door = ring[(1, 0)];
+            int handle = colony.Grid.Edifice[door];
+            Pawn butcher = Spawn(colony, PawnKindIndex.Butcher, East(colonist, 5));
+            Assert.That(butcher.OwnMode, Is.EqualTo(TraverseMode.Bandit));
+
+            TickUntil(colony, () => AttackingBuilding(butcher, handle), 60, "the butcher never went for the door");
+            for (int t = 0; t < 20_000 && colony.Grid.Edifice[door] == handle; t++)
+            {
+                colony.World.Tick();
+                if (colony.Grid.Edifice[door] != handle) break;
+                Assert.That(butcher.Cell, Is.Not.EqualTo(door), $"tick {t}: it stood in the doorway of a door still standing");
+                Assert.That(colony.Doors.IsOpen(door), Is.False, $"tick {t}: the door was opened");
+            }
+            Assert.That(colony.Grid.Edifice[door], Is.Not.EqualTo(handle), "the butcher never broke the door down");
+        }
+
+        /// <summary>
         /// The control on the door: open, the same room is a room with a way in, and the bandit
         /// goes straight for her and never touches the door.
         /// </summary>

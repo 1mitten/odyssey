@@ -95,7 +95,7 @@ namespace Odyssey.Presentation.Audio
 
             _level = fade <= 1e-4f
                 ? target
-                : Mathf.MoveTowards(_level, target, Mathf.Max(0f, deltaTime) / fade);
+                : Mathf.MoveTowards(_level, target, StepOf(deltaTime) / fade);
 
             // Latched on *reaching* full, not on being synced once. The first version set it
             // on the first frame, so the eight-second arrival governed one sixtieth of a second
@@ -119,6 +119,22 @@ namespace Odyssey.Presentation.Audio
 
             if (!_source.isPlaying) _source.Play();
         }
+
+        /// <summary>
+        /// The longest step one frame may take off the fade, in seconds.
+        ///
+        /// <para><b>A fade is a clock, and a frame can be a second long.</b> The world is built in
+        /// one frame (0.4–1.5 s, design 38 §25), and the unscaled delta of the frame after it is
+        /// that whole second — so the bed dropped a quarter of its four-second leaving fade in one
+        /// step, and on a board that builds in four seconds it simply cut. Unity's own
+        /// <c>maximumDeltaTime</c> caps the scaled clock and not this one. A tenth of a second is
+        /// six frames at 60 and far above any frame anybody hears as smooth, so an ordinary frame
+        /// is never touched.</para>
+        /// </summary>
+        public const float MaxStepSeconds = 0.1f;
+
+        static float StepOf(float deltaTime) =>
+            float.IsNaN(deltaTime) ? 0f : Mathf.Clamp(deltaTime, 0f, MaxStepSeconds);
 
         /// <summary>Stop at once, with no fade — quitting, or the scene going away.</summary>
         public void Silence()

@@ -65,8 +65,18 @@ find_unity() {
   fi
   local hub="${UNITY_HUB_EDITORS:-}"
   if [[ -z "$hub" ]]; then
-    local cand
-    for cand in "$HOME/Unity/Hub/Editor" "/c/Program Files/Unity/Hub/Editor"; do
+    local cand hubcfg=""
+    # Unity Hub's own "install location" setting, when it has one: the D:\dev machine installs
+    # editors to D:\Unity\Hub\Editor because C: is full, and its CI runner starts without the
+    # UNITY_HUB_EDITORS a login shell would have. A JSON string, so strip the quotes and escapes.
+    if [[ -n "${APPDATA:-}" && -f "$APPDATA/UnityHub/secondaryInstallPath.json" ]]; then
+      hubcfg="$(tr -d '"\r\n' < "$APPDATA/UnityHub/secondaryInstallPath.json" | sed 's/\\\\/\//g; s/\\/\//g')"
+      if [[ "$hubcfg" =~ ^([A-Za-z]):(.*)$ ]]; then
+        hubcfg="/$(echo "${BASH_REMATCH[1]}" | tr '[:upper:]' '[:lower:]')${BASH_REMATCH[2]}"
+      fi
+    fi
+    for cand in "$hubcfg" "$HOME/Unity/Hub/Editor" "/c/Program Files/Unity/Hub/Editor"; do
+      [[ -n "$cand" ]] || continue
       if [[ -d "$cand" ]]; then hub="$cand"; break; fi
     done
     hub="${hub:-$HOME/Unity/Hub/Editor}"

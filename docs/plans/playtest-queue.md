@@ -23,12 +23,129 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the World screen read as a planet, and does the site change the colony?** (`claude/busy-meitner-zkrhtu`,
+  the reviewed `claude/sharp-euler-a6xtci`; design 59.) **Second look after the first (2026-09-26, §4e–§4f):** the planet is
+  128 x 64 with warped coasts and a sea share that varies by seed, zoom goes to 8x, temperatures in the site panel are
+  red/amber/green, the site name sits on the swatch's foot, and "World" is bigger. New game now opens on a **World** screen: a hex planet with ice caps, a dry-scrub belt round
+  the equator and Meadow at mid-latitudes, region and sea names, a legend, and a site already picked.
+  Look for:
+  - whether Meadow can be found at a glance, and whether the other biomes reading *Not yet available* is
+    clear rather than a fault;
+  - whether the names help or clutter, and whether zoom to 4x (wheel, double-click, + / -, 0 to fit)
+    and panning across the east–west seam feel right;
+  - Next is disabled on sea, Sheer or a non-Meadow tile, with the reason in the site panel.
+  - zoom to 2x and pan across the date line: the planet should run on without a dark band down the join;
+  - press the arrows with nothing focused: they should step the selection, not jump into the seed box
+    (and typing 0, - or Enter in the seed box should not zoom the map or press Next);
+  - hover along the very top and bottom edge: the ice there should outline and click like any tile.
+
+  Then take a **Mountainous** Meadow: the board should be 24 layers with rock under the valleys and
+  higher terraces — does it look like mountains, or just steeper hills? Take a cold, high-latitude
+  Meadow and skip a few months (Debug → Skip one month): Rime should bite harder than on the suggested
+  site. A wrong answer looks like: the map a patchwork nobody would call a planet, Meadow lost in the
+  colours, names over the zoom buttons, or a mountainous board indistinguishable from today's.
+- **The Pig Butcher, second round: the cleaver, the card and four levels** (`claude/pig-butcher`,
+  PR #248, design 62 §4b, §8c). Debug → Spawn → the four butcher rows, near drafted colonists.
+  - Watch a swing. Wrong: the cleaver still hangs at its hip, or the blow does not read as the
+    cleaver striking.
+  - Click one. Wrong: the card shows anything but the pig-headed butcher in that level's colours.
+  - Spawn all four side by side. Wrong: you cannot tell the levels apart, or the step in size
+    (4.4 to 5.6 m) is too small or too large.
+  - Fight level 1 with three or four colonists. Wrong: it is not the *easiest* you had in mind. The
+    probe says it still beats four bats every time (§4b).
+  - Stand a drafted gunman on a rock or a roof and shoot it (design 62 §3a, §7a). Wrong: it still
+    wanders below; the rock it throws is not seen coming; it throws so often it is a gunman; being
+    knocked off the perch feels unfair rather than earned.
+  - Listen to a fight (design 62 §8d). Wrong: the grunt on its swing is as loud as the bellow when
+    it throws somebody; the squeal when hit is lost under the thud; the oink as it dies is missing
+    or comic; the cleaver's whoosh is not clearly deeper than a sword's.
+
+- **First Person: does the shoulder camera show a colonist's day and a fight clearly?**
+  (`claude/planning-session-fok6wm`, design 57.) Select a colonist, press **First Person** on her
+  card, and let her work, walk up a terrace and go through a door.
+  - Draft her into a melee fight and watch it. Wrong: her body hides the blow, or the camera swings
+    about as she turns.
+  - Wheel in to the eyes. Wrong: a black smear or a hollow face in view, or it makes you queasy.
+  - Walk her along a wall and into a small room. Wrong: the camera goes through the wall or jumps
+    in and out.
+  - Press Escape. Wrong: the camera does not come back where it was, walls-down does not come back,
+    or the pointer stays hidden.
+  - Read the strip at the bottom. Wrong: a missing fact you wanted, or it covers the action.
+  - Check the card's buttons now Prioritise is gone. Wrong: her name runs under them.
+
+- **Do the clouds make the sky look lived in, and do they follow the weather?** (`claude/clouds`,
+  design 63.) Select a colonist and press **First Person**; look along the horizon.
+  - A clear noon. Wrong: the sky still reads bare, or the band of cloud looks like a painted strip
+    rather than cloud.
+  - Debug → Weather: Rain, then Storm. Rain should look heavier but keep the meadow's colour; a
+    storm should be a slate deck darker than the sky. Wrong: rain that looks like a clear day, a
+    storm that still reads light, or one so dark it looks like night at noon.
+  - Watch dusk into night and night into dawn. They should keep their gold at sunset, dissolve
+    into the sky between 19:30 and 21:00, be gone all night, and return 05:00–06:30. Wrong: the
+    night still too light, a cloud that pops rather than fades, or dawn arriving without them.
+  - Run at speed 3 and pause. Wrong: the drift is too quick to feel like weather, or the clouds keep
+    moving on a pause.
+  - Look straight up. Wrong: you wanted clouds overhead too; the rings are a horizon band by
+    design (63 §9), and overhead cloud is a second technique.
+
+- **Do the frogs read as frogs, and are they where the water is?** (`claude/frog`, design 30 §8.)
+  New game on the meadow and look along a stream or a pond: there should be groups of three to five
+  bright emerald, red-eyed frogs on the banks (about 0.9 m long since the owner's first ask), and none
+  in dry fields. Watch one move: it should crouch, leap about 1.3 m, land and sit, rather than
+  glide, and when several in a group hop at once they should go different ways. Open Debug → Spawn → **Spawn culvert frog** away from
+  water and watch it hop back to the nearest bank. Make it rain (Debug) and see the frogs stay out
+  while the hogs go under the trees. Wrong answers: a frog that slides along the ground between
+  hops or lurches backwards at the start of one; frogs far from water; a frog too small to find from
+  your normal camera height; a green that still sinks into the grass; or frogs you would rather see swimming, which
+  is a cost stated in §8b.
+
+- **Polish batch: trees, drops, the fire, the roster, the pane, the fade** (`claude/polish-batch`,
+  designs 20 §14, 23 §11, 31 §20, 25 §10, 14 §10–§11, 38 §27).
+  - Gather six or more colonists round a campfire at night. Each should be on their own tile, with
+    the inner ring seated facing the fire. Wrong: two figures clipping into each other, or the
+    second ring reads as a queue.
+  - Halt two drafted colonists on one tile. Wrong: they jitter or swap places when a third
+    arrives.
+  - Single-click a roster card, then double-click it. Wrong: the single click still moves the
+    camera, or 14 m is too close or too far.
+  - Read the colonist pane over bright grass. Wrong: the dim grey lines are hard to read.
+  - With nothing selected, walk a colonist behind trees. Wrong: the trees still fade.
+  - Fire several supply drops into woodland. Wrong: a pallet lands in a trunk.
+
+- **Is the lit-butterfly night right now?** The first look said the day was *"superb"* and the night's halos were *"big glowing saucers"*; they are gone and each butterfly is lit in its own colour instead (design 52 §5a). (`claude/ambient-butterflies`, design 52.) New game on a meadow in Larkspur or Tansy; watch the grass near the camera at the default zoom, then walk a colonist through them, then press the debug menu's new **Skip to night** (22:00, fully dark), then zoom right out. Wrong answers: a lit butterfly reads as a coloured blob rather than a wing; the colours look flat rather than glowing (the lever is `ButterflyPalette.WingGlowCeiling`, held at 1.0 against shimmer); they shimmer or vanish as they move; zoomed out, they are too small to see or too many; a colonist walking through does not scatter them.
+- **Does a raid read as a band that stalks and then strikes?** (PR #233,
+  `claude/sharp-lamport-8q5u4h`, design 55, reviewed 2026-09-26 §15.) Debug → Events → Raid:
+  size 20, Mixed, and run at top speed through the gathering (2–4 in-game hours). Wrong answers:
+  - you do not hear the war horn, or it plays over itself and feels like a cutscene (18 s);
+  - 2–4 in-game hours at the edge feel like a wait rather than suspense;
+  - clicking the red *Raid* alert does not put the camera on the band;
+  - once they reach the colony, raiders walk back and forth between the fire and a colonist rather
+    than fighting (the fault fixed in §15 #2 — say so if it is still there);
+  - a band of 150 in the far form reads as a crowd rather than a band.
+
+  Then fire 200, and 200 again while the first stands: the second press should say under the
+  row that it will not fit, with the room left. **Five armed colonists who are not drafted lost to eight raiders in both
+  soak seeds**: say whether that is the game you want.
+
 - **Does changing a graphics setting still hitch, and is the board seen catching up?**
   (`claude/mesh-cost`, design 38 §26.) Open Settings → Graphics and flick the Grass ladder, then Ground
   relief, with the camera over thick meadow; then dig out a row of cells. A board-wide re-mesh now
   spends at most about 2 ms a frame and takes about a third of a second to finish. Wrong answers: a
   visible hitch when a setting changes, or chunks of old grass visibly swapping to new a few at a time.
 
+- **Do the sandbags look like sandbags, and does cover change a fight?** (`claude/cool-darwin-akh02q`,
+  PR #232, design 53 §7a-bis and §13; worktree `D:\code\odyssey-cover`.) Build → Security: drag a line
+  of **Sandbags**, then an L and a T. The barricade chip is dim again, beside the turret and the trap.
+  Walk a colonist across: she climbs over slowly and never stops on top. Draft two colonists with
+  pistols behind the bags and use the debug menu's *Spawn pistol bandit* ten cells away: they crouch
+  behind the bags, the bandits step behind anything nearby before firing, *Cover* floats over a bag
+  that takes a bullet, and a bar appears over each one hit. Select a drafted gun colonist and hover a
+  bandit: the readout beside the pointer gives the chance and what moved it. **Wrong answers:** the
+  wall reads as a striped block rather than bags (the bags too small, or the grooves between them
+  lost); the line visibly restarts at every cell; a corner with a gap or a bag poking through; the
+  colour reads as stone or as plastic; bags so tall the crouched colonist is hidden or so low she
+  towers over them; a colonist standing on top of the bags; bandits that shuffle about without
+  shooting; or a readout that sits under the pointer or flickers.
 - **Does the new bill list read at a glance, and is anything on it in the way?** (`claude/bills-pane`,
   design 49, stacked on `claude/cooking`.) Click an **Electric Cooker** with no power: the pane is
   wider (680), a warn strip reads **No power** with a green **Switch off** beside it, and the tile's
@@ -1324,6 +1441,10 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-26 | **The Almanac, true to the game, and one picture per key** (PR #252, `docs/design/64-almanac.md`): 110 pages keyed by registry key, the facts pinned to the Defs, and `IconGlyphs` drawn by every icon slot | working — owner, after asking for the pane and the Almanac to share their icons: *"yep it's all good"* | the icon request moved the line art into one table (design 64 §2a); the issues found along the way are rows 1–13 of `docs/plans/todo.md`. Ready to merge |
+| 2026-09-26 | **The inspect header's two toggles** (PR #245, `docs/design/61-inspect-header.md`): Draft and First Person as icon toggles, the mixed draft, First Person on Z, Close over Info | working — owner: *"it's great - happy to get this resolved and get it ready for a merge"* | none; ready to merge. Z for First Person and the 40 px tile stand |
+| 2026-09-26 | **Cracks, the break and the demolition sounds, two rounds** (PR #243, `docs/design/58-cracks.md`): walls and mined rock cracking, the break into quarters, rock's six levels, the wood smash and the boulder impact | working — owner, after the second round and the sounds: *"happy to get ready to merge into main"* | the first look moved three things (cracks from an impact point, six rock levels, the break, §1a); the sounds' one-blow gap was closed (§9). Ready to merge |
+| 2026-09-26 | **Waking into the world** (PR #241 on PR #240, `docs/design/56-wake-up.md`): the fade to black, the build behind it, the five-second dream, the held clock, the skip and the setting | working — owner: *"perfect"* | none; ready to merge after PR #240. The Unity tier found the blur's keep-alive material missing (design 56 §11) |
 | 2026-09-25 | **Ambient birds** (PR #230, `docs/design/50-ambient-birds.md`): rooks and a buzzard, their size at every zoom, perching, the scatter, the rookery, the weather | working — owner: *"superb - if this is performant - get it ready to be merged in"* | measured, then ready to merge: `FrameSection.Birds` 0.018–0.032 ms, and the frame at 640 x 480 and 4K is inside its own noise with the birds on (design 50 §8a) |
 | 2026-09-25 | **Ranged combat, three rounds** (PR #225, `docs/design/47-ranged-combat.md` §10a–§12): the aim, the shot, the tracer, the sound, then accuracy from a height, weapon quality and the reach rule | working — owner, first play: *"it's really decent and everything seemed to work well"*; after the reach rule: *"great job - just played a big battle"* | the first play raised the accuracy, sent a miss past its target into the ground and landed a hit on the body wherever it stands (§10a); asked for weapon quality (§11) and the reach rule (§12), both built and played in the big battle. Ready to merge. The frame with gunfire (P4) is still unmeasured |
 | 2026-09-25 | **The home area, the hearth and the Assign tab** (PR #214, `docs/design/43-home-area.md`), after the review's five fixes | working — owner: *"it all works get ready to merge in"* | none; ready to merge. The house over the hearth, which the frame test logged hidden, is covered by "it all works" |

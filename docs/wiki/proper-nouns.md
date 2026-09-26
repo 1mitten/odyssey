@@ -19,7 +19,8 @@ Names that are not interface keys: people, places, factions, creatures, the cale
 | City predator | **girder cat** | proposed  | A lean climbing predator that hunts along the structure of a ruin. Named for the verticality on purpose: it arrives from a layer you were not watching |
 | Feral machine | **loper** | proposed  | A long-legged maintenance unit still walking its rounds, now hostile to anything that moves. Not alive, not intelligent, not harmless. ui.pawn.synth points at this |
 | Pack animal | **dray hog** | proposed  | A larger bred cousin of the midden hog, for caravans. Not in the original list; caravans need something to carry the load and it should not be a vehicle at prototype scale |
-| City vermin | **duct rat** | proposed  | The rat of the ruin: lives in the ducts and the caverns, climbs anything, eats what the colony stores. Named in the register of the midden hog and the girder cat; the first animal with a full set of movements, so the one the figure work is proven on |
+| Bank wildlife | **culvert frog** | proposed  | A big frog of the meadow's streams, ponds and lakes, and of the flooded culverts under the ruin. Keeps to the water's edge; the first animal placed by where the water is. Named in the register of the midden hog and the duct rat |
+| City vermin | **duct rat** | proposed  | The rat of the ruin: keeps to the rock, climbs ladders and opens doors. Named in the register of the midden hog and the girder cat; the first animal with a full set of movements, so the one the figure work is proven on |
 | The calendar | **6 months of 12 days, 72-day year** | proposed  | Three seasons of two months each. A short year means seasonal pressure arrives often, which a prototype wants: you see a full cycle in ten hours rather than thirty. Days stay 24 hours for legibility |
 | Month | **Larkspur** | proposed  | First month of Wash. Botanical month names are a civic nicety the city kept from before it was a city, which is the kind of detail that makes a dead place feel lived in. Invented earlier for the clock readout and kept |
 | Month | **Tansy** | proposed  | Second month of Wash |
@@ -27,15 +28,16 @@ Names that are not interface keys: people, places, factions, creatures, the cale
 | Month | **Ember** | proposed  | Second month of Glare |
 | Month | **Hollow** | proposed  | First month of Rime |
 | Month | **Candle** | proposed  | Second month of Rime |
-| Season | **Wash** | proposed  | The rains. Growing season, and the season that puts fires out |
+| Season | **Wash** | proposed  | The rains. The growing season |
 | Season | **Glare** | proposed  | Dry heat. Cooling matters, crops need water, tempers go |
 | Season | **Rime** | proposed  | Cold. The season the prototype's ten-day survival run should eventually land in, because it is the one that kills you |
 | Research naming | **Plain functional names** | proposed  | Projects are named for what they unlock, not given proper names: Hydroponics, Powered Doors, Structural Bracing, Salvage Sorting. A research list is scanned, not read, and a clever name costs the player a guess. Proper nouns are reserved for people, places and factions |
 | Early projects | **Salvage Sorting, Structural Bracing, Powered Doors, Hydroponics, Cold Storage, Field Medicine, Conduit Runs, Vertical Haulage, Rubble Clearance, Shell Survey, Water Reclamation, Basic Fabrication** | proposed  | The twelve the vertical slice and M4 to M5 need. Vertical Haulage and Shell Survey are ours: lifts, and reading a ruin before you build in it. The rest of the tree arrives with M7 |
 | Colonist names | **Given names only, no surnames** | proposed  | A holding is small enough to be on first-name terms, and a single short name fits the roster bar, which is the densest region in the interface. Short, consonant-forward, mixed origin, nothing that reads as a joke |
 | Starter name pool | **See docs/design/colonist-names.csv** | approved  | 244 given names in three registers — settled, frontier and yard — owner-supplied 2026-09-18. The eight invented for the mockups are in the frontier register. The pool has its own file because it would drown this table, and its own wiki page so every name can be read and struck; the order of that file is load-bearing, since a name is arithmetic on a saved seed |
+| Regions and seas on the planet | **Generated from the world seed** | proposed  | S1=Ver Cal Mor Ess Tal Ond Bra Hes Kel Iv Sar Dun Ul Quen Ash; S2=an ere oth ia ul ane ess ir orra en ys; S3=- - d n th ry ck. A name is S1+S2+S3 (a dash is no ending), shown bare, with -ia, or in a frame from ui.world.region.* (Reach, Downs, Hold, Greater; Sea of, Deep, Shelf, Sound, Gulf of). Drawn on the World map only, regenerated from the seed, never saved. From Claude Design's specification, 2026-09-26 (design 59 §9c); RegionNamesTests holds the code to these tables |
 
-**0 of 30 rows have no name at all.** Those are not oversights to tidy up later: a storyteller and a faction with no name cannot be written about, and the city the whole prototype is set in is currently called nothing.
+**0 of 32 rows have no name at all.** Those are not oversights to tidy up later: a storyteller and a faction with no name cannot be written about, and the city the whole prototype is set in is currently called nothing.
 
 ---
 

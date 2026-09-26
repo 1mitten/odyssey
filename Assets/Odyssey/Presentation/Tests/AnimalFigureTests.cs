@@ -71,7 +71,57 @@ namespace Odyssey.Tests.Presentation
                 "and the run is faster than the walk, or the blend has nothing to blend");
 
             Assert.That(ModuleIds.Animal(0), Is.Empty, "the colonist has no animal row");
+            Assert.That(ModuleIds.Animal(3), Is.Empty, "nor the bandit, a person");
+            Assert.That(ModuleIds.Animal(4), Is.Empty, "nor the gunman");
             Assert.That(ModuleIds.Animal(99), Is.Empty, "nor does a kind past the table");
+        }
+
+        /// <summary>
+        /// <b>The frog hops on its own Jump clip</b> (design 30 §8): kind 5's row resolves from the
+        /// project's art, asks for the hop pacing rather than the computed trot, and has the idle
+        /// and the jump as its two gaits — both looping, or the frog would take one hop and freeze
+        /// in the air.
+        /// </summary>
+        [Test]
+        public void TheFrogRowResolvesAndHopsOnItsJumpClip()
+        {
+            ModuleEntry? frog = Catalogue().Find(ModuleIds.Animal(5));
+            Assert.That(frog, Is.Not.Null, "the frog row is in the catalogue");
+            Assert.That(frog!.prefab, Is.Not.Null, "the frog's model resolved");
+            Assert.That(AssetDatabase.GetAssetPath(frog.prefab), Does.StartWith("Assets/Art/Custom/"));
+            Assert.That(frog.hopGait, Is.True, "the frog is paced to its hop");
+            Assert.That(frog.quadrupedGait, Is.False, "and not given the hog's trot");
+            Assert.That(frog.locomotion, Has.Count.EqualTo(2));
+            foreach (LocomotionEntry gait in frog.locomotion)
+            {
+                Assert.That(gait.clip, Is.Not.Null, $"{gait.clipName} resolved");
+                Assert.That(gait.clip!.isLooping, Is.True, $"{gait.clipName} loops");
+            }
+            Assert.That(frog.locomotion[1].clipName, Does.Contain("Jump"), "the moving gait is the jump");
+            Assert.That(frog.locomotion[1].metresPerSecond, Is.GreaterThan(0f), "with a declared speed");
+        }
+
+        /// <summary>
+        /// <b>A hop is still on the ground and quick in the air.</b> The drawn fraction of a hop —
+        /// the even position plus the lead — is nought through the crouch and one after landing,
+        /// the lead is nought at both ends of the cycle so the loop joins with no step, and it is
+        /// never more than half a hop either way.
+        /// </summary>
+        [Test]
+        public void AHopHoldsStillOnTheGroundAndCarriesThroughTheAir()
+        {
+            Assert.That(PawnFigureDirector.HopLead(0f), Is.EqualTo(0f).Within(1e-5f));
+            Assert.That(PawnFigureDirector.HopLead(1f), Is.EqualTo(0f).Within(1e-5f));
+            for (int i = 0; i <= 100; i++)
+            {
+                float phase = i / 100f;
+                float drawn = phase + PawnFigureDirector.HopLead(phase);
+                if (phase <= PawnFigureDirector.HopLiftOff)
+                    Assert.That(drawn, Is.EqualTo(0f).Within(1e-5f), $"moving on the ground at {phase:F2}");
+                else if (phase >= PawnFigureDirector.HopTouchDown)
+                    Assert.That(drawn, Is.EqualTo(1f).Within(1e-5f), $"moving after landing at {phase:F2}");
+                Assert.That(Mathf.Abs(PawnFigureDirector.HopLead(phase)), Is.LessThanOrEqualTo(0.5f + 1e-5f));
+            }
         }
 
         [Test]
@@ -84,17 +134,21 @@ namespace Odyssey.Tests.Presentation
                 director = new PawnFigureDirector(Catalogue(), parent.transform, 0);
                 Assume.That(director.Enabled, Is.True, "the animal rows alone make the director able to draw");
 
-                WorldSnapshot frame = Frame(Standing(1, 1, 2, 2), Standing(2, 2, 4, 2), Standing(3, 9, 6, 2));
+                // Kind 99 is past every table: 9 was unknown until it became the butcher king
+                // (design 62 §4b), which is drawn.
+                WorldSnapshot frame = Frame(Standing(1, 1, 2, 2), Standing(2, 2, 4, 2), Standing(3, 99, 6, 2),
+                    Standing(4, Odyssey.Hud.PawnKindLabels.CulvertFrogKind, 8, 2));
                 director.Sync(frame, 0, new SliceSettings(), 0f, 1, 0.016f);
 
                 Assert.That(director.HasFigureFor(1), Is.True, "the hog is drawn as a figure");
                 Assert.That(director.HasFigureFor(2), Is.True, "and so is the rat");
+                Assert.That(director.HasFigureFor(4), Is.True, "and so is the frog");
                 Assert.That(director.HasFigureFor(3), Is.False, "a kind with no row is not drawn here at all");
 
                 int animals = 0;
                 foreach (Transform child in parent.transform)
                     if (child.name.StartsWith("Animal figure")) animals++;
-                Assert.That(animals, Is.EqualTo(2));
+                Assert.That(animals, Is.EqualTo(3));
             }
             finally
             {

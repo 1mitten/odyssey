@@ -320,11 +320,20 @@ namespace Odyssey.Presentation.World
             switch (combatEvent.Kind)
             {
                 case CombatEventKind.Shot:
+                    // A thrown rock (design 62 §7a) has no muzzle and no tracer: it is drawn as
+                    // itself, on its arc, by DrawRocks.
+                    if (Odyssey.Sim.Pawns.Hurl.IsHurl(combatEvent.Weapon)) return;
                     OnShot(combatEvent, snapshot, figures);
                     return;
                 case CombatEventKind.Hit:
                 case CombatEventKind.Miss:
                     OnImpact(combatEvent, snapshot, figures);
+                    return;
+                // Cover took it (design 53 §7e): the streak ends on the cover. A piece with hit
+                // points also reported its Hit, which ended the streak already; this is for a tree
+                // or a rock face, which report only this.
+                case CombatEventKind.Covered:
+                    if (combatEvent.Amount == 0) OnImpact(combatEvent, snapshot, figures);
                     return;
             }
         }
@@ -464,7 +473,48 @@ namespace Odyssey.Presentation.World
             }
 
             DrawFlashes(renderer, snapshot, alpha, lowest, highest, figures, slice, activeLayer);
+            DrawRocks(renderer, snapshot, alpha, lowest, highest, figures, slice, activeLayer);
             LastDrawCalls = renderer.DrawCalls - callsBefore;
+        }
+
+        /// <summary>Rocks in the air last frame. For tests and the overlay.</summary>
+        public int LastRocksDrawn { get; private set; }
+
+        /// <summary>How high a thrown rock rises over its line, in metres, plus this much per metre thrown.</summary>
+        public const float RockArcMetres = 0.8f, RockArcPerMetre = 0.12f;
+
+        /// <summary>
+        /// The butcher's thrown rocks (design 62 §7a): the stone item's own mesh, from the thrower's
+        /// hand to where the rock is going, on a lob that rises with the distance and tumbles as it
+        /// flies. Read off the snapshot's flights, like the streaks, so a paused frame holds it and a
+        /// load shows it. A rock whose ends are both on undrawn layers is not drawn.
+        /// </summary>
+        void DrawRocks(ChunkRenderer renderer, WorldSnapshot snapshot, float alpha, int lowest, int highest,
+            PawnFigureDirector? figures, SliceSettings? slice, int activeLayer)
+        {
+            LastRocksDrawn = 0;
+            ReadOnlySpan<ProjectileView> flights = snapshot.Projectiles;
+            for (int b = 0; b < flights.Length; b++)
+            {
+                ProjectileView rock = flights[b];
+                if (!Odyssey.Sim.Pawns.Hurl.IsHurl(rock.Weapon)) continue;
+                if (!Drawn(rock.Start, lowest, highest, slice, activeLayer) && !Drawn(rock.End, lowest, highest, slice, activeLayer))
+                    continue;
+
+                bool hasShooter = snapshot.TryGetPawn(rock.Shooter, out PawnView thrower);
+                Vector3 from = MuzzleOrChest(rock.Shooter, hasShooter, thrower, rock.Start, figures);
+                Vector3 to;
+                if (rock.Aimed && snapshot.TryGetPawn(rock.Target, out PawnView target))
+                    to = figures != null && figures.TryGetChest(rock.Target, out Vector3 chest) ? chest : ChestOf(target.Cell);
+                else to = ChestOf(rock.End);
+
+                float t = FallArc.Progress(snapshot.Tick, alpha, rock.FireTick, rock.ImpactTick);
+                float lift = (RockArcMetres + RockArcPerMetre * Vector3.Distance(from, to)) * 4f * t * (1f - t);
+                Vector3 at = Vector3.Lerp(from, to, t) + Vector3.up * lift;
+                Quaternion tumble = Quaternion.Euler(t * 540f, t * 320f, (rock.FireTick % 90) * 4f);
+                renderer.DrawModule(Odyssey.Presentation.Rendering.ModuleIds.ItemStone, Matrix4x4.TRS(at, tumble, Vector3.one * 0.8f));
+                LastRocksDrawn++;
+            }
         }
 
         /// <summary>
@@ -484,6 +534,7 @@ namespace Odyssey.Presentation.World
             for (int b = 0; b < bullets.Length; b++)
             {
                 ProjectileView bullet = bullets[b];
+                if (Odyssey.Sim.Pawns.Hurl.IsHurl(bullet.Weapon)) continue; // a rock: DrawRocks
                 int index = FindStreak(bullet.Shooter.Value, bullet.FireTick);
                 Streak s;
                 if (index < 0)

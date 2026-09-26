@@ -1,23 +1,23 @@
 # World and interface
 
-Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
+Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006. The planet's biomes and terrain are proposals for veto (design 59): only Meadow can be settled until more art arrives.
 
-134 entries, 108 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+187 entries, 161 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
-| **Grass** | `ui.terrain.grass` | The living surface. Trees grow here and nothing else <br>**Needs:** a tuft of grass on a ground tile | no art | M1 |
+| **Grass** | `ui.terrain.grass` | The living surface. Trees and bushes grow here, and carrots can be sown <br>**Needs:** a tuft of grass on a ground tile | no art | M1 |
 | **Bare Earth** | `ui.terrain.bareearth` | Soil with the grass worn off it <br>**Needs:** a bare soil tile | no art | M1 |
-| **Gravel** | `ui.terrain.gravel` | Stony ground. Poor soil, firm footing <br>**Needs:** a tile of loose stones | no art | M1 |
+| **Gravel** | `ui.terrain.gravel` | Loose gravel of the ruined city. Poor soil <br>**Needs:** a tile of loose stones | no art | M1 |
 | **Sand** | `ui.terrain.sand` | Loose and barren. What a riverbed is made of <br>**Needs:** a plain sand tile | no art | M1 |
-| **Marsh** | `ui.terrain.marsh` | Wet ground fringing water. Crossed at three quarters pace <br>**Needs:** a reed or two on wet ground | no art | M1 |
-| **Shallow Water** | `ui.terrain.water.shallow` | Wadeable, at a third of walking pace. Nothing can be built on it without a bridge <br>**Needs:** ripples with the bed showing through | no art | M1 |
+| **Marsh** | `ui.terrain.marsh` | Wet ground fringing water. Crossed at seven tenths pace, and too poor to sow <br>**Needs:** a reed or two on wet ground | no art | M1 |
+| **Shallow Water** | `ui.terrain.water.shallow` | Wadeable, at a third of walking pace. Nothing can be built on it <br>**Needs:** ripples with the bed showing through | no art | M1 |
 | **Deep Water** | `ui.terrain.water.deep` | Out of your depth. Colonists will not enter it and paths go round <br>**Needs:** flat dark water, no bed visible | no art | M1 |
 | **Rock** | `ui.terrain.rock` | Natural stone. Mined, not cleared <br>**Needs:** a face of natural stone | no art | M1 |
 | **Subsoil** | `ui.terrain.subsoil` | The band between soil and rock. Cheap to dig <br>**Needs:** a tile of dug earth | no art | M1 |
-| **Bedrock** | `ui.terrain.bedrock` | The floor of the world. Deliberately punitive to mine <br>**Needs:** a tile of dark, banded stone | no art | M1 |
+| **Bedrock** | `ui.terrain.bedrock` | The floor of the world. It cannot be mined <br>**Needs:** a tile of dark, banded stone | no art | M1 |
 | **Packed Gravel** | `ui.terrain.packedgravel` | Stony ground, packed hard. Firm footing, poor soil | no art | M3 |
 | **Birch** | `ui.terrain.tree.birch` | A slim white-barked tree. Quick to chop, not much wood in it <br>**Needs:** a slim pale-trunked tree | no art | M3 |
 | **Meadow tree** | `ui.terrain.tree.meadow` | A broad round-crowned tree of the open meadow. Chopped for wood <br>**Needs:** a round-crowned tree | no art | M3 |
@@ -33,9 +33,9 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
 | **Clear** | `ui.weather.clear` | Open sky <br>**Needs:** clear sky or sun | no art | M1 |
-| **Cloudy** | `ui.weather.cloudy` | Less light, no other effect <br>**Needs:** cloud | no art | M1 |
-| **Rain** | `ui.weather.rain` | Puts out fires, waters crops | sheet 06 (action tiles), med | M1 |
-| **Storm** | `ui.weather.storm` | Rain, wind and lightning <br>**Needs:** lightning | no art | M1 |
+| **Cloudy** | `ui.weather.cloudy` | Less light, and a little colder <br>**Needs:** cloud | no art | M1 |
+| **Rain** | `ui.weather.rain` | Slows anyone under open sky a little, and waters the crops | sheet 06 (action tiles), med | M1 |
+| **Storm** | `ui.weather.storm` | The heaviest rain, and the coldest weather <br>**Needs:** lightning | no art | M1 |
 | **Snow** | `ui.weather.snow` | Cold, and it settles | sheet 06 (action tiles), high | M1 |
 | **Fog** | `ui.weather.fog` | Sight and shooting suffer <br>**Needs:** fog or mist | no art | M1 |
 | **Ashfall** | `ui.weather.ashfall` | Filth from the sky, and no sun <br>**Needs:** ash falling | no art | M1 |
@@ -117,6 +117,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Surrounding land** | `ui.settings.surround` | The land carried past the rim so the board does not end in mid-air | no art | M1 |
 | **Ground relief** | `ui.settings.relief` | The roll of the drawn ground. The cells underneath stay flat | no art | M1 |
 | **See through to selection** | `ui.settings.seethrough` | Fade whatever stands between the camera and a selected colonist | no art | M1 |
+| **Trees fade for every colonist** | `ui.settings.seethroughall` | Fade the trees in front of every colonist on screen, not only the selected ones | no art | M3 |
 | **Cut away the ceiling** | `ui.settings.cutaway` | See into rooms on this layer. Off shows the floor above you | no art | M3 |
 | **Walls down** | `ui.settings.wallsdown` | Lower walls to a stump and hide the storeys above, so you can see inside. Building shows them in full | no art | M3 |
 | **Keys** | `ui.settings.keys` | Every key the game reads, and what each one may be changed to | no art | M3 |
@@ -125,6 +126,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Camera speed** | `ui.settings.camspeed` | How fast the camera pans and zooms, as a share of its tuned speed | no art | M3 |
 | **Build palette layout** | `ui.settings.buildlayout` | Which of the three shapes the Build palette takes: rows, rail or bar | no art | M3 |
 | **Selection style** | `ui.settings.selectionstyle` | How the selected thing is marked: a line round the thing itself, or corner brackets | no art | M3 |
+| **Wake-up** | `ui.settings.wake` | Enter a colony by waking into it: blurred, warm and muffled, clearing over five seconds. Any key or click wakes you at once. Off fades straight in | no art | MS |
 | **Developer overlay** | `ui.settings.developer` | The frame-time and draw-call readout, kept on the machine between sessions | no art | M3 |
 | **Display** | `ui.settings.display` | How the frame is paced and how large it is drawn | no art | M3 |
 | **Detail** | `ui.settings.detail` | What the board is drawn with. None of it reaches the simulation | no art | M3 |
@@ -137,6 +139,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Quality** | `ui.settings.quality` | Set every lever on this page at once, from Low to Ultra. Custom once any is moved by hand | no art | MF |
 | **Grass** | `ui.settings.vegetation` | How thick the grass is strewn, from bare ground to every cell. Decoration, in no cell and no save | no art | MF |
 | **Grass distance** | `ui.settings.grassdist` | How far from the camera grass is still drawn. Past it the ground carries the field | no art | MF |
+| **Butterflies** | `ui.settings.butterflies` | How many butterflies the meadow near the camera may hold, from none to a swarm. They glow at night. Decoration, in no cell and no save | no art | AB |
 | **Grass shadows** | `ui.settings.foliageshadows` | Whether grass casts shadows. Off, as it has always shipped: a shadow centimetres long on grass the same colour | no art | MF |
 | **Resolution** | `ui.settings.resolution` | How many pixels the game is drawn at. Only a built game can change it | no art | M3 |
 | **Exit game** | `ui.settings.exit` | Leave the game. The row asks twice, because leaving is not undoable | no art | M3 |
@@ -177,6 +180,71 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Go moves the camera to that place and selects it. Clicking the item row itself goes to the place holding the most.** | `ui.inventory.hud.hint` | The hint under the list of places | no art | INV |
 | **Nothing is in a store yet.** | `ui.inventory.hud.empty` | The table when the colony's stores are empty | no art | INV |
 | **No item matches.** | `ui.inventory.hud.nomatch` | The table when a search finds nothing | no art | INV |
+
+## Biomes
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Ocean** | `ui.biome.ocean` | Open water. Nothing can be built on it | no art | WG |
+| **Meadow** | `ui.biome.meadow` | Temperate grass and woodland, streams and ponds. The ground the colony knows | no art | WG |
+| **Cold steppe** | `ui.biome.coldsteppe` | Cold, open grassland: long winters and little shelter | no art | WG |
+| **Dry scrub** | `ui.biome.dryscrub` | Warm dry ground of thorn and low bushes. Water is scarce | no art | WG |
+| **Marsh** | `ui.biome.marsh` | Waterlogged ground: reeds, pools and soft footing | no art | WG |
+| **Ice** | `ui.biome.ice` | Ice all year round, on land and on the polar sea. Nothing grows | no art | WG |
+
+## Terrain on the planet
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Flat** | `ui.hills.flat` | Level ground. Room to build, little stone | no art | WG |
+| **Rolling** | `ui.hills.rolling` | Gentle rises and terraces. The board every measurement was taken on | no art | WG |
+| **Hilly** | `ui.hills.hilly` | Steep terraces and more exposed rock | no art | WG |
+| **Mountainous** | `ui.hills.mountainous` | High terraces over deep rock. Twenty-four layers deep | no art | WG |
+| **Sheer** | `ui.hills.sheer` | Too steep to settle | no art | WG |
+
+## The World screen's words
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **World** | `ui.world.title` | The planet, and where on it the colony lands | no art | WG |
+| **Site** | `ui.world.site` | The tile the colony lands on | no art | WG |
+| **Random site** | `ui.world.random` | Pick another tile the colony could land on | no art | WG |
+| **Next** | `ui.world.next` | On to the colony's name, size and people | no art | WG |
+| **Legend** | `ui.world.legend` | What each colour and mark on the map means | no art | WG |
+| **Biome** | `ui.world.biome` | What grows there | no art | WG |
+| **Hills** | `ui.world.hills` | How hilly the ground is | no art | WG |
+| **Mean temperature** | `ui.world.temperature` | The year's average, out of doors | no art | WG |
+| **Seasons** | `ui.world.seasons` | Each season's average, out of doors | no art | WG |
+| **Rainfall** | `ui.world.rainfall` | How much rain falls in a year | no art | WG |
+| **Latitude** | `ui.world.latitude` | How far from the equator. The further out, the harder the seasons bite | no art | WG |
+| **Board depth** | `ui.world.depth` | How many layers the board has, sky to bedrock | no art | WG |
+| **Not yet available** | `ui.world.unavailable` | Only Meadow sites can be settled for now. Other biomes arrive with a later art pack. | no art | WG |
+| **Open water** | `ui.world.water` | The colony cannot land on the sea | no art | WG |
+| **Too steep to settle** | `ui.world.steep` | Sheer ground: no colony could find its footing | no art | WG |
+| **Pick a site to drop your colony** | `ui.world.subtitle` | The World screen's subtitle | no art | WG |
+| **The map wraps east to west** | `ui.world.wraphint` | Walk off the right edge and you come in on the left | no art | WG |
+| **Drag to pan, double-click to zoom** | `ui.world.zoomhint` | How to move about the map | no art | WG |
+| **Settleable** | `ui.world.settleable` | A colony can land here | no art | WG |
+| **Selected site** | `ui.world.selectedsite` | The tile the colony would land on | no art | WG |
+| **Tile** | `ui.world.tile` | The tile's column and row on the planet | no art | WG |
+| **Click a tile to inspect it. Random site picks a temperate Meadow.** | `ui.world.foot` | The stats panel's foot | no art | WG |
+| **Zoom in** | `ui.world.zoomin` | Closer to the ground | no art | WG |
+| **Zoom out** | `ui.world.zoomout` | Further from the ground | no art | WG |
+| **Fit** | `ui.world.fit` | The whole planet in view | no art | WG |
+| **N** | `ui.world.north` | North of the equator | no art | WG |
+| **S** | `ui.world.south` | South of the equator | no art | WG |
+| **mm** | `ui.world.mm` | Millimetres of rain a year | no art | WG |
+| **layers** | `ui.world.layers` | Layers from sky to bedrock | no art | WG |
+| **to** | `ui.world.to` | Between the coldest and the warmest month, as in 2 to 26 | no art | WG |
+| **{name} Reach** | `ui.world.region.reach` | A land region's name in one of its frames | no art | WG |
+| **The {name} Downs** | `ui.world.region.downs` | A land region's name in one of its frames | no art | WG |
+| **{name} Hold** | `ui.world.region.hold` | A land region's name in one of its frames | no art | WG |
+| **Greater {name}** | `ui.world.region.greater` | A land region's name in one of its frames | no art | WG |
+| **Sea of {name}** | `ui.world.region.seaof` | A sea's name in one of its frames | no art | WG |
+| **{name} Deep** | `ui.world.region.deep` | A sea's name in one of its frames | no art | WG |
+| **The {name} Shelf** | `ui.world.region.shelf` | A sea's name in one of its frames | no art | WG |
+| **{name} Sound** | `ui.world.region.sound` | A sea's name in one of its frames | no art | WG |
+| **Gulf of {name}** | `ui.world.region.gulfof` | A sea's name in one of its frames | no art | WG |
 
 ---
 

@@ -279,11 +279,43 @@ namespace Odyssey.Sim.Pawns
         /// <summary>No shot is surer to miss than this, per mille (the reference's 2 %).</summary>
         public int hitFloorPerMille = 20;
 
+        // ── Cover (design 53 §2). The angle bands are geometry and live in `Cover`; these are the
+        // numbers a play session tunes. ─────────────────────────────────────────────────────────
+
         /// <summary>
-        /// Partial cover, per mille of the hit chance. Always 1,000: a wall blocks the line or it
-        /// does not (owner). The slot a cover value will read.
+        /// What a thing that fills its whole cell — a wall, a closed door, a pillar, a rock face —
+        /// is worth as cover, per mille (design 53 §3). The reference's 75 %: a wall beside you is
+        /// not invulnerability, and full cover is not certainty.
         /// </summary>
-        public int coverPerMille = 1_000;
+        public int fullFillCoverPerMille = 750;
+
+        /// <summary>
+        /// The descent, as a tangent in per mille, below which <b>low</b> cover (sandbags, a
+        /// barricade, a bush, furniture) keeps all of its value (design 53 §2b): about 10°. INVENTED.
+        /// </summary>
+        public int coverLowFullTanPerMille = 176;
+
+        /// <summary>…and at and past which it keeps none: about 35°. Linear in the tangent between. INVENTED.</summary>
+        public int coverLowGoneTanPerMille = 700;
+
+        /// <summary>The same for <b>tall</b> cover (a wall, a rock face, a door, a tree): full to about 30°. INVENTED.</summary>
+        public int coverTallFullTanPerMille = 577;
+
+        /// <summary>…and gone by about 60°. INVENTED.</summary>
+        public int coverTallGoneTanPerMille = 1_732;
+
+        /// <summary>
+        /// The chance a stray bullet crossing a cover cell is caught by it, per mille of that
+        /// thing's base cover (design 53 §2e, the owner: "yes, at a fraction"), before the dead
+        /// zone's ramp from the shooter. INVENTED: the reference's constant was not recovered.
+        /// </summary>
+        public int coverInterceptPerMille = 500;
+
+        /// <summary>
+        /// The cover from its current target at and above which a fighter crouches behind a low
+        /// piece (design 53 §8a), per mille. A pose only; the rule never reads it. INVENTED.
+        /// </summary>
+        public int coverCrouchPerMille = 200;
 
         /// <summary>A bystander nearer the shooter than this is never hit by her bullet, in millimetres.</summary>
         public int interceptDeadZoneMm = 5_000;

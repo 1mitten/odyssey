@@ -125,6 +125,218 @@
   </SpeciesDef>
 
   <!--
+    The culvert frog (proper-nouns.csv, creature.amphibian — proposed; docs/design/30-wildlife.md
+    section 8). Lives on the banks of the streams, ponds and lakes and never strays far from them:
+    bankRadius holds every leg it takes to within three cells of water, and a frog that finds
+    itself further out heads back. It hops (presentation: the Jump clip is its gait).
+
+    It does not swim. A frog would, but a swimming animal is a sixth traverse mode, and every mode
+    costs a district flood on every nav rebuild whether any pawn walks in it or not (design 33
+    section 16b); it is TraverseMode.Animal, the hog's - no ladders, no doors, no water - and sits
+    at the water's edge instead. It does not mind the rain (ignoresRain): it is the one animal
+    that stays out in it.
+
+    Drawn about 0.87 m nose to toe - well over life beside a 2.49 m colonist, and deliberately:
+    0.4 m could not be picked out from the play camera (owner, 2026-09-26: "just over double the
+    size"). Pace 1,000 per mille since the same day, so that the bigger frog's hop is about 1.3 m,
+    a body and a half, rather than the one metre it covered at 0.4 m. A radius of four, short
+    rests. INVENTED, playtest numbers. A frog never turns on
+    whoever hurts it (revenge 0) and so carries no attack.
+  -->
+  <SpeciesDef>
+    <defName>Species_CulvertFrog</defName>
+    <labelKey>ui.pawn.frog</labelKey>
+    <person>false</person>
+    <bodyLengthMm>870</bodyLengthMm>
+    <movePerMille>1000</movePerMille>
+    <traverseMode>Animal</traverseMode>
+    <wanderRadius>4</wanderRadius>
+    <restTicksMin>180</restTicksMin>
+    <restTicksMax>720</restTicksMax>
+    <bankRadius>3</bankRadius>
+    <ignoresRain>true</ignoresRain>
+    <!-- A group's frogs set off in different directions (owner, 2026-09-26): a new hop prefers a
+         heading 60 degrees or more from every other frog within six cells that is already hopping. -->
+    <divergeRadius>6</divergeRadius>
+    <figureKey>animal.frog</figureKey>
+    <healthPoints>8</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>0</revengePerMille>
+    <meleeSkill>1</meleeSkill>
+    <interceptPerMille>40</interceptPerMille>
+  </SpeciesDef>
+
+  <!--
+    The butcher (docs/design/62-pig-butcher.md): a hulking hostile person with a cleaver, the boss a
+    colony fights together, in four levels (section 4b; owner, 2026-09-26: "different levels based
+    on their appearance ... a bit bigger each level"). A level is the pack's own colourway of the
+    same giant - 01_A to 01_D - and is bigger, harder to kill and harder hitting than the one
+    before. A person species of its own, not the colonist's, because what makes it a boss is what
+    it IS: its pool, its body, its fixed melee level, its cleaver and its sweep. Every number is
+    INVENTED and the first tuning (section 4).
+
+    It is one cell, drawn huge (section 3), and it moves as a bandit does (TraverseMode.Bandit): a
+    closed door is a wall it breaks, and it climbs every rock, ledge and ladder a colonist can. It
+    was TraverseMode.Animal, the hog's, until the owner stood on a rock one layer up and shot it dead
+    while it wandered below (2026-09-26, design 62 section 3a): a hog may not scramble on to stone,
+    and a boss that cannot reach a perch is a target.
+    A bigger body on a bullet's line than anything (800, the ceiling). Never stunned, never knocked
+    back. The cleaver is its own, not an item: it does not drop, and nobody else swings it
+    (section 5). The sweep (sections 5 and 7): the front arc of three, and a landed blow usually
+    flings its victim, slamming into what stops it and falling off a ledge.
+  -->
+  <SpeciesDef Name="ButcherBase" Abstract="true">
+    <person>true</person>
+    <traverseMode>Bandit</traverseMode>
+    <wanderRadius>6</wanderRadius>
+    <restTicksMin>0</restTicksMin>
+    <restTicksMax>0</restTicksMax>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <interceptPerMille>800</interceptPerMille>
+    <unstoppable>true</unstoppable>
+    <!-- The pig's voice (design 62 section 8d): a grunt as it swings, a squeal when it is hit, a
+         bellow when it throws somebody, an oink as it goes down. Presentation only. -->
+    <voice>butcher</voice>
+    <!--
+      The thrown rock (design 62 section 7a; owner, 2026-09-26: "have a mechanism so this isn't too
+      easy"). Thrown only at a colonist above it - a rock, a ledge, a roof - or one it cannot reach
+      at all, and never from behind cover: one rock, then it goes back to climbing up to her. Blunt,
+      so it can stun; a landed rock rolls the level's fling, so it usually knocks her off her perch.
+      Its cooldown is the throw's own clock (six seconds), never the cleaver's; its wind-up is the
+      throw (0.75 s). Thrown at the level's melee skill. Slow in the air (0.35 m a tick, a second
+      at 25 m) so it can be seen coming. INVENTED, the first tuning.
+    -->
+    <hurl>
+      <damage>9</damage>
+      <cooldownTicks>360</cooldownTicks>
+      <windupTicks>45</windupTicks>
+      <damageKind>Blunt</damageKind>
+      <stunPerMille>250</stunPerMille>
+      <stunTicks>60</stunTicks>
+      <style>Heavy</style>
+      <ranged>
+        <rangeMm>25000</rangeMm>
+        <speedMmPerTick>350</speedMmPerTick>
+        <accuracyByDistance>
+          <li><mm>3000</mm><perMille>900</perMille></li>
+          <li><mm>12000</mm><perMille>800</perMille></li>
+          <li><mm>25000</mm><perMille>600</perMille></li>
+        </accuracyByDistance>
+      </ranged>
+    </hurl>
+  </SpeciesDef>
+
+  <!-- Level 1, the butcher: 4.4 m, five colonists' worth, a veteran's arm. -->
+  <SpeciesDef ParentName="ButcherBase">
+    <defName>Species_Butcher</defName>
+    <labelKey>ui.pawn.butcher</labelKey>
+    <figureKey>hostile.butcher</figureKey>
+    <bodyLengthMm>4400</bodyLengthMm>
+    <movePerMille>800</movePerMille>
+    <healthPoints>500</healthPoints>
+    <meleeSkill>14</meleeSkill>
+    <health>Health_Brute</health>
+    <naturalAttack>
+      <damage>14</damage>
+      <cooldownTicks>170</cooldownTicks>
+      <windupTicks>54</windupTicks>
+      <damageKind>Sharp</damageKind>
+      <style>Heavy</style>
+    </naturalAttack>
+    <sweep>
+      <knockbackPerMille>750</knockbackPerMille>
+      <distance>2</distance>
+      <slamDamage>8</slamDamage>
+      <knockedDownTicks>120</knockedDownTicks>
+      <immunityTicks>300</immunityTicks>
+    </sweep>
+  </SpeciesDef>
+
+  <!-- Level 2, the scarred butcher: 4.7 m, half as tough again. -->
+  <SpeciesDef ParentName="ButcherBase">
+    <defName>Species_ButcherScarred</defName>
+    <!-- A bigger level calls lower. -->
+    <voicePitchPerMille>940</voicePitchPerMille>
+    <labelKey>ui.pawn.butcher.scarred</labelKey>
+    <figureKey>hostile.butcher.scarred</figureKey>
+    <bodyLengthMm>4700</bodyLengthMm>
+    <movePerMille>800</movePerMille>
+    <healthPoints>750</healthPoints>
+    <meleeSkill>16</meleeSkill>
+    <health>Health_Brute2</health>
+    <naturalAttack>
+      <damage>17</damage>
+      <cooldownTicks>165</cooldownTicks>
+      <windupTicks>54</windupTicks>
+      <damageKind>Sharp</damageKind>
+      <style>Heavy</style>
+    </naturalAttack>
+    <sweep>
+      <knockbackPerMille>800</knockbackPerMille>
+      <distance>2</distance>
+      <slamDamage>10</slamDamage>
+      <knockedDownTicks>130</knockedDownTicks>
+      <immunityTicks>300</immunityTicks>
+    </sweep>
+  </SpeciesDef>
+
+  <!-- Level 3, the blood butcher: 5.2 m, twice the first, and a little slower on its feet. -->
+  <SpeciesDef ParentName="ButcherBase">
+    <defName>Species_ButcherBlood</defName>
+    <!-- A bigger level calls lower. -->
+    <voicePitchPerMille>880</voicePitchPerMille>
+    <labelKey>ui.pawn.butcher.blood</labelKey>
+    <figureKey>hostile.butcher.blood</figureKey>
+    <bodyLengthMm>5200</bodyLengthMm>
+    <movePerMille>760</movePerMille>
+    <healthPoints>1000</healthPoints>
+    <meleeSkill>18</meleeSkill>
+    <health>Health_Brute3</health>
+    <naturalAttack>
+      <damage>20</damage>
+      <cooldownTicks>160</cooldownTicks>
+      <windupTicks>50</windupTicks>
+      <damageKind>Sharp</damageKind>
+      <style>Heavy</style>
+    </naturalAttack>
+    <sweep>
+      <knockbackPerMille>850</knockbackPerMille>
+      <distance>2</distance>
+      <slamDamage>12</slamDamage>
+      <knockedDownTicks>140</knockedDownTicks>
+      <immunityTicks>300</immunityTicks>
+    </sweep>
+  </SpeciesDef>
+
+  <!-- Level 4, the butcher king: 5.6 m, nearly three times the first, and it flings three cells. -->
+  <SpeciesDef ParentName="ButcherBase">
+    <defName>Species_ButcherKing</defName>
+    <!-- A bigger level calls lower. -->
+    <voicePitchPerMille>820</voicePitchPerMille>
+    <labelKey>ui.pawn.butcher.king</labelKey>
+    <figureKey>hostile.butcher.king</figureKey>
+    <bodyLengthMm>5600</bodyLengthMm>
+    <movePerMille>720</movePerMille>
+    <healthPoints>1400</healthPoints>
+    <meleeSkill>20</meleeSkill>
+    <health>Health_Brute4</health>
+    <naturalAttack>
+      <damage>24</damage>
+      <cooldownTicks>150</cooldownTicks>
+      <windupTicks>48</windupTicks>
+      <damageKind>Sharp</damageKind>
+      <style>Heavy</style>
+    </naturalAttack>
+    <sweep>
+      <knockbackPerMille>900</knockbackPerMille>
+      <distance>3</distance>
+      <slamDamage>15</slamDamage>
+      <knockedDownTicks>150</knockedDownTicks>
+      <immunityTicks>300</immunityTicks>
+    </sweep>
+  </SpeciesDef>
+
+  <!--
     The animal kinds. Every needs and rest field on PawnKindDef is unread for an animal — nothing
     ticks its needs — so only the species is stated and the rest take the type's defaults.
   -->
@@ -137,6 +349,13 @@
   <PawnKindDef>
     <defName>PawnKind_DuctRat</defName>
     <species>Species_DuctRat</species>
+    <faction>Wild</faction>
+  </PawnKindDef>
+
+  <!-- Kind 4, after the bandit: kind order is a save contract and is appended. -->
+  <PawnKindDef>
+    <defName>PawnKind_CulvertFrog</defName>
+    <species>Species_CulvertFrog</species>
     <faction>Wild</faction>
   </PawnKindDef>
 
@@ -168,6 +387,54 @@
          their motivation ... for now - thieve items"). Loot carries the nearest stack off the
          board; Kidnap is the seam and does exactly what Loot does today. -->
     <motive>Loot</motive>
+  </PawnKindDef>
+
+  <!--
+    The gunman (design 55 section 8): the bandit with a pistol. Its own kind rather than a bandit
+    handed a weapon, so a raid mix can name it and a storyteller can draw it; everything else is
+    the bandit's - a person, Hostile, the same traverse mode and motive, and the same outfit,
+    because PawnOutfits keys on a hostile person rather than on the kind. The pistol is the only
+    row in its table, so every gunman carries one.
+  -->
+  <PawnKindDef>
+    <defName>PawnKind_Gunman</defName>
+    <species>Species_Person</species>
+    <faction>Hostile</faction>
+    <weapons>
+      <li>Item_Pistol</li>
+    </weapons>
+    <traverseMode>Bandit</traverseMode>
+    <motive>Loot</motive>
+  </PawnKindDef>
+
+  <!--
+    Kind 6, the butcher (design 62): debug-spawned only until it has been played (owner,
+    2026-09-26), and in no raid mix. Its mode is its species' (Animal); its weapon is its species'
+    natural attack, so it names none here. It came for a fight, not for loot.
+  -->
+  <PawnKindDef>
+    <defName>PawnKind_Butcher</defName>
+    <species>Species_Butcher</species>
+    <faction>Hostile</faction>
+  </PawnKindDef>
+
+  <!-- Kinds 7 to 9, the butcher's harder levels (design 62 section 4b), appended in order. -->
+  <PawnKindDef>
+    <defName>PawnKind_ButcherScarred</defName>
+    <species>Species_ButcherScarred</species>
+    <faction>Hostile</faction>
+  </PawnKindDef>
+
+  <PawnKindDef>
+    <defName>PawnKind_ButcherBlood</defName>
+    <species>Species_ButcherBlood</species>
+    <faction>Hostile</faction>
+  </PawnKindDef>
+
+  <PawnKindDef>
+    <defName>PawnKind_ButcherKing</defName>
+    <species>Species_ButcherKing</species>
+    <faction>Hostile</faction>
   </PawnKindDef>
 
 </Defs>

@@ -100,6 +100,12 @@ namespace Odyssey.Presentation.Rendering
         /// the one soft thing in the renderer.
         /// </summary>
         Pillow = 13,
+
+        /// <summary>
+        /// One filled sandbag (design 53 §7a-bis): a flattened pillow with a tied end, spanning the
+        /// unit box. <see cref="CoverShape"/> lays a wall of them; see <see cref="SandbagMesh"/>.
+        /// </summary>
+        Sandbag = 14,
     }
 
     /// <summary>
@@ -380,6 +386,16 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         [Tooltip("Lay a computed four-legged gait over the idle. Off = the clips are the locomotion.")]
         public bool quadrupedGait;
+
+        /// <summary>
+        /// This row's fastest locomotion clip is a <b>hop</b>, drawn in place (design 30 §8): the
+        /// figure's drawn position is paced to the clip's own flight, held still while it crouches
+        /// and lands and carried forward while it is in the air, so a frog hops rather than gliding
+        /// along the ground with its legs going. On for the frog, whose only way of moving is its
+        /// Jump clip; see <c>PawnFigureDirector.HopSurge</c>.
+        /// </summary>
+        [Tooltip("The fastest gait is a hop drawn in place: pace the figure's position to the clip's flight.")]
+        public bool hopGait;
 
         /// <summary>
         /// Which parts of this body's atlas are its skin, its hair and its clothes, so a colonist
@@ -716,6 +732,13 @@ namespace Odyssey.Presentation.Rendering
         public const string Shelf = Prefix + "shelf";
 
         /// <summary>
+        /// Sandbags (design 53 §7a-bis). No catalogue row: the id resolves to
+        /// <see cref="ModuleShape.Sandbag"/>, our own bag mesh, and <c>CoverShape</c> lays a wall of
+        /// them bag by bag in hessian and desert tan. Ours, so a clone without the packs draws it too.
+        /// </summary>
+        public const string Sandbags = Prefix + "sandbags";
+
+        /// <summary>
         /// The line round a stockpile's outer edge (owner, 2026-09-23: "wash + edge outline"). No
         /// art is meant to exist for it: it resolves to the plain slab primitive, which the edge
         /// tint colours flat, the way the bed's placeholder is a box the tint colours.
@@ -749,11 +772,45 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const string AnimalBase = Prefix + "pawn.animal";
 
-        public static readonly string[] AnimalNames = { string.Empty, "hog", "rat" };
+        /// <remarks>Kinds 3 and 4 are the bandit and the gunman, people, and have no row; the frog is kind 5
+        /// (design 30 §8).</remarks>
+        public static readonly string[] AnimalNames = { string.Empty, "hog", "rat", string.Empty, string.Empty, "frog" };
 
-        /// <summary>The row for a kind, or empty for the colonist and for a kind past the table.</summary>
+        /// <summary>The row for a kind, or empty for a person and for a kind past the table.</summary>
         public static string Animal(int kind) =>
-            kind > 0 && kind < AnimalNames.Length ? AnimalBase + "." + AnimalNames[kind] : string.Empty;
+            kind > 0 && kind < AnimalNames.Length && AnimalNames[kind].Length > 0
+                ? AnimalBase + "." + AnimalNames[kind] : string.Empty;
+
+        /// <summary>
+        /// The hostile people drawn as themselves rather than as a rolled person in the gang's
+        /// outfit (design 62 §8): one row per such <b>kind</b>, parallel to <c>PawnKindIndex</c> as
+        /// <see cref="AnimalNames"/> is. Kind 6 is the butcher. Out of the colonist family, so no
+        /// lottery, no swatches and no look index of anybody else's moves.
+        /// </summary>
+        public const string HostileBase = Prefix + "pawn.hostile";
+
+        /// <remarks>Kinds 3 and 4, the bandit and the gunman, are dressed people and have no row.
+        /// Kinds 6 to 9 are the butcher's four levels (design 62 §4b), one colourway each.</remarks>
+        public static readonly string[] HostileNames =
+        {
+            string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty,
+            "butcher", "butcher.scarred", "butcher.blood", "butcher.king",
+        };
+
+        /// <summary>The row a hostile kind is drawn as, or empty for every kind that has none.</summary>
+        public static string Hostile(int kind) =>
+            kind > 0 && kind < HostileNames.Length && HostileNames[kind].Length > 0
+                ? HostileBase + "." + HostileNames[kind] : string.Empty;
+
+        /// <summary>
+        /// What a hostile kind's own row holds in its right hand when the simulation gives it no
+        /// item — its natural attack (the butcher's cleaver, design 62 §5) — or empty.
+        /// </summary>
+        public static string HostileWeapon(int kind)
+        {
+            string row = Hostile(kind);
+            return row.Length > 0 ? row + ".weapon" : string.Empty;
+        }
 
         /// <summary>
         /// The fight's clip rows (design 33 §1, <c>docs/research/synty-sword-combat.md</c>), one

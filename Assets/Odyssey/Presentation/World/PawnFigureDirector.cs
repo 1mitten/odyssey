@@ -515,7 +515,7 @@ namespace Odyssey.Presentation.World
                 Figure figure = _figures[i];
                 if (figure.Pawn != id.Value || figure.Transform == null) continue;
                 Look? look = LookAt(figure.Look);
-                if (look == null || !look.Animal || figure.DrawnBox.size.sqrMagnitude <= 1e-6f) continue;
+                if (look == null || !(look.Animal || look.OwnPaint) || figure.DrawnBox.size.sqrMagnitude <= 1e-6f) continue;
                 Transform t = figure.Transform;
                 place = Matrix4x4.TRS(t.TransformPoint(figure.DrawnBox.center), t.rotation, Vector3.one);
                 size = figure.DrawnBox.size;
@@ -596,6 +596,28 @@ namespace Odyssey.Presentation.World
             /// <summary>Lay the computed four-legged gait over the idle; the rig is measured at build.</summary>
             public bool QuadrupedGait;
 
+            /// <summary>The fastest gait is a hop drawn in place; see <see cref="HopSurge"/>.</summary>
+            public bool HopGait;
+
+            /// <summary>
+            /// A person drawn as the pack painted it (design 62 §8): no bared head, no overlay, no
+            /// hair, beard or headgear, and never recoloured — the butcher, whose face and clothes
+            /// are the character. False for every colonist and bandit body.
+            /// </summary>
+            public bool OwnPaint;
+
+            /// <summary>
+            /// What this body holds when the simulation gives it no item: its species' own weapon
+            /// (the butcher's cleaver, design 62 §5), always in the hand. Null for everybody else.
+            /// </summary>
+            public GameObject? HandProp;
+
+            /// <summary>
+            /// The material a body in its own paint wears in place of the prefab's, and its hand
+            /// prop with it — a butcher level's colourway (design 62 §4b). Null keeps the art's own.
+            /// </summary>
+            public Material? Paint;
+
             /// <summary>A feminine body: the draw and the sheathe are the pack's <c>_Femn</c> clips (design 33 §8b).</summary>
             public bool Feminine;
 
@@ -611,15 +633,35 @@ namespace Odyssey.Presentation.World
         readonly ModuleCatalogue? _catalogue;
 
         /// <summary>
-        /// One slot per animal <b>kind</b>, indexed as <c>ModuleIds.Animal</c> is — 0 is the
-        /// colonist and is always null here. A look index at or past <see cref="_looks"/>' length
-        /// names one of these (<see cref="AnimalLookIndex"/>), so the pool, the create and the
-        /// repaint all key on one integer whatever the figure is.
+        /// One slot per <b>kind</b> drawn as its own row rather than as a rolled person — every
+        /// animal (<c>ModuleIds.Animal</c>) and the hostile kinds that are themselves
+        /// (<c>ModuleIds.Hostile</c>, the butcher) — indexed by kind; 0 is the colonist and is
+        /// always null here. A look index at or past <see cref="_looks"/>' length names one of
+        /// these (<see cref="AnimalLookIndex"/>), so the pool, the create and the repaint all key
+        /// on one integer whatever the figure is.
         /// </summary>
         readonly Look?[] _animalLooks;
         readonly int _usableAnimalLooks;
 
         int AnimalLookIndex(int kind) => _looks.Length + kind;
+
+        /// <summary>Is this kind a hostile drawn as its own row, like the butcher (design 62 §8)?</summary>
+        static bool HasKindRow(int kind) => ModuleIds.Hostile(kind).Length > 0;
+
+        /// <summary>
+        /// Is this pawn measured by its own drawn box (<see cref="TryGetAnimalBox"/>) rather than the
+        /// colonist's fixed one — an animal, or a hostile drawn as itself, whose height is its own
+        /// (the butcher is half as tall again, design 62 §8). The question every cursor, bar, ring,
+        /// wound and floater asks before it asks for the box.
+        /// </summary>
+        public static bool HasOwnBox(in PawnView pawn) => pawn.IsAnimal || HasKindRow(pawn.Kind);
+
+        /// <summary>
+        /// Did this kind's own row resolve to art — the question a test of a kind drawn as itself
+        /// asks, never whether a catalogue exists (docs/lessons.md).
+        /// </summary>
+        public bool CanDrawKind(int kind) =>
+            (uint)kind < (uint)_animalLooks.Length && _animalLooks[kind] != null;
 
         Look? LookAt(int look) =>
             look < _looks.Length ? _looks[look]
@@ -628,10 +670,15 @@ namespace Odyssey.Presentation.World
 
         static Look?[] AnimalLooksFrom(ModuleCatalogue? catalogue)
         {
-            var looks = new Look?[ModuleIds.AnimalNames.Length];
+            var looks = new Look?[Math.Max(ModuleIds.AnimalNames.Length, ModuleIds.HostileNames.Length)];
             if (catalogue == null) return looks;
             for (int kind = 1; kind < looks.Length; kind++)
             {
+                if (HasKindRow(kind))
+                {
+                    looks[kind] = HostileLookFrom(catalogue, kind);
+                    continue;
+                }
                 ModuleEntry? row = catalogue.Find(ModuleIds.Animal(kind));
                 if (row == null || row.prefab == null) continue;
                 LocomotionEntry[] gaits = Gaits(row);
@@ -644,9 +691,37 @@ namespace Odyssey.Presentation.World
                     Speeds = GroundSpeeds(gaits, row.scale),
                     Animal = true,
                     QuadrupedGait = row.quadrupedGait,
+                    HopGait = row.hopGait,
                 };
             }
             return looks;
+        }
+
+        /// <summary>
+        /// A hostile kind drawn as itself (design 62 §8): a person's figure — the combat layer, the
+        /// work bones, a person's height window — in the pack's own paint, with its natural weapon
+        /// in the hand. Null when the row or its gaits did not resolve, which on a machine without
+        /// the pack leaves the pawn to the capsule every missing figure is.
+        /// </summary>
+        static Look? HostileLookFrom(ModuleCatalogue catalogue, int kind)
+        {
+            ModuleEntry? row = catalogue.Find(ModuleIds.Hostile(kind));
+            if (row == null || row.prefab == null) return null;
+            LocomotionEntry[] gaits = Gaits(row);
+            if (gaits.Length == 0) return null;
+            ModuleEntry? weapon = catalogue.Find(ModuleIds.HostileWeapon(kind));
+            return new Look
+            {
+                Prefab = row.prefab,
+                Scale = row.scale,
+                Gaits = gaits,
+                Speeds = GroundSpeeds(gaits, row.scale),
+                Sit = row.sitClip,
+                Feminine = row.sex == BodySex.Female,
+                OwnPaint = true,
+                HandProp = weapon != null ? weapon.prefab : null,
+                Paint = row.material,
+            };
         }
 
         /// <summary>
@@ -1033,7 +1108,7 @@ namespace Odyssey.Presentation.World
         /// outfit they wear — a bandit's is the gang's (design 42), never the colonist lottery's.
         /// </summary>
         int LookFor(in PawnView pawn) =>
-            pawn.IsAnimal
+            pawn.IsAnimal || HasKindRow(pawn.Kind)
                 ? AnimalLookIndex(pawn.Kind)
                 : Appearances.LookFor(pawn.Id.Value, RollSeedOf(pawn.Id), PawnOutfits.For(pawn));
 
@@ -1063,11 +1138,66 @@ namespace Odyssey.Presentation.World
         /// </summary>
         bool CanDraw(in PawnView pawn)
         {
-            if (pawn.IsAnimal)
-                return (uint)pawn.Kind < (uint)_animalLooks.Length && _animalLooks[pawn.Kind] != null;
+            if (pawn.IsAnimal || HasKindRow(pawn.Kind)) return CanDrawKind(pawn.Kind);
             if (_looks.Length == 0) return false;
             int look = LookFor(in pawn);
             return (uint)look < (uint)_looks.Length && _looks[look] != null;
+        }
+
+        /// <summary>
+        /// Where in its Jump clip a hopper leaves the ground and lands again, as fractions of the
+        /// clip (design 30 §8). <b>Measured, not judged</b>: <c>AnimalProbe.ShootFrog</c> samples the
+        /// frog's clip at twelve phases, and its body bone sits in a crouch to 0.33, is 12 cm up at
+        /// 0.42 and 16 cm at 0.50, and is back on its landing height by 0.83. The clip itself is in
+        /// place — the body moves four centimetres fore and aft and nothing more.
+        /// </summary>
+        public const float HopLiftOff = 0.35f, HopTouchDown = 0.78f;
+
+        /// <summary>
+        /// How much of a hop's ground a hopper has covered at <paramref name="phase"/> of the clip:
+        /// nothing until it leaves the ground, all of it once it lands, and at a constant rate in
+        /// between, because a body in the air keeps its speed along the ground.
+        /// </summary>
+        public static float HopTravel(float phase) => Mathf.InverseLerp(HopLiftOff, HopTouchDown, phase);
+
+        /// <summary>
+        /// The drawn offset from the even position, as a fraction of one hop's ground, at
+        /// <paramref name="phase"/>: behind on the ground, level at the top, ahead on landing, and
+        /// nought at both ends of the cycle so the loop joins with no step.
+        /// </summary>
+        public static float HopLead(float phase) => HopTravel(phase) - phase;
+
+        /// <summary>
+        /// The offset along its facing that makes a hopper hop rather than glide (design 30 §8).
+        ///
+        /// <para>The simulation moves a frog at an even pace, cell by cell, as it moves everybody;
+        /// its figure plays the Jump clip on a loop while it goes. Left at that, the body rises and
+        /// falls while the whole figure slides forward at a constant speed, so it crouches and
+        /// lands on a moving floor. This takes the distance one clip cycle covers at the gait's
+        /// declared speed and redistributes it within the cycle — none while crouched, all of it
+        /// through the flight — as an offset from the even position (<see cref="HopLead"/>).</para>
+        ///
+        /// <para>Drawn only, and bounded by half a hop: the simulated cell, the measured speed the
+        /// gait is solved from, the cursor box and the click all use the even position. Scaled by
+        /// the hop clip's weight in the mixer, so a frog easing to a stop eases out of it and a
+        /// resting one has none.</para>
+        /// </summary>
+        Vector3 HopSurge(Figure figure)
+        {
+            Look? look = LookAt(figure.Look);
+            if (look == null || !look.HopGait || look.Gaits.Length < 2) return Vector3.zero;
+            int hop = look.Gaits.Length - 1;
+            if (hop >= figure.Clips.Length) return Vector3.zero;
+            float weight = figure.Mixer.GetInputWeight(hop);
+            if (weight <= 1e-3f) return Vector3.zero;
+            AnimationClipPlayable clip = figure.Clips[hop];
+            double length = clip.GetAnimationClip().length;
+            if (length <= 1e-4) return Vector3.zero;
+            float phase = (float)(clip.GetTime() / length % 1.0);
+            if (phase < 0f) phase += 1f;
+            float stride = look.Speeds[hop] * (float)length;
+            Vector3 forward = Quaternion.Euler(0f, figure.Yaw, 0f) * Vector3.forward;
+            return forward * (stride * HopLead(phase) * weight);
         }
 
         /// <summary>Gaits with a live clip, slowest first. Order is what makes the blend a blend.</summary>
@@ -1204,6 +1334,53 @@ namespace Odyssey.Presentation.World
             ApplyWorkPose();
             CheckSocialGreetings();
             ApplyGazePose(deltaTime);
+            // Last, after every pass that turns the head: what is shrunk is the pose as drawn.
+            ApplyHeadHidden();
+        }
+
+        /// <summary>
+        /// The colonist whose head is taken out of the picture, or none: set by a ride whose camera
+        /// is at, or pushed up against, her eyes (design 57 §4).
+        ///
+        /// <para><b>Why the head goes rather than being looked past.</b> The face is part of the one
+        /// skinned body and its ink hull is drawn with front faces culled, so a camera inside the
+        /// head sees the hull's inside as solid black; and there is no separate head renderer to
+        /// switch off. Shrinking the head bone to nothing takes the face, the hull and the hair,
+        /// beard and headgear slots parented on it all at once, and nothing else. The shadow's head
+        /// goes with it, which from behind her own eyes nobody sees.</para>
+        /// </summary>
+        public PawnId? HeadHidden { get; set; }
+
+        /// <summary>The head bone currently shrunk, and the scale it had, to give back.</summary>
+        Transform? _shrunkHead;
+        Vector3 _shrunkHeadScale = Vector3.one;
+
+        /// <summary>The scale a hidden head is drawn at: small enough to be nothing, not zero, so no matrix degenerates.</summary>
+        const float HiddenHeadScale = 0.001f;
+
+        /// <summary>
+        /// Shrink the hidden colonist's head bone and restore any other. Every frame, because the
+        /// figure a head was hidden on can be retired and leased to somebody else between two
+        /// frames, and that somebody must not arrive headless.
+        /// </summary>
+        void ApplyHeadHidden()
+        {
+            Transform? want = null;
+            if (HeadHidden is PawnId id && _byPawn.TryGetValue(id.Value, out Figure? figure))
+                want = figure.Head;
+
+            if (_shrunkHead != null && _shrunkHead != want)
+            {
+                _shrunkHead.localScale = _shrunkHeadScale;
+                _shrunkHead = null;
+            }
+            if (want == null) return;
+            if (_shrunkHead != want)
+            {
+                _shrunkHeadScale = want.localScale;
+                _shrunkHead = want;
+            }
+            want.localScale = _shrunkHeadScale * HiddenHeadScale;
         }
 
         /// <summary>
@@ -2017,6 +2194,9 @@ namespace Odyssey.Presentation.World
             // A computed blow's lunge, a stagger's shove, a dodge's sidestep (design 33 §1).
             drawn += CombatOffset(figure);
 
+            // A hopper's flight (design 30 §8): still on the ground, quick through the air.
+            drawn += HopSurge(figure);
+
             figure.Transform.position = drawn;
 
             // Turn towards the heading rather than snapping to it.
@@ -2332,6 +2512,16 @@ namespace Odyssey.Presentation.World
         /// </summary>
         void Repaint(Figure figure, PawnId pawn, uint rollSeed)
         {
+            // A body in its own paint (design 62 §8) is never dressed: its art goes back on, which
+            // is also what keeps a pooled figure from wearing somebody else's colours.
+            Look? own = LookAt(figure.Look);
+            if (own != null && own.OwnPaint)
+            {
+                for (int i = 0; i < figure.Skins.Length; i++)
+                    if (figure.Skins[i] != null && figure.ArtMaterials[i] != null)
+                        figure.Skins[i].sharedMaterial = figure.ArtMaterials[i];
+                return;
+            }
             if (Materials == null || figure.Skins.Length == 0) return;
 
             AppearanceCells? cells = CellsFor(figure.Look);
@@ -2535,11 +2725,25 @@ namespace Odyssey.Presentation.World
 
             // Whatever the pack already put on this head comes off, so our hair is the only hair
             // and a bare head is reachable at all (docs/design/29-modular-colonists.md).
-            ColonistAttachments.BareTheHead(instance);
+            // A body in its own paint keeps its own head (design 62 §8): the butcher is the character.
+            if (!face.OwnPaint) ColonistAttachments.BareTheHead(instance);
 
             // The bandit's vest (design 42): the one overlay its row names, switched back on after
             // the head was bared, and before the skins are gathered below so it is painted too.
-            ColonistAttachments.ShowOverlay(instance, face.Overlay);
+            if (!face.OwnPaint) ColonistAttachments.ShowOverlay(instance, face.Overlay);
+
+            // A body in its own paint is the one character its prefab switches on (design 62 §8):
+            // the Fantasy Rivals prefab carries all eleven of the pack's giants as inactive
+            // siblings, and the skins gathered below include inactive ones on purpose (a bandit's
+            // vest is switched on after them). Left in, they were measured with the butcher —
+            // a box 6.2 m wide and 4.1 m tall (ButcherSpawnTests) — so they go now.
+            if (face.OwnPaint)
+            {
+                var all = instance.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true);
+                for (int i = 0; i < all.Length; i++)
+                    if (all[i] != null && !all[i].gameObject.activeInHierarchy)
+                        UnityEngine.Object.DestroyImmediate(all[i].gameObject);
+            }
 
             // Re-skin from the bones as they are at the moment of drawing, not as they were when
             // the animation system last looked at them.
@@ -2554,6 +2758,10 @@ namespace Odyssey.Presentation.World
             // looks like the arm pose failing, and the arm pose is fine.
             var skins = instance.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true);
             for (int i = 0; i < skins.Length; i++) skins[i].forceMatrixRecalculationPerRender = true;
+
+            // A butcher level wears its colourway (design 62 §4b) before its art is remembered, so
+            // the repaint that puts a body's own art back puts this back.
+            if (face.OwnPaint && face.Paint != null) Repaint(skins, face.Paint);
 
             var animator = instance.GetComponent<Animator>();
             if (animator == null) animator = instance.AddComponent<Animator>();
@@ -2608,7 +2816,7 @@ namespace Odyssey.Presentation.World
             // After BindWorkBones, which is what finds the head. The slots are empty until a
             // lease dresses them, so a figure built for a bald colonist costs two disabled
             // renderers and nothing else.
-            if (figure.Head != null)
+            if (figure.Head != null && !face.OwnPaint)
             {
                 ColonistAttachments.MakeSlot(figure.Head, "Hair", _layer,
                     out MeshFilter hf, out MeshRenderer hr);
@@ -2643,6 +2851,24 @@ namespace Odyssey.Presentation.World
             else
             {
                 figure.StandingHeight = MeasureBody(figure);
+                // A body drawn as itself carries its own box too (design 62 §8): the butcher's
+                // bar, ring and cursor stand at its own height, not a colonist's. The box is read in
+                // the figure's own frame, which for an animal is metres (its scale is 1) and for the
+                // butcher is not (2.0): its sides are scaled back to metres, and its height is the
+                // baked sole to crown, not the renderers' loose volume, which read 4.4 m for a
+                // 3.6 m body (measured, ButcherSpawnTests).
+                if (face.OwnPaint)
+                {
+                    Bounds local = FigureBuild.DrawnBounds(figure.Skins, figure.Transform);
+                    Vector3 across = Vector3.Scale(local.size, face.Scale);
+                    // The loose volume is the rig's bind pose, arms out: 5.8 m across for the
+                    // butcher. A cursor wants the body, so the footprint is a square of the
+                    // narrower side, about 1.9 m, centred on it.
+                    float side = Mathf.Min(across.x, across.z);
+                    across = new Vector3(side, figure.StandingHeight, side);
+                    float up = face.Scale.y > 1e-4f ? figure.StandingHeight * 0.5f / face.Scale.y : 0f;
+                    figure.DrawnBox = new Bounds(new Vector3(0f, up, 0f), across);
+                }
                 // Where a sheathed weapon hangs, and where in the draw the hand is on the hilt:
                 // measured off this body, after its height, in the idle (design 33 §8b).
                 BindSheath(figure, face.Feminine);
@@ -2654,6 +2880,18 @@ namespace Odyssey.Presentation.World
             return figure;
         }
 
+
+        /// <summary>Every material slot of every renderer to <paramref name="paint"/>: one atlas, one colourway.</summary>
+        static void Repaint(Renderer[] renderers, Material paint)
+        {
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] == null) continue;
+                var slots = renderers[i].sharedMaterials;
+                for (int m = 0; m < slots.Length; m++) slots[m] = paint;
+                renderers[i].sharedMaterials = slots;
+            }
+        }
 
         static void SetLayer(Transform transform, int layer)
         {

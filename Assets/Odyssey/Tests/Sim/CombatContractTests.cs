@@ -109,7 +109,17 @@ namespace Odyssey.Tests.Sim
             Assert.That(SkillIndex.Shooting, Is.EqualTo(8));
             Assert.That(SkillIndex.Count, Is.EqualTo(9));
             Assert.That(PawnKindIndex.Bandit, Is.EqualTo(3));
-            Assert.That(PawnKindIndex.Count, Is.EqualTo(4));
+            // 5 since the raid appended the gunman at 4 (design 55 §8).
+            Assert.That(PawnKindIndex.Gunman, Is.EqualTo(4));
+            // And the culvert frog at 5, after the gunman (design 30 §8): six.
+            Assert.That(PawnKindIndex.CulvertFrog, Is.EqualTo(5));
+            // And the butcher at 6, after the frog (design 62): seven.
+            Assert.That(PawnKindIndex.Butcher, Is.EqualTo(6));
+            // And its three harder levels at 7 to 9 (design 62 §4b): ten.
+            Assert.That(PawnKindIndex.ButcherScarred, Is.EqualTo(7));
+            Assert.That(PawnKindIndex.ButcherBlood, Is.EqualTo(8));
+            Assert.That(PawnKindIndex.ButcherKing, Is.EqualTo(9));
+            Assert.That(PawnKindIndex.Count, Is.EqualTo(10));
 
             // IntentKind is an enum whose numbers an intent log carries: the three orders are
             // together and after everything main shipped first (power's four, since the merge of
@@ -228,7 +238,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(JobSystem.AnimalMind.Select(n => n.Name),
                 Is.EqualTo(new[] { "Downed", "AnimalCombat", "AnimalShelter", "AnimalIdle" }));
             Assert.That(JobSystem.HostileMind.Select(n => n.Name),
-                Is.EqualTo(new[] { "Downed", "Hostile", "Idle" }));
+                Is.EqualTo(new[] { "Downed", "Raid", "Hostile", "Idle" }), "the raid asks its band first (design 55 §3)");
         }
 
         [Test]
@@ -347,6 +357,8 @@ namespace Odyssey.Tests.Sim
             Moves("an order's target", () => pawn.CombatTarget = 2, () => pawn.CombatTarget = 0);
             Moves("a carrier", () => pawn.CarriedBy = 2, () => pawn.CarriedBy = 0);
             Moves("a treatment cooldown", () => pawn.TreatedUntilTick = 99, () => pawn.TreatedUntilTick = 0);
+            Moves("a knockback immunity", () => pawn.KnockbackImmuneUntilTick = 99, () => pawn.KnockbackImmuneUntilTick = 0);
+            Moves("a thrower's clock", () => pawn.HurlReadyTick = 99, () => pawn.HurlReadyTick = 0);
             Moves("a struck building", () => colony.Pawns.EdificeDamage.Set(123, 4_000),
                 () => colony.Pawns.EdificeDamage.Clear(123));
 
@@ -372,6 +384,8 @@ namespace Odyssey.Tests.Sim
             a.CombatTarget = b.Id.Value;
             a.CarriedBy = b.Id.Value;
             a.TreatedUntilTick = 15_030; // layout 4, medical supplies (design 37)
+            a.KnockbackImmuneUntilTick = 2_345; // layout 6, the butcher's fling (design 62)
+            a.HurlReadyTick = 3_456; // layout 7, the butcher's rock (design 62 §7a)
             colony.Pawns.Corpses.Add(b, 31, 5);
             colony.Pawns.EdificeDamage.Set(1_234, 55_000);
             colony.Pawns.EdificeDamage.Set(99, 1);
@@ -390,6 +404,8 @@ namespace Odyssey.Tests.Sim
             Assert.That(back.CombatTarget, Is.EqualTo(b.Id.Value));
             Assert.That(back.CarriedBy, Is.EqualTo(b.Id.Value));
             Assert.That(back.TreatedUntilTick, Is.EqualTo(15_030));
+            Assert.That(back.KnockbackImmuneUntilTick, Is.EqualTo(2_345));
+            Assert.That(back.HurlReadyTick, Is.EqualTo(3_456));
 
             Assert.That(restored.Pawns.Corpses.Count, Is.EqualTo(1));
             Assert.That(restored.Pawns.Corpses[0].Pawn, Is.EqualTo(b.Id.Value));
@@ -509,6 +525,8 @@ namespace Odyssey.Tests.Sim
             // which reads this constant itself.
             Assert.That(CombatAspects.ResponseName, Is.EqualTo("odyssey.pawn.response"));
             Assert.That(CombatAspects.RescuePatientName, Is.EqualTo("odyssey.pawn.rescue.patient"));
+            // Design 62 §8: the butcher's telegraph.
+            Assert.That(CombatAspects.SweepFacingName, Is.EqualTo("odyssey.pawn.sweep.facing"));
         }
 
         /// <summary>
