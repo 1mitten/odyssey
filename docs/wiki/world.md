@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006. The planet's biomes and terrain are proposals for veto (design 57): only Meadow can be settled until more art arrives.
 
-167 entries, 141 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+187 entries, 161 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -185,16 +185,12 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
-| **Sea** | `ui.biome.sea` | Open water. Nothing can be built on it | no art | WG |
-| **Icefield** | `ui.biome.icefield` | Ice all year round, at the poles. Nothing grows | no art | WG |
-| **Frost barrens** | `ui.biome.frostbarrens` | Cold, dry ground: moss, stone and wind | no art | WG |
-| **Pinewood** | `ui.biome.pinewood` | Cold woods of needle trees, and long winters | no art | WG |
-| **Moor** | `ui.biome.moor` | Cold, wet upland: heather, peat and standing water | no art | WG |
-| **Scrubland** | `ui.biome.scrubland` | Warm dry ground of thorn and low bushes | no art | WG |
+| **Ocean** | `ui.biome.ocean` | Open water. Nothing can be built on it | no art | WG |
 | **Meadow** | `ui.biome.meadow` | Temperate grass and woodland, streams and ponds. The ground the colony knows | no art | WG |
-| **Fen** | `ui.biome.fen` | Temperate and waterlogged: reeds, pools and soft ground | no art | WG |
-| **Dust flats** | `ui.biome.dustflats` | Hot and dry. Little grows and water is scarce | no art | WG |
-| **Wildwood** | `ui.biome.wildwood` | Hot and wet. Dense forest that grows back as fast as it is cut | no art | WG |
+| **Cold steppe** | `ui.biome.coldsteppe` | Cold, open grassland: long winters and little shelter | no art | WG |
+| **Dry scrub** | `ui.biome.dryscrub` | Warm dry ground of thorn and low bushes. Water is scarce | no art | WG |
+| **Marsh** | `ui.biome.marsh` | Waterlogged ground: reeds, pools and soft footing | no art | WG |
+| **Ice** | `ui.biome.ice` | Ice all year round, on land and on the polar sea. Nothing grows | no art | WG |
 
 ## Terrain on the planet
 
@@ -216,15 +212,39 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Next** | `ui.world.next` | On to the colony's name, size and people | no art | WG |
 | **Legend** | `ui.world.legend` | What each colour and mark on the map means | no art | WG |
 | **Biome** | `ui.world.biome` | What grows there | no art | WG |
-| **Terrain** | `ui.world.terrain` | How hilly the ground is | no art | WG |
+| **Hills** | `ui.world.hills` | How hilly the ground is | no art | WG |
 | **Mean temperature** | `ui.world.temperature` | The year's average, out of doors | no art | WG |
 | **Seasons** | `ui.world.seasons` | Each season's average, out of doors | no art | WG |
 | **Rainfall** | `ui.world.rainfall` | How much rain falls in a year | no art | WG |
 | **Latitude** | `ui.world.latitude` | How far from the equator. The further out, the harder the seasons bite | no art | WG |
-| **Depth** | `ui.world.depth` | How many layers the board has, sky to bedrock | no art | WG |
-| **Not yet available** | `ui.world.unavailable` | This ground has no art yet and cannot be settled in this version | no art | WG |
+| **Board depth** | `ui.world.depth` | How many layers the board has, sky to bedrock | no art | WG |
+| **Not yet available** | `ui.world.unavailable` | Only Meadow sites can be settled for now. Other biomes arrive with a later art pack. | no art | WG |
 | **Open water** | `ui.world.water` | The colony cannot land on the sea | no art | WG |
 | **Too steep to settle** | `ui.world.steep` | Sheer ground: no colony could find its footing | no art | WG |
+| **Pick a site to drop your colony** | `ui.world.subtitle` | The World screen's subtitle | no art | WG |
+| **The map wraps east to west** | `ui.world.wraphint` | Walk off the right edge and you come in on the left | no art | WG |
+| **Drag to pan, double-click to zoom** | `ui.world.zoomhint` | How to move about the map | no art | WG |
+| **Settleable** | `ui.world.settleable` | A colony can land here | no art | WG |
+| **Selected site** | `ui.world.selectedsite` | The tile the colony would land on | no art | WG |
+| **Tile** | `ui.world.tile` | The tile's column and row on the planet | no art | WG |
+| **Click a tile to inspect it. Random site picks a temperate Meadow.** | `ui.world.foot` | The stats panel's foot | no art | WG |
+| **Zoom in** | `ui.world.zoomin` | Closer to the ground | no art | WG |
+| **Zoom out** | `ui.world.zoomout` | Further from the ground | no art | WG |
+| **Fit** | `ui.world.fit` | The whole planet in view | no art | WG |
+| **N** | `ui.world.north` | North of the equator | no art | WG |
+| **S** | `ui.world.south` | South of the equator | no art | WG |
+| **mm** | `ui.world.mm` | Millimetres of rain a year | no art | WG |
+| **layers** | `ui.world.layers` | Layers from sky to bedrock | no art | WG |
+| **to** | `ui.world.to` | Between the coldest and the warmest month, as in 2 to 26 | no art | WG |
+| **{name} Reach** | `ui.world.region.reach` | A land region's name in one of its frames | no art | WG |
+| **The {name} Downs** | `ui.world.region.downs` | A land region's name in one of its frames | no art | WG |
+| **{name} Hold** | `ui.world.region.hold` | A land region's name in one of its frames | no art | WG |
+| **Greater {name}** | `ui.world.region.greater` | A land region's name in one of its frames | no art | WG |
+| **Sea of {name}** | `ui.world.region.seaof` | A sea's name in one of its frames | no art | WG |
+| **{name} Deep** | `ui.world.region.deep` | A sea's name in one of its frames | no art | WG |
+| **The {name} Shelf** | `ui.world.region.shelf` | A sea's name in one of its frames | no art | WG |
+| **{name} Sound** | `ui.world.region.sound` | A sea's name in one of its frames | no art | WG |
+| **Gulf of {name}** | `ui.world.region.gulfof` | A sea's name in one of its frames | no art | WG |
 
 ---
 

@@ -218,3 +218,14 @@ Owner, 2026-09-26:
 - mountainous sites are 24 layers
 - a Claude Design brief first
 - no factions yet
+
+## Answered
+
+**Claude Design answered on 2026-09-26 with a written specification** (mockups 26a and 26b). The
+owner pasted it into the session, and it is kept verbatim in `world-screen-spec.md` beside this
+brief. It drew six biomes rather than the ten asked for, gave the hill bands the reference's own
+names, and added region names and zoom — the second and third against this brief's own *What not to
+do*.
+
+The owner ruled the same day: **the six biomes, our own hill names, and region names and zoom
+built**. Design 57 §6 and §9a–§9c carry what was built and every departure.

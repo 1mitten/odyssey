@@ -1,7 +1,6 @@
 # 57 — World generation: a planet of sites that drive the colony board
 
-**Status: designed 2026-09-26, nothing built. Waiting on the owner's approval of this document,
-and on Claude Design for the World screen's look.** Branch `claude/sharp-euler-a6xtci`.
+**Status: approved 2026-09-26 (owner: *"happy to go"*, then *"ok go"*); Claude Design's specification received the same day (§9a). Being built.** Branch `claude/sharp-euler-a6xtci`.
 Units WG1–WG3 are in `docs/plans/world-generation.md`.
 
 **Read first:**
@@ -150,38 +149,35 @@ it pins the rest of the content.
 
 ## 6. Biomes
 
+**Six, by the owner's ruling of 2026-09-26** on Claude Design's specification
+(`docs/reference/mockups/world-screen-spec.md`). The first draft proposed ten; the specification
+drew six with finished colour ramps, and the owner took the six.
+
 `BiomeDef` is the **first map-generation content authored in XML** (`Defs/Core/World/Biomes.xml`),
 registered in `WorldContent.Register` beside `ClimateDef`. Its fields:
 - `defName`, and `label` as a registry key (`ui.biome.*`)
 - `settleable`
-- `mapColour`, the World screen's fill for the biome, chosen in the Claude Design pass and checked
-  for all three dichromacies
+- `water`, true for Ocean only
 - `priority`
-- `tempMinC` / `tempMaxC` and `rainMinMm` / `rainMaxMm` (half-open bands)
-- `water`, true for sea only
+- `bands`, a list of half-open bands: `tempMinC` / `tempMaxC` and `rainMinMm` / `rainMaxMm`
+- `rampFrom` / `rampTo`, the map ramp's two stops as hex (§9b)
+- `ramp`: `Ocean`, `Land` or `Ice`, which rule sets the ramp's t
 - `board`, which names the board preset. Only `Meadow` exists, and it means `MakeWooded()`.
 
-**The names below are proposals for veto**, as the occupations were (design 19 §6): English, plain,
-industrial register (`proper-nouns.csv`'s own rule), and none of them the reference's label.
-
-Bands in centi-degrees of mean temperature and millimetres of rain a year, **checked in priority
-order**:
+Bands are in centi-degrees of mean temperature and millimetres of rain a year, **checked in
+priority order**. The last band is the rest, so the table is total by construction.
 
 | Priority | Key | Name | Band | Settleable now |
 |---|---|---|---|---|
-| — | `ui.biome.sea` | Sea | pass 1 | no, ever |
-| 1 | `ui.biome.icefield` | Icefield | T < −1000 | no |
-| 2 | `ui.biome.frostbarrens` | Frost barrens | T < 300, rain < 500 | no |
-| 3 | `ui.biome.pinewood` | Pinewood | T < 300, 500 ≤ rain < 1500 | no |
-| 4 | `ui.biome.moor` | Moor | T < 300, rain ≥ 1500 | no |
-| 5 | `ui.biome.scrubland` | Scrubland | 300 ≤ T < 1700, rain < 500; **or** T ≥ 1700, 500 ≤ rain < 1500 | no |
-| 6 | **`ui.biome.meadow`** | **Meadow** | **300 ≤ T < 1700, 500 ≤ rain < 1500** | **yes** |
-| 7 | `ui.biome.fen` | Fen | 300 ≤ T < 1700, rain ≥ 1500 | no |
-| 8 | `ui.biome.dustflats` | Dust flats | T ≥ 1700, rain < 500 | no |
-| 9 | `ui.biome.wildwood` | Wildwood | T ≥ 1700, rain ≥ 1500 | no |
+| — | `ui.biome.ocean` | Ocean | pass 1 (below sea level) | no, ever |
+| 1 | `ui.biome.ice` | Ice | T < −1000, **on land or sea**: polar sea freezes and stays water | no |
+| 2 | `ui.biome.coldsteppe` | Cold steppe | T < 300 | no |
+| 3 | `ui.biome.marsh` | Marsh | rain ≥ 1500 | no |
+| 4 | `ui.biome.dryscrub` | Dry scrub | rain < 500, **or** T ≥ 1700 | no |
+| 5 | **`ui.biome.meadow`** | **Meadow** | **the rest: 300 ≤ T < 1700 and 500 ≤ rain < 1500** | **yes** |
 
-- **Scrubland is two bands.** A biome carries a list of bands, not one, which is why the table has a
-  priority rather than being a pure grid.
+- **Ice is checked before the sea is coloured.** A sea tile colder than −1000 is Ice: it is still
+  water and still cannot be settled, and it takes the spec's sea-ice ramp.
 - **Why a band table and not the reference's scoring** (a-13 §6):
   - it reads in XML
   - it is total: every land tile lands somewhere, and a test proves it
@@ -290,14 +286,86 @@ Title ─ New game ─► World ─ Next ─► Setup page (name, size, colonist
   and the depth when it is 24). Back returns to the map **with the three candidates kept**. Hunting
   for a site must not cost you a colonist you liked, which is design 19 §2.7's own rule carried
   forward.
-- **Escape backs out one level** (`SettingsDirector.Escape` gains the rung). This is session
-  lifecycle's lesson: a screen with no rung let the key fall through to the settings window.
-- **Keyboard:** the arrow keys move the selection one hex, Enter is Next, and R is Random site.
-- **Its look is Claude Design's** (the brief). The constraints that are not negotiable:
+- **Escape backs out one level, and needs no new rung.** The start screen's existing `MenuBack`
+  rung calls `MenuDirector.Back()` (`SettingsPresenter`), and `Back()` becomes hierarchical: from
+  NewGame to World, and from World to Root. Before this it always went to Root.
+- **Keyboard** (the specification's, §9c):
+  - the arrow keys move the selection one hex at 1×, and pan when zoomed
+  - `+` / `-` zoom and `0` fits
+  - Enter is Next and R is Random site
+- **Its look is Claude Design's** (§9a). The constraints that are not negotiable:
   - the map is **one texture painted when the seed changes**, one draw (P10)
   - every word goes through `Registry.Label`
   - every mark is a drawn path, never a character (the font rule)
   - no scrollbar
+
+## 9a. The look: Claude Design's specification, and where the build departs from it
+
+The specification is kept verbatim in `docs/reference/mockups/world-screen-spec.md`, and its
+constants live in `Odyssey.Hud.WorldLayout`. **Departures:**
+
+| The specification says | Built as | Why |
+|---|---|---|
+| Hill bands Flat, Small hills, Large hills, Mountainous, Impassable | **Flat, Rolling, Hilly, Mountainous, Sheer**; the bump is Hilly and the tall peak is Sheer | owner, 2026-09-26: the specification's names are the reference's own labels (clean room) |
+| `colourLow` / `colourHigh` | **`rampFrom` (t = 0) / `rampTo` (t = 1)** | the specification's "high" and "low" name lightness on the land ramps and depth on the ocean's, so the same field meant opposite ends; from/to names the end of t and nothing else |
+| texture about 1187 × 515 | **painted at 2× (2374 × 1030)**, with the geometry in 1× units | at 4× zoom a 1× texture is a blur; the hex outlines, marks and labels are drawn at 1× units either way. Paint time is §9d's number. |
+| the sea labels in italic | **upright** | neither shipped face has an italic cut; the tracking and ink are kept, as the specification itself allows |
+| the land labels' 3 px white halo | a **1 px outline** (UI Toolkit's `-unity-text-outline`) | the specification's own fallback, since UI Toolkit has no text shadow blur |
+| "drawn with `SvgPath`" (selection and hover) | drawn with `Painter2D` in the map overlay's `generateVisualContent`, from `WorldMapGeometry.Outline` | the outline is a hexagon computed per tile, not a fixed path string; the dashed ring uses `DashedOutline`'s hand-dashed loop, since `SvgPath` has no dashes |
+
+## 9b. The map colours
+
+`BiomeDef.rampFrom` is the colour at t = 0 and `rampTo` at t = 1:
+
+| Biome | `rampFrom` | `rampTo` | t |
+|---|---|---|---|
+| Ocean | `#0b1d2c` (deep) | `#2f6f8c` (coast) | `(e / sea)^2.2` |
+| Meadow | `#a3cf72` (lowland) | `#4f8f45` (upland) | `landHeight × 1.1 + jitter` |
+| Cold steppe | `#cdc79c` | `#8c8766` | as Meadow |
+| Dry scrub | `#e0b577` | `#a8743f` | as Meadow |
+| Marsh | `#5c9c8c` | `#2c6660` | as Meadow |
+| Ice | `#b9c9d2` | `#f4f8fa` | on sea, `0.6 + (e / sea) × 0.4`; on land, as Meadow |
+
+- `e` is the elevation noise over its range, `sea` the sea level on the same scale, and
+  `landHeight = (e − sea) / (1 − sea)`.
+- The jitter is `(hash(col, row, 7) − 0.5) × 0.12`, from the tile, so a repaint is identical.
+- The painter is presentation, so it may use floating point: nothing it computes reaches a cell, a
+  save or the hash.
+
+## 9c. Region names, zoom and pan (owner, 2026-09-26: built now)
+
+**Region names** are **drawn only**. They are regenerated from the world seed every time, never
+saved and never in the hash.
+- Land regions are connected land over the six neighbours, with the wrap. The seven largest of at
+  least 14 tiles get a label at their centroid, using a circular mean for x.
+- Up to five sea labels go in the largest ocean, on tiles whose six neighbours are all ocean, away
+  from the four polar rows, at least 230 px apart at 1×.
+- A name is `S1 + S2 + S3` from the syllable tables, placed in a frame. The tables are code in
+  `RegionNames`.
+  - **`proper-nouns.csv`'s `world.regionnames` row lists the same three tables**, and
+    `RegionNamesTests` fails if the two differ. That is one list with a guard, not two sources.
+  - The frames (*Reach*, *The … Downs*, *Hold*, *Greater*, *Sea of*, *Deep*, *The … Shelf*,
+    *Sound*, *Gulf of*) are registry labels, `ui.world.region.*` with a `{name}` placeholder.
+  - The bare word and the *-ia* form are not frames.
+
+**Zoom and pan** are `WorldMapView`, engine-free:
+- zoom 1× to 4× in steps of ×1.5, eased over 180 ms
+- centred with no pan at 1×
+- y clamped, and x wrapping when zoomed in
+- `ScreenToTile` composes the fit, the zoom, the pan and the wrap, and is tested through all four
+
+The page draws three copies of the one texture side by side, so a pan across the seam shows the
+planet continuing.
+
+## 9d. Measurements
+
+Taken as each unit lands, with the machine and date.
+
+| What | Number |
+|---|---|
+| planet generation (64 × 32) | *WG2* |
+| map paint at 2× | *WG3a* |
+| board memory per hill band | *WG4* |
 
 ## 10. Seams recorded, not built
 
