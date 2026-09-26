@@ -97,9 +97,71 @@ tick, ~2,400 distance tests); each figure is under 1,100 triangles, against the 
 
 ## 5. Questions
 
-Put to the owner with `AskUserQuestion`, in rounds; the answers are recorded in §6 verbatim in
-intent, with what each one decides.
+Put to the owner on 2026-09-26 in four rounds of four: the roster (scope, the hog, size, names),
+aggression (the model, man-eaters, after a down, predation), character (signatures, hours, the kill
+window, warnings) and delivery (population, far animals, hunting, PRs). Each carried a
+recommendation; the owner took every one but one, **after a down**, where they chose that a
+predator can kill.
 
 ## 6. Answers
 
-*(Pending — the interview is under way.)*
+| # | Question | Answer | What it decides |
+|---|---|---|---|
+| 1 | Which species? | **All nine**: rabbit, deer (doe and stag), fox, raccoon, skunk, boar, moose (cow and bull), wolf, bear. | Nine species, eleven drawn forms. Doe/stag and cow/bull are one species each with a sex (see decisions). |
+| 2 | Hog against boar | **Both, different places.** | The boar is the woodland species on the meadow; the midden hog stays the ruined city's scavenger, and its CC0 art stays the proof that an animal draws on the runner. |
+| 3 | Size | **Life size against a colonist.** | Real shoulder heights (§4), set per species on the catalogue row from a probe shot, never from the pack's prefab scale. |
+| 4 | Names | **Flavoured, like the hog**, proposed by us and corrected by the owner in the wiki before anything ships. | The proposal is in §8. Every name goes through `proper-nouns.csv` and `icon-keys.csv`; none may be a reference-game animal name. |
+| 5 | Temperament | **Five rungs, visible.** | Timid, Skittish, Defensive, Territorial, Predator — each a behaviour built from `SpeciesDef` fields, and the rung **written in words** on the inspect pane and in the Almanac. |
+| 6 | Man-eaters | **Only when starving and the colonist is alone, and a world setting can switch it off.** | Predators take animals and avoid people otherwise. A predator stalking a colonist raises a **pinned alert** that jumps to it. |
+| 7 | After a down | **It can kill.** | **A deliberate exception to design 33's "an unordered fight ends in downs, never deaths"**, for predators alone. Recorded in design 33 when built; the only thing in the game that kills without an order. |
+| 8 | Predation | **Yes, and the kill is left.** | Predators get a hunger clock (the first animal need); a hungry predator chases prey smaller than itself, eats, and leaves a corpse that K3's hunting can later salvage. |
+| 9 | Signatures | **All four**: skunk spray, the rut, crop grazing, raccoon store raids. | Spray is a mood thought and a smell for about a day, no damage; stag and bull moose are *In rut* in autumn; rabbits and deer eat growing crops at dawn and dusk; a raccoon walks into a stockpile or shelf at night and leaves with food. |
+| 10 | Hours | **Night, day, dawn-and-dusk, and winter sleep.** | `nocturnal` becomes an activity pattern; the bear leaves sight for the winter. |
+| 11 | The kill window | **A rescue window.** | A downed colonist under a predator loses health steadily for about one game hour (~40 s at speed 1) and dies at its end unless it is driven off. The alert names her. |
+| 12 | Heeding a warning | **Back off and path round.** | An undrafted colonist stops, backs away and routes round a warning animal, and her activity line says so; a drafted one does what she is ordered. |
+| 13 | Population | **Scale with the board: Small 32, Standard 48, Large 64, Huge 80.** | The 24 ceiling becomes per board. The wildlife layer's cost is measured in the work, target **under 0.05 ms a tick**. |
+| 14 | Far animals | **The cheap far form.** | Past the 64-figure ceiling an animal is a frozen baked pose, one instanced call per species, as colonists are. Closes design 29 §8a. |
+| 15 | Hunting | **Stats now, hunting in K3.** | Each species carries meat and hide yields as data; K3 reads them. A drafted colonist can still kill an animal and the corpse stays. |
+| 16 | Delivery | **Three PRs, a playtest each.** | **FA1** art and roster (spawn and wander, life size, named); **FA2** temperament (rungs, warnings, herds, predators, the kill window, the far form); **FA3** signatures (spray, rut, grazing, raids, hours). Each is played before the next starts. |
+
+## 7. Decisions made without asking, and why
+
+Routine calls the answers imply; any can be overturned at the plan.
+
+- **Sex is derived, not rolled into a new saved field.** Doe/stag and cow/bull come from the pawn's
+  own roll seed, like a colonist's appearance, so the rut (which moves behaviour and therefore the
+  hash) reads a deterministic value that is already saved. Colourway is dealt the same way.
+- **The pack is imported to `Assets/Synty/SimpleForestAnimal/`** and moved there in the import run,
+  with a guard that fails if `Assets/SimpleForestAnimal/` exists. Nothing under it is committed; a
+  test that needs one of these animals asks whether *that kind's* row resolved.
+- **The missing clips are computed**: the warning (stamp, rear, tail up), the lunge, the charge's
+  stop-short, lying down to sleep and hibernate. The pack's **Eat** clip is looped and driven while
+  grazing — the first per-job clip an animal has.
+- **Temperament numbers start from `a-20`'s table** (converted from the reference, marked where ours)
+  and are tuned in play, not argued in advance. Rage lasts 10,000–18,000 ticks; herds answer within
+  12 cells.
+- **Kinds are appended after the butcher's** if PR #248 merges first (kind 10 on), and the three
+  hand-kept kind tables move together.
+- **Stale lines found on the way are fixed in FA1**: the frog's "kind 4" comment, design 30's
+  density and "nothing flees", design 29's hog pace, and `WildlifeSystem`'s "no death" comment.
+
+## 8. Proposed names — for the owner to correct
+
+Flavoured as the hog, rat and frog are. None is a reference-game animal name.
+
+| Species | Proposed | Forms |
+|---|---|---|
+| Rabbit | **Verge rabbit** | — |
+| Deer | **Hedgerow deer** | doe, stag |
+| Fox | **Ash fox** | — |
+| Raccoon | **Gutter raccoon** | — |
+| Skunk | **Rubble skunk** | — |
+| Boar | **Thicket boar** | — |
+| Moose | **Mire moose** | cow, bull |
+| Wolf | **Ridge wolf** | — |
+| Bear | **Quarry bear** | — |
+
+## 9. Next
+
+Phase 3, the plan: `docs/plans/forest-animals.md` and a design document for the temperament model,
+written and put to the owner before any code.
