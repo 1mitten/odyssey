@@ -2946,6 +2946,22 @@ only the blow that *crosses* the line kills. Found by review, not by a test — 
   deferred phase (`FallTests.AFatalFallInsideTheDeferredPhaseIsGoneTheSameTick`), and a removal
   that must not outlive its tick uses `DeferThisTick`.
 
+## A line indented into a guard it is not inside (2026-09-26)
+
+Ranged combat added the weapon's quality to the snapshot as a second line under the weapon's own
+`if (weapon != null && !weapon.Despawned)`, indented to match and with no braces — so it ran for
+every pawn with a non-zero `EquippedItem`, and `ColonyItems.Get` returns null for a despawned thing.
+A hand pointing at a thing that is gone threw out of the publish, which is the snapshot for every
+pawn on the board. Nothing reached it in play yet: every path that empties a hand clears
+`EquippedItem` first. Found by a code survey for the colonist kit (design 54), not by a report.
+
+- **The pattern:** *a guard with a second way in*, in its most literal form — the second statement
+  was never inside the guard at all.
+- **What made it invisible:** every test that published a weapon published a live one; the one that
+  set a stale id (`TheCombatStateSurvivesTheRoundTrip`, `EquippedItem = 77`) never ticked after.
+- **The check:** a guarded publish of more than one row gets braces, and a test drives the stale
+  case through a tick. `CombatContractTests.AHandHoldingNothingThatExistsPublishesNoWeapon`, with
+  the live weapon as its control.
 ## A derived value written on an interval, and not on a load (2026-09-25)
 
 **Symptom.** A save taken mid-gunfight on a cloudy day resumed identically for 45 ticks and parted
