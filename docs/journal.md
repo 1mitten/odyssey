@@ -14550,3 +14550,37 @@ around"* — a bush had a picture on its page and a placeholder square when clic
 paths moved into one table, `IconGlyphs`, keyed by registry key, and `IconBadge` — every icon slot
 in the game — falls back to it where there is no pixel art. The Almanac now draws an `IconBadge`
 like everything else, so there is one place to change a picture (design 64 §2a).
+
+## 2026-09-26 — The storyteller merged with `main` and reviewed: a silent Trent, and a second colony that never heard its raids
+
+**The merge.** `main` had taken design 59 for world generation while the storyteller was on its
+branch, and the open branches between them hold 60 to 67, so the storyteller is **design 68** now
+(its second renumbering; the two lines above that say "so it is design 59" are left as they were
+written). The World screen landed between New game and the setup page, so `NewGameChoice` carries
+both the site and the story, and one PlayMode test — the Story block's fit at 150 % — was still
+choosing New game and measuring a page that was never shown. Every other New game test on `main`
+had been given its `NextFromWorld`; this one was written on the branch.
+
+**Two reviews, one per side, found five faults.**
+
+- **Trent went silent for good on Peaceful** (design 68 §13h). His drought rule forced every roll
+  after fourteen days without a big threat into ThreatBig and never asked whether a big threat
+  could fall; with big threats off it was thrown away, so from day 22 there were no drops and no
+  good events at all. The same trap caught a forced raid the world refused (the refire gate, a full
+  board): the roll was spent. The harness passed because its check counted good events over the
+  whole run, and the first 22 days had some. The new test looks at the last two seasons and fails
+  on the old pacer.
+- **A second colony's first raids did not pause the game.** `BulletinModel` is the shell's, and it
+  kept the last colony's highest id; ids are the ledger's and restart at one, so every early
+  bulletin in the next colony was "already seen". Older than this branch, but this branch hung the
+  pause on it.
+- **A difficulty picked on an old save looked refused and then came true.** The simulation takes a
+  difficulty with no storyteller but publishes none, so the row snapped back to Normal, and the pick
+  was applied silently the moment a storyteller was chosen. The difficulty now waits for one.
+- **A loss on the tick a day turned counted that day as quiet** (`<` for `<=`), and **the intent
+  handlers read a tick the context learns only on the first system tick** — harmless in the game
+  because a session always ticks once first, wrong for any world started at a later hour whose
+  first intent is the storyteller. They read the world they are bound to.
+
+Every harness number is unchanged: Trent is one generator, and with big threats allowed and an
+always-yes oracle the reordered draws move nothing.

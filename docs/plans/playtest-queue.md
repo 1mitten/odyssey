@@ -25,7 +25,10 @@ the next session learns to ignore.
 
 - **The storyteller screens: can you pick a storyteller and a difficulty at a glance, and read the
   gauge?** (`claude/sweet-cerf-wzfxgs`, design 68 §12.) New game, then Settings > Gameplay in the
-  colony, then the debug menu's Events tab > *Tension preview*.
+  colony, then the debug menu's Events tab > *Tension preview*. New game opens on the World
+  screen now; press Next to reach the Story block.
+  - Look at the three portraits (the owner's art, 2026-09-26). Wrong: a face cropped so it
+    reads as nobody at 64 px, or one tile still showing the drawn line emblem.
   - Pick between the three cards. Wrong: you read every blurb to tell them apart, so the strips
     and emblems are not doing their job.
   - Pick Custom on the ladder. Wrong: anything on the page jumps rather than lighting in place.
@@ -43,6 +46,8 @@ the next session learns to ignore.
   - Jacob. Wrong: raids arrive without a rhythm you could learn by the second season.
   - Trent. Wrong: his season feels like Jacob's (his variance is three times as large).
   - Kano. Wrong: more than one or two raids a season, or none at all after his 15-day grace.
+  - Start a colony, quit to the menu, start a second, then fire a raid at speed 3. Wrong: no
+    horn, no Events row, or the clock keeps running.
   - Let a colonist go down or die in a raid, then hover the gauge. Wrong: the band does not drop,
     or the tooltip names no cause.
   - Arm the colony well and watch the next Auto raid. Wrong: its size does not grow with the

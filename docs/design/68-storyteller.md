@@ -433,3 +433,30 @@ Kano's single raid is his blurb: one hard test. The soak asserts drops for all t
 - `BulletinView.Category`, so *Pause on big threats* covers every big threat rather than raids alone (there are no others yet).
 - ST7, the joiner, which makes population intent live.
 - A season played on each storyteller.
+
+### 13h. The review (2026-09-26, on the merge with `main`)
+
+- **The drought forces a big threat only where one may fall.** `StepBag` asked the drought before
+  asking `bigAllowed`, so with big threats off (Peaceful, or Custom) every roll after the drought
+  became ThreatBig and was discarded, and the bag was silent for the rest of the colony. A forced
+  threat the world refuses no longer spends the roll either: the drawn category is tried instead.
+  The category and the budget are drawn on **every** roll, so how many draws a roll takes never
+  depends on the oracle. `TheGoodEventsOutliveADrought` fails on the old pacer.
+- **A plan saved mid on-phase is tested on the pure pacer** (`APlanSavedMidPhaseFiresTheSame`); the
+  colony-level save test saves inside the grace, where every slot is empty.
+- **The intents read the world's clock** (`Storyteller.Bind`), not the context's, which learns the
+  tick only on the first system tick (`TheFirstIntentReadsTheWorldsClock`).
+- **A loss on the tick the day turns is that day's loss** (`<=`); the storyteller runs before
+  combat in the same tick.
+- **The difficulty waits for a storyteller** (`StoryDirector.DifficultyLive`): on an old save the
+  row is greyed until one is chosen.
+- **The Events panel forgets the last colony** (`BulletinModel.Reset`), or its high-water id hid a
+  second colony's first raids and the pause with them.
+- **Left as it is, for the owner:** Custom's threat scale reaches 0 %, and a raid at 0 % is still
+  one bandit (`AutoSize` clamps to 1). If 0 % should mean no raids, `SizeFor` returns 0 and the
+  worker refuses; otherwise the ladder's floor should be 10 %.
+
+**The portraits** (2026-09-26): the owner's illustrated cards, cut to three 256 px heads under
+`Resources/Odyssey/Storytellers/` and named by their `ui.storyteller.portrait.*` keys, fill the
+64 px tile the card was built with. A missing file leaves the drawn emblem. The full cards and the
+heads are kept in `art-source/storytellers/`.
