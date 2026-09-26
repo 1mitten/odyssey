@@ -1072,12 +1072,12 @@ namespace Odyssey.Presentation.Ui
             bool live = story.HasColony;
             _storyNote.style.display = live ? DisplayStyle.None : DisplayStyle.Flex;
             _storytellerRow.SetLive(live, null);
-            _difficultyRow.SetLive(live, null);
+            _difficultyRow.SetLive(story.DifficultyLive, null);
 
             LightRung(_storytellerRungs, choice.Teller);
             _difficultySelect.SetValueWithoutNotify(StoryCatalogue.RungAt(choice.Rung).Label);
 
-            _customRows.style.display = live && choice.IsCustom ? DisplayStyle.Flex : DisplayStyle.None;
+            _customRows.style.display = story.DifficultyLive && choice.IsCustom ? DisplayStyle.Flex : DisplayStyle.None;
             _customBigThreats.Control.EnableInClassList("sw__switch--on", choice.BigThreats);
             _customBigThreats.Word.text = choice.BigThreats ? "On" : "Off";
             SetCustomFader(StoryCatalogue.ThreatScaleKey, choice.ThreatPercent,

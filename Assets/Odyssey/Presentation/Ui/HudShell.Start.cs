@@ -1074,6 +1074,11 @@ namespace Odyssey.Presentation.Ui
             // against the last one's and announces a level she arrived with.
             _toasts.Clear();
 
+            // So do the Events panel's rows: bulletin ids are the ledger's and restart at one in
+            // every colony, so the last colony's high-water mark hid the next one's first raids
+            // (and with them the pause on big threats).
+            _bulletins.Reset();
+
             // A menu raised in the last colony names its colonists and things (design 33 §7a).
             CloseContextMenu();
 

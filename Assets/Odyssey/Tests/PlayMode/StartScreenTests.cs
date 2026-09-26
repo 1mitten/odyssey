@@ -814,7 +814,11 @@ namespace Odyssey.Tests.PlayMode
                 yield return Settle();
                 var doc = boot.GetComponent<UIDocument>();
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                // New game opens on the World screen now (design 59 §9); the Story block is on
+                // the setup page after it, which is hidden and never laid out until Next.
+                shell.Menu.NextFromWorld();
                 yield return Settle();
+                Assert.That(shell.Menu.Screen, Is.EqualTo(MenuScreen.NewGame), "the setup page is not the one showing");
 
                 foreach (int scale in new[] { 100, 150 })
                 {

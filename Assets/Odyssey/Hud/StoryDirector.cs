@@ -86,11 +86,20 @@ namespace Odyssey.Hud
         }
 
         public bool ChooseStoryteller(int teller) => HasColony && Press(Choice.WithTeller(teller));
-        public bool ChooseRung(int rung) => HasColony && Press(Choice.WithRung(rung));
-        public bool SetThreat(int percent) => HasColony && Press(Choice.WithThreat(percent));
-        public bool SetBigThreats(bool on) => HasColony && Press(Choice.WithBigThreats(on));
-        public bool SetAdaptation(int percent) => HasColony && Press(Choice.WithAdaptation(percent));
-        public bool SetGrace(int hundredths) => HasColony && Press(Choice.WithGrace(hundredths));
+
+        /// <summary>
+        /// The difficulty is live only once a storyteller is chosen. The simulation takes it
+        /// either way but publishes nothing without one, so on an old save a pick of Hard snapped
+        /// back to Normal as if refused, and then came true, unannounced, the moment a storyteller
+        /// was chosen (review, 2026-09-26).
+        /// </summary>
+        public bool DifficultyLive => HasColony && Choice.HasTeller;
+
+        public bool ChooseRung(int rung) => DifficultyLive && Press(Choice.WithRung(rung));
+        public bool SetThreat(int percent) => DifficultyLive && Press(Choice.WithThreat(percent));
+        public bool SetBigThreats(bool on) => DifficultyLive && Press(Choice.WithBigThreats(on));
+        public bool SetAdaptation(int percent) => DifficultyLive && Press(Choice.WithAdaptation(percent));
+        public bool SetGrace(int hundredths) => DifficultyLive && Press(Choice.WithGrace(hundredths));
 
         /// <summary>
         /// Read the published storyteller: the choice, unless a press is still ahead of it, and the

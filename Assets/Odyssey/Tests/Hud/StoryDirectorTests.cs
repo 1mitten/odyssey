@@ -103,6 +103,27 @@ namespace Odyssey.Tests.Hud
             Assert.That(sent, Is.Empty);
         }
 
+        /// <summary>
+        /// An old save has no storyteller, and the simulation publishes no difficulty without one:
+        /// a rung picked then snapped back to Normal as if refused and came true, unannounced, when
+        /// a storyteller was chosen. The difficulty waits for a storyteller instead.
+        /// </summary>
+        [Test]
+        public void WithNoStorytellerTheDifficultyWaits()
+        {
+            var (story, sent) = Open();
+            story.Sync(ViewOf(StoryChoice.Nobody));
+            Assert.That(story.DifficultyLive, Is.False);
+            Assert.That(story.ChooseRung(4), Is.False);
+            Assert.That(story.SetThreat(250), Is.False);
+            Assert.That(sent, Is.Empty, "a difficulty was sent to a colony with no storyteller");
+
+            Assert.That(story.ChooseStoryteller(StorytellerHandle.Jacob), Is.True);
+            Assert.That(sent.Count, Is.EqualTo(1), "choosing a storyteller sent a difficulty nobody picked");
+            Assert.That(story.DifficultyLive, Is.True);
+            Assert.That(story.ChooseRung(4), Is.True);
+        }
+
         [Test]
         public void WithNoColonyAPressDoesNothing()
         {

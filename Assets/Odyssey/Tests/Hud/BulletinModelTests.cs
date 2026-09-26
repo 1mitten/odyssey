@@ -45,6 +45,31 @@ namespace Odyssey.Tests.Hud
             Assert.That(model.Arrived, Is.Zero, "a row that is merely still there is not news");
         }
 
+        /// <summary>
+        /// A second colony's ids start at one again. Without the reset its first events were all
+        /// "already seen": no row, no chime, and a raid that should pause the game did not.
+        /// </summary>
+        [Test]
+        public void ANewColonyStartsItsIdsAgain()
+        {
+            var model = new BulletinModel();
+            model.Refresh(Frame());
+            model.Refresh(Frame((1, 100), (2, 200), (3, 300)));
+            Assert.That(model.Rows.Count, Is.EqualTo(3));
+
+            model.Reset();
+            Assert.That(model.Rows, Is.Empty, "the last colony's rows stayed on the panel");
+            model.Refresh(Frame());
+            model.Refresh(Frame((1, 50)));
+            Assert.That(model.Rows.Count, Is.EqualTo(1), "the new colony's first event was taken as already seen");
+            Assert.That(model.Arrived, Is.EqualTo(1));
+
+            // A loaded tail after a reset is history, not news.
+            model.Reset();
+            model.Refresh(Frame((1, 50), (2, 60), (3, 70), (4, 80)));
+            Assert.That(model.Arrived, Is.Zero, "a loaded colony's history chimed as it arrived");
+        }
+
         [Test]
         public void TheRowSaysWhatWhenAndWhere()
         {

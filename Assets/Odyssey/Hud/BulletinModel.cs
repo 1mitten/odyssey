@@ -148,6 +148,25 @@ namespace Odyssey.Hud
         public bool IsDismissed(int id) => _dismissed.Contains(id);
 
         /// <summary>
+        /// Forget the last colony: its rows, what was dismissed and the highest id seen. Ids are
+        /// the ledger's and count from one in every colony, so without this a second colony's
+        /// first bulletins were all "already seen" — no row, no horn, and no pause on its first
+        /// raids — and a save whose tail ran past the last colony's arrived whole, chiming. The
+        /// next <see cref="Refresh"/> primes again, so a loaded tail does not chime either.
+        /// </summary>
+        public void Reset()
+        {
+            Rows.Clear();
+            _dismissed.Clear();
+            _highestSeen = 0;
+            _primed = false;
+            Arrived = 0;
+            ArrivedFavourability = 0;
+            ArrivedRaid = false;
+            Version++;
+        }
+
+        /// <summary>
         /// The id every presentation-side notice carries. <b>Negative, so it can never collide
         /// with a ledger id</b>, which is how a row the simulation never raised can live on a
         /// panel whose whole edge rule is "an id above the highest seen is new".
