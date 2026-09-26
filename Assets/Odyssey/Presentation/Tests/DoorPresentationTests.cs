@@ -187,6 +187,41 @@ namespace Odyssey.Tests.Presentation
             Assert.That(module.Parts.Length, Is.GreaterThan(0), "fallback must contain at least one part");
         }
 
+        /// <summary>
+        /// The door list reads the chunks an edit touched, not the board (design 62 §2c, DM1). It
+        /// used to rescan every cell whenever the model's one version moved — any edit anywhere.
+        /// A 60 x 60 x 3 board is 27 chunks; a door raised on layer 1 re-stamps its own chunk and
+        /// the one beneath it (<c>RefreshDirty</c> re-meshes a column downwards), so two.
+        /// </summary>
+        [Test]
+        public void ADoorRaisedRescansItsChunkNotTheBoard()
+        {
+            var world = new RenderTestWorld(60, 60, 3)
+                .Edifice(3, 3, 1, CoreContent.EdificeDoor, blocking: false)
+                .Edifice(40, 40, 1, CoreContent.EdificeDoor, blocking: false)
+                .Publish();
+            using var director = new DoorDirector(world.Model, null, null, 0) { SubmitToGpu = false };
+
+            Assert.That(director.ActiveDoorCount, Is.EqualTo(2));
+            Assert.That(director.DoorChunksRescanned, Is.EqualTo(world.Chunks.Count),
+                "the first list is a scan of the whole board");
+
+            world.Edifice(41, 40, 1, CoreContent.EdificeDoor, blocking: false);
+            world.Chunks.MarkDirty(41, 40, 1);
+            world.PublishEdits();
+
+            Assert.That(director.ActiveDoorCount, Is.EqualTo(3), "the new door was missed");
+            Assert.That(director.DoorChunksRescanned, Is.InRange(1, 2),
+                "an edit in one chunk rescanned more of the board than the chunk and the one below it");
+
+            // And a door taken away leaves the list: its chunk drops what it held before the rescan.
+            world.Grid.Edifice[world.Index(3, 3, 1)] = -1;
+            world.Chunks.MarkDirty(3, 3, 1);
+            world.PublishEdits();
+
+            Assert.That(director.ActiveDoorCount, Is.EqualTo(2), "a door that came down stayed in the list");
+        }
+
 #if UNITY_EDITOR
         [Test]
         public void DoorFrameDoesNotUseBrickMaterial()

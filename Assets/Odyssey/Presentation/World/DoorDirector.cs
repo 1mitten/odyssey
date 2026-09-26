@@ -41,7 +41,19 @@ namespace Odyssey.Presentation.World
         readonly GameObject _root;
 
         readonly Dictionary<int, DoorState> _states = new Dictionary<int, DoorState>();
-        readonly List<int> _doorCells = new List<int>();
+
+        /// <summary>
+        /// Every door on the board, kept chunk by chunk (design 62 §2c, DM1). It was one list
+        /// rebuilt by a scan of every cell whenever <see cref="WorldRenderModel.Version"/> moved —
+        /// which any edit anywhere does, so one mined cell on a 32-layer Huge board read 1.8
+        /// million cells. Now the board-wide version is only the cheap "has anything changed?",
+        /// and the chunks whose own <see cref="WorldRenderModel.ChunkVersion"/> moved are the only
+        /// ones read again.
+        /// </summary>
+        readonly Odyssey.Hud.ChunkedCellList _doors;
+        readonly Func<int, int> _chunkVersionOf;
+        readonly Action<int, List<int>> _scanChunk;
+        IReadOnlyList<int> _doorCells => _doors.Cells;
         int _doorListVersion = -1;
 
         Matrix4x4[] _placements = new Matrix4x4[16];
@@ -62,6 +74,12 @@ namespace Odyssey.Presentation.World
             _leafModule = _library.Resolve(ModuleIds.DoorLeaf, ModuleShape.WallPanel);
             _ownsMaterials = materials == null;
             _materials = materials ?? new MaterialCache();
+
+            // Both delegates made once, here: EnsureDoorList runs on a version move and must not
+            // allocate on each one.
+            _doors = new Odyssey.Hud.ChunkedCellList(model.Chunks.Count);
+            _chunkVersionOf = model.ChunkVersion;
+            _scanChunk = ScanChunkForDoors;
 
             _root = new GameObject("Door Director");
             _root.transform.SetParent(parent, worldPositionStays: false);
@@ -228,15 +246,21 @@ namespace Odyssey.Presentation.World
         {
             if (_doorListVersion == _model.Version) return;
             _doorListVersion = _model.Version;
-            _doorCells.Clear();
+            _doors.Update(_chunkVersionOf, _scanChunk);
+        }
 
-            int count = _model.Size.CellCount;
-            for (int i = 0; i < count; i++)
+        /// <summary>How many chunks the last door-list update read again. For a test that says an
+        /// edit rescans the chunks it touched rather than the board.</summary>
+        public int DoorChunksRescanned => _doors.ChunksScannedLastUpdate;
+
+        void ScanChunkForDoors(int chunk, List<int> into)
+        {
+            _model.ChunkBounds(chunk, out int x0, out int z0, out int y, out int x1, out int z1);
+            for (int z = z0; z < z1; z++)
             {
-                if (_model.EdificeDef(i) == CoreContent.EdificeDoor)
-                {
-                    _doorCells.Add(i);
-                }
+                int row = _model.Index(0, z, y);
+                for (int x = x0; x < x1; x++)
+                    if (_model.EdificeDef(row + x) == CoreContent.EdificeDoor) into.Add(row + x);
             }
         }
 
