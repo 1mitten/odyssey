@@ -1259,6 +1259,9 @@ namespace Odyssey.Presentation.Ui
             _menu.ShowSaves(rows);
         }
 
+        /// <summary>Where the storyteller's presses go (design 59 §7): the open world's queue.</summary>
+        void SubmitStoryIntent(Intent intent) => _boot?.World?.Intents.Submit(intent);
+
         /// <summary>
         /// A new colony, on the seed the player was shown (U39).
         ///
@@ -1271,8 +1274,6 @@ namespace Odyssey.Presentation.Ui
         /// type and scenario — which is what the plan's U39 row asks for: the seed is the only knob
         /// exposed, so the rest stay tunable later without new interface.</para>
         /// </summary>
-        void SubmitStoryIntent(Intent intent) => _boot?.World?.Intents.Submit(intent);
-
         void OnStartNewGame(NewGameChoice choice)
         {
             // Not built here: the menu fades to black first, and the build is asked for once the
