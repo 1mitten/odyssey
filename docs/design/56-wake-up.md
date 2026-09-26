@@ -234,6 +234,17 @@ survived stripping**. The number goes here with its machine, resolution and date
 3. **A player build and the hitch tour** at 4K: the mid-wake picture and the "available True" line.
 4. **The owner's first look** — the playtest rows.
 
+**2026-09-26.** Compiled and played in the editor — owner: *"perfect"*. The Unity tier's one
+failure was `EveryKeptShaderAlsoHasAnInstancingKeepAliveMaterial`: `Odyssey/WakeBlur` went into
+`ShaderInclusion.Required` without the keep-alive material every required shader carries, so
+`InstancingKeepAlive.Apply` generated `Odyssey_WakeBlur.mat`.
+
+The four `WakeUpTests` then failed on the runner, each with the passage still in `Closing`:
+they waited 600 *frames* for a passage timed in real *seconds*, and a batch run with only the menu
+on screen and no frame cap is through 600 frames before a 0.2 s close has run. They wait on a
+fifteen-second real-time deadline now (`WakeUpTests.PassageSeconds`) and pass. The code was right;
+the test counted the wrong unit — the same trap as "a frame is not a tick" in `docs/lessons.md`.
+
 ## 12. What not to undo by tidying
 
 - **Two dark frames**, and the build **requested** late but **handed over** in its own frame (§3).
