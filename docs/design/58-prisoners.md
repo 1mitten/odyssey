@@ -501,3 +501,60 @@ should re-bake.
 - **`Kind` is never rewritten.** See §4a.
 - **The fast tier compiles neither Presentation nor Editor.** The picker, the bed toggle, the
   prisoner tab and the outfit each need a Unity run before they are called done.
+
+## 15. As built (P1–P12, 2026-09-26)
+
+Every unit is in, tests first, on the fast tier. **No golden moved after P3's bake**: custody,
+bed purposes, the prison section and job handles 28–35 are all hashed only while set, and the new
+surrender roll draws nothing unless a free prison bed exists, which no golden has.
+
+### 15a. Where the build departs from §1–§14, and why
+
+| Designed | Built | Why |
+|---|---|---|
+| A **Prisoner tab** with mode chips (§11b) | The prisoner's facts are **rows on her pane** — mode, willing, joins in, slowed by, shackled, escape risk, because — and **pressing the mode row moves it on**: Hold → Recruit → Release → Exile → Hold | A prisoner's pane is the bandit's bare shape with no tab box. The rows reuse the tile readout's grid and the bed-purpose row's pick affordance, so there is no new layout to measure. Chips are a later look if rows read badly |
+| *Ransom* drawn dim among the chips | Never offered by the cycle; refused by the intent | Nothing to draw it on without chips |
+| The ETA **names its warden** | It does not | The warden is not published; `Recruitment.BestWarden` is the arithmetic and the pane shows its result |
+| **Arrest** from a right-click on a standing colonist with a drafted colonist selected (§10, §11c) | **A command on the colonist's own pane**; the nearest colonist on her feet who can reach her is sent (`OrderArrest` with `A = 0`) | A right-click that touches a colonist is a **move**, and three tests pin it (design 33 §2f: the hit box covers the cell behind her, and the review found every order just behind the squad doing nothing). A menu there would take that away |
+| `ui.alert.prisonerescape` **cycles** every escapee on click | **One row per escapee**, Danger, each jumping to her | The alert panel's per-pawn rows already do it; a cycling row is a new control |
+| A surrendering raider **leaves the band** (§10) | She **stays on the band's roll**, counted out of the fight | The same rule P6 set for capture (`RaidSystem.InTheFight`): a band that lost her to a cell is a band that lost her, and the withdrawal arithmetic is unchanged |
+| `LeaveTree` for Released and Exiled | `PawnCustody.Released` walks in **`TraverseMode.Colonist`** (`Allegiance.ModeOf`) | The warden has opened the door; a released bandit in her own mode could not leave the cell at all |
+| Release and Exile | **The same walk** for anybody but an arrested colonist, who on Release goes back to work with *Was arrested* | The difference is goodwill, and there are no factions yet (M7) |
+| Escape risk in ‰ a day | **Parts per million a day**, shown as *"2.1% a day"* | The √n divisor and the ×0.7 lose too much in per-mille integers |
+| — | **`ToMyCellThinkNode`**, second in the held tree: a prisoner on her feet who owns a cell bed and stands outside that cell walks there in a colonist's mode for the one job (`Job_GoToCell`), and is dressed on arrival | What makes surrender and a quiet arrest need no carry. It also returns anybody who strayed |
+| — | **`FightBackThinkNode`**, second in the escape tree: an escapee strikes her arrester while he is beside her and the grudge lasts (2,500 ticks) | §6's "retaliate against the arrester", as a node |
+| — | **Debug → Spawn → Break out nearest prisoner** (`DebugImprison` B = 2) | Escape is a 2 %-a-day roll; nobody could see it otherwise |
+| The chat giver | Named **`RecruitWorkGiver`** ("Recruit"), and the escort's **`ReleaseWorkGiver`** | Givers of one work type are scanned by type name; a hungry prisoner (FeedPrisoner) must come first |
+
+### 15b. The one-owner table, as built
+
+| Question | Owner |
+|---|---|
+| Which bed may this pawn use or own | `BedRule` (contracts) / `BedRules` (Sim) |
+| Whose side is she on, how does she walk | `Allegiance` |
+| Taking her into custody | `CustodyRules.Take` (via `JobSystem.TakeIntoCustody`) |
+| How fast she is talked round | `Recruitment.Factors` — the chat and the pane |
+| How likely she is to break out | `EscapeRisk.Odds` — the hourly roll and the pane; `EscapeTests.ThePublishedRiskIsExactlyWhatIsRolled` with a doubled-threshold negative control |
+| Letting her go | `PrisonRelease.Let` |
+| Leaving the board | `PrisonExit.Leave` (escape and release both) |
+| Whether a raider yields | `Surrender.Consider`, called by `CombatSystem.Hurt`, the one owner of damage |
+| Whether an arrest is resisted | `Arrest.Contact` |
+
+### 15d. A fault on `main` the escape found
+
+A broken cell door did not open the cell. `EnclosureGrid.FillLayer` cut a flood short at the room
+limit and left its queued frontier marked visited, and the next region's flood treated those cells
+as walls. The fill now flags the limit and carries on (`docs/bug-patterns.md`, 2026-09-26). No golden
+moved. It is temperature's code, and every room on `main` is judged by it.
+
+### 15c. Still owed
+
+- **Unity.** The fast tier compiles neither Presentation nor Editor: the pane's mode row, the
+  Arrest button, the bed-purpose row and the prison jumpsuit are unproven until both Unity tiers
+  have compiled and run them.
+- **The Arrest button is enabled without a free prison bed** and the intent is then refused
+  silently. The Hud cannot see beds; a published "a prison bed is free" scalar is the fix.
+- **How long a door holds an unarmed escapee** is the building attack's arithmetic, unmeasured at
+  play; `EscapeTests.AnEscapeeBreaksTheDoorRunsAndIsGone` proves only that it ends.
+- **Every number is a proposal**: the recruitment gain, the escape factors, surrender's quarter,
+  arrest's 5–60 %. The owner confirms them at the first play.

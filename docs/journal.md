@@ -13906,3 +13906,37 @@ numbers are marked low confidence and ours are proposals for the first play.
 **One refinement over the design pass:** it would have spent the pawn hash word's last two free
 bits on `Joined` and `Dressed`. Those are hashed through the prison section instead, and bits 30–31
 stay free for whatever needs a per-pawn flag next.
+
+## 2026-09-26 — Prisoners built, P1–P12: what the tests pinned that the design had not
+
+The plan was approved and every unit went in the same day, tests first, on the fast tier. Four
+things are worth keeping.
+
+**The design's arrest gesture would have broken a fixed decision.** Design 58 put Arrest on a
+right-click over a standing colonist with a drafted colonist selected. Three Hud tests failed on
+the first build, and they were right to: a colonist's hit box covers the cell behind her at the
+play camera, and design 33's review found every drafted order just behind the squad doing nothing
+until a click that touched a pawn was made a move. A menu there would have taken the move away for
+the rarest order in the game. Arrest is a button on the target's own pane instead, and the
+simulation sends the nearest colonist who can reach her (`OrderArrest`, `A = 0`). **A test that
+fails on a new feature is sometimes the decision the feature forgot**, and the answer is to move
+the feature.
+
+**Givers of one work type are scanned by type name, so a name is a priority.** The chat giver sorted
+ahead of feeding, and a hungry prisoner would have waited while a warden talked to her cellmate.
+It is `RecruitWorkGiver` now, and the escort's is `ReleaseWorkGiver`, and the scan-order test's
+comment says why: renaming either back is a behaviour change dressed as a tidy.
+
+**A released bandit could not have left her cell.** Custody decides the traverse mode, and a
+Released pawn fell through to her kind's, which is a bandit's, which opens no door. The warden has
+opened it, so a Released pawn walks as a colonist does; and a surrendered raider or a quiet
+arrestee walks herself into the cell in a colonist's mode for that one job, which is the whole
+reason surrender needs no carry.
+
+**The risk shown is the risk rolled, proven rather than asserted.** `EscapeTests` rebuilds the
+hourly threshold from the published aspect alone and checks it against 20,000 hourly rolls, with a
+doubled threshold as the negative control that must disagree. Parts per million rather than per
+mille, because the √n divisor and the ×0.7 lose too much in thousandths.
+
+No golden moved after P3. Unity has compiled none of it: the pane's rows, the Arrest button and the
+jumpsuit are Presentation code the fast tier never sees.

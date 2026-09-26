@@ -126,6 +126,15 @@ plan.**
 - A resisting arrest ends in downs, never deaths.
 - Both thoughts land.
 
+## As built (2026-09-26)
+
+All twelve units are in (design 58 §15). Of the bullets above, two are **not** covered by a test
+yet, and say so rather than being quietly dropped:
+
+- *A resisting arrest ends in downs, never deaths* — the escapee is hostile and the fight's own rule
+  applies; no arrest-specific test asserts it.
+- *Ransom is refused `NotBuilt`* — it is refused `NotPermitted`; there is no `NotBuilt` rejection.
+
 ## Merge order
 
 In unit order:
