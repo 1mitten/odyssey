@@ -2739,3 +2739,21 @@ session's file hit a sharing violation with the leaked session's). **Report from
 coroutine and assert in the outer method, and give a file that builds worlds a `[TearDown]` that
 destroys them by name.** The symptom is a failure in a *different* test that only appears once the
 new file is in the run.
+
+## A header change breaks every test that "relabels" a save (2026-09-26)
+
+Two ranged-combat tests made a format-9 file by writing `9` over the version field of a save the
+current build had written, on the reasoning that formats 9 and 10 share every layout. Format 11
+(design 57) added the planet site to the **header**, so the relabelled file carried a byte no older
+build wrote, the reader took it for the section count, and both tests failed with a negative length
+— nothing to do with ranged combat. **Make an older save with `SaveFixtures.AsFormat(bytes,
+version)`**, which knows what each version's header lacks, and give it the next header change.
+`grep "CopyTo(old, 8)"` finds any test still poking the version by hand.
+
+## The first arm of a memory measurement pays for the process (2026-09-26)
+
+A board-memory probe read a 24-layer board as **smaller** than a 16-layer one (8.8 MiB against
+18.9), because the first arm it built also paid for loading the content, the Defs' statics and the
+JIT. Two warm-up builds and each arm taken twice in alternating order gave 18.8 / 27.8 MiB, stable
+to 1 %. **Warm up before the first measured arm, and repeat in the reverse order**; an arm order
+that changes the answer is the tell.

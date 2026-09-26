@@ -1,6 +1,6 @@
 # 57 — World generation: a planet of sites that drive the colony board
 
-**Status: approved 2026-09-26 (owner: *"happy to go"*, then *"ok go"*); Claude Design's specification received the same day (§9a). Being built.** Branch `claude/sharp-euler-a6xtci`.
+**Status: approved 2026-09-26 (owner: *"happy to go"*, then *"ok go"*); Claude Design's specification received the same day (§9a). WG1–WG3 built 2026-09-26, not yet played; the Presentation half (the World page) is uncompiled until the owner's Unity tiers run.** Branch `claude/sharp-euler-a6xtci`.
 Units WG1–WG3 are in `docs/plans/world-generation.md`.
 
 **Read first:**
@@ -368,7 +368,7 @@ Taken as each unit lands, with the machine and date.
 |---|---|
 | planet generation (64 × 32) | **2.1 ms median, 2.45 worst**, over 20 seeds (fast tier, CoreCLR, the build container, 2026-09-26): a twenty-fifth of the 50 ms budget. Two sample planets hold 13–17 % Meadow, 19–21 % Ice and 37 % Ocean, with a dry-scrub belt round the equator, since the six biomes have no tropical forest. |
 | map paint at 2× (2,374 × 1,031) | **31 ms median in a Release build, 87 ms in Debug** (fast tier, CoreCLR, the build container, 2026-09-26), into a reused buffer. The first version cost **447 ms**, a per-pixel cube-rounding pick through a float buffer. Three changes brought it down, measured each time: a scanline nearest-centre fill (447 → 215 Debug); fill and finish in one pass, with the finish as one affine map per pixel, marks stamped from a mask, and the buffer reused (→ 115 Debug / 58 Release); and the sheen and vignette tabulated, with no square root per pixel (→ 87 / 31). A player build compiles Release. The editor defaults to Debug, so a reroll there hitches for about a tenth of a second. **The Unity (Mono) figure is owed** from the owner's machine; if it is over 60 ms in a player build, `WorldLayout.PaintScale` drops to 1.5. |
-| board memory per hill band | *WG4* |
+| board memory per hill band | **Rolling 16 layers: Standard 18.8 MiB, Huge 74.5 MiB; Mountainous 24 layers: Standard 27.8 MiB, Huge 109.8 MiB**, about 84 bytes a cell either way, so the depth costs its cells and nothing else (+48 %). A Huge mountainous board builds in 0.72 s against 0.53 s. Headless simulation only, without the render mirror; fast tier, CoreCLR, the build container, 2026-09-26, each arm taken twice in alternating order after two warm-up builds. **The first reading said the deeper board was smaller** (8.8 MiB against 18.9): the first arm had paid for the content load, the statics and the JIT, which is why the arms are warmed now. **Whether 110 MiB for a Huge mountainous board is too much is the owner's call** (design 57 §5); capping it at 20 layers would be about 91 MiB. |
 
 ## 10. Seams recorded, not built
 

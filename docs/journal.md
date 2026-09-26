@@ -13997,3 +13997,63 @@ an unconfirmed number: every constant is ours, to be tuned and measured.
 **Nor could the fast tier run.** The container's network policy refuses the .NET installer
 (`dot.net`), so the one generated C# change (the registry gaining its `ui.biome`, `ui.hills` and
 `ui.world` rows) waits on CI.
+
+## 2026-09-26 — World generation built: a planet, a site, and the board it makes
+
+The owner approved design 57 and pasted Claude Design's specification for the World screen. It
+disagreed with the design three times, and the owner ruled:
+- **the specification's six biomes**
+- **our hill names**, because its five were the reference's own labels
+- **region names and zoom built now**
+
+The whole line went in the same day, as six commits on `claude/sharp-euler-a6xtci`.
+
+**The seam held its one rule.** A request with no site builds exactly today's board, climate and
+weather:
+- asserted field for field against `PlayedMap`
+- a Rolling site equal to it too
+- the Long tier's goldens untouched
+
+A site shapes the board through `SiteBoard`. Relief is set; outcrops and caverns are *scaled from
+the preset*, so a bare board stays bare. The site's climate comes through `SiteClimate`, a new Def
+that never writes through the shared one. The reference site (53°, 9 °C, 1,000 mm) is
+`Climate_Temperate` to the centi-degree. The rules both the colony and the World screen need live
+once, in `Sim.Contracts.SiteRules`, because the interface cannot call the simulation:
+- seasonality by latitude
+- the board seed of a tile
+- a mountainous board's 24 layers
+
+**The planet is 2.1 ms.** It is integer passes on separate streams, with the sea and the hills cut
+by rank so every world has the same shares. A wrapped lattice gives the east–west seam in integers;
+a test holds plain noise's seam at the join against it. Every world has a settleable tile: held over
+1,000 seeds, and 300 in the default tier.
+
+**The painter was fifteen times too slow and is now inside its budget.**
+- The first version took 447 ms at 2× in Debug, picking each pixel by cube rounding into a float
+  buffer.
+- A scanline nearest-centre fill cut it to 215.
+- One pass with the finish written as an affine map per pixel, stamped hill marks and a reused
+  buffer cut it to 115 in Debug and 58 in Release.
+- Tabulating the sheen and vignette cut it to 87 in Debug and **31 in Release**.
+
+The player build compiles Release. The Unity figure is owed.
+
+**Three faults found on the way, none shipped:**
+- **The header change broke two ranged-combat tests.** They relabelled saves by poking the version
+  field. `SaveFixtures.AsFormat` now does it properly.
+- **The type-setting rule rejected the specification's label styling.** The spec wanted tracking and
+  a bold weight in the stylesheet, which `TheSheetSetsNoTypeAtAll` forbids. The labels take their
+  roles instead, recorded as departures in §9a.
+- **A name clash would have broken the Unity build.** A method named `DashedOutline` in `HudShell`
+  would have shadowed the type of that name and broken `HudShell.Settings.cs`'s `new DashedOutline()`.
+  Only a compile would have caught it, and there is no Unity in the container, so it was found by
+  grepping for every new member name across the partials.
+
+**The mountains cost memory, not frames.** Twenty-four layers is +48 %: 110 MiB for a Huge
+mountainous board against 74.5. The first reading said the deeper board was smaller, which was the
+first arm paying for the process (lessons).
+
+**Owed:**
+- Both Unity tiers and a player build. The World page has never been compiled.
+- The owner's first look (playtest queue).
+- A ruling on whether 110 MiB is too much for a Huge mountainous board.

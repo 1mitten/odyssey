@@ -7,7 +7,7 @@
 - Brief: `docs/reference/mockups/world-map-brief.md`.
 - Reference: `docs/research/a-13-world-generation.md`.
 
-**Approved 2026-09-26 (owner: *"ok go"*). Claude Design's specification is `docs/reference/mockups/world-screen-spec.md`; the owner's rulings on it (six biomes, our hill names, region names and zoom built) are in design 57 §6 and §9a.**
+**Built 2026-09-26 (WG0b, WG1, WG2, WG3a, WG3b, WG4 as commits on the branch); not yet played; the World page owes both Unity tiers and a player build. Approved 2026-09-26 (owner: *"ok go"*). Claude Design's specification is `docs/reference/mockups/world-screen-spec.md`; the owner's rulings on it (six biomes, our hill names, region names and zoom built) are in design 57 §6 and §9a.**
 
 Every unit lands on `claude/sharp-euler-a6xtci` as its own commit, because this session may push
 only there. A PR is opened when the owner asks.

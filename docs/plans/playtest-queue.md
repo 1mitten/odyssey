@@ -23,6 +23,22 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the World screen read as a planet, and does the site change the colony?** (`claude/sharp-euler-a6xtci`,
+  design 57.) New game now opens on a **World** screen: a hex planet with ice caps, a dry-scrub belt round
+  the equator and Meadow at mid-latitudes, region and sea names, a legend, and a site already picked.
+  Look for:
+  - whether Meadow can be found at a glance, and whether the other biomes reading *Not yet available* is
+    clear rather than a fault;
+  - whether the names help or clutter, and whether zoom to 4x (wheel, double-click, + / -, 0 to fit)
+    and panning across the east–west seam feel right;
+  - Next is disabled on sea, Sheer or a non-Meadow tile, with the reason in the site panel.
+
+  Then take a **Mountainous** Meadow: the board should be 24 layers with rock under the valleys and
+  higher terraces — does it look like mountains, or just steeper hills? Take a cold, high-latitude
+  Meadow and skip a few months (Debug → Skip one month): Rime should bite harder than on the suggested
+  site. A wrong answer looks like: the map a patchwork nobody would call a planet, Meadow lost in the
+  colours, names over the zoom buttons, or a mountainous board indistinguishable from today's.
+
 - **Do the frogs read as frogs, and are they where the water is?** (`claude/frog`, design 30 §8.)
   New game on the meadow and look along a stream or a pond: there should be groups of three to five
   bright emerald, red-eyed frogs on the banks (about 0.9 m long since the owner's first ask), and none
