@@ -2,7 +2,7 @@
 
 Everything on the architect menu: what can be built, and the one-off orders that can be given to things that already exist. The vertical connectors matter more here than in a flat colony sim, because a stair occupies two cells and a ladder one.
 
-83 entries, 24 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+84 entries, 25 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Architect categories
 
@@ -38,7 +38,8 @@ Everything on the architect menu: what can be built, and the one-off orders that
 | **Allowed area** | `ui.arch.tool.allowed` | Where colonists may go | sheet 08 (salvage gear), med | M3 |
 | **Dumping zone** | `ui.arch.tool.dumping` | Where rubbish and rubble go | sheet 08 (salvage gear), low | M3 |
 | **Animal area** | `ui.arch.tool.kennel` | Where tame animals may roam | sheet 06 (action tiles), high | M3 |
-| **Mine** | `ui.arch.tool.mine` | Dig out a cell | sheet 05 (tools and weapons), high | M3 |
+| **Mine** | `ui.arch.tool.mine` | Dig out a cell. A drag begun on rock marks only rock; one begun on soft ground marks everything | sheet 05 (tools and weapons), high | M3 |
+| **Dig** | `ui.arch.tool.dig` | The Mine order on soft ground: grass, earth, sand, gravel or subsoil. The same job and the same work | no art | DM |
 | **Deconstruct** | `ui.arch.tool.deconstruct` | Take our own building apart for materials | sheet 01 (raw materials), med | M3 |
 | **Salvage** | `ui.arch.tool.salvage` | Strip a ruin. Slower than deconstruct, better yield | sheet 05 (tools and weapons), med | M3 |
 | **Haul urgently** | `ui.arch.tool.haulurgent` | Jump this to the top of the haul list | sheet 08 (salvage gear), low | M3 |
