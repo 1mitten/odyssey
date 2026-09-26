@@ -653,3 +653,9 @@ longest given name, *Charlotte*, and *colonist · L6* after it need **173**, the
 Prioritise gone, not their widths). With the owner's ruling Arrest left the header, and the test
 asserts the name clears and logs the word's shortfall, which is the header's own open question.
 
+**Then `main` rebuilt the header** (design 61, PR #245, merged the same afternoon): two icon toggles,
+Draft and First Person, with Close over Info, and the response moved to the Assign tab. The numbers
+above are the old header's. Arrest stays a right-click row, and the test now measures the name line
+against whatever stands after it in the new header: **308 px, where the name and its word need
+173 — 135 to spare**, so design 61 also settled the shortfall `main` had.
+

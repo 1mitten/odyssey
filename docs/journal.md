@@ -14303,3 +14303,8 @@ right-click menu for Arrest (while nobody selected is drafted, beside Tend and E
 the design had first put it. The header is `main`'s three again, with the name clear by 6 px — and
 the word after the name 72 px short **on `main` too**, since First Person's 117 went in. That is
 logged by the test and left as the header's own question.
+
+**And `main` moved underneath it the same afternoon**: #245 rebuilt the header as two icon toggles
+with Close over Info (design 61). Merged a second time; main's side taken in the model and its
+tests, Arrest left in the menu, and the header measurement retargeted at the new layout, since the
+actions row it measured is gone.
