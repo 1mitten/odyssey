@@ -762,7 +762,17 @@ namespace Odyssey.Sim.Pawns
                 bestCell = at;
             }
 
-            if (best < 0) return false;
+            if (best < 0)
+            {
+                // Her kit's ration is the fallback, not the first choice (design 54 §4): eaten
+                // first, every kit would be empty every day with nothing yet to top it up.
+                ColonyItem? ration = Kit.Food(pawn, ctx);
+                if (ration == null) return false;
+                job.Reset(JobIndex.Eat);
+                job.TargetItem = ration.Id;
+                job.TargetCell = -1;
+                return true;
+            }
 
             job.Reset(JobIndex.Eat);
             job.TargetItem = items[best].Id;

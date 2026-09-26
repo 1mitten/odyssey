@@ -111,7 +111,13 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int AttackRanged = 27;
 
-        public const int Count = 28;
+        /// <summary>
+        /// Walk to a stack and take as much of it as fits into her kit (design 54 §3): the kit's
+        /// one job, 28, appended after the ranged attack.
+        /// </summary>
+        public const int TakeIntoKit = 28;
+
+        public const int Count = 29;
     }
 
     /// <summary>
@@ -623,5 +629,23 @@ namespace Odyssey.Sim.Contracts
         public const int Wood = 4;
         public const int Stone = 5;
         public const int Count = 6;
+    }
+
+    /// <summary>
+    /// Whether the thing in a kit slot can be used now (design 54 §3), as the kit's
+    /// <c>odyssey.pawn.kit.&lt;slot&gt;.use</c> aspect carries it: the simulation's own answer, so
+    /// the Gear tab's Use button never disagrees with the order it sends. Absent (nought) for a
+    /// thing with no use at all.
+    /// </summary>
+    public static class KitUseHandle
+    {
+        public const int None = 0;
+        public const int Usable = 1;
+
+        /// <summary>Medical supplies on somebody with nothing to treat.</summary>
+        public const int NotHurt = 2;
+
+        /// <summary>A ration on somebody who is full.</summary>
+        public const int NotHungry = 3;
     }
 }

@@ -345,4 +345,16 @@
     <trainsSkill>8</trainsSkill>
   </JobDef>
 
+  <!--
+    The kit (design 54 section 3): walk to a stack and take as much of it as fits into her kit.
+    Only ever given by an order, so not casually interruptible, and the walking jobs' expiry,
+    because the stores can be a long way off.
+  -->
+  <JobDef>
+    <defName>Job_TakeIntoKit</defName>
+    <driver>28</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>6000</expiryTicks>
+  </JobDef>
+
 </Defs>

@@ -28,6 +28,7 @@ namespace Odyssey.Sim.Pawns
             Items = new ColonyItems(content);
             Reservations = new ReservationManager();
             Pawns = new PawnRegistry(this);
+            Kits = new KitLedger(this);
             Corpses = new CorpseRegistry(cells.Size, content);
             Projectiles = new Projectiles(cells.Size);
         }
@@ -62,6 +63,9 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Every bullet in flight (design 47 §2c). Saved, and hashed while there is any.</summary>
         public Projectiles Projectiles { get; }
+
+        /// <summary>Which thing is in which colonist's kit slot (design 54 §6). Saved, and hashed while any kit holds anything.</summary>
+        public KitLedger Kits { get; }
 
         /// <summary>The fight's own pass, when the world has one. Null in a bare pawn fixture.</summary>
         public CombatSystem? Combat { get; set; }

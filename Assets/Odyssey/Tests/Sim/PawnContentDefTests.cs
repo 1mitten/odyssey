@@ -310,7 +310,12 @@ namespace Odyssey.Tests.Sim
         // Medicine rows were dropped for design 37's (design 43 §15), so no handle moved. No golden
         // moved: the ledger is hashed only while a pawn has anything on it. Re-taken from the
         // merged pack.
-        const ulong ContentFingerprint = 5726159748193892954UL;
+        //
+        // The kit (design 54), 2026-09-26: ItemDef gained kitCap (5 on medical supplies, 3 on the
+        // ration pack, nought on everything else) and Job_TakeIntoKit was appended at 28. No golden
+        // moved: the job's counters reach the hash only once one has run, and the kit's ledger adds
+        // nothing while every kit is empty.
+        const ulong ContentFingerprint = 15035839191909394385UL;
 
 
         [Test]

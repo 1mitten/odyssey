@@ -189,6 +189,7 @@ namespace Odyssey.Sim.Pawns
         public const int Forage = JobHandle.Forage;
         public const int Cook = JobHandle.Cook;
         public const int AttackRanged = JobHandle.AttackRanged;
+        public const int TakeIntoKit = JobHandle.TakeIntoKit;
         public const int Count = JobHandle.Count;
     }
 
@@ -721,6 +722,13 @@ namespace Odyssey.Sim.Pawns
         /// colonist thinks of a meal is the food's, not the eater's, so a new food is one row.
         /// </summary>
         public int ateThought = -1;
+
+        /// <summary>
+        /// How many of this one kit slot holds (design 54 §1), or 0 for a thing that never goes in a
+        /// kit — which is every thing that does not say otherwise. A colonist may keep a stack of
+        /// it on her, up to this many a slot.
+        /// </summary>
+        public int kitCap;
     }
 
     /// <summary>
@@ -1539,7 +1547,9 @@ namespace Odyssey.Sim.Pawns
                 // The kitchen (design 48 §5).
                 "Job_Cook",
                 // The ranged attack (design 47 §2d).
-                "Job_AttackRanged");
+                "Job_AttackRanged",
+                // The kit (design 54 §3).
+                "Job_TakeIntoKit");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",

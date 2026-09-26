@@ -133,7 +133,10 @@ namespace Odyssey.Sim.Pawns
         public override bool TryMakeReservations(PawnContext ctx)
         {
             var item = ctx.Items.Get(Job.TargetItem);
-            if (item == null || ctx.WhereIs(item) < 0) return false;
+            if (item == null) return false;
+            // Her own kit's (design 54 §4): nobody else can see it, so there is nothing to claim.
+            if (Kit.IsHers(Pawn, ctx, item)) return true;
+            if (ctx.WhereIs(item) < 0) return false;
 
             // The item, and **not the store it is in**. Eating takes no slot and leaves the shelf
             // no fuller than it found it, so two colonists helping themselves from one pantry is
@@ -149,8 +152,17 @@ namespace Odyssey.Sim.Pawns
             var item = ctx.Items.Get(Job.TargetItem);
             if (item == null) return JobStatus.Failed;
 
+            bool fromKit = Job.TargetCell < 0;
+            if (fromKit && !Kit.IsHers(Pawn, ctx, item)) return JobStatus.Failed;
+
             if (ToilIndex == 0)
             {
+                // Her kit's ration is eaten where she stands.
+                if (fromKit)
+                {
+                    NextToil();
+                    return JobStatus.Ongoing;
+                }
                 if (!StillAt(ctx, item, Job.TargetCell)) return JobStatus.Failed;
                 JobStatus walk = GotoCell(ctx, Job.TargetCell);
                 if (walk == JobStatus.Succeeded) NextToil();
@@ -175,7 +187,8 @@ namespace Odyssey.Sim.Pawns
             // One meal from the pile, not the pile. Despawning the whole item ate four meals per
             // sitting, which is why the soak found the pantry empty by the end of day one and
             // why every pantry-size estimate made before this was four times too high.
-            if (item.Stack > 1) item.Stack--;
+            if (fromKit) Kit.Spend(Pawn, ctx, item);
+            else if (item.Stack > 1) item.Stack--;
             else ctx.Items.Despawn(item);
 
             // What she thinks of it is the food's (design 48 §4): a cooked meal pleases, a ration

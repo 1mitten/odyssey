@@ -209,6 +209,9 @@ namespace Odyssey.Sim.Pawns
                 // The bullets in the air (design 47 §2c): appended, no format bump. A save from
                 // before guns has no section and loads with nothing in flight.
                 pawns.Projectiles,
+                // The kit (design 54 §6): appended, no format bump. A save from before the kit has
+                // no section and loads with every kit empty, as every kit then was.
+                pawns.Kits,
             };
         }
 

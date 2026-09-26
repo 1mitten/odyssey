@@ -13710,3 +13710,24 @@ built without and design 47 §5 recorded as a reason to write none: the weapon t
 includes it or an upgrade in the hand would not redraw. And **design 47 is two documents** —
 `47-gear-tab.md` and `47-ranged-combat.md` reached `main` separately; left as the known collision
 it is rather than renaming either and breaking their cross-references.
+
+## 2026-09-26 — The kit (G3, design 54)
+
+The owner, after the Gear tab: *"I should be able to pick up medical supplies into my inventory and
+use"*. Three answers the same day: automatic use plus a Use button, the general kit rather than
+medical supplies alone, and a branch stacked on #231.
+
+**The kit thing is where the held weapon is** — carried by her with no cell — so every search in the
+game already skips it and the unit wrote no exclusion anywhere. **It is spent in place, never
+lifted**: the treatment's own supplies are split off and carried, which is what drops a unit on the
+floor when a treatment is cut short, and a kit that did the same would leak.
+
+Two things the first build got wrong, both found by its own tests. **One take filled both slots from
+a stack of eight** — the design allowed two slots of one kind and the room sum counted both, so a
+big stack silently took the player's choice away; one take is one slot's worth now. And the design
+said the new job would **move every golden**; a job above `HashedAlways` is hashed only once one has
+run, and nothing did.
+
+**Use is published rather than derived**: the rule is `Kit.UseOf`, the order asks it and the
+snapshot carries it, so the button can never offer what the order refuses. On the way the survey
+for this unit found the weapon-quality publish outside its null check (PR #236).

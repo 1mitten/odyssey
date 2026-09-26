@@ -365,6 +365,28 @@ namespace Odyssey.Sim.Contracts
         /// that can take it. Handler: <c>JobSystem.HandleOrderUnequip</c>.
         /// </summary>
         OrderUnequip,
+
+        /// <summary>
+        /// Send one colonist to take a stack into her kit (design 54 §3): <c>A</c> is her
+        /// <c>PawnId</c> value and <c>B</c> the thing's. She walks to it and lifts as many as fit,
+        /// leaving the rest where it lay. Handler: <c>JobSystem.HandleOrderTakeIntoKit</c>. Appended.
+        /// </summary>
+        OrderTakeIntoKit,
+
+        /// <summary>
+        /// Lay the stack in one of a colonist's kit slots at her feet, at once (design 54 §3):
+        /// <c>A</c> her <c>PawnId</c> value, <c>B</c> the slot, and <c>C</c> how — 0 <b>Remove</b>,
+        /// left to the haulers; 1 <b>Drop</b>, forbidden where it lies — the two words the weapon's
+        /// Unequip and Drop are. Handler: <c>JobSystem.HandleOrderKitDrop</c>. Appended.
+        /// </summary>
+        OrderKitDrop,
+
+        /// <summary>
+        /// Use what is in one of a colonist's kit slots now (design 54 §3): <c>A</c> her
+        /// <c>PawnId</c> value, <c>B</c> the slot. Medical supplies: she treats herself; a ration:
+        /// she eats it. Handler: <c>JobSystem.HandleOrderUseKit</c>. Appended.
+        /// </summary>
+        OrderUseKit,
     }
 
     /// <summary>What an <see cref="IntentKind.EditBill"/> does, as its <c>A</c> carries it.</summary>
@@ -479,6 +501,11 @@ namespace Odyssey.Sim.Contracts
             // Putting a weapon down (design 47 §3): a button on the Gear tab, which is a pane you
             // open while paused, and nothing needs to run to make it true.
             IntentKind.OrderUnequip => true,
+            // The kit's orders (design 54 §3), on the Gear tab and the right-click menu, for the
+            // Equip and Unequip reasons above.
+            IntentKind.OrderTakeIntoKit => true,
+            IntentKind.OrderKitDrop => true,
+            IntentKind.OrderUseKit => true,
             // A colonist's response (design 33 §18c): a setting over a colonist, on a pane you open
             // while paused, and a button that read one thing while the world did another until you
             // pressed play would be the slab fault again.

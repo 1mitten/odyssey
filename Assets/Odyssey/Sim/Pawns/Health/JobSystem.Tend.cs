@@ -35,7 +35,7 @@ namespace Odyssey.Sim.Pawns
             if (doctor.Drafted) doctor.DraftQuietSinceTick = tick;
             Interrupt(doctor, JobStatus.Failed);
 
-            ColonyItem? supplies = Medical.NearestSupplies(doctor, _ctx);
+            ColonyItem? supplies = Medical.SuppliesFor(doctor, _ctx);
             Job job = doctor.JobBuffer;
             job.Reset(JobIndex.Treat);
             job.WorkTicks = patient.Id.Value;

@@ -33,9 +33,11 @@ namespace Odyssey.Sim.Pawns
 
         public void Died(Pawn pawn, Pawn? by, int corpseId, int tick)
         {
-            if (pawn.EquippedItem == 0) return;
             int cell = _ctx.Corpses.TryGet(corpseId, out Corpse corpse) ? corpse.Cell : pawn.Cell;
-            WeaponHand.PutDown(pawn, _ctx, cell);
+            if (pawn.EquippedItem != 0) WeaponHand.PutDown(pawn, _ctx, cell);
+            // The kit goes down beside her too (design 54 §5), until Strip (G7) exists: the only
+            // other answer is a kit nobody can ever reach.
+            Kit.LayAll(pawn, _ctx, cell);
         }
     }
 }
