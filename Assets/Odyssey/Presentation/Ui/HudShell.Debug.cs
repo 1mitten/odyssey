@@ -453,9 +453,10 @@ namespace Odyssey.Presentation.Ui
             var figures = _boot?.Figures;
             var world = _boot?.World;
             if (figures == null || world == null) return;
-            if (figures.ConversationCount > 0)
+            // Only what this row started: the colony's own chatter (design 59 §5c) is not its to stop.
+            if (figures.AskedConversationCount > 0)
             {
-                figures.EndConversations();
+                figures.EndAskedConversations();
                 RefreshDebugFaces();
                 return;
             }
@@ -486,7 +487,7 @@ namespace Odyssey.Presentation.Ui
         {
             if (_debugPanel == null || _debugPanel.style.display == DisplayStyle.None) return;
             var figures = _boot?.Figures;
-            _debugTalkRow?.EnableInClassList("settings__row--on", figures != null && figures.ConversationCount > 0);
+            _debugTalkRow?.EnableInClassList("settings__row--on", figures != null && figures.AskedConversationCount > 0);
             FaceExpression? forced = figures == null ? null
                 : _directors != null && _directors.Selection.HasPawn ? figures.ForcedExpressionOf(_directors.Selection.Pawn)
                 : figures.EveryoneExpression;

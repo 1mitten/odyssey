@@ -188,6 +188,36 @@ namespace Odyssey.Presentation.Tests
         }
 
         [Test]
+        public void OneColonistCanBeHandedBackToHerContextWhileTheColonyIsForced()
+        {
+            _root = new GameObject("director");
+            using var figures = new PawnFigureDirector(null, _root.transform, 0);
+            var her = new Odyssey.Sim.Contracts.PawnId(3);
+            var other = new Odyssey.Sim.Contracts.PawnId(4);
+
+            figures.SetEveryoneExpression(FaceExpression.Stern);
+            figures.SetExpression(her, null);
+            Assert.That(figures.ForcedExpressionOf(her), Is.Null, "hers is her own context again");
+            Assert.That(figures.ForcedExpressionOf(other), Is.EqualTo(FaceExpression.Stern), "the rest stay forced");
+
+            figures.SetEveryoneExpression(null);
+            Assert.That(figures.ForcedExpressionOf(her), Is.Null);
+            Assert.That(figures.ForcedExpressionOf(other), Is.Null, "and the colony is handed back whole");
+        }
+
+        [Test]
+        public void TheTalkRowStopsOnlyWhatItStarted()
+        {
+            _root = new GameObject("director");
+            using var figures = new PawnFigureDirector(null, _root.transform, 0);
+            figures.StartConversation(new Odyssey.Sim.Contracts.PawnId(1), new Odyssey.Sim.Contracts.PawnId(2), 30f);
+            Assert.That(figures.AskedConversationCount, Is.EqualTo(1));
+            Assert.That(figures.AmbientConversationCount, Is.Zero, "the colony struck nothing up here");
+            figures.EndAskedConversations();
+            Assert.That(figures.ConversationCount, Is.Zero);
+        }
+
+        [Test]
         public void AHeadWithNeitherBoneHasNoFace()
         {
             _root = new GameObject("root");

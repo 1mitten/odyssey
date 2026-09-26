@@ -53,7 +53,11 @@ namespace Odyssey.Presentation.World
 
         static readonly AspectKey PainKey = AspectKey.Of(HealthAspectNames.Pain);
 
-        readonly Dictionary<int, FaceExpression> _expressions = new Dictionary<int, FaceExpression>();
+        /// <summary>
+        /// Faces set one colonist at a time. A null value is an explicit "her own context", which
+        /// is how one colonist is handed back while the whole colony is forced to something else.
+        /// </summary>
+        readonly Dictionary<int, FaceExpression?> _expressions = new Dictionary<int, FaceExpression?>();
         readonly List<Conversation> _conversations = new List<Conversation>();
         FaceExpression? _everyone;
 
@@ -74,16 +78,19 @@ namespace Odyssey.Presentation.World
             _everyone = expression;
         }
 
-        /// <summary>Force one colonist's face, or with null hand it back to the colony's rule.</summary>
+        /// <summary>
+        /// Force one colonist's face, or with null hand it back to her own context — even while the
+        /// rest of the colony is forced to something (the explicit null is kept for exactly that).
+        /// </summary>
         public void SetExpression(PawnId pawn, FaceExpression? expression)
         {
-            if (expression is FaceExpression e) _expressions[pawn.Value] = e;
-            else _expressions.Remove(pawn.Value);
+            if (expression == null && _everyone == null) _expressions.Remove(pawn.Value);
+            else _expressions[pawn.Value] = expression;
         }
 
         /// <summary>The face forced on <paramref name="pawn"/>, one at a time or with everyone; null when her context decides.</summary>
         public FaceExpression? ForcedExpressionOf(PawnId pawn) =>
-            _expressions.TryGetValue(pawn.Value, out FaceExpression e) ? e : _everyone;
+            _expressions.TryGetValue(pawn.Value, out FaceExpression? e) ? e : _everyone;
 
         /// <summary>The face <paramref name="pawn"/> is holding: forced, or her context's, or neutral off screen.</summary>
         public FaceExpression ExpressionOf(PawnId pawn) =>
@@ -104,6 +111,19 @@ namespace Odyssey.Presentation.World
         }
 
         public void EndConversations() => _conversations.Clear();
+
+        /// <summary>
+        /// End only the conversations somebody asked for, and leave the ones the colony struck up
+        /// by itself (§5c) — what the debug Talk row stops, so pressing it does not silence a meal.
+        /// </summary>
+        public void EndAskedConversations()
+        {
+            for (int i = _conversations.Count - 1; i >= 0; i--)
+                if (!_conversations[i].Ambient) _conversations.RemoveAt(i);
+        }
+
+        /// <summary>How many of the conversations under way were asked for rather than struck up.</summary>
+        public int AskedConversationCount => _conversations.Count - AmbientConversationCount;
 
         public int ConversationCount => _conversations.Count;
 

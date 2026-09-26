@@ -38,7 +38,16 @@ namespace Odyssey.Tests.PlayMode
                 if (boot.moduleCatalogue == null)
                     boot.moduleCatalogue = UnityEditor.AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);
 #endif
-                if (boot.moduleCatalogue == null) Assert.Ignore("no catalogue on this machine");
+                ModuleCatalogue? catalogue = boot.moduleCatalogue;
+                if (catalogue == null) Assert.Ignore("no catalogue on this machine");
+
+                // Asked of the colonist rows, and before anything is started (BanditLookTests'
+                // order): on the runner the catalogue loads with every colonist reference null, and
+                // a colony started there fails to build before any figure could be asked.
+                bool colonistArt = false;
+                foreach (ModuleEntry row in catalogue!.FindFamily(ModuleIds.ColonistBase))
+                    if (row.prefab != null) { colonistArt = true; break; }
+                if (!colonistArt) Assert.Ignore("the colonist rows resolved no art — the licensed packs are absent");
 
                 for (int i = 0; i < 8; i++) yield return null;
                 shell.Menu.Choose(SessionCommands.NewGameKey);

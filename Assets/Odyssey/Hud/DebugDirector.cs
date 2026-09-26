@@ -376,8 +376,8 @@ namespace Odyssey.Hud
 
         public const string TalkTooltip =
             "The selected colonist, or the one nearest the camera, talks with the nearest colonist within "
-            + "eight metres for thirty seconds - or to nobody if there is none. Pressed again, every "
-            + "conversation stops";
+            + "eight metres for thirty seconds - or to nobody if there is none. Pressed again, it stops; "
+            + "the conversations colonists strike up by themselves carry on";
 
         /// <summary>One expression the Faces tab sets (design 59 §3).</summary>
         public readonly struct FaceRow

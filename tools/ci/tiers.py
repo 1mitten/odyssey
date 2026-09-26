@@ -96,6 +96,7 @@ RULES: tuple[Rule, ...] = (
     Rule("tools/perf/*", GATES_ONLY, "trace reader"),
     Rule("tools/ci/*", GATES_ONLY, "this selector"),
     Rule("tools/synty/*", NOTHING, "pack unpacker, run by hand on a dev machine"),
+    Rule("tools/fbx/*", NOTHING, "FBX readers for research (e-15), run by hand"),
     # --- Words. -----------------------------------------------------------------------------
     Rule("docs/*", NOTHING, "documentation"),
     Rule("art-source/*", NOTHING, "source art outside Assets"),
