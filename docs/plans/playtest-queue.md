@@ -23,6 +23,19 @@ the next session learns to ignore.
 
 ## Open
 
+- **Polish batch: trees, drops, the fire, the roster, the pane, the fade** (`claude/polish-batch`,
+  designs 20 §14, 23 §11, 31 §20, 25 §10, 14 §10–§11, 38 §27).
+  - Gather six or more colonists round a campfire at night. Each should be on their own tile, with
+    the inner ring seated facing the fire. Wrong: two figures clipping into each other, or the
+    second ring reads as a queue.
+  - Halt two drafted colonists on one tile. Wrong: they jitter or swap places when a third
+    arrives.
+  - Single-click a roster card, then double-click it. Wrong: the single click still moves the
+    camera, or 14 m is too close or too far.
+  - Read the colonist pane over bright grass. Wrong: the dim grey lines are hard to read.
+  - With nothing selected, walk a colonist behind trees. Wrong: the trees still fade.
+  - Fire several supply drops into woodland. Wrong: a pallet lands in a trunk.
+
 - **Does changing a graphics setting still hitch, and is the board seen catching up?**
   (`claude/mesh-cost`, design 38 §26.) Open Settings → Graphics and flick the Grass ladder, then Ground
   relief, with the camera over thick meadow; then dig out a row of cells. A board-wide re-mesh now
