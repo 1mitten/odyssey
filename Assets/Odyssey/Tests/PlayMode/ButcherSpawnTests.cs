@@ -68,7 +68,12 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(box.y, Is.InRange(4.0f, 4.8f), $"drawn {box.y:0.00} m tall: not the 4.37 m design 62 §8a measured");
                 Assert.That(Mathf.Max(box.x, box.z), Is.LessThan(3.0f),
                     $"a box {box.x:0.00} x {box.z:0.00} m across: the bind pose's arm span or the pack's other giants, not the body");
-                Assert.That(figures.WeaponOf(butcher.Id), Is.Not.Null, "the cleaver is not in its hand");
+                Transform? cleaver = figures.WeaponOf(butcher.Id);
+                Assert.That(cleaver, Is.Not.Null, "the butcher has no cleaver");
+                // In the fist, not parked at the hip where every new prop is fitted first (owner,
+                // 2026-09-26: "he wasn't using a weapon to strike people").
+                Assert.That(cleaver!.parent != null && cleaver.parent.name.Contains("Hand"), Is.True,
+                    $"the cleaver hangs from {(cleaver.parent != null ? cleaver.parent.name : "nothing")}, not the hand");
                 TestContext.WriteLine($"butcher drawn {box.x:0.00} x {box.y:0.00} x {box.z:0.00} m");
             }
             finally

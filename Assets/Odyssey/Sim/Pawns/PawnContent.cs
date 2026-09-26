@@ -222,7 +222,12 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int Butcher = 6;
 
-        public const int Count = 7;
+        /// <summary>The butcher's harder levels (design 62 §4b), each a colourway of the same giant and bigger than the last.</summary>
+        public const int ButcherScarred = 7;
+        public const int ButcherBlood = 8;
+        public const int ButcherKing = 9;
+
+        public const int Count = 10;
     }
 
     /// <summary>
@@ -1692,12 +1697,12 @@ namespace Odyssey.Sim.Pawns
                 "PawnKind_Gunman",
                 // The frog of the banks (design 30 §8), appended after the gunman.
                 "PawnKind_CulvertFrog",
-                // The butcher (design 62), appended after the frog.
-                "PawnKind_Butcher");
+                // The butcher (design 62), appended after the frog, and its three harder levels.
+                "PawnKind_Butcher", "PawnKind_ButcherScarred", "PawnKind_ButcherBlood", "PawnKind_ButcherKing");
             content.Species = ByName<SpeciesDef>(defs,
                 "Species_Person", "Species_MiddenHog", "Species_DuctRat", "Species_CulvertFrog",
-                // The butcher's own (design 62), appended.
-                "Species_Butcher");
+                // The butcher's own (design 62), appended, one per level.
+                "Species_Butcher", "Species_ButcherScarred", "Species_ButcherBlood", "Species_ButcherKing");
             content.KindSpecies = new int[content.Kinds.Length];
             for (int k = 0; k < content.Kinds.Length; k++)
             {

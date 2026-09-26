@@ -223,6 +223,17 @@ namespace Odyssey.Presentation.Rendering
                     // Its own subject key, below every look index, so a colonist's body is never
                     // mistaken for it or it for one.
                     GameObject? subject = Subject(row, KindSubject - kind, ownPaint: true);
+                    if (subject != null && row.material != null)
+                    {
+                        // Its level's colourway (design 62 §4b), as the figure wears it.
+                        var renderers = subject.GetComponentsInChildren<Renderer>(includeInactive: true);
+                        for (int i = 0; i < renderers.Length; i++)
+                        {
+                            var slots = renderers[i].sharedMaterials;
+                            for (int m = 0; m < slots.Length; m++) slots[m] = row.material;
+                            renderers[i].sharedMaterials = slots;
+                        }
+                    }
                     if (subject != null) taken = Photograph(subject, row);
                 }
             }

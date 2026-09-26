@@ -612,6 +612,12 @@ namespace Odyssey.Presentation.World
             /// </summary>
             public GameObject? HandProp;
 
+            /// <summary>
+            /// The material a body in its own paint wears in place of the prefab's, and its hand
+            /// prop with it — a butcher level's colourway (design 62 §4b). Null keeps the art's own.
+            /// </summary>
+            public Material? Paint;
+
             /// <summary>A feminine body: the draw and the sheathe are the pack's <c>_Femn</c> clips (design 33 §8b).</summary>
             public bool Feminine;
 
@@ -714,6 +720,7 @@ namespace Odyssey.Presentation.World
                 Feminine = row.sex == BodySex.Female,
                 OwnPaint = true,
                 HandProp = weapon != null ? weapon.prefab : null,
+                Paint = row.material,
             };
         }
 
@@ -2752,6 +2759,10 @@ namespace Odyssey.Presentation.World
             var skins = instance.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true);
             for (int i = 0; i < skins.Length; i++) skins[i].forceMatrixRecalculationPerRender = true;
 
+            // A butcher level wears its colourway (design 62 §4b) before its art is remembered, so
+            // the repaint that puts a body's own art back puts this back.
+            if (face.OwnPaint && face.Paint != null) Repaint(skins, face.Paint);
+
             var animator = instance.GetComponent<Animator>();
             if (animator == null) animator = instance.AddComponent<Animator>();
             // The simulation says where a pawn is. A clip that also moved it would fight that.
@@ -2869,6 +2880,18 @@ namespace Odyssey.Presentation.World
             return figure;
         }
 
+
+        /// <summary>Every material slot of every renderer to <paramref name="paint"/>: one atlas, one colourway.</summary>
+        static void Repaint(Renderer[] renderers, Material paint)
+        {
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] == null) continue;
+                var slots = renderers[i].sharedMaterials;
+                for (int m = 0; m < slots.Length; m++) slots[m] = paint;
+                renderers[i].sharedMaterials = slots;
+            }
+        }
 
         static void SetLayer(Transform transform, int layer)
         {

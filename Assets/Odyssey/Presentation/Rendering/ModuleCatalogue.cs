@@ -789,9 +789,13 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const string HostileBase = Prefix + "pawn.hostile";
 
-        /// <remarks>Kinds 3 and 4, the bandit and the gunman, are dressed people and have no row.</remarks>
+        /// <remarks>Kinds 3 and 4, the bandit and the gunman, are dressed people and have no row.
+        /// Kinds 6 to 9 are the butcher's four levels (design 62 §4b), one colourway each.</remarks>
         public static readonly string[] HostileNames =
-            { string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, "butcher" };
+        {
+            string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty,
+            "butcher", "butcher.scarred", "butcher.blood", "butcher.king",
+        };
 
         /// <summary>The row a hostile kind is drawn as, or empty for every kind that has none.</summary>
         public static string Hostile(int kind) =>

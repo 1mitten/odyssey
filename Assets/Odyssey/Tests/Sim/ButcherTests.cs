@@ -117,11 +117,45 @@ namespace Odyssey.Tests.Sim
             Assert.That(content.HealthOf(PawnKindIndex.Butcher)!.defName, Is.EqualTo("Health_Brute"));
             Assert.That(species.naturalAttack!.damageKind, Is.EqualTo(DamageKind.Sharp));
 
-            // Nobody else sweeps, nobody else is unstoppable.
+            // Nobody but a butcher sweeps or is unstoppable.
             for (int s = 0; s < content.Species.Length; s++)
-                if (content.Species[s] != species)
+                if (!content.Species[s].defName.StartsWith("Species_Butcher", System.StringComparison.Ordinal))
                     Assert.That(content.Species[s].sweep == null && !content.Species[s].unstoppable, Is.True,
                         content.Species[s].defName);
+        }
+
+        /// <summary>
+        /// The four levels (design 62 §4b; owner, 2026-09-26: "maybe make them a bit bigger each
+        /// level"): kinds 6 to 9, each a hostile butcher of its own species and body, and each one
+        /// bigger, tougher, surer and harder hitting than the one before — never merely equal.
+        /// </summary>
+        [Test]
+        public void EachLevelIsBiggerAndTougherThanTheLast()
+        {
+            PawnContent content = ContentPack.Pawns();
+            int[] kinds = { PawnKindIndex.Butcher, PawnKindIndex.ButcherScarred, PawnKindIndex.ButcherBlood, PawnKindIndex.ButcherKing };
+            SpeciesDef? before = null;
+            foreach (int kind in kinds)
+            {
+                SpeciesDef s = content.SpeciesOf(kind);
+                Assert.That(content.KindOf(kind).faction, Is.EqualTo(Faction.Hostile), s.defName);
+                Assert.That(content.ModeOf(kind), Is.EqualTo(TraverseMode.Animal), s.defName);
+                Assert.That(s.person && s.unstoppable && s.sweep != null && s.naturalAttack != null, Is.True, s.defName);
+                HealthDef body = content.HealthOf(kind)!;
+                // Pain shock at about two-thirds of the pool, never at a colonist's 64.
+                int shock = 800 * 10 / body.painPerPointTenths;
+                Assert.That(shock * 1_000 / s.healthPoints, Is.InRange(560, 720), $"{s.defName}: shock at {shock} of {s.healthPoints}");
+                if (before != null)
+                {
+                    Assert.That(s.bodyLengthMm, Is.GreaterThan(before.bodyLengthMm), s.defName + " is no bigger");
+                    Assert.That(s.healthPoints, Is.GreaterThan(before.healthPoints), s.defName + " is no tougher");
+                    Assert.That(s.meleeSkill, Is.GreaterThan(before.meleeSkill), s.defName + " is no surer");
+                    Assert.That(s.naturalAttack!.damage, Is.GreaterThan(before.naturalAttack!.damage), s.defName + " hits no harder");
+                    Assert.That(s.sweep!.knockbackPerMille, Is.GreaterThan(before.sweep!.knockbackPerMille), s.defName + " flings no more often");
+                }
+                before = s;
+            }
+            Assert.That(content.SpeciesOf(PawnKindIndex.ButcherKing).sweep!.distance, Is.EqualTo(3), "the king flings three cells");
         }
 
         [Test]

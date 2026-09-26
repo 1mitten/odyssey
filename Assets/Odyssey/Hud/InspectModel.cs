@@ -551,7 +551,14 @@ namespace Odyssey.Hud
         static readonly string AnimalWord = Registry.Label("ui.pawn.animal").ToLowerInvariant();
         static readonly string BanditWord = PawnKindLabels.Label(PawnKindLabels.Bandit).ToLowerInvariant();
         static readonly string GunmanWord = PawnKindLabels.Label(PawnKindLabels.Gunman).ToLowerInvariant();
-        static readonly string ButcherWord = PawnKindLabels.Label(PawnKindLabels.Butcher).ToLowerInvariant();
+        // Every butcher level's word (design 62 §4b), lower-cased once, indexed from the first.
+        static readonly string[] ButcherWords =
+        {
+            PawnKindLabels.Label(PawnKindLabels.Butcher).ToLowerInvariant(),
+            PawnKindLabels.Label(PawnKindLabels.ButcherScarred).ToLowerInvariant(),
+            PawnKindLabels.Label(PawnKindLabels.ButcherBlood).ToLowerInvariant(),
+            PawnKindLabels.Label(PawnKindLabels.ButcherKing).ToLowerInvariant(),
+        };
 
         /// <summary>
         /// The word under a hostile person's name: "bandit" for the bandit (design 42 §2), "gunman"
@@ -561,7 +568,7 @@ namespace Odyssey.Hud
         static string HostileKindWord(int kind) =>
             kind == PawnKindLabels.Bandit ? BanditWord
             : kind == PawnKindLabels.Gunman ? GunmanWord
-            : kind == PawnKindLabels.Butcher ? ButcherWord
+            : kind >= PawnKindLabels.Butcher && kind <= PawnKindLabels.ButcherKing ? ButcherWords[kind - PawnKindLabels.Butcher]
             : HostileWord;
 
         static string WithArticle(string noun) =>

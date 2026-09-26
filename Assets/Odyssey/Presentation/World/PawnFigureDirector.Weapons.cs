@@ -82,6 +82,11 @@ namespace Odyssey.Presentation.World
             if (natural && figure.Weapon != null)
             {
                 // Always in the fist: it is never sheathed, and on the ground it is not drawn.
+                // FitWeaponBothWays leaves every new prop at the hip for the sheath to draw, and
+                // this path never runs the sheath, so it is put in the hand here — a no-op once it
+                // is there. Without it the cleaver hung at the butcher's left hip through every
+                // swing (owner, 2026-09-26: "he wasn't using a weapon to strike people").
+                PlaceWeapon(figure, atHip: false);
                 bool inHand = figure.SleepWeight <= 0.001f && !pawn.IsDowned;
                 if (figure.Weapon.activeSelf != inHand) figure.Weapon.SetActive(inHand);
                 return;
@@ -142,6 +147,9 @@ namespace Odyssey.Presentation.World
 
             GameObject prop = Object.Instantiate(prefab, figure.RightHand);
             prop.name = "Weapon" + def;
+            // A butcher level's cleaver is in its colourway (design 62 §4b).
+            Material? paint = def == NaturalWeaponDef ? LookAt(figure.Look)?.Paint : null;
+            if (paint != null) Repaint(prop.GetComponentsInChildren<Renderer>(includeInactive: true), paint);
             SetLayer(prop.transform, _layer);
             var colliders = prop.GetComponentsInChildren<Collider>(includeInactive: true);
             for (int i = 0; i < colliders.Length; i++) colliders[i].enabled = false;

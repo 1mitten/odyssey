@@ -98,6 +98,9 @@ ui.pawn.frog,Culvert frog,ui.pawn,AN,"A big frog of the banks. Keeps to the wate
 ui.pawn.bandit,Bandit,ui.pawn,CB,"Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing"
 ui.pawn.gunman,Gunman,ui.pawn,RD,"A bandit with a pistol, dressed as the rest. Shoots whoever it can see, and clubs whoever comes close"
 ui.pawn.butcher,Butcher,ui.pawn,BU,"Huge, slow and very hard to kill. Its cleaver sweeps three cells at once and flings whoever it lands on two cells back"
+ui.pawn.butcher.scarred,Scarred butcher,ui.pawn,BU,"The second level of butcher: bigger, half as tough again, and it hits harder"
+ui.pawn.butcher.blood,Blood butcher,ui.pawn,BU,"The third level of butcher: bigger again, twice as tough as the first and a little slower"
+ui.pawn.butcher.king,Butcher king,ui.pawn,BU,"The fourth and last level of butcher: the biggest, nearly three times as tough as the first, and it flings three cells"
 ui.status.hauling,Hauling,ui.status,M2,Carrying something to storage
 ui.status.building,Building,ui.status,M2,Working a frame or blueprint
 ui.status.deconstructing,Deconstructing,ui.status,M3,Taking one of our own buildings apart
@@ -600,6 +603,9 @@ ui.debug.spawnfrog,Spawn culvert frog,ui.debug,AN,"Adds a culvert frog near the 
 ui.debug.spawnbandits,Spawn 3 bandits,ui.debug,CB,"Adds three bandits near the camera, each on its own tile"
 ui.debug.spawngunman,Spawn gunman,ui.debug,RC,"Adds a gunman near the camera: a bandit with a pistol. It shoots whoever it can see"
 ui.debug.spawnbutcher,Spawn butcher,ui.debug,BU,"Adds the butcher near the camera: huge, slow and hard to kill. Its cleaver sweeps three cells and flings whoever it lands on"
+ui.debug.spawnbutcher.scarred,Spawn scarred butcher,ui.debug,BU,"Adds a scarred butcher: the second level, bigger and half as tough again"
+ui.debug.spawnbutcher.blood,Spawn blood butcher,ui.debug,BU,"Adds a blood butcher: the third level, bigger again and twice as tough as the first"
+ui.debug.spawnbutcher.king,Spawn butcher king,ui.debug,BU,"Adds the butcher king: the fourth level, the biggest, and it flings three cells"
 ui.debug.raid.size,Raid size,ui.debug,RD,"How many the next raid brings. Auto sizes it from the colonists standing and the days survived"
 ui.debug.raid.mix,Raid mix,ui.debug,RD,"Who the next raid is made of: bandits, gunmen, or a mix of both"
 ui.debug.raid.auto,Auto,ui.debug,RD,"The raid picks its own size: one per colonist standing, and one more every five days"

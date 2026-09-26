@@ -115,7 +115,11 @@ namespace Odyssey.Tests.Sim
             Assert.That(PawnKindIndex.CulvertFrog, Is.EqualTo(5));
             // And the butcher at 6, after the frog (design 62): seven.
             Assert.That(PawnKindIndex.Butcher, Is.EqualTo(6));
-            Assert.That(PawnKindIndex.Count, Is.EqualTo(7));
+            // And its three harder levels at 7 to 9 (design 62 §4b): ten.
+            Assert.That(PawnKindIndex.ButcherScarred, Is.EqualTo(7));
+            Assert.That(PawnKindIndex.ButcherBlood, Is.EqualTo(8));
+            Assert.That(PawnKindIndex.ButcherKing, Is.EqualTo(9));
+            Assert.That(PawnKindIndex.Count, Is.EqualTo(10));
 
             // IntentKind is an enum whose numbers an intent log carries: the three orders are
             // together and after everything main shipped first (power's four, since the merge of

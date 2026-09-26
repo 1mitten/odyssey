@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-64 entries, 46 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+67 entries, 49 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -21,6 +21,9 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Bandit** | `ui.pawn.bandit` | Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing | no art | CB |
 | **Gunman** | `ui.pawn.gunman` | A bandit with a pistol, dressed as the rest. Shoots whoever it can see, and clubs whoever comes close | no art | RD |
 | **Butcher** | `ui.pawn.butcher` | Huge, slow and very hard to kill. Its cleaver sweeps three cells at once and flings whoever it lands on two cells back | no art | BU |
+| **Scarred butcher** | `ui.pawn.butcher.scarred` | The second level of butcher: bigger, half as tough again, and it hits harder | no art | BU |
+| **Blood butcher** | `ui.pawn.butcher.blood` | The third level of butcher: bigger again, twice as tough as the first and a little slower | no art | BU |
+| **Butcher king** | `ui.pawn.butcher.king` | The fourth and last level of butcher: the biggest, nearly three times as tough as the first, and it flings three cells | no art | BU |
 
 ## Needs
 

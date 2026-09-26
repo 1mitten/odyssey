@@ -94,30 +94,18 @@
   </HealthDef>
 
   <!--
-    The brute's body (docs/design/62-pig-butcher.md section 6): the person's six regions at five
-    times the hit points, pain a fifth as fast (shock at 320 points of live injury, not 64) and a
-    fifth of the bleed. Everything else - tending, blood stages, falls - is the person's. INVENTED.
+    The brute's body (docs/design/62-pig-butcher.md section 6), one per level of butcher (section
+    4b). The person's six regions scaled with the pool - a vital region at nought downs, so a
+    bigger pool needs bigger regions or a head would fell a king at 125 - pain slow enough that
+    shock comes at about two-thirds of the pool, and the bleed falling as the body grows. The rest
+    (tending, blood stages, falls) is the person's, on the abstract parent. INVENTED.
   -->
-  <HealthDef>
-    <defName>Health_Brute</defName>
-
-    <regions>
-      <li><name>head</name><hitPoints>125</hitPoints><meleeCoverage>100</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Consciousness</capacity><vital>true</vital></li>
-      <li><name>torso</name><hitPoints>200</hitPoints><meleeCoverage>400</meleeCoverage><fallCoverage>300</fallCoverage><capacity>None</capacity><vital>true</vital></li>
-      <li><name>arm.left</name><hitPoints>150</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Manipulation</capacity><overflowTo>torso</overflowTo></li>
-      <li><name>arm.right</name><hitPoints>150</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Manipulation</capacity><overflowTo>torso</overflowTo></li>
-      <li><name>leg.left</name><hitPoints>150</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>350</fallCoverage><capacity>Moving</capacity><overflowTo>torso</overflowTo></li>
-      <li><name>leg.right</name><hitPoints>150</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>350</fallCoverage><capacity>Moving</capacity><overflowTo>torso</overflowTo></li>
-    </regions>
-
-    <painPerPointTenths>25</painPerPointTenths>
+  <HealthDef Name="BruteBody" Abstract="true">
     <painShockPerMille>800</painShockPerMille>
     <painConsciousnessFromPerMille>100</painConsciousnessFromPerMille>
     <painConsciousnessMaxPerMille>400</painConsciousnessMaxPerMille>
     <downedConsciousnessBelowPerMille>300</downedConsciousnessBelowPerMille>
     <downedMovingAtPerMille>150</downedMovingAtPerMille>
-
-    <bleedPerPointPerDay>12</bleedPerPointPerDay>
     <bloodRecoveryPerDay>333</bloodRecoveryPerDay>
     <bloodDeathAtPerMille>1000</bloodDeathAtPerMille>
     <bloodStages>
@@ -146,6 +134,66 @@
     <fallHitsMax>4</fallHitsMax>
     <fallSpreadPerMille>200</fallSpreadPerMille>
     <fallFractureFromLayers>2</fallFractureFromLayers>
+  </HealthDef>
+
+  <!-- Health_Brute: regions x5, pain shock at 320 points of live injury. -->
+  <HealthDef ParentName="BruteBody">
+    <defName>Health_Brute</defName>
+    <regions>
+      <li><name>head</name><hitPoints>125</hitPoints><meleeCoverage>100</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Consciousness</capacity><vital>true</vital></li>
+      <li><name>torso</name><hitPoints>200</hitPoints><meleeCoverage>400</meleeCoverage><fallCoverage>300</fallCoverage><capacity>None</capacity><vital>true</vital></li>
+      <li><name>arm.left</name><hitPoints>150</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Manipulation</capacity><overflowTo>torso</overflowTo></li>
+      <li><name>arm.right</name><hitPoints>150</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Manipulation</capacity><overflowTo>torso</overflowTo></li>
+      <li><name>leg.left</name><hitPoints>150</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>350</fallCoverage><capacity>Moving</capacity><overflowTo>torso</overflowTo></li>
+      <li><name>leg.right</name><hitPoints>150</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>350</fallCoverage><capacity>Moving</capacity><overflowTo>torso</overflowTo></li>
+    </regions>
+    <painPerPointTenths>25</painPerPointTenths>
+    <bleedPerPointPerDay>12</bleedPerPointPerDay>
+  </HealthDef>
+
+  <!-- Health_Brute2: regions x7.5, pain shock at 470 points of live injury. -->
+  <HealthDef ParentName="BruteBody">
+    <defName>Health_Brute2</defName>
+    <regions>
+      <li><name>head</name><hitPoints>188</hitPoints><meleeCoverage>100</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Consciousness</capacity><vital>true</vital></li>
+      <li><name>torso</name><hitPoints>300</hitPoints><meleeCoverage>400</meleeCoverage><fallCoverage>300</fallCoverage><capacity>None</capacity><vital>true</vital></li>
+      <li><name>arm.left</name><hitPoints>225</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Manipulation</capacity><overflowTo>torso</overflowTo></li>
+      <li><name>arm.right</name><hitPoints>225</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Manipulation</capacity><overflowTo>torso</overflowTo></li>
+      <li><name>leg.left</name><hitPoints>225</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>350</fallCoverage><capacity>Moving</capacity><overflowTo>torso</overflowTo></li>
+      <li><name>leg.right</name><hitPoints>225</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>350</fallCoverage><capacity>Moving</capacity><overflowTo>torso</overflowTo></li>
+    </regions>
+    <painPerPointTenths>17</painPerPointTenths>
+    <bleedPerPointPerDay>8</bleedPerPointPerDay>
+  </HealthDef>
+
+  <!-- Health_Brute3: regions x10, pain shock at 615 points of live injury. -->
+  <HealthDef ParentName="BruteBody">
+    <defName>Health_Brute3</defName>
+    <regions>
+      <li><name>head</name><hitPoints>250</hitPoints><meleeCoverage>100</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Consciousness</capacity><vital>true</vital></li>
+      <li><name>torso</name><hitPoints>400</hitPoints><meleeCoverage>400</meleeCoverage><fallCoverage>300</fallCoverage><capacity>None</capacity><vital>true</vital></li>
+      <li><name>arm.left</name><hitPoints>300</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Manipulation</capacity><overflowTo>torso</overflowTo></li>
+      <li><name>arm.right</name><hitPoints>300</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Manipulation</capacity><overflowTo>torso</overflowTo></li>
+      <li><name>leg.left</name><hitPoints>300</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>350</fallCoverage><capacity>Moving</capacity><overflowTo>torso</overflowTo></li>
+      <li><name>leg.right</name><hitPoints>300</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>350</fallCoverage><capacity>Moving</capacity><overflowTo>torso</overflowTo></li>
+    </regions>
+    <painPerPointTenths>13</painPerPointTenths>
+    <bleedPerPointPerDay>6</bleedPerPointPerDay>
+  </HealthDef>
+
+  <!-- Health_Brute4: regions x14, pain shock at 888 points of live injury. -->
+  <HealthDef ParentName="BruteBody">
+    <defName>Health_Brute4</defName>
+    <regions>
+      <li><name>head</name><hitPoints>350</hitPoints><meleeCoverage>100</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Consciousness</capacity><vital>true</vital></li>
+      <li><name>torso</name><hitPoints>560</hitPoints><meleeCoverage>400</meleeCoverage><fallCoverage>300</fallCoverage><capacity>None</capacity><vital>true</vital></li>
+      <li><name>arm.left</name><hitPoints>420</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Manipulation</capacity><overflowTo>torso</overflowTo></li>
+      <li><name>arm.right</name><hitPoints>420</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Manipulation</capacity><overflowTo>torso</overflowTo></li>
+      <li><name>leg.left</name><hitPoints>420</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>350</fallCoverage><capacity>Moving</capacity><overflowTo>torso</overflowTo></li>
+      <li><name>leg.right</name><hitPoints>420</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>350</fallCoverage><capacity>Moving</capacity><overflowTo>torso</overflowTo></li>
+    </regions>
+    <painPerPointTenths>9</painPerPointTenths>
+    <bleedPerPointPerDay>4</bleedPerPointPerDay>
   </HealthDef>
 
 </Defs>
