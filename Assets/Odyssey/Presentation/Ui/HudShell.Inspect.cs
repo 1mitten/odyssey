@@ -2196,7 +2196,7 @@ namespace Odyssey.Presentation.Ui
             // The response beside it (design 33 §18e): the model decides, this carries its intents.
             if (command.Enabled && ResponseModel.IsResponseKey(command.IconKey))
                 button.RegisterCallback<ClickEvent>(_ => CycleResponse());
-            // Ride along (design 56): watching, not commanding, so no intent — the directors take
+            // First Person (design 56): watching, not commanding, so no intent — the directors take
             // the view and the rig and this shell follow them on the next frame.
             if (command.Enabled && command.IconKey == InspectModel.RideKey)
                 button.RegisterCallback<ClickEvent>(_ => BeginRide());

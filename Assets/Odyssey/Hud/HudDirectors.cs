@@ -108,7 +108,7 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// Ride along with a colonist (design 56): the Ride along button on her card. The ride
+        /// Ride along with a colonist (design 56): the First Person button on her card. The ride
         /// takes the view, so what stood in it is put aside — the selection (her own outline and
         /// brackets would be drawn over the shot, and a selected colonist's sight line fades walls
         /// beside her), any armed tool, and the game's keys other than time and Escape — and the
@@ -149,7 +149,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// Leave the ride (Escape, or her going): the keys come back, the slice returns to the
-        /// layer it was on, and she is the selection — so the pane the player pressed Ride along
+        /// layer it was on, and she is the selection — so the pane the player pressed First Person
         /// on is the pane they come back to. Nothing if no ride is running.
         /// </summary>
         public void EndRide(WorldSnapshot snapshot)

@@ -42,7 +42,7 @@ namespace Odyssey.Tests.Hud
             int respond = pane.Commands.FindIndex(c => ResponseModel.IsResponseKey(c.IconKey));
             Assert.That(ride, Is.EqualTo(respond + 1), "not after the response");
             Assert.That(pane.Commands[ride].Enabled, Is.True);
-            Assert.That(pane.Commands[ride].Label, Is.EqualTo("Ride along"));
+            Assert.That(pane.Commands[ride].Label, Is.EqualTo("First Person"));
         }
 
         /// <summary>A colonist who has gone cannot be ridden with; the control is the live pane above.</summary>

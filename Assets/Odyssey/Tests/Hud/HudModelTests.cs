@@ -441,11 +441,11 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.Tabs.Single(t => t.Name == "Health").Enabled, Is.True);
 
             Assert.That(pane.Commands, Is.Not.Empty);
-            // The draft, the response (design 33 §2f, §18e) and Ride along (design 56) are the
+            // The draft, the response (design 33 §2f, §18e) and First Person (design 56) are the
             // commands wired; the rest may not pretend to be.
             Assert.That(pane.Commands.Where(c => c.Enabled).Select(c => c.IconKey),
                 Is.EqualTo(new[] { InspectModel.DraftKey, ResponseModel.FightBackKey, InspectModel.RideKey }),
-                "only Draft, the response and Ride along (design 56) are wired, and none of the others may pretend to be");
+                "only Draft, the response and First Person (design 56) are wired, and none of the others may pretend to be");
         }
 
         /// <summary>

@@ -23,8 +23,8 @@ the next session learns to ignore.
 
 ## Open
 
-- **Ride along: does the shoulder camera show a colonist's day and a fight clearly?**
-  (`claude/planning-session-fok6wm`, design 56.) Select a colonist, press **Ride along** on her
+- **First Person: does the shoulder camera show a colonist's day and a fight clearly?**
+  (`claude/planning-session-fok6wm`, design 56.) Select a colonist, press **First Person** on her
   card, and let her work, walk up a terrace and go through a door.
   - Draft her into a melee fight and watch it. Wrong: her body hides the blow, or the camera swings
     about as she turns.

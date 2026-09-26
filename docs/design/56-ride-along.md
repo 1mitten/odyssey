@@ -9,7 +9,7 @@ to see action."*
 
 ## 1. What it is
 
-**A Ride along button on a colonist's card** (after Draft and her response). Pressing it:
+**A First Person button on a colonist's card** (after Draft and her response). Pressing it:
 
 - locks the view to her, over her right shoulder. The wheel steps in to her eyes and back out, and
   the mouse looks round;
@@ -27,7 +27,7 @@ hash** (owner: *"watch only"*).
 | What the player controls | **Watch only** (owner) | Contained: no intent, no mechanic. Drafted orders from the view (a click on the crosshair through `SelectionPresenter.Order`) would be a cheap later unit. Steering her with WASD would be a new mechanic, a unit the size of Manor Lords' walk mode. |
 | The screen | **A minimal strip** (owner) | The "locked in" feeling, and the three facts a watcher wants. |
 | Time | **Unchanged** (owner) | Speed keys and pause keep working. Entering never touches the speed. |
-| The name | **Ride along** (`ui.command.ride`), provisional | The owner has not named it. The default view is behind her, not first person, so "first person" would mislabel it. Renaming it is one CSV row. |
+| The name | **First Person** (`ui.command.ride`) (owner, 2026-09-26) | The owner's name for the mode: *"call this Mode 'First Person' Not go along with the ride"*. Title case as they wrote it, although the rest of the registry is sentence case. The key stays `ui.command.ride` because a key is stable and only the label moved; the code keeps *ride* as its internal word. |
 
 ## 2. Where it lives (who owns what)
 
@@ -180,7 +180,7 @@ something that does not exist is worse than a gap.
   60–160 m up. Measure it in `FrameTimeTests` at 4K on Standard and Huge, riding and not riding. Do
   not guess a far plane: the fog is only 97 % at 900 m, so a nearer plane would cut the land in front
   of the sky.
-- **Owed: the key.** A rebindable Ride along key, unbound by default. It was left out so this unit
+- **Owed: the key.** A rebindable First Person key, unbound by default. It was left out so this unit
   would not move `SettingsLayout.KeyColumns` without a Unity run.
 - **Owed: the look.** Is 3.2 m the right first stop? Does the eye stop read with her head gone? And
   the grass-clearance mask's 0.375 m texels at a metre.
@@ -211,7 +211,7 @@ beside it:
 - the arm, the shoulder, looking down, the eye stop, a wall behind, a wall at the shoulder, the
   ground, and a squeezed camera's distance from her eyes.
 
-`HudModelTests` now expects Ride along among the live commands.
+`HudModelTests` now expects First Person among the live commands.
 
 None of this compiles the Presentation half. That is Unity's (process §5). **First Unity run,
 2026-09-26, after merging `main`:** the Presentation half compiled clean first time; EditMode 4,387

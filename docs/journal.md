@@ -13905,3 +13905,12 @@ shipped. A fourth labelled button would have run her unwrapping name under the b
 the network policy. So neither the fast tier nor the Presentation compile has run here, and the
 first compile of this branch is its CI run. The frame at a level view is unmeasured and owed
 (design 56 §7).
+
+### 2026-09-26 — the mode is called First Person
+
+The owner, before the first play: *"call this Mode 'First Person' Not go along with the ride"*. The
+label of `ui.command.ride` is **First Person**, in their casing, although the registry is otherwise
+sentence case. Design 56 had argued against the name because the default view is over her shoulder
+rather than from her eyes; the owner has decided, and the wheel's eye stop is still one scroll away.
+Only the label moved: the key, `RideDirector`, `RideCamera` and the design's file name keep *ride*,
+because a key is stable and renaming the internals is churn with no player-facing effect.

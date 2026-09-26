@@ -223,7 +223,7 @@ namespace Odyssey.Hud
             { "ui.command.release", "Release" },
             { "ui.command.rename", "Rename" },
             { "ui.command.rescue", "Rescue" },
-            { "ui.command.ride", "Ride along" },
+            { "ui.command.ride", "First Person" },
             { "ui.command.selectsimilar", "Select similar" },
             { "ui.command.sethearth", "Make this the hearth" },
             { "ui.command.setowner", "Assign" },

@@ -60,7 +60,7 @@ What the player can tell a selected thing to do. Many are conventional; the ones
 | **Defend** | `ui.command.defend` | Joins a fight near her, then goes back to work. Press to change <br>**Needs:** a shield over a figure | no art | CB |
 | **Flee** | `ui.command.flee` | Runs from danger near her, and fights only when cornered. Press to change <br>**Needs:** a figure running away | no art | CB |
 | **Make this the hearth** | `ui.command.sethearth` | Centre the colony's home on this campfire <br>**Needs:** a house over a campfire | no art | M3 |
-| **Ride along** | `ui.command.ride` | Watch from behind her shoulder while she goes about her day. The wheel goes in to her eyes; Esc leaves <br>**Needs:** an eye over a figure's shoulder | no art | RA |
+| **First Person** | `ui.command.ride` | Watch from behind her shoulder while she goes about her day. The wheel goes in to her eyes; Esc leaves <br>**Needs:** an eye over a figure's shoulder | no art | RA |
 | **Leave** | `ui.command.leaveride` | Back to the colony view, where you were <br>**Needs:** Interface words, no icon wanted | no art | RA |
 
 ## The context menu
