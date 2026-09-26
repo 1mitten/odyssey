@@ -7,7 +7,7 @@ namespace Odyssey.Presentation.Rendering
     /// <summary>
     /// The pieces of the Meadow Forest pack the look pass draws the ground and grades the frame
     /// with (<c>docs/design/38-meadow-overhaul.md</c> §17): six terrain textures and the demo
-    /// scene's URP volume profile.
+    /// scene's URP volume profile — and its sky, the two cloud rings and their material (design 63).
     ///
     /// <para><b>An asset of references, like the module catalogue.</b> The textures live under the
     /// gitignored <c>Assets/Synty</c>; this committed asset points at them by GUID and is loaded
@@ -41,6 +41,18 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>The Meadow demo scene's own URP volume profile: its grade, not ours.</summary>
         public VolumeProfile? grade;
+
+        /// <summary>The Meadow demo's low cloud ring (design 63).</summary>
+        public Mesh? cloudRing;
+
+        /// <summary>The Meadow demo's high cloud ring, from the biomes' shared core (design 63).</summary>
+        public Mesh? cloudRingHigh;
+
+        /// <summary>The Meadow demo's cloud material, on the pack's <c>Clouds</c> shader graph. Copied, never written.</summary>
+        public Material? clouds;
+
+        /// <summary>True when the low ring and the cloud material resolved to real art and its shader runs here.</summary>
+        public bool HasClouds => cloudRing != null && clouds != null && clouds.shader != null && clouds.shader.isSupported;
 
         /// <summary>
         /// Whether the grass terrain is drawn by <c>Odyssey/MeadowGround</c>. On unless a

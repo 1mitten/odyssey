@@ -3750,6 +3750,99 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What the clouds cost (<c>docs/design/63-clouds.md</c> §8): the played meadow on Standard,
+        /// from the colony camera at its usual pitch, where the rings must submit nothing, and from
+        /// an eye on top of the board looking at the horizon through the ride camera's lens, where
+        /// the sky fills half the screen — the worst case. Each at 640 x 480 and into a
+        /// 3840 x 2160 target, timed off, on, off again and on again, so the price is read against
+        /// the spread of two identical arms.
+        ///
+        /// <para>The budget design 63 set is the birds' tier, <c>FrameSection.Clouds</c> under
+        /// 0.1 ms. The arm logs it and asserts no times; it asserts the controls applied: off drew
+        /// nothing, the colony view drew nothing, the eye drew both rings, and the camera drew at 4K.</para>
+        /// </summary>
+        [UnityTest, Category("Measurement")]
+        public IEnumerator TheCloudsAgainstTheFrame()
+        {
+            var lines = new List<string>();
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true, out OdysseyBootstrap boot);
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            float previousFov = 40f;
+            try
+            {
+                yield return TimeFrames("clouds/warm", boot, WarmupFrames, _ => { });
+                CloudDirector clouds = boot.Clouds!;
+                if (!clouds.Available) Assert.Ignore("the Meadow cloud art did not resolve on this machine");
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                previousFov = cam.fieldOfView;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "clouds-4k" };
+                float top = boot.layers * CellMetrics.SizeY;
+                Vector3 middle = new Vector3(boot.sizeX * CellMetrics.SizeXZ * 0.5f, top + 2f, boot.sizeZ * CellMetrics.SizeXZ * 0.5f);
+
+                foreach (bool eye in new[] { false, true })
+                {
+                    string view = eye ? "eye" : "colony";
+                    // The eye stands the camera itself, so the rig is stopped from putting it back.
+                    boot.cameraRig!.enabled = !eye;
+                    if (eye)
+                    {
+                        cam.fieldOfView = Odyssey.Hud.RideCamera.FieldOfView;
+                        cam.transform.SetPositionAndRotation(middle, Quaternion.Euler(4f, 30f, 0f));
+                    }
+                    foreach (bool big in new[] { false, true })
+                    {
+                        cam.targetTexture = big ? fourK : previousTarget;
+                        string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                        var frame = new Dictionary<string, float>();
+                        var gpu = new Dictionary<string, float>();
+                        double section = 0d;
+                        foreach (string arm in new[] { "off", "on", "off again", "on again" })
+                        {
+                            bool on = arm.StartsWith("on");
+                            clouds.Enabled = on;
+                            float ms = 0f, g = 0f;
+                            double cloudMs = 0d;
+                            yield return TimeFrames($"clouds/{view}/{resolution}/{arm}", boot, WarmupFrames,
+                                m => ms = m, s => cloudMs = s[(int)OdysseyBootstrap.FrameSection.Clouds], x => g = x);
+                            frame[arm] = ms;
+                            gpu[arm] = g;
+                            if (arm == "on") section = cloudMs;
+                            if (!on) Assert.That(clouds.LastDrawCalls, Is.Zero, "the clouds were drawn with the switch off");
+                            else if (eye) Assert.That(clouds.LastDrawCalls, Is.InRange(1, 2), "the eye should see the rings");
+                            else Assert.That(clouds.LastDrawCalls, Is.Zero, "the colony camera cannot see the sky and should submit nothing");
+                            if (big) Assert.That(cam.pixelWidth, Is.EqualTo(3840), "the camera was not drawing at 4K");
+                        }
+                        float off = (frame["off"] + frame["off again"]) * 0.5f;
+                        float onMean = (frame["on"] + frame["on again"]) * 0.5f;
+                        float floor = Math.Max(Math.Abs(frame["off again"] - frame["off"]),
+                                               Math.Abs(frame["on again"] - frame["on"]));
+                        lines.Add($"{view} {resolution}: section {section:0.000} ms, " +
+                                  $"frame off {frame["off"]:0.00} / on {frame["on"]:0.00} / off {frame["off again"]:0.00} / " +
+                                  $"on {frame["on again"]:0.00} ms (clouds {onMean - off:+0.00;-0.00} ms, noise {floor:0.00}), gpu " +
+                                  (gpu["on"] > 0f ? $"off {(gpu["off"] + gpu["off again"]) * 0.5f:0.00} / on {(gpu["on"] + gpu["on again"]) * 0.5f:0.00} ms" : "unavailable"));
+                    }
+                }
+            }
+            finally
+            {
+                if (boot != null && boot.Clouds != null) boot.Clouds.Enabled = true;
+                if (boot != null && boot.cameraRig != null) boot.cameraRig.enabled = true;
+                if (cam != null)
+                {
+                    cam.targetTexture = previousTarget;
+                    cam.fieldOfView = previousFov;
+                }
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+            yield return null;
+            Debug.Log($"[FrameTime] clouds ({SystemInfo.graphicsDeviceName}): " + string.Join("; ", lines));
+        }
+
+        /// <summary>
         /// The shoreline against the square one it replaces (design 38 §24): the played meadow on
         /// Standard and Huge, each built once with <see cref="WaterShore.Enabled"/> off and once on
         /// — the switch decides how marsh is dressed when the library resolves, so each arm is its
