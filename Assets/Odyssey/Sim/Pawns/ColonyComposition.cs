@@ -166,6 +166,10 @@ namespace Odyssey.Sim.Pawns
             // colony gets the events that fire one.
             var raids = new Events.RaidSystem(pawns) { Jobs = pipeline };
             pawns.Raids = raids;
+            // The traders (design 57): a clock in the pawn phase at order 16, hashed and saved only
+            // while a visit exists, so its registration moved no golden.
+            var trade = new Trade.TradeSystem(pawns) { Jobs = pipeline };
+            pawns.Trade = trade;
             builder
                 // The world itself, first: it is what everything below reads, and it ticks
                 // nothing, so nothing else would ever have put it in the hash (OQ-50).
@@ -190,6 +194,8 @@ namespace Odyssey.Sim.Pawns
                 .AddSystem(_ => raids)
                 .AddHashable(raids)
                 .AddSnapshotContributor(raids)
+                .AddSystem(_ => trade)
+                .AddHashable(trade)
                 // Inside the lambda, not before it: the factory runs during Build(), so a giver
                 // registered after this call is still picked up. Outside it, AddColony would have
                 // had to be the last call on the builder, which is precisely the kind of ordering

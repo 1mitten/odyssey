@@ -156,29 +156,9 @@ namespace Odyssey.Sim.Events
             if (census.Edge.Count == 0) return false;
 
             // The edge: a side with any reachable cell, then a centre on it, then the side's cells
-            // nearest that centre as the band's slots.
-            var sides = new List<int>[4];
-            for (int s = 0; s < 4; s++) sides[s] = new List<int>();
-            for (int i = 0; i < census.Edge.Count; i++) sides[SideOf(grid, census.Edge[i])].Add(census.Edge[i]);
-            var edgeDraw = ctx.Random(RaidPurpose.Edge);
-            int open = 0;
-            for (int s = 0; s < 4; s++) if (sides[s].Count > 0) open++;
-            int pick = edgeDraw.NextInt(open), side = -1;
-            for (int s = 0; s < 4; s++)
-            {
-                if (sides[s].Count == 0) continue;
-                if (pick-- == 0) { side = s; break; }
-            }
-            List<int> slots = sides[side];
-            int centre = slots[edgeDraw.NextInt(slots.Count)];
-            CellRef c = grid.FromIndex(centre);
-            slots.Sort((a, b) =>
-            {
-                CellRef pa = grid.FromIndex(a), pb = grid.FromIndex(b);
-                int da = Math.Abs(pa.X - c.X) + Math.Abs(pa.Z - c.Z);
-                int db = Math.Abs(pb.X - c.X) + Math.Abs(pb.Z - c.Z);
-                return da != db ? da.CompareTo(db) : a.CompareTo(b);
-            });
+            // nearest that centre as the band's slots (EdgeArrival, shared with the trader).
+            if (!EdgeArrival.TryPick(ctx, census, RaidPurpose.Edge, out int side, out int centre, out List<int> slots))
+                return false;
 
             int target = RaidTargets.Resolve(pawns, origin);
             int gather = GatherPoint(ctx, census, side, centre, p.gatherInset);
@@ -242,7 +222,7 @@ namespace Odyssey.Sim.Events
         /// Where the census is taken from and the fallback target: the colony's start, else the
         /// first standing colonist, else -1 — a board with no colony has nobody to raid.
         /// </summary>
-        static int Origin(PawnContext pawns)
+        internal static int Origin(PawnContext pawns)
         {
             GridSize size = pawns.Size;
             if (pawns.ColonyStart is CellRef start && size.Contains(start))
@@ -254,15 +234,6 @@ namespace Odyssey.Sim.Events
             for (int i = 0; i < all.Count; i++)
                 if (all[i].IsColonist && Melee.IsStanding(all[i])) return all[i].Cell;
             return -1;
-        }
-
-        /// <summary>West 0, east 1, south 2, north 3; a corner is its x side.</summary>
-        static int SideOf(GridSize size, int cell)
-        {
-            CellRef at = size.FromIndex(cell);
-            if (at.X == 0) return 0;
-            if (at.X == size.SizeX - 1) return 1;
-            return at.Z == 0 ? 2 : 3;
         }
 
         /// <summary>The census cell nearest the point <paramref name="inset"/> cells straight in from the edge centre.</summary>

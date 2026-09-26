@@ -212,6 +212,9 @@ namespace Odyssey.Sim.Pawns
                 // The raids on the board (design 55 §10): appended, no format bump. A save from
                 // before raids has no section and loads with no band.
                 pawns.Raids!,
+                // The traders and their visits (design 57 §8): appended, no format bump. A save from
+                // before trading has no section and loads with no trader.
+                pawns.Trade!,
             };
         }
 

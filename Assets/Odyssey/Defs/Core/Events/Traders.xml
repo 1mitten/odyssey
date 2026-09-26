@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Who trades with the colony (docs/design/57-trading.md section 5). A trader walks in from an edge,
+  waits by the hearth for stayHours, and leaves. It carries a purse rolled between purseMin and
+  purseMax and linesMin to linesMax lines drawn by weight from its stock, each a count between min
+  and max. It sells at sellPerMille of an item's value and buys at buyPerMille (section 3).
+  The order of these kinds is IncidentContent.TraderOrder's, which is the contract: append.
+  Every number here is INVENTED and a playtest's to move.
+-->
+<Defs>
+
+  <!-- General goods: a little of everything the colony can use and cannot yet make. -->
+  <TraderKindDef>
+    <defName>TraderKind_General</defName>
+    <label>general goods</label>
+    <description>A trader with a little of everything</description>
+    <pawnKind>PawnKind_Trader</pawnKind>
+    <purseMin>400</purseMin>
+    <purseMax>900</purseMax>
+    <linesMin>4</linesMin>
+    <linesMax>7</linesMax>
+    <sellPerMille>1400</sellPerMille>
+    <buyPerMille>600</buyPerMille>
+    <stayHours>24</stayHours>
+    <stock>
+      <li><item>Item_Meal</item><weight>100</weight><min>10</min><max>30</max></li>
+      <li><item>Item_MedicalSupplies</item><weight>100</weight><min>3</min><max>10</max></li>
+      <li><item>Item_Salvage</item><weight>80</weight><min>20</min><max>50</max></li>
+      <li><item>Item_IronOre</item><weight>70</weight><min>30</min><max>75</max></li>
+      <li><item>Item_Coal</item><weight>60</weight><min>30</min><max>75</max></li>
+      <li><item>Item_Wood</item><weight>50</weight><min>40</min><max>75</max></li>
+      <li><item>Item_Pistol</item><weight>40</weight><min>1</min><max>2</max></li>
+      <li><item>Item_Crowbar</item><weight>40</weight><min>1</min><max>2</max></li>
+      <li><item>Item_Machete</item><weight>30</weight><min>1</min><max>1</max></li>
+      <li><item>Item_Carrots</item><weight>40</weight><min>20</min><max>60</max></li>
+    </stock>
+  </TraderKindDef>
+
+</Defs>

@@ -156,4 +156,28 @@
     </raid>
   </IncidentDef>
 
+  <!--
+    A trader walks in from one edge, waits by the hearth (else the colony's start) for about a day,
+    and walks out again (docs/design/57-trading.md section 5). Send a colonist to it with the
+    right-click Trade row. What it carries and at what prices is its trader kind's (Traders.xml).
+    The gates are INVENTED and read by nothing until a storyteller exists.
+  -->
+  <IncidentDef>
+    <defName>Incident_Trader</defName>
+    <label>trader</label>
+    <description>A trader walks in from the edge of the board and waits by the hearth for about a day. Select a colonist and right-click the trader to trade</description>
+    <bulletinKey>ui.bulletin.trader</bulletinKey>
+    <favourability>Good</favourability>
+    <category>Arrival</category>
+    <worker>Trader</worker>
+    <earliestDay>2</earliestDay>
+    <minRefireDays>5</minRefireDays>
+    <weight>100</weight>
+    <minColonists>1</minColonists>
+    <maxFires>0</maxFires>
+    <trader>
+      <kind>TraderKind_General</kind>
+    </trader>
+  </IncidentDef>
+
 </Defs>

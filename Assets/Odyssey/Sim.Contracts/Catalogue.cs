@@ -393,7 +393,10 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A band of hostiles walks in from one edge, gathers, probes, and assaults (design 55).</summary>
         public const int Raid = 5;
 
-        public const int Count = 6;
+        /// <summary>A trader walks in from an edge, waits by the hearth about a day, and leaves (design 57).</summary>
+        public const int Trader = 6;
+
+        public const int Count = 7;
     }
 
     /// <summary>

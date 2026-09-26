@@ -91,6 +91,12 @@ namespace Odyssey.Sim.Events
         /// per-worker block, the shape design 23 §8 asked for rather than widening the flat set.
         /// </summary>
         public RaidParams? raid;
+
+        /// <summary>
+        /// A trader's own parameters (design 57 §5): which kind of trader comes. Null for any
+        /// incident that is not a trader's arrival.
+        /// </summary>
+        public Trade.TraderParams? trader;
     }
 
     /// <summary>
@@ -115,6 +121,8 @@ namespace Odyssey.Sim.Events
             "Incident_MedicalDrop",
             // A band of hostiles from one edge (design 55), appended.
             "Incident_Raid",
+            // A trader walks in from an edge and waits by the hearth (design 57), appended.
+            "Incident_Trader",
         };
 
         /// <summary>
@@ -129,10 +137,22 @@ namespace Odyssey.Sim.Events
             "RaidMix_Mixed",
         };
 
+        /// <summary>
+        /// Every trader kind in index order (design 57 §5), the same contract as <see cref="Order"/>:
+        /// position <i>is</i> the kind index a visit saves, so append, never insert.
+        /// </summary>
+        public static readonly string[] TraderOrder =
+        {
+            "TraderKind_General",
+        };
+
         public IncidentDef[] Defs = System.Array.Empty<IncidentDef>();
 
         /// <summary>The raid mixes, bound, in <see cref="MixOrder"/>.</summary>
         public RaidMix[] Mixes = System.Array.Empty<RaidMix>();
+
+        /// <summary>The trader kinds, bound, in <see cref="TraderOrder"/>.</summary>
+        public Trade.TraderKind[] Traders = System.Array.Empty<Trade.TraderKind>();
 
         /// <summary>The <c>ItemIndex</c> each incident pays out, or -1 for none. Parallel to <see cref="Defs"/>.</summary>
         public int[] ItemIndex = System.Array.Empty<int>();
@@ -143,7 +163,8 @@ namespace Odyssey.Sim.Events
         public int Count => Defs.Length;
 
         /// <summary>The Def types this content is made of, registered in one place.</summary>
-        public static DefLoader Register(DefLoader loader) => loader.Register<IncidentDef>().Register<RaidMixDef>();
+        public static DefLoader Register(DefLoader loader) =>
+            loader.Register<IncidentDef>().Register<RaidMixDef>().Register<Trade.TraderKindDef>();
 
         /// <summary>
         /// Read and bind. A missing Def, an unknown worker or an item the pawn content does not
@@ -185,6 +206,12 @@ namespace Odyssey.Sim.Events
             for (int m = 0; m < MixOrder.Length; m++)
                 content.Mixes[m] = RaidMix.Bind(OneMix(defs, MixOrder[m]), pawns);
 
+            // The trader kinds (design 57 §5), bound before the workers validate: a trader's Def
+            // names one.
+            content.Traders = new Trade.TraderKind[TraderOrder.Length];
+            for (int t = 0; t < TraderOrder.Length; t++)
+                content.Traders[t] = Trade.TraderKind.Bind(OneTrader(defs, TraderOrder[t]), pawns);
+
             // What each worker's own fields must satisfy is the worker's to say.
             for (int i = 0; i < Order.Length; i++)
                 content.Workers[i].Validate(content.Defs[i], pawns);
@@ -193,6 +220,9 @@ namespace Odyssey.Sim.Events
             for (int i = 0; i < Order.Length; i++)
             {
                 IncidentDef def = content.Defs[i];
+                if (def.trader != null && content.TraderIndex(def.trader.kind) < 0)
+                    throw new DefLoadException(
+                        $"{def.Origin}: incident '{def.defName}' names trader kind '{def.trader.kind}', which the content does not have.");
                 if (def.raid != null && content.MixIndex(def.raid.mix) < 0)
                     throw new DefLoadException(
                         $"{def.Origin}: incident '{def.defName}' names raid mix '{def.raid.mix}', which the content does not have.");
@@ -221,6 +251,23 @@ namespace Odyssey.Sim.Events
             for (int m = 0; m < Mixes.Length; m++)
                 if (Mixes[m].Def.defName == defName) return m;
             return -1;
+        }
+
+        /// <summary>The index of the trader kind named <paramref name="defName"/> in <see cref="TraderOrder"/>, or -1.</summary>
+        public int TraderIndex(string defName)
+        {
+            for (int t = 0; t < Traders.Length; t++)
+                if (Traders[t].Def.defName == defName) return t;
+            return -1;
+        }
+
+        static Trade.TraderKindDef OneTrader(DefDatabase defs, string defName)
+        {
+            if (!defs.HasTable<Trade.TraderKindDef>())
+                throw new DefLoadException($"the content has no TraderKindDef at all, and '{defName}' is required.");
+            if (!defs.Table<Trade.TraderKindDef>().TryGetHandle(defName, out var handle))
+                throw new DefLoadException($"the content has no TraderKindDef named '{defName}'.");
+            return defs.Table<Trade.TraderKindDef>()[handle];
         }
 
         static RaidMixDef OneMix(DefDatabase defs, string defName)

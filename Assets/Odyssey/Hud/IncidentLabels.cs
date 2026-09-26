@@ -29,6 +29,8 @@ namespace Odyssey.Hud
             "ui.bulletin.medicaldrop",
             // A band walking in from one edge (design 55): its Events row is the warning.
             "ui.bulletin.raidincoming",
+            // A trader walking in to the hearth (design 57): "A trader has come to us".
+            "ui.bulletin.trader",
         };
 
         /// <summary>The key for an incident the table does not know, so the fault is visible on screen.</summary>

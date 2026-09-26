@@ -254,6 +254,9 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public Events.RaidSystem? Raids { get; set; }
 
+        /// <summary>The traders on the board and their visits (design 57). Set by the composition root.</summary>
+        public Trade.TradeSystem? Trade { get; set; }
+
         /// <summary>
         /// Where the colony started — the generator's start cell — or null where there was none (a
         /// hand-built test board). What a raid makes for with no hearth (design 55 §5). Derived:
