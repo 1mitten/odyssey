@@ -14255,3 +14255,21 @@ needed no new number.
 Proved by listening through the code: the fight test now tallies `AudioDirector.Played` and hears
 all four moments.
 
+## 2026-09-26 — No safe perch: the butcher climbs, and throws
+
+The owner stood on a rock one layer up and shot two butchers dead while they wandered below. The
+cause was one line of content. The butcher moved as the hog does, and the hog may not hop on to
+stone, a rule the owner asked for when a pig climbed a mine face. The rule was right for a hog and
+wrong for a boss. The bandit never had the weakness, and a test now says so: a colonist on a stone
+outcrop, and the bandit, the butcher and the king each have to reach her.
+
+Asked how it should answer a perch, the owner chose climb and throw. The climb is TraverseMode.Bandit
+rather than a sixth mode, because a mode is a district flood on every nav rebuild of every colony
+and every district is in the state hash. That is a price every colony would pay to keep one boss
+off ladders, and the throw makes a ladder no refuge anyway.
+
+The throw is the pistol's machinery with a species field, a weapon id below every item, and a clock
+of its own. The item-only landing would have made a rock vanish on arrival. It is thrown only up at
+a perch, or at whoever it cannot reach, so on open ground it is still a thing that walks at you with
+a cleaver.
+

@@ -62,6 +62,32 @@ alone, at no navigation cost. **Reusing `TraverseMode.Animal` adds no sixth dist
 meadow a stream it cannot jump is a wall to it, and it goes round by a crossing. That is a feature
 of a heavy thing, not a fault; the first play says whether it strands one.
 
+### 3a. No safe perch (owner, 2026-09-26)
+
+> *"I was able to get up onto a rock/one height and just shoot the pigs until they were dead - have
+> a mechanism so this isn't too easy as they just end up walking around as normal"*; *"can we check
+> that bandits don't do this as well"*
+
+**The cause.** The butcher moved as the hog does (`TraverseMode.Animal`). An animal may not hop on
+to stone (`NavGraph.HopMask`, the owner's hog rule of 2026-09-22), only up a terrace of soil. So a
+colonist on a stone outcrop one layer up was out of every walk. The hostile mind found nobody it
+could reach, and the butcher wandered below her.
+
+**Bandits never had it.** They move as a colonist does, doors aside, so they reach every rock,
+ledge and roof a colonist can stand on.
+`ButcherTests.NoHostileIsKeptOffARockOneLayerUp` puts a colonist on a stone outcrop and holds that
+the bandit, the butcher and the king all get up to her. It failed for both butchers and passed for
+the bandit before the change.
+
+**The fix, the owner's pick of four:** it climbs, and it throws.
+- **It moves as a bandit** (`TraverseMode.Bandit`): every rock, ledge and ladder a colonist can
+  climb, and a closed door is a wall it breaks.
+  - It gives up "no ladders", which the owner's choice named.
+  - A sixth traverse mode would have kept it, at a cost: a district flood on every nav rebuild in
+    every colony, and every golden re-baked, because the districts are part of the state hash.
+  - With the throw, a ladder is no longer an escape anyway. The owner can ask for the sixth mode.
+- **It throws a rock** at a colonist above it, or one it cannot reach at all (§7a).
+
 ## 4. The numbers (first tuning, INVENTED unless stated)
 
 | Where | Field | Value | Why |
@@ -260,6 +286,55 @@ hard enough to fly, and something stopped it.
 - It is never stunned: a stun roll against it is dropped at `ApplySwing`.
 - It is never knocked back.
 - A drafted colonist's order on it still works.
+
+### 7a. The thrown rock
+
+`SpeciesDef.hurl` is a second, ranged attack of the species' own, in the pistol's shape. It is
+thrown **only** at:
+- the colonist it is after, when she stands **above** it (a rock, a ledge, a roof) and out of arm's
+  reach, in range and in sight; or
+- whoever it can see, when it can reach nobody at all.
+
+It is never thrown at somebody on its own level, who is walked to and cleaved, and never from
+behind cover. It throws one rock and goes back to the chase (`Hurl`).
+
+| Field | Value |
+|---|---|
+| damage | 9, blunt (can stun: 25 %, 1 s) |
+| range | 25 m |
+| wind-up (the throw) | 45 ticks |
+| its own clock | 360 ticks, never the cleaver's |
+| in the air | 0.35 m a tick (a second at 25 m) |
+| aimed at | the level's melee skill |
+
+**It reuses the pistol's machinery:** the ranged driver, the shot roll, the saved and hashed
+flight, the landing. What is its own:
+- **Its armament.** `Hurl.ArmamentOf`, the throw for a species that has one.
+- **Its weapon id.** `−100 − kind`, so a rock in the air knows what threw it after the thrower has
+  died.
+- **Its clock.** `Pawn.HurlReadyTick`, `CombatSection` layout 7, hash bit 29. A throw that never
+  leaves the hand gives it back.
+- **Its fling.** A landed rock rolls the level's fling chance, and a fling now points straight away
+  from wherever the blow came from (`SweepArc.Toward`), so it knocks her off the far side of her
+  perch.
+
+**Drawn and heard as a throw:**
+- no muzzle flash, tracer or report;
+- the arm comes over with the heavy swing;
+- the stone item's own mesh tumbles along a lob that rises with the distance;
+- the deep whoosh and a grunt;
+- dust where a miss comes down.
+
+**Tested:**
+- a colonist on a two-layer stone column is thrown at, with the rock reported as the butcher's own
+  and arriving;
+- one on a rock above it is a target, one on its own level is not, and none while its clock runs;
+- a landed rock throws her off the far side;
+- it throws at its melee level;
+- the clock is saved and hashed.
+
+**The negative control:** with the throw taken out of the mind, the column test fails with "it
+never threw at her".
 
 ## 8. How it is drawn
 

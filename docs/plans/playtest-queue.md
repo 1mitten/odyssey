@@ -32,6 +32,9 @@ the next session learns to ignore.
     (4.4 to 5.6 m) is too small or too large.
   - Fight level 1 with three or four colonists. Wrong: it is not the *easiest* you had in mind. The
     probe says it still beats four bats every time (§4b).
+  - Stand a drafted gunman on a rock or a roof and shoot it (design 62 §3a, §7a). Wrong: it still
+    wanders below; the rock it throws is not seen coming; it throws so often it is a gunman; being
+    knocked off the perch feels unfair rather than earned.
   - Listen to a fight (design 62 §8d). Wrong: the grunt on its swing is as loud as the bellow when
     it throws somebody; the squeal when hit is lost under the thud; the oink as it dies is missing
     or comic; the cleaver's whoosh is not clearly deeper than a sword's.
