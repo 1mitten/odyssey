@@ -23,8 +23,15 @@ namespace Odyssey.Presentation.World
     /// </summary>
     public sealed class SheathSurface
     {
-        /// <summary>The grid's cell, as a fraction of the figure's height.</summary>
-        public const float CellFraction = 0.006f;
+        /// <summary>
+        /// The grid's cell, as a fraction of the figure's height: about a centimetre. Was 0.006,
+        /// half the one-to-three-centimetre window the gap is held to, and a cell holds its
+        /// outermost point, so the fit could stand a weapon off by up to a cell more than it meant
+        /// to: the military build's bat read 3.3 cm once the height was measured in the idle, and
+        /// 2.7 at this. The hip measurement went from about 40 ms to 65–69 ms a look, paid once a
+        /// session when a look is first built (2026-09-26, WeaponSheathGapTests prints it).
+        /// </summary>
+        public const float CellFraction = 0.004f;
 
         /// <summary>
         /// The window of the body that is mapped, as fractions of the figure's height about the hip

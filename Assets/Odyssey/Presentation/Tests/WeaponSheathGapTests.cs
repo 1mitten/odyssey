@@ -140,6 +140,8 @@ namespace Odyssey.Tests.Presentation
                     }
                 }
 
+                // What the hip's relief costs, paid once a look when a figure is built.
+                table.AppendLine($"slowest hip measurement {director.MeasuredSheathBindMs:F1} ms");
                 TestContext.WriteLine(table.ToString());
                 Debug.Log("[SheathGap]\n" + table);
                 Assert.That(measured, Is.EqualTo(Bodies.Length * Weapons.Length * 2), string.Join("\n", failures));

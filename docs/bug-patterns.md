@@ -2946,6 +2946,22 @@ only the blow that *crosses* the line kills. Found by review, not by a test — 
   deferred phase (`FallTests.AFatalFallInsideTheDeferredPhaseIsGoneTheSameTick`), and a removal
   that must not outlive its tick uses `DeferThisTick`.
 
+## A line indented into a guard it is not inside (2026-09-26)
+
+Ranged combat added the weapon's quality to the snapshot as a second line under the weapon's own
+`if (weapon != null && !weapon.Despawned)`, indented to match and with no braces — so it ran for
+every pawn with a non-zero `EquippedItem`, and `ColonyItems.Get` returns null for a despawned thing.
+A hand pointing at a thing that is gone threw out of the publish, which is the snapshot for every
+pawn on the board. Nothing reached it in play yet: every path that empties a hand clears
+`EquippedItem` first. Found by a code survey for the colonist kit (design 54), not by a report.
+
+- **The pattern:** *a guard with a second way in*, in its most literal form — the second statement
+  was never inside the guard at all.
+- **What made it invisible:** every test that published a weapon published a live one; the one that
+  set a stale id (`TheCombatStateSurvivesTheRoundTrip`, `EquippedItem = 77`) never ticked after.
+- **The check:** a guarded publish of more than one row gets braces, and a test drives the stale
+  case through a tick. `CombatContractTests.AHandHoldingNothingThatExistsPublishesNoWeapon`, with
+  the live weapon as its control.
 ## A derived value written on an interval, and not on a load (2026-09-25)
 
 **Symptom.** A save taken mid-gunfight on a cloudy day resumed identically for 45 ticks and parted
@@ -2994,3 +3010,28 @@ UI. PlayMode `StartScreenTests.ALoadedWorldIsCoveredLikeANewOne` is the regressi
 reading state its own previous call may have written. Ask of any event: can it fire twice in one
 frame, and does the second call ask a question the first one answered? Decide from a counter or the
 cause, not from the screen.
+
+## A measurement taken in whatever pose the last setup step left (2026-09-26)
+
+**Symptom.** `WeaponSheathGapTests` failed on every branch after the kitchen merged: the military
+build's sheathed bat stood 3.2 cm off the thigh against a 3.0 cm bound. Nothing in the kitchen
+touches a weapon, a hip or a body.
+
+**Cause.** A figure is built in steps, and `BindWorkBones` poses it in each work style's struck
+pose to fit that style's tool, leaving it in the last. The sole, the height and the hip relief are
+measured straight after, off the posed mesh, and the loop's comment said the pose "is thrown away
+by the next animation update" — true of the picture, false of the build. So a colonist's measured
+height was the height of the last tool's blow: 2.38–2.48 m in the hammer's stoop, 2.55–2.57 once
+the cook's pan was appended after it, 2.58–2.59 standing. The hip fit is sized in fractions of that
+height, so appending a work style moved a sheathed bat.
+
+**Measurement that found it.** A `git bisect run` over `main`'s merges, then over the kitchen's own
+commits, with the one test and its logged gap as the verdict; then the pan's style taken out at the
+bad commit, which restored 2.3 cm; then the good and bad tables diffed row by row, where every
+body's *height* column had moved and nothing else consistently had.
+
+- **The pattern:** *one rule, two owners*, in time rather than space. "The figure is in its idle"
+  was owned by the next animation update, and the measurements ran before it did.
+- **The check:** a build step that poses a rig puts it back before it returns; a measurement that
+  says "in the idle" evaluates the idle itself or asserts it. Ask of any `Measure*` at build: *what
+  pose is the rig in when this runs, and who put it there?*

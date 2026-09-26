@@ -530,6 +530,40 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// A hand whose thing is gone publishes nothing about it, and the publish does not throw.
+        /// The weapon's quality line sat outside the null check the weapon's own line was inside
+        /// (indented as if it were not), so a stale <see cref="Pawn.EquippedItem"/> — a thing
+        /// despawned, or an id a save carried in — threw out of the snapshot. The live weapon is
+        /// the control: both aspects appear while the thing exists.
+        /// </summary>
+        [Test]
+        public void AHandHoldingNothingThatExistsPublishesNoWeapon()
+        {
+            var colony = Board();
+            Pawn a = colony.Pawns.Pawns.All[0];
+            colony.World.Tick();
+            int free = colony.Pawns.Items.NearestCellWithSpace(colony.Pawns.Cells, a.Cell, ItemIndex.Pistol, 1, maxRadius: 8);
+            Assume.That(free, Is.GreaterThanOrEqualTo(0), "nowhere to put the pistol down");
+            ThingId id = colony.Pawns.Items.Spawn(ItemIndex.Pistol, free);
+            ColonyItem pistol = colony.Pawns.Items.Get(id)!;
+            pistol.Quality = QualityHandle.Decent;
+            a.EquippedItem = id.Value;
+            colony.World.Tick();
+            WorldSnapshot live = colony.World.Views.Current;
+            Assert.That(live.TryGetPawnAspect(a.Id, CombatAspects.Weapon, out _), Is.True, "the control: a live weapon");
+            Assert.That(live.TryGetPawnAspect(a.Id, CombatAspects.WeaponQuality, out _), Is.True, "the control: its quality");
+
+            colony.Pawns.Items.Despawn(pistol);
+            Assert.DoesNotThrow(() => colony.World.Tick(), "a despawned weapon in the hand threw out of the publish");
+            WorldSnapshot after = colony.World.Views.Current;
+            Assert.That(after.TryGetPawnAspect(a.Id, CombatAspects.Weapon, out _), Is.False);
+            Assert.That(after.TryGetPawnAspect(a.Id, CombatAspects.WeaponQuality, out _), Is.False);
+
+            a.EquippedItem = 999_999;
+            Assert.DoesNotThrow(() => colony.World.Tick(), "an id with no thing behind it threw out of the publish");
+        }
+
+        /// <summary>
         /// Sparse: a whole, undrafted colonist publishes none of the fight; a hurt one its hit
         /// points; one under orders its target; one holding a weapon the weapon's def.
         /// </summary>
