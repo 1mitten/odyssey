@@ -929,3 +929,53 @@ ui.assign.response,Response,ui.assign,HA,"What she does about danger. Press a ce
 ui.assign.anywhere,Anywhere,ui.assign,HA,"She takes work wherever it is"
 ui.assign.home,Home,ui.assign,HA,"She takes no work outside home, and walks home when idle. A draft overrides it"
 ui.assign.nohearth,No hearth yet,ui.assign,HA,"There is no hearth, so there is no home and Home keeps nobody in. Mark a campfire as the hearth"
+ui.hills.flat,Flat,ui.hills,WG,"Level ground. Room to build, little stone"
+ui.hills.rolling,Rolling,ui.hills,WG,Gentle rises and terraces. The board every measurement was taken on
+ui.hills.hilly,Hilly,ui.hills,WG,Steep terraces and more exposed rock
+ui.hills.mountainous,Mountainous,ui.hills,WG,High terraces over deep rock. Twenty-four layers deep
+ui.hills.sheer,Sheer,ui.hills,WG,Too steep to settle
+ui.world.title,World,ui.world,WG,"The planet, and where on it the colony lands"
+ui.world.site,Site,ui.world,WG,The tile the colony lands on
+ui.world.random,Random site,ui.world,WG,Pick another tile the colony could land on
+ui.world.next,Next,ui.world,WG,"On to the colony's name, size and people"
+ui.world.legend,Legend,ui.world,WG,What each colour and mark on the map means
+ui.world.biome,Biome,ui.world,WG,What grows there
+ui.world.hills,Hills,ui.world,WG,How hilly the ground is
+ui.world.temperature,Mean temperature,ui.world,WG,"The year's average, out of doors"
+ui.world.seasons,Seasons,ui.world,WG,"Each season's average, out of doors"
+ui.world.rainfall,Rainfall,ui.world,WG,How much rain falls in a year
+ui.world.latitude,Latitude,ui.world,WG,"How far from the equator. The further out, the harder the seasons bite"
+ui.world.depth,Board depth,ui.world,WG,"How many layers the board has, sky to bedrock"
+ui.world.unavailable,Not yet available,ui.world,WG,Only Meadow sites can be settled for now. Other biomes arrive with a later art pack.
+ui.world.water,Open water,ui.world,WG,The colony cannot land on the sea
+ui.world.steep,Too steep to settle,ui.world,WG,Sheer ground: no colony could find its footing
+ui.biome.ocean,Ocean,ui.biome,WG,Open water. Nothing can be built on it
+ui.biome.meadow,Meadow,ui.biome,WG,"Temperate grass and woodland, streams and ponds. The ground the colony knows"
+ui.biome.coldsteppe,Cold steppe,ui.biome,WG,"Cold, open grassland: long winters and little shelter"
+ui.biome.dryscrub,Dry scrub,ui.biome,WG,Warm dry ground of thorn and low bushes. Water is scarce
+ui.biome.marsh,Marsh,ui.biome,WG,"Waterlogged ground: reeds, pools and soft footing"
+ui.biome.ice,Ice,ui.biome,WG,"Ice all year round, on land and on the polar sea. Nothing grows"
+ui.world.subtitle,Pick a site to drop your colony,ui.world,WG,The World screen's subtitle
+ui.world.wraphint,The map wraps east to west,ui.world,WG,"Walk off the right edge and you come in on the left"
+ui.world.zoomhint,"Drag to pan, double-click to zoom",ui.world,WG,How to move about the map
+ui.world.settleable,Settleable,ui.world,WG,A colony can land here
+ui.world.selectedsite,Selected site,ui.world,WG,The tile the colony would land on
+ui.world.tile,Tile,ui.world,WG,"The tile's column and row on the planet"
+ui.world.foot,Click a tile to inspect it. Random site picks a temperate Meadow.,ui.world,WG,The stats panel's foot
+ui.world.zoomin,Zoom in,ui.world,WG,Closer to the ground
+ui.world.zoomout,Zoom out,ui.world,WG,Further from the ground
+ui.world.fit,Fit,ui.world,WG,The whole planet in view
+ui.world.north,N,ui.world,WG,North of the equator
+ui.world.south,S,ui.world,WG,South of the equator
+ui.world.mm,mm,ui.world,WG,Millimetres of rain a year
+ui.world.layers,layers,ui.world,WG,Layers from sky to bedrock
+ui.world.to,to,ui.world,WG,"Between the coldest and the warmest month, as in 2 to 26"
+ui.world.region.reach,{name} Reach,ui.world,WG,A land region's name in one of its frames
+ui.world.region.downs,The {name} Downs,ui.world,WG,A land region's name in one of its frames
+ui.world.region.hold,{name} Hold,ui.world,WG,A land region's name in one of its frames
+ui.world.region.greater,Greater {name},ui.world,WG,A land region's name in one of its frames
+ui.world.region.seaof,Sea of {name},ui.world,WG,A sea's name in one of its frames
+ui.world.region.deep,{name} Deep,ui.world,WG,A sea's name in one of its frames
+ui.world.region.shelf,The {name} Shelf,ui.world,WG,A sea's name in one of its frames
+ui.world.region.sound,{name} Sound,ui.world,WG,A sea's name in one of its frames
+ui.world.region.gulfof,Gulf of {name},ui.world,WG,A sea's name in one of its frames

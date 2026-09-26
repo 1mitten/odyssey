@@ -829,8 +829,14 @@ namespace Odyssey.Presentation.Bootstrap
         /// <c>WorldSave.Load</c> refuses a world of a different size anyway.</para>
         /// </summary>
         public void BuildSession(uint? seedOverride, SaveHeader? from, uint[]? colonists,
-            string? name, GridSize? sizeOverride)
+            string? name, GridSize? sizeOverride, SiteTile? site = null, uint worldSeed = 0)
         {
+            // A planet site (design 59), from the World screen on a new game or from the header on
+            // a load. Null for every caller before world generation and every test, which then
+            // builds exactly the board it always did.
+            SiteTile? sessionSite = from != null ? from.Recipe.Site : site;
+            uint sessionWorldSeed = from != null ? from.Recipe.WorldSeed : worldSeed;
+
             if (HasSession)
                 throw new System.InvalidOperationException(
                     "a session is already built; call TeardownSession before building another");
@@ -866,6 +872,11 @@ namespace Odyssey.Presentation.Bootstrap
             GridSize size = from != null
                 ? from.Size
                 : sizeOverride ?? new GridSize(sizeX, sizeZ, layers);
+            // A mountainous site is 24 layers deep (design 59 §5) — decided here, with the rest of
+            // the size, so the chunk grid and the render model below are built at the same depth
+            // as the world. A load needs nothing: the header's size already carries it.
+            if (from == null && sessionSite is SiteTile hillSite)
+                size = new GridSize(size.SizeX, size.SizeZ, SiteRules.BoardLayers(size.SizeY, hillSite.Hills));
             var chunks = new ChunkGrid(size);
 
             // The render model is built before the world, because the mirror the world publishes
@@ -895,7 +906,11 @@ namespace Odyssey.Presentation.Bootstrap
             if (colonists != null && colonists.Length > 0 && from == null)
                 scenarioDef = scenarioDef.WithColonists(colonists.Length);
 
-            uint sessionSeed = from != null ? from.Seed : seedOverride ?? seed;
+            // With a site, the board's seed is the tile's of the world (design 59 §8): the same
+            // world and tile always give the same colony. A load's comes from its file either way.
+            uint sessionSeed = from != null ? from.Seed
+                : sessionSite is SiteTile seedSite ? SiteRules.BoardSeed(sessionWorldSeed, seedSite.TileIndex)
+                : seedOverride ?? seed;
             MapType sessionMap = from != null && from.Recipe.Map != MapType.Unknown
                 ? from.Recipe.Map
                 : mapType;
@@ -915,6 +930,8 @@ namespace Odyssey.Presentation.Bootstrap
                 Wooded = from != null ? from.Recipe.Wooded : woodedMap,
                 SurfaceRelief = from != null ? -1 : surfaceReliefOverride,
                 Map = sessionMap,
+                Site = sessionSite,
+                WorldSeed = sessionWorldSeed,
                 Chunks = chunks,
 
                 // A colony keeps the name it was saved under. Nothing names one yet — that is the

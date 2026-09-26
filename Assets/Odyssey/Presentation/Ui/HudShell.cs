@@ -656,6 +656,8 @@ namespace Odyssey.Presentation.Ui
             }
             Detach();
             if (_topRamp != null) DestroyImmediate(_topRamp);
+            // The World map (design 59 §9a): tens of megabytes, and HideAndDontSave outlives the scene.
+            ReleaseWorldMap(immediate: true);
             if (_bottomRamp != null) DestroyImmediate(_bottomRamp);
             if (_panelCopy != null) DestroyImmediate(_panelCopy);
         }
